@@ -339,10 +339,10 @@ function objTemplate(o){
   return importStore[o.ref]?.obj || null;
 }
 let tplPending = 0;
-async function loadTpl(ref){
+async function loadTpl(ref, quiet){
   TPL[ref] = {status:"loading"}; tplPending++; busy(`Carico ${LIBMAP[ref].nome}…`);
   try { TPL[ref] = {status:"ok", obj:finishTpl(await LIBMAP[ref].load())}; }
-  catch(e){ TPL[ref] = {status:"err"}; console.warn(e); toast(`Non riesco a caricare «${LIBMAP[ref].nome}»: manca la cartella assets accanto alla pagina?`, true); }
+  catch(e){ TPL[ref] = {status:"err"}; console.warn(e); if (!quiet) toast(`Non riesco a caricare «${LIBMAP[ref].nome}»: manca la cartella assets accanto alla pagina?`, true); }
   tplPending--; if (!tplPending) busy(""); rebuild3D(); draw2D(); if (S.tab === "props") renderInspector();
 }
 function objFootprint(o){
@@ -363,4 +363,68 @@ async function loadPersonalIndex(){
   }
   LIB_CATS = [...new Set(LIB.map(x => x.cat))];
   if (S.tool === "furn") renderInspector(); draw2D(); rebuild3D();
+}
+
+/* ---------- Anteprime della libreria ----------
+   Ogni oggetto ha un'immagine: prima si cerca assets/anteprime/<ref>.webp (generate con
+   npm run build:anteprime), altrimenti la si disegna qui con un renderer dedicato. */
+const THUMB = {w:240, h:180};
+const thumbCache = {};
+let thumbR = null;
+function thumbRenderer(){
+  if (thumbR) return thumbR;
+  const r = new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true});
+  r.setPixelRatio(1); r.setSize(THUMB.w, THUMB.h); r.outputEncoding = THREE.sRGBEncoding; r.toneMapping = THREE.ACESFilmicToneMapping;
+  r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+  const sc = new THREE.Scene(), pm = new THREE.PMREMGenerator(r); sc.environment = pm.fromScene(new THREE.RoomEnvironment(), .04).texture;
+  sc.add(new THREE.HemisphereLight("#eef3f7", "#8a8578", .45));
+  const key = new THREE.DirectionalLight("#fff6ea", 2.1); key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.radius = 5; key.shadow.bias = -.0006; key.shadow.normalBias = .02; sc.add(key, key.target);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShadowMaterial({opacity:.2})); ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; sc.add(ground);
+  const cam = new THREE.PerspectiveCamera(26, THUMB.w/THUMB.h, .01, 1000);
+  return thumbR = {r, sc, key, ground, cam};
+}
+/** Disegna un oggetto 3D in un'immagine 240×180 vista di tre quarti, con ombra a terra. */
+function renderThumb(obj, type = "image/webp"){
+  const T = thumbRenderer(), c = obj.clone(true);
+  const box = new THREE.Box3().setFromObject(c); if (box.isEmpty()) return null;
+  const size = box.getSize(new THREE.Vector3()), ctr = box.getCenter(new THREE.Vector3()), rad = Math.max(size.length()/2, .05);
+  const tall = size.y > 1.6 * Math.max(size.x, size.z);
+  const dir = new THREE.Vector3(.72, tall ? .28 : .62, 1).normalize();
+  const fov = THREE.MathUtils.degToRad(T.cam.fov), fit = Math.max(rad / Math.sin(fov/2), rad / Math.sin(Math.atan(Math.tan(fov/2) * T.cam.aspect)));
+  T.cam.position.copy(ctr).addScaledVector(dir, fit * .92); T.cam.near = fit / 50; T.cam.far = fit * 10; T.cam.lookAt(ctr); T.cam.updateProjectionMatrix();
+  T.ground.position.set(ctr.x, box.min.y + .001, ctr.z); T.ground.scale.setScalar(rad * 8);
+  T.key.position.set(ctr.x - rad * 1.6, ctr.y + rad * 4, ctr.z + rad * 2.2); T.key.target.position.copy(ctr);
+  const sc = T.key.shadow.camera; sc.left = sc.bottom = -rad * 2; sc.right = sc.top = rad * 2; sc.near = .01; sc.far = rad * 12; sc.updateProjectionMatrix();
+  T.sc.add(c); T.r.render(T.sc, T.cam); T.sc.remove(c);
+  return T.r.domElement.toDataURL(type, .86);
+}
+const THUMB_PLACEHOLDER = "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180"><g fill="none" stroke="#8f9a96" stroke-width="3" stroke-linejoin="round"><path d="M120 52 172 78v52l-52 26-52-26V78z"/><path d="M68 78l52 26 52-26M120 104v52"/></g></svg>`);
+const thumbQueue = []; let thumbBusy = false;
+/** Chiamata quando manca l'anteprima statica: la genera (anche per i modelli da caricare) e la mette in cache. */
+function queueThumb(img){
+  const ref = img.dataset.thumb; if (!ref) return;
+  if (thumbCache[ref]){ img.src = thumbCache[ref]; return; }
+  img.src = THUMB_PLACEHOLDER; thumbQueue.push(img); if (!thumbBusy) pumpThumbs();
+}
+function pumpThumbs(){
+  const img = thumbQueue.shift(); if (!img){ thumbBusy = false; return; } thumbBusy = true;
+  const ref = img.dataset.thumb, it = LIBMAP[ref];
+  const next = () => (window.requestIdleCallback || setTimeout)(pumpThumbs, 30);
+  if (thumbCache[ref]){ img.src = thumbCache[ref]; return next(); }
+  if (!it){ return next(); }
+  const t = TPL[ref];
+  if (it.load && t?.status !== "ok"){ if (!t) loadTpl(ref, true); return next(); } // al termine il pannello si ridisegna
+  try { const o = objTemplate({kind:"lib", ref}); const url = o && renderThumb(o); if (url){ thumbCache[ref] = url; if (img.isConnected) img.src = url; } }
+  catch(e){ console.warn("anteprima", ref, e); }
+  next();
+}
+function thumbImg(ref, cls = ""){
+  return `<img class="${cls}" src="${thumbCache[ref] || ASSET + "anteprime/" + ref + ".webp"}" data-thumb="${esc(ref)}" alt="" loading="lazy" decoding="async">`;
+}
+function hydrateThumbs(root){
+  root.querySelectorAll("img[data-thumb]").forEach(img => {
+    if (thumbCache[img.dataset.thumb]) return;
+    if (img.complete && img.naturalWidth === 0 && img.src.indexOf("data:") !== 0) queueThumb(img);
+    else img.addEventListener("error", () => queueThumb(img), {once:true});
+  });
 }

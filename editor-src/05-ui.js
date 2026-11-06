@@ -11,11 +11,19 @@ function furnPanel(){
   const src = S.furnSrc;
   let h = `<div class="sec"><h3>Arredi, verde e persone</h3><div class="seg" id="furnSrc"><button data-fs="lib" aria-pressed="${src==="lib"}">Libreria interna</button><button data-fs="online" aria-pressed="${src==="online"}">Poly Haven</button><button data-fs="personal" aria-pressed="${src==="personal"}">Personale</button></div>`;
   if (src === "lib"){
-    h += `<div class="cats">${LIB_CATS.map(c=>`<button data-fcat="${c}" aria-pressed="${S.furnCat===c}">${c}</button>`).join("")}</div>
-      <div class="grid-lib">${LIB.filter(it=>it.cat===S.furnCat).map(it=>`<button data-furn="${it.ref}" aria-pressed="${S.furn===it.ref}">${esc(it.nome)}${it.real?'<span class="badge">reale</span>':""}<small>${it.dim}${it.credit?` · ${esc(it.credit)}`:""}</small></button>`).join("")}</div>
-      <p class="note">Clicca in pianta per posizionare. I modelli <b>reali</b> si caricano dalla cartella <b>assets</b> al primo uso.</p>`;
+    const it = LIBMAP[S.furn], st = TPL[S.furn]?.status;
+    h += `${it ? `<div class="libsel">${thumbImg(it.ref)}<div><b>${esc(it.nome)}</b><small>${esc(it.cat)} · ${esc(it.dim)}${it.credit ? ` · ${esc(it.credit)}` : ""}</small><p class="note">${st === "loading" ? "Carico il modello…" : st === "err" ? "Modello non disponibile: manca la cartella assets?" : "Clicca in pianta per posizionarlo · poi ruotalo e scalalo qui."}</p></div></div>` : ""}
+      <div class="f"><input id="libQ" class="inp" type="search" placeholder="Cerca nella libreria (es. sedia, olivo, doccia)" value="${esc(S.libQ || "")}" aria-label="Cerca nella libreria"></div>
+      <div class="cats">${LIB_CATS.map(c=>`<button data-fcat="${esc(c)}" aria-pressed="${!S.libQ && S.furnCat===c}">${esc(c)} <span>${LIB.filter(x=>x.cat===c).length}</span></button>`).join("")}</div>
+      <div class="grid-lib" id="libGrid">${libGridHTML()}</div>
+      <p class="note">I modelli <b>reali</b> si caricano dalla cartella <b>assets</b> al primo uso.</p>`;
   } else h += onlinePanelHTML();
   return h + `</div>`;
+}
+function libItems(){ const q = (S.libQ || "").trim().toLowerCase(); return q ? LIB.filter(x => (x.nome + " " + x.cat + " " + x.ref).toLowerCase().includes(q)) : LIB.filter(x => x.cat === S.furnCat); }
+function libGridHTML(){
+  const items = libItems(); if (!items.length) return `<p class="note">Nessun oggetto trovato.</p>`;
+  return items.map(it => `<button data-furn="${esc(it.ref)}" aria-pressed="${S.furn===it.ref}" title="${esc(it.nome)}"><span class="th">${thumbImg(it.ref)}${it.real ? '<span class="badge">reale</span>' : ""}</span><span class="nm">${esc(it.nome)}</span><small>${esc(it.dim)}</small></button>`).join("");
 }
 function renderInspector(){
   const el = $("#panel-props"); if (!P) return; const sel = findSel(), L = level(); let h = "";
@@ -51,7 +59,7 @@ function renderInspector(){
         <span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, sel.mat, "rm")}<div class="btns"><button class="btn" id="camRoom">Vista interna</button><button class="btn danger" id="delSel">Elimina</button></div></div>`; }
     if (S.sel.type === "object"){
       const it = sel.kind === "lib" ? LIBMAP[libRef(sel.ref)] : null, imp = sel.kind === "import" ? importStore[sel.ref] : null, fp = objFootprint(sel);
-      h += `<div class="sec"><h3>${it ? esc(it.cat) : imp?.source?.type === "polyhaven" ? "Poly Haven" : "Modello importato"}</h3>${F("obName","Nome",sel.name)}<div class="row">${F("obX","X (m)",fmt(sel.x),'inputmode="decimal"')}${F("obY","Y (m)",fmt(sel.y),'inputmode="decimal"')}</div>
+      h += `<div class="sec"><h3>${it ? esc(it.cat) : imp?.source?.type === "polyhaven" ? "Poly Haven" : "Modello importato"}</h3>${it ? `<div class="libsel">${thumbImg(it.ref)}<div><b>${esc(it.nome)}</b><small>${esc(it.dim)}${it.credit ? ` · ${esc(it.credit)}` : ""}</small></div></div>` : ""}${F("obName","Nome",sel.name)}<div class="row">${F("obX","X (m)",fmt(sel.x),'inputmode="decimal"')}${F("obY","Y (m)",fmt(sel.y),'inputmode="decimal"')}</div>
         <div class="row3">${F("obR","Rotazione °",Math.round(sel.rot||0),'inputmode="decimal"')}${F("obS","Scala",fmt(sel.scale,2),'inputmode="decimal"')}${F("obZ","Quota (m)",fmt(sel.z||0),'inputmode="decimal"')}</div>
         <dl class="kv"><dt>Ingombro</dt><dd>${fmt(fp.w)} × ${fmt(fp.d)} × ${fmt(fp.h||0)} m</dd>${it?.credit?`<dt>Fonte</dt><dd>${esc(it.credit)}</dd>`:""}${imp?.source?.credit?`<dt>Fonte</dt><dd>${esc(imp.source.credit)}</dd>`:""}</dl>
         ${!objTemplate(sel) ? `<p class="note warn">${sel.kind === "import" ? "Il file di questo modello non è in memoria. Riapri il progetto salvato in JSON per ricaricarlo." : "Caricamento in corso…"}</p>` : ""}
@@ -63,7 +71,7 @@ function renderInspector(){
     h += `<div class="sec"><h3>Piano</h3>${F("lName","Nome",L.name)}<div class="row3">${F("lElev","Quota (m)",fmt(L.elev),'inputmode="decimal"')}${F("lH","Altezza muri",fmt(L.height),'inputmode="decimal"')}${F("lSlab","Solaio",fmt(L.slab),'inputmode="decimal"')}</div>
       <div class="row"><div class="f"><span class="lbl">Copertura</span><select id="lRoof" class="inp"><option value="none">Nessuna</option><option value="flat">Piana</option><option value="gable">A due falde</option></select></div>
       ${L.roof.type==="gable"?F("lPitch","Pendenza °",L.roof.pitch,'inputmode="decimal"'):"<div></div>"}</div>
-      ${L.roof.type!=="none"?`<div class="row">${F("lOv","Sporto (m)",fmt(L.roof.overhang),'inputmode="decimal"')}<div></div></div><span class="lbl">Manto</span>${swatches(ROOF_MATS, L.roof.mat, "roofm")}`:""}
+      ${L.roof.type!=="none"?`<div class="row">${F("lOv","Sporto (m)",fmt(L.roof.overhang),'inputmode="decimal"')}${L.roof.type==="gable"?`<div class="f"><span class="lbl">Colmo</span><select id="lRidge" class="inp"><option value="">Lato lungo</option><option value="x" ${L.roof.ridge==="x"?"selected":""}>Est–ovest</option><option value="y" ${L.roof.ridge==="y"?"selected":""}>Nord–sud</option></select></div>`:"<div></div>"}</div><span class="lbl">Manto</span>${swatches(ROOF_MATS, L.roof.mat, "roofm")}`:""}
       ${P.levels.length>1?`<div class="btns"><button class="btn danger" id="lDel">Elimina piano</button></div>`:""}</div>
       ${U?`<div class="sec"><h3>Base di ricalco</h3><div class="f"><label class="lbl" for="uOp">Opacità</label><input type="range" id="uOp" min="0.05" max="1" step="0.05" value="${U.opacity}"></div><div class="btns"><button class="btn" data-tool-go="calib">Calibra scala</button><button class="btn" data-tool-go="moveunder">Sposta</button><button class="btn danger" id="uDel">Rimuovi</button></div></div>`:""}
       <div class="sec"><h3>Vista 3D</h3><div class="seg" id="show3d"><button data-s="all">Tutto</button><button data-s="below">Fino a questo piano</button><button data-s="section">Sezione</button></div>
@@ -82,6 +90,7 @@ function renderInspector(){
   const sk = $("#skySel", el); if (sk) sk.value = P.sky?.kind === "ph" ? "ph" : (P.sky?.id || "giorno");
   $$("#show3d button", el).forEach(b => b.setAttribute("aria-pressed", b.dataset.s === S.show3d));
   if (S.tool === "furn" && S.furnSrc !== "lib") hydrateOnline();
+  hydrateThumbs(el);
 }
 const P_ = $("#panel-props");
 P_.addEventListener("change", e => {
@@ -114,6 +123,7 @@ P_.addEventListener("change", e => {
     case "lRoof": L.roof.type = e.target.value; commit(); break;
     case "lPitch": if (v>0){ L.roof.pitch = clamp(v,5,60); commit(); } break;
     case "lOv": if (v>=0){ L.roof.overhang = v; commit(); } break;
+    case "lRidge": if (e.target.value) L.roof.ridge = e.target.value; else delete L.roof.ridge; commit(); break;
     case "gChk": S.ground = e.target.checked; rebuild3D(); break;
     case "skySel": { const s = SKIES.find(x => x.id === e.target.value); if (s){ P.sky = {kind:"asset", id:s.id}; if (s.sun) P.sun.el = s.sun.el; save(); applySky(); placeSun(); renderInspector(); } break; }
     case "phSearch": hydrateOnline(); break;
@@ -124,11 +134,12 @@ P_.addEventListener("input", e => {
   if (t.id === "sAz" || t.id === "sEl"){ P.sun[t.id === "sAz" ? "az" : "el"] = +t.value; t.previousElementSibling.textContent = (t.id==="sAz"?"Orientamento sole · ":"Altezza sole · ") + t.value + "°"; placeSun(); render3D(); save(); }
   if (t.id === "sEx"){ S.exposure = +t.value; t.previousElementSibling.textContent = "Esposizione · " + fmt(S.exposure,2); placeSun(); render3D(); }
   if (t.id === "uOp"){ level().underlay.opacity = +t.value; draw2D(); save(); }
+  if (t.id === "libQ"){ S.libQ = t.value; const g = $("#libGrid"); if (g){ g.innerHTML = libGridHTML(); hydrateThumbs(g); } $$("[data-fcat]", P_).forEach(b => b.setAttribute("aria-pressed", !S.libQ && b.dataset.fcat === S.furnCat)); }
 });
 P_.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return; const sel = findSel(), L = level();
   if (b.dataset.fs){ S.furnSrc = b.dataset.fs; S.onlinePick = null; renderInspector(); return; }
-  if (b.dataset.fcat){ S.furnCat = b.dataset.fcat; renderInspector(); return; }
+  if (b.dataset.fcat){ S.furnCat = b.dataset.fcat; S.libQ = ""; renderInspector(); return; }
   if (b.dataset.furn){ S.furn = b.dataset.furn; const it = LIBMAP[S.furn]; if (it.load && !TPL[S.furn]) loadTpl(S.furn); renderInspector(); return; }
   if (b.dataset.phcat !== undefined){ S.phCat = b.dataset.phcat; hydrateOnline(); return; }
   if (b.dataset.pick){ S.onlinePick = JSON.parse(b.dataset.pick); $$("[data-pick]", P_).forEach(x => x.setAttribute("aria-pressed", x === b)); toast(`«${S.onlinePick.nome}»: clicca in pianta per posizionarlo`); return; }

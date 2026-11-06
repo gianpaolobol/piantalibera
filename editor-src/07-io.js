@@ -192,10 +192,11 @@ let dxfPending = null;
 function renderImport(){
   const el = $("#panel-import"); const pm = projMatKeys();
   el.innerHTML = `
-  <div class="exp"><header><h4>Pianta da ricalcare</h4><span class="tag">DXF · PDF · PNG · JPG</span></header>
+  ${autoPanelHTML()}
+  <div class="exp"><header><h4>Pianta da ricalcare</h4><span class="tag">DWG · DXF · PDF · PNG · JPG</span></header>
     <p class="note">La pianta diventa la base del piano corrente. Poi la calibri con una misura nota e ci disegni sopra muri e aperture.</p>
     <button class="btn primary" id="imPlan">Scegli file della pianta</button>
-    <p class="note">Hai un DWG? Salvalo come DXF dal tuo CAD: il DWG è un formato chiuso.</p></div>
+    <p class="note">Anche DWG: il lettore (libredwg) si scarica alla prima apertura.</p></div>
   ${dxfPending ? dxfPanel() : ""}
   <div class="exp"><header><h4>Modello 3D con materiali</h4><span class="tag">SketchUp · DAE · OBJ · glTF · FBX · 3DS · STL</span></header>
     <p class="note"><b>Da SketchUp:</b> File → Esporta → Modello 3D → <b>COLLADA (.dae)</b> con «Esporta mappe di texture». Seleziona insieme il file .dae e la cartella delle texture (o comprimi tutto in un .zip). Vanno bene anche OBJ+MTL+texture e glTF.</p>
@@ -243,7 +244,7 @@ PI.addEventListener("change", e => { const t = e.target;
 const readAs = (f, how) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r[how](f); });
 $("#fPlan").addEventListener("change", async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return;
   const ext = f.name.split(".").pop().toLowerCase();
-  try { if (ext === "dxf") await loadDXF(f); else if (ext === "pdf") await loadPDF(f); else setUnderlayImage(await readAs(f, "readAsDataURL"), f.name); }
+  try { if (ext === "dxf" || ext === "dwg") await loadDXF(f); else if (ext === "pdf") await loadPDF(f); else setUnderlayImage(await readAs(f, "readAsDataURL"), f.name); }
   catch(err){ console.error(err); toast("Non riesco a leggere il file: " + (err.message||err), true); }
 });
 $("#fTex").addEventListener("change", async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return;
@@ -268,25 +269,77 @@ async function loadPDF(f){
   setUnderlayImage(cv.toDataURL("image/jpeg", .85), f.name, (0.0254/72) * 100 / scale);
   toast("PDF caricato con ipotesi 1:100: verifica con Calibra");
 }
-async function loadDXF(f){
+/* ---------- Lettura CAD: DXF (dxf-parser) e DWG (libredwg in WebAssembly) ---------- */
+const DWG_LIB = "https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web@0.8.2";
+let dwgLib = null;
+async function readCAD(f){
+  const ext = f.name.split(".").pop().toLowerCase();
+  if (ext === "dwg"){
+    if (!dwgLib){
+      busy("Carico il lettore DWG (circa 11 MB, solo la prima volta)…");
+      try { const m = await import(DWG_LIB + "/dist/libredwg-web.js"); dwgLib = await m.LibreDwg.create(DWG_LIB + "/wasm"); }
+      catch(e){ console.warn(e); throw new Error("lettore DWG non disponibile (serve la connessione). In alternativa salva il disegno come DXF"); }
+      finally { busy(""); }
+    }
+    let db;
+    try { const ptr = dwgLib.dwg_read_data(await readAs(f, "readAsArrayBuffer"), 0); if (!ptr) throw new Error("file non riconosciuto"); db = dwgLib.convert(ptr); dwgLib.dwg_free(ptr); }
+    catch(e){ console.warn(e); throw new Error("questo DWG non si legge (versione o contenuto non supportati): salvalo come DXF dal tuo CAD e riprova"); }
+    return dwgToDxf(db);
+  }
   await loadScript("https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js");
-  const Parser = window.DxfParser?.default || window.DxfParser; const dxf = new Parser().parseSync(await readAs(f, "readAsText"));
-  const segs = [];
-  const T = (p, tr) => { const x = p.x*tr.sx, y = p.y*tr.sy; const c = Math.cos(tr.r), s = Math.sin(tr.r); return [x*c - y*s + tr.x, x*s + y*c + tr.y]; };
+  const Parser = window.DxfParser?.default || window.DxfParser; return new Parser().parseSync(await readAs(f, "readAsText"));
+}
+/** Database di libredwg → stessa forma di dxf-parser, così il resto del codice è uno solo. */
+function dwgToDxf(db){
+  const P2 = p => p ? {x:p.x || 0, y:p.y || 0} : {x:0, y:0};
+  const conv = e => { const layer = e.layer || "0";
+    switch (e.type){
+      case "LINE": return {type:"LINE", layer, vertices:[P2(e.startPoint), P2(e.endPoint)]};
+      case "LWPOLYLINE": case "POLYLINE2D": case "POLYLINE3D": return {type:"LWPOLYLINE", layer, vertices:(e.vertices || []).map(P2), shape:!!((e.flag || 0) & 513)};
+      case "ARC": return {type:"ARC", layer, center:P2(e.center), radius:e.radius, startAngle:e.startAngle, endAngle:e.endAngle};
+      case "CIRCLE": return {type:"CIRCLE", layer, center:P2(e.center), radius:e.radius};
+      case "TEXT": return {type:"TEXT", layer, text:e.text, startPoint:P2(e.startPoint || e.insertionPoint), textHeight:e.textHeight};
+      case "MTEXT": return {type:"MTEXT", layer, text:e.text, position:P2(e.insertionPoint), height:e.textHeight};
+      case "INSERT": return {type:"INSERT", layer, name:e.name, position:P2(e.insertionPoint), xScale:e.xScale || 1, yScale:e.yScale || 1, rotation:(e.rotation || 0) * 180 / Math.PI,
+        attribs:(e.attribs || []).map(a => ({type:"TEXT", layer:a.layer || layer, text:a.text?.text ?? a.text, startPoint:P2(a.text?.startPoint || a.startPoint)}))};
+      default: return null;
+    } };
+  const blocks = {};
+  for (const b of db.tables?.BLOCK_RECORD?.entries || []) if (b.name && !/^\*(model|paper)_space/i.test(b.name)) blocks[b.name] = {position:P2(b.basePoint), entities:(b.entities || []).map(conv).filter(Boolean)};
+  return {entities:(db.entities || []).map(conv).filter(Boolean), blocks, header:{$INSUNITS:db.header?.INSUNITS}};
+}
+/** Esplode blocchi e polilinee: segmenti, archi (centro e raggio) e testi, nelle unità del disegno, y verso l'alto. */
+function flattenCAD(dxf){
+  const segs = [], arcs = [], texts = [];
+  const T = (p, tr) => { const x = (p?.x||0)*tr.sx, y = (p?.y||0)*tr.sy; const c = Math.cos(tr.r), s = Math.sin(tr.r); return [x*c - y*s + tr.x, x*s + y*c + tr.y]; };
   const walk = (ents, tr, depth, layerOverride) => { for (const en of ents || []){ const lay = (en.layer === "0" && layerOverride) ? layerOverride : (en.layer || "0");
     if (en.type === "LINE" && en.vertices?.length >= 2){ const a = T(en.vertices[0], tr), b = T(en.vertices[1], tr); segs.push([a[0],a[1],b[0],b[1],lay]); }
     else if ((en.type === "LWPOLYLINE" || en.type === "POLYLINE") && en.vertices?.length){ const v = en.vertices.map(p=>T(p,tr)); for (let i=0;i<v.length-1;i++) segs.push([v[i][0],v[i][1],v[i+1][0],v[i+1][1],lay]); if (en.shape || en.closed) segs.push([v[v.length-1][0],v[v.length-1][1],v[0][0],v[0][1],lay]); }
-    else if (en.type === "ARC" || en.type === "CIRCLE"){ let a0 = en.startAngle ?? 0, a1 = en.endAngle ?? Math.PI*2; if (a1 < a0) a1 += Math.PI*2; const n = Math.max(6, Math.ceil((a1-a0)/(Math.PI/16))); let prev = null; for (let i=0;i<=n;i++){ const a = a0 + (a1-a0)*i/n, p = T({x:en.center.x + Math.cos(a)*en.radius, y:en.center.y + Math.sin(a)*en.radius}, tr); if (prev) segs.push([prev[0],prev[1],p[0],p[1],lay]); prev = p; } }
-    else if (en.type === "INSERT" && depth < 4){ const bl = dxf.blocks?.[en.name]; if (bl){ const r = (en.rotation||0)*Math.PI/180, sx = en.xScale||1, sy = en.yScale||1; const bx = bl.position?.x||0, by = bl.position?.y||0;
+    else if (en.type === "ARC" || en.type === "CIRCLE"){ let a0 = en.startAngle ?? 0, a1 = en.endAngle ?? Math.PI*2; if (a1 < a0) a1 += Math.PI*2; const sc = Math.abs(tr.sx); const cc = T(en.center, tr); arcs.push({cx:cc[0], cy:cc[1], r:en.radius*sc, layer:lay, full:en.type === "CIRCLE"});
+      const n = Math.max(6, Math.ceil((a1-a0)/(Math.PI/16))); let prev = null; for (let i=0;i<=n;i++){ const a = a0 + (a1-a0)*i/n, p = T({x:en.center.x + Math.cos(a)*en.radius, y:en.center.y + Math.sin(a)*en.radius}, tr); if (prev) segs.push([prev[0],prev[1],p[0],p[1],lay]); prev = p; } }
+    else if ((en.type === "TEXT" || en.type === "MTEXT") && en.text){ const p = T(en.startPoint || en.position || en.insertionPoint, tr); texts.push({x:p[0], y:p[1], text:en.text, layer:lay}); }
+    else if (en.type === "INSERT" && depth < 4){
+      for (const a of en.attribs || []) if (a.text){ const p = T(a.startPoint, {sx:1, sy:1, r:0, x:0, y:0}); texts.push({x:p[0], y:p[1], text:a.text, layer:a.layer || lay}); }
+      const bl = dxf.blocks?.[en.name]; if (bl){ const r = (en.rotation||0)*Math.PI/180, sx = en.xScale||1, sy = en.yScale||1; const bx = bl.position?.x||0, by = bl.position?.y||0;
       const sub = {sx: tr.sx*sx, sy: tr.sy*sy, r: tr.r + r, x: 0, y: 0}; const ip = T(en.position, tr); const c = Math.cos(sub.r), s = Math.sin(sub.r); sub.x = ip[0] - (bx*sub.sx*c - by*sub.sy*s); sub.y = ip[1] - (bx*sub.sx*s + by*sub.sy*c); walk(bl.entities, sub, depth+1, lay); } } } };
   walk(dxf.entities, {sx:1, sy:1, r:0, x:0, y:0}, 0);
-  if (!segs.length) throw new Error("nessuna linea trovata nel DXF");
+  const ins = dxf.header?.$INSUNITS; const unit = ins === 4 ? .001 : ins === 5 ? .01 : ins === 6 ? 1 : segs.length ? guessUnit(segs, arcs) : 1;
+  return {segs, arcs, texts, unit};
+}
+async function loadDXF(f){
+  const {segs, unit} = flattenCAD(await readCAD(f));
+  if (!segs.length) throw new Error("nessuna linea trovata nel disegno");
   const layers = {}; segs.forEach(s => layers[s[4]] = (layers[s[4]]||0) + 1);
-  const ins = dxf.header?.$INSUNITS; const unit = ins === 4 ? .001 : ins === 5 ? .01 : ins === 6 ? 1 : guessUnit(segs);
   dxfPending = {name:f.name, segs, layers, sel:new Set(Object.keys(layers)), mode:"vec", unit, count:segs.length};
   S.tab = "import"; renderTabs();
 }
-function guessUnit(segs){ const xs = segs.flatMap(s=>[s[0],s[2]]), w = Math.max(...xs) - Math.min(...xs); return w > 2000 ? .001 : w > 200 ? .01 : 1; }
+/** Unità del disegno quando l'intestazione non la dice: prima dai raggi delle porte (~0,8–1 m), poi dalla larghezza. */
+function guessUnit(segs, arcs = []){
+  const rs = arcs.filter(a => !a.full).map(a => a.r).sort((a,b) => a-b);
+  if (rs.length >= 2){ const r = rs[rs.length >> 1]; for (const u of [1, .01, .001]) if (r * u > .5 && r * u < 1.4) return u; }
+  let x0 = Infinity, x1 = -Infinity; for (const s of segs){ if (s[0] < x0) x0 = s[0]; if (s[2] < x0) x0 = s[2]; if (s[0] > x1) x1 = s[0]; if (s[2] > x1) x1 = s[2]; }
+  const w = x1 - x0; return w > 30000 ? .001 : w > 300 ? .01 : 1;
+}
 function applyDXF(){
   const d = dxfPending, u = d.unit, segs = d.segs.filter(s => d.sel.has(s[4])); if (!segs.length){ toast("Seleziona almeno un layer", true); return; }
   const xs = segs.flatMap(s=>[s[0],s[2]]), ys = segs.flatMap(s=>[s[1],s[3]]); const minX = Math.min(...xs), maxY = Math.max(...ys);

@@ -17,5 +17,10 @@ Arredi realistici (assets/arredi/) — Khronos glTF Sample Assets
 
 Librerie JavaScript (da CDN)
   three.js r147 (MIT), fflate (MIT), dxf-parser (MIT), pdf.js (Apache 2.0).
+  @mlightcad/libredwg-web 0.8.2 (GPL-3.0, basato su GNU LibreDWG): caricato da jsDelivr solo per aprire i DWG,
+  non incluso nel repository. Da valutare con il proprietario la compatibilità con la licenza del progetto.
+
+Anteprime della libreria (assets/anteprime/*.webp)
+  Generate da scripts/build-thumbs.mjs con i modelli dell'app; stesse licenze dei modelli di origine.
 
 Alberi, arbusti, palme, sagome di persone e arredi parametrici sono generati dal codice dell'app.
