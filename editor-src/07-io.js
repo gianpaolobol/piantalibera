@@ -116,10 +116,16 @@ function aiPrompt(){
   const trees = [...new Set(P.objects.filter(o => LIBMAP[libRef(o.ref)]?.cat === "Verde").map(o => LIBMAP[libRef(o.ref)].nome.toLowerCase()))];
   const people = P.objects.some(o => LIBMAP[libRef(o.ref)]?.cat === "Persone");
   const n = P.levels.length;
-  return `Fotografia architettonica fotorealistica di un edificio ${n>1?`a ${n} piani`:"a un piano"}${roof?`, ${roof}`:""}, facciate in ${mats.join(" e ")}, serramenti in alluminio antracite con grandi vetrate, pavimenti interni in ${floors.join(" e ") || "legno"}. ${luce[0].toUpperCase()+luce.slice(1)}. ${trees.length ? `Vegetazione: ${trees.join(", ")}, prato curato.` : "Giardino curato con prato."}${people ? " Alcune persone a misura d'uomo danno la scala." : ""} Obiettivo 24 mm, inquadratura a misura d'uomo, colori naturali, alta definizione.
-Mantieni esattamente geometria, aperture, proporzioni e punto di vista dell'immagine di riferimento; non aggiungere piani o volumi.
+  // punto di vista reale della camera: il prompt non deve contraddire l'immagine di riferimento
+  let pitch = 10, interno = false;
+  try { const d = controls.target.clone().sub(camera.position); pitch = Math.atan2(-d.y, Math.hypot(d.x, d.z)) * 180 / Math.PI; interno = camera.fov > 55; } catch(e){}
+  const vista = pitch > 40 ? ["vista aerea dall'alto: si vedono solo il terreno e la copertura, niente cielo né orizzonte", "high aerial view looking down, no sky, no horizon"]
+    : pitch > 15 ? ["vista a volo d'uccello dall'alto, inclinata", "elevated bird's-eye view"]
+    : ["inquadratura a altezza d'uomo", "eye-level"];
+  return `Fotografia architettonica fotorealistica di un edificio ${n>1?`a ${n} piani`:"a un piano"}${roof?`, ${roof}`:""}, facciate in ${mats.join(" e ")}, serramenti in alluminio antracite con grandi vetrate${interno ? `, pavimenti interni in ${floors.join(" e ") || "legno"}` : ""}. ${luce[0].toUpperCase()+luce.slice(1)}. ${trees.length ? `Vegetazione: ${trees.join(", ")}, prato curato.` : "Giardino curato con prato."}${interno ? "" : " Intorno all'edificio il terreno resta a prato come nel modello, senza pavimentazioni, muri o recinzioni aggiunti."}${people ? " Alcune persone a misura d'uomo danno la scala." : ""} Obiettivo 24 mm, ${vista[0]}, colori naturali, alta definizione.
+Mantieni esattamente geometria, aperture, proporzioni e punto di vista dell'immagine di riferimento; non aggiungere piani, volumi, muri o recinzioni.
 
-EN: Photorealistic architectural photograph, ${n>1?n+"-storey":"single-storey"} building, ${roofL?.roof.type==="gable"?"pitched gable roof with clay tiles":"flat roof"}, ${ws.some(w=>w.mat==="mattone")?"exposed brick and ":""}rendered facades, anthracite aluminium window frames, ${el<12?"warm golden-hour light":el<30?"soft afternoon light":"bright daylight, light clouds"}, ${trees.length ? trees.length + " kinds of mature trees, " : ""}landscaped garden${people ? ", a few people for scale" : ""}, 24mm lens, eye-level, natural colours. Keep the exact geometry, openings, proportions and camera angle of the reference image.`;
+EN: Photorealistic architectural photograph, ${n>1?n+"-storey":"single-storey"} building, ${roofL?.roof.type==="gable"?"pitched gable roof with clay tiles":"flat roof"}, ${ws.some(w=>w.mat==="mattone")?"exposed brick and ":""}rendered facades, anthracite aluminium window frames, ${el<12?"warm golden-hour light":el<30?"soft afternoon light":"bright daylight, light clouds"}, ${trees.length ? trees.length + " kinds of mature trees, " : ""}landscaped garden${interno ? "" : ", lawn all around exactly as in the model, no added paving, walls or fences"}${people ? ", a few people for scale" : ""}, 24mm lens, ${vista[1]}, natural colours. Keep the exact geometry, openings, proportions and camera angle of the reference image.`;
 }
 /* stampa 3D */
 function printGroups(){
