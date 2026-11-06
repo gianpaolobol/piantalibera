@@ -14,7 +14,7 @@ const CONTRACT_TEMPLATE = `{
   "depth": "{{depth_dataurl}}",
   "lines": "{{lines_dataurl}}",
   "camera": {{camera}},
-  "params": {"strength": {{strength}}, "seed": {{seed}}, "variants": {{variants}}, "width": {{width}}, "height": {{height}}},
+  "params": {"strength": {{strength}}, "seed": {{seed}}, "variants": {{variants}}, "width": {{width}}, "height": {{height}}, "use_guides": {{use_guides}}},
   "project": {"name": "{{project}}"}
 }`;
 const AI_PRESETS = {
@@ -48,13 +48,13 @@ const ADV_TEMPLATE = `{
 const AI_VARS = [
   ["image","vista PNG in base64"],["image_dataurl","vista come data URL"],["depth","profondità base64"],["depth_dataurl",""],["lines","contorni base64"],["lines_dataurl",""],
   ["materials","mappa materiali base64"],["materials_dataurl",""],["materials_legend","legenda colori → materiali (JSON)"],["prompt",""],["negative",""],["model",""],
-  ["strength","0–1"],["steps",""],["guidance",""],["seed",""],["variants",""],["width",""],["height",""],["w_depth",""],["w_lines",""],["w_seg",""],["project","nome progetto"],["camera","posizione, target, fov e proporzioni (oggetto JSON)"],["render_mode","fedele o creativo"],["scene","interni o esterni"]];
+  ["strength","0–1"],["steps",""],["guidance",""],["seed",""],["variants",""],["width",""],["height",""],["w_depth",""],["w_lines",""],["w_seg",""],["project","nome progetto"],["camera","posizione, target, fov e proporzioni (oggetto JSON)"],["render_mode","fedele o creativo"],["scene","interni o esterni"],["use_guides","true/false: usa profondità e contorni"]];
 function aiDefaults(){ return {
   mode:"base",
-  base:{preset:"pianta", conn:"direct", url:"/api/render", authHeader:"Authorization", authValue:"", model:"", strength:.45, longSide:1536, prompt:"", renderMode:"fedele", ...pick(AI_PRESETS.pianta)},
+  base:{preset:"pianta", conn:"direct", url:"/api/render", authHeader:"Authorization", authValue:"", model:"", strength:.45, longSide:512, outLongSide:1024, guides:true, prompt:"", renderMode:"fedele", ...pick(AI_PRESETS.pianta)},
   adv:{conn:"direct", url:"/api/render", authHeader:"Authorization", authValue:"", model:"", contentType:"json", template:ADV_TEMPLATE, extraHeaders:"", renderMode:"fedele",
     resultPath:"", pollUrlPath:"", jobIdPath:"", pollTemplate:"", statusPath:"", doneValues:"succeeded,completed,done", failValues:"failed,error,canceled", interval:2, timeout:300,
-    prompt:"", negative:"cartoon, disegno, distorsione, persone deformi, testo, filigrana, geometria alterata", strength:.4, steps:30, guidance:6, seed:-1, variants:2, longSide:1536, w_depth:.8, w_lines:.6, w_seg:.3},
+    prompt:"", negative:"cartoon, disegno, distorsione, persone deformi, testo, filigrana, geometria alterata", strength:.4, steps:30, guidance:6, seed:-1, variants:2, longSide:1536, outLongSide:1536, guides:true, w_depth:.8, w_lines:.6, w_seg:.3},
 }; function pick(p){ const {nome, ...r} = p; return r; } }
 let AI = (() => { try { const s = JSON.parse(localStorage.getItem(AI_KEY)); if (s?.base && s?.adv) return {...aiDefaults(), ...s, base:{...aiDefaults().base, ...s.base}, adv:{...aiDefaults().adv, ...s.adv}}; } catch(e){} return aiDefaults(); })();
 const aiResults = []; let aiLastRaw = "", aiBusy = false;
@@ -64,7 +64,7 @@ function connBlock(pf, c){
   const isBackend = pf === "b" ? AI_PRESETS[c.preset]?.backend : !c.authValue && /^\/|^\.\.?\//.test(c.url || "");
   return `${AF(pf+"_url","Endpoint",c.url,'placeholder="/api/render"')}
     ${pf === "b" && isBackend ? `${AF(pf+"_pollTemplate","Stato del lavoro",c.pollTemplate,'placeholder="/api/render/{{job}}"')}
-      <p class="note">Il backend del progetto tiene la chiave del servizio AI, applica le quote e restituisce il lavoro. Con <b>npm run mock</b> risponde un finto servizio di prova; sul sito PHP usa <b>../api/render.php</b> e <b>../api/render.php?id={{job}}</b>.</p>`
+      <p class="note">Il backend del progetto tiene la chiave del servizio AI, applica le quote e restituisce il lavoro. In locale <b>npm run dev</b> risponde con un servizio di prova; su Cloudflare risponde il Worker con FLUX.2 klein; sul sito PHP usa <b>../api/render.php</b> e <b>../api/render.php?id={{job}}</b>.</p>`
     : `<div class="row">${AF(pf+"_authHeader","Intestazione chiave",c.authHeader)}${AF(pf+"_authValue","Valore",c.authValue,'type="password" autocomplete="off" placeholder="Bearer …"')}</div>
       <p class="note warn">Chiamata diretta al servizio: la chiave resta solo in questo browser. Va bene per prove in locale, non per il sito pubblico, dove serve il backend con le quote.</p>`}`;
 }
@@ -79,6 +79,9 @@ function renderAI(){
     ${connBlock("b", b)}
     <div class="row"><div class="f"><span class="lbl">Tipo di render</span><select id="b_renderMode" class="inp"><option value="fedele" ${b.renderMode!=="creativo"?"selected":""}>Fedele alla geometria</option><option value="creativo" ${b.renderMode==="creativo"?"selected":""}>Creativo</option></select></div>${AF("b_model","Modello",b.model,'placeholder="facoltativo"')}</div>
     <p class="note">Anche in modalità fedele un modello generativo può cambiare dettagli: controlla aperture, muri e coperture prima di usare l'immagine.</p>
+    <div class="row">${AF("b_longSide","Lato vista inviata (px)",b.longSide,'inputmode="numeric"')}${AF("b_outLongSide","Lato render (px)",b.outLongSide,'inputmode="numeric"')}</div>
+    <label class="chk"><input type="checkbox" id="b_guides" ${b.guides?"checked":""}> Invia anche profondità e contorni come guida</label>
+    <p class="note">FLUX.2 klein su Cloudflare accetta immagini di riferimento fino a 512 px; il render può uscire fino a 1920 px.</p>
     <div class="f"><label class="lbl" for="b_strength">Libertà creativa · ${fmt(b.strength,2)}</label><input type="range" id="b_strength" min="0.1" max="0.9" step="0.05" value="${b.strength}"></div>
     <p class="note">Valori bassi rispettano di più la geometria della vista.</p>
     <div class="f"><label class="lbl" for="b_prompt">Prompt</label><textarea id="b_prompt" class="inp">${esc(b.prompt || aiPrompt())}</textarea></div>
@@ -117,6 +120,7 @@ const PA = $("#panel-ai");
 function aiField(id, val){ const [pf, ...rest] = id.split("_"); const key = rest.join("_"); const tgt = pf === "b" ? AI.base : pf === "a" ? AI.adv : null; if (!tgt || !(key in tgt)) return false; const numeric = typeof aiDefaults()[pf === "b" ? "base" : "adv"][key] === "number"; tgt[key] = numeric ? (num(val) ?? tgt[key]) : val; aiSave(); return true; }
 PA.addEventListener("input", e => { const t = e.target; if (t.id === "b_strength"){ AI.base.strength = +t.value; t.previousElementSibling.textContent = "Libertà creativa · " + fmt(AI.base.strength,2); aiSave(); return; } if (t.tagName === "TEXTAREA") aiField(t.id, t.value); });
 PA.addEventListener("change", e => { const t = e.target;
+  if (t.id === "b_guides"){ AI.base.guides = t.checked; aiSave(); return; }
   if (t.id === "b_preset"){ const p = AI_PRESETS[t.value]; const {nome, backend, ...rest} = p; AI.base = {...AI.base, preset:t.value, resultPath:"", pollUrlPath:"", jobIdPath:"", pollTemplate:"", statusPath:"", doneValues:"", failValues:"", url:"", ...rest}; aiSave(); renderAI(); return; }
   aiField(t.id, t.value);
 });
@@ -150,12 +154,15 @@ async function buildVars(cfg, test){
   const size = renderer.getSize(new THREE.Vector2()), long = test ? 256 : (cfg.longSide || 1536);
   const opts = {longSide: long};
   const beauty = renderAt(1, null, {...opts, hq:true});
-  const need = k => (cfg.template || "").includes(k);
+  const guides = cfg.guides !== false;
+  const need = k => guides && (cfg.template || "").includes(k);
+  const outL = clamp(+cfg.outLongSide || long, 256, 1920), ar = size.x / size.y;
+  const ow = Math.round((ar >= 1 ? outL : outL*ar)/16)*16, oh = Math.round((ar >= 1 ? outL/ar : outL)/16)*16;
   const depth = need("depth") ? depthCanvas(1, opts) : null, lines = need("lines") ? linesCanvas(1, opts) : null, mats = need("materials") ? materialsCanvas(1, opts) : null;
   const d64 = c => c ? c.toDataURL("image/png") : "";
   const vars = {image_dataurl:d64(beauty), depth_dataurl:d64(depth), lines_dataurl:d64(lines), materials_dataurl:d64(mats?.canvas), materials_legend:JSON.stringify(mats?.legend || {}),
     prompt: cfg.prompt || aiPrompt(), negative: cfg.negative || "", model: cfg.model || "", strength: +cfg.strength || .4, steps: +cfg.steps || 30, guidance: +cfg.guidance || 6,
-    seed: (+cfg.seed >= 0 ? +cfg.seed : Math.floor(Math.random()*2**31)), variants: clamp(+cfg.variants || 1, 1, 8), width: beauty.width, height: beauty.height,
+    seed: (+cfg.seed >= 0 ? +cfg.seed : Math.floor(Math.random()*2**31)), variants: clamp(+cfg.variants || 1, 1, 8), width: clamp(ow, 256, 1920), height: clamp(oh, 256, 1920), use_guides: guides,
     w_depth: +cfg.w_depth || 0, w_lines: +cfg.w_lines || 0, w_seg: +cfg.w_seg || 0, project: P.name,
     render_mode: cfg.renderMode === "creativo" ? "creativo" : "fedele", scene: S.show3d === "all" && camera.position.y > level().elev + 2.2 ? "esterni" : (camera.fov > 55 ? "interni" : "esterni"),
     camera: {position:camera.position.toArray().map(v=>+v.toFixed(3)), target:controls.target.toArray().map(v=>+v.toFixed(3)), fov:camera.fov, aspect:+camera.aspect.toFixed(4), units:"m", up:"y"}};
@@ -219,7 +226,7 @@ async function runAI(test){
     const now = new Date().toLocaleTimeString("it-IT", {hour:"2-digit", minute:"2-digit"});
     imgs.forEach(src => aiResults.unshift({src, before, time:now, mode: (data.mock ? "prova · " : "") + (vars.render_mode === "creativo" ? "creativo" : "fedele"), prompt:vars.prompt}));
     if (data.mock) toast("Risposta del servizio di prova: l'immagine è la vista inviata, non un render AI");
-    aiBusy = false; renderAI(); aiStatus(test ? `Connessione riuscita: ${imgs.length} immagine ricevuta in ${Math.round((Date.now()-t0)/1000)} s.` : `${imgs.length} render ricevuti in ${Math.round((Date.now()-t0)/1000)} s.`, "ok");
+    aiBusy = false; renderAI(); aiStatus(test ? `Connessione riuscita: ${imgs.length} immagine ricevuta in ${Math.round((Date.now()-t0)/1000)} s.` : `${imgs.length} render ricevuti in ${Math.round((Date.now()-t0)/1000)} s.${data.mock ? " Servizio di prova: l'immagine è la vista inviata, non un render AI." : ""}`, "ok");
     if (!test) openCompare(aiResults[0]);
   } catch(err){ console.warn(err); aiBusy = false; renderAI(); aiStatus("Non riuscito: " + (err.message || err), "err"); }
 }

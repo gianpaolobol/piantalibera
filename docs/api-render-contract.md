@@ -1,6 +1,6 @@
 # Contratto API di render — `/api/render`
 
-Versione 1 · 6 novembre 2026 · implementato da: servizio di prova `server/mock-render-server.mjs`, backend PHP `server/php/api/render.php`, client nell'editor (`editor-src/08-ai.js`, preset «Backend Pianta Libera»).
+Versione 1.1 · 6 novembre 2026 · validazione condivisa in `shared/contract.js` · implementato da: Worker Cloudflare `worker/src/index.js` (Workers AI, FLUX.2 klein 4B), servizio di prova `server/mock-render-server.mjs`, backend PHP `server/php/api/render.php`, client `editor-src/08-ai.js` (preset «Backend Pianta Libera»).
 
 Il client non conosce il fornitore AI. Manda la vista del modello e i metadati di scena; il backend sceglie il fornitore, tiene le chiavi, applica le quote.
 
@@ -19,7 +19,7 @@ Il client non conosce il fornitore AI. Manda la vista del modello e i metadati d
   "lines": "data:image/png;base64,…",
   "materials": "data:image/png;base64,…",
   "camera": {"position": [20, 4, 22], "target": [5.5, 1.5, 4], "fov": 45, "aspect": 1.33, "units": "m", "up": "y"},
-  "params": {"strength": 0.45, "seed": 123, "variants": 1, "width": 1536, "height": 1152},
+  "params": {"strength": 0.45, "seed": 123, "variants": 1, "width": 1024, "height": 768, "use_guides": true},
   "project": {"name": "Casa unifamiliare"},
   "turnstile": "token facoltativo"
 }
@@ -30,11 +30,12 @@ Il client non conosce il fornitore AI. Manda la vista del modello e i metadati d
 | `mode` | sì | `fedele` (conserva la geometria, uso architettonico) o `creativo` (può reinterpretare; va etichettato) |
 | `scene` | no | `interni` / `esterni` |
 | `prompt` | sì | max 4000 caratteri |
-| `image` | sì | data URL PNG/JPEG/WebP, max 8 MB decodificati |
+| `image` | sì | data URL PNG/JPEG/WebP, max 8 MB decodificati; con klein lato massimo 512 px (il client lo rispetta) |
 | `depth`, `lines`, `materials` | no | stessi limiti; profondità (vicino = chiaro), contorni, zone dei materiali a colori piatti |
 | `camera` | no | `position` e `target` in metri, `fov` verticale in gradi |
-| `params.width/height` | no | 64–2048 px |
-| `params.variants` | no | 1–2 (PHP) · 1–4 (prova) |
+| `params.width/height` | no | interi 256–1920 px (dimensione del render in uscita) |
+| `params.variants` | no | 1–2 |
+| `params.use_guides` | no | `true` (predefinito): profondità e contorni vengono passati al modello come immagini di riferimento |
 
 Risposta `202` (lavoro accodato) oppure `200` (completato subito, backend sincrono) oppure `502` (fornitore in errore). Intestazione `Location` con l'URL dello stato.
 
@@ -44,7 +45,7 @@ Risposta `202` (lavoro accodato) oppure `200` (completato subito, backend sincro
 
 ## Stato e risultato
 
-`GET /api/render/:id` (Node) · `GET render.php?id=:id` (PHP)
+`GET /api/render/:id` (Worker, prova) · `GET render.php?id=:id` (PHP) · immagini: `GET /api/render/:id/image/:n`
 
 ```json
 {"id": "…", "status": "succeeded", "images": ["/api/render.php?id=…&img=0"], "expires_at": "…", "mock": false}
@@ -80,8 +81,13 @@ Sempre `{"error": {"code": "…", "message": "…"}}`.
 
 Variabili d'ambiente (solo nomi): `PL_PROVIDER_MODE`, `PL_PROVIDER_URL`, `PL_PROVIDER_AUTH`, `PL_PROVIDER_TIMEOUT`, `PL_KILL_SWITCH`, `PL_PER_IP_DAILY`, `PL_GLOBAL_DAILY`, `PL_TURNSTILE_SECRET`, `PL_ALLOWED_ORIGINS`, `PL_IP_SALT`, `PL_DATA_DIR`.
 
+## Fornitore
+
+Per i test: **Cloudflare Workers AI, `@cf/black-forest-labs/flux-2-klein-4b`** (decisione del proprietario, 6/11/2026). Il Worker manda in multipart `prompt`, `width`, `height`, `seed` e fino a tre `input_image_N` (vista, profondità, contorni), con un prompt che chiede di conservare camera, aperture e volumi. Il modello restituisce `{image: base64}`. Dettagli e costi in [deploy-cloudflare.md](deploy-cloudflare.md).
+
 ## Aperto
 
-- **Fornitore non ancora scelto né verificato.** `provider_mode=forward` inoltra il contratto così com'è: serve l'adattatore specifico (Cloudflare Workers AI, ComfyUI con ControlNet depth/lineart…) dopo la verifica di modello, input supportati, prezzi e licenza.
+- Fedeltà geometrica da misurare sulle scene di prova; se insufficiente: klein 9B o ComfyUI con ControlNet depth/lineart.
+- Licenza d'uso commerciale di FLUX.2 klein 4B da confermare sui termini di Black Forest Labs.
 - Il backend PHP è sincrono (adatto all'hosting condiviso, limite pratico ~90 s). Per elaborazioni lunghe serve una coda vera (Worker + Queue, o servizio dedicato).
 - Account utente, metriche di consumo e informativa privacy per l'invio delle immagini a terzi.

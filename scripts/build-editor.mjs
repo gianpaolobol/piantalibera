@@ -1,13 +1,13 @@
-// Assembla public/editor/index.html dai sorgenti in editor-src/.
+// Assembla public/index.html dai sorgenti in editor-src/.
 // L'editor è una pagina statica: le librerie arrivano da CDN in versione fissata,
-// gli asset da public/editor/assets/. Uso: npm run build:editor  (oppure  --check  in CI)
+// gli asset da public/assets/. Uso: npm run build:editor  (oppure  --check  in CI)
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const src = join(root, "editor-src");
-const out = join(root, "public", "editor", "index.html");
+const out = join(root, "public", "index.html");
 
 const THREE = "https://cdn.jsdelivr.net/npm/three@0.147.0";
 const scripts = [
@@ -36,8 +36,8 @@ const html = [
 
 if (process.argv.includes("--check")) {
   const current = existsSync(out) ? readFileSync(out, "utf8") : "";
-  if (current !== html) { console.error("public/editor/index.html non è aggiornato: esegui npm run build:editor"); process.exit(1); }
-  console.log("public/editor/index.html è aggiornato");
+  if (current !== html) { console.error("public/index.html non è aggiornato: esegui npm run build:editor"); process.exit(1); }
+  console.log("public/index.html è aggiornato");
 } else {
   writeFileSync(out, html);
   console.log(`scritto ${out} (${(html.length / 1024).toFixed(0)} KB)`);

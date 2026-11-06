@@ -1,50 +1,52 @@
 # Pianta Libera
 
-Web app per modellazione architettonica 3D e rendering di interni ed esterni.
+Web app per modellare architettura in pianta e in 3D (interni ed esterni) e ottenere render fotorealistici **a partire dalla scena modellata**.
 
-## Stato
+## Prova
 
-Prima versione (MVP) con editor 3D nel browser, viste esterno/interno, elementi parametrici di base, materiali, esportazione PNG e progetto JSON. L'integrazione con un servizio AI è predisposta a livello di interfaccia e API, **non è ancora attiva**.
-
-## Avvio
+- Demo statica (dopo il primo deploy su `main`): https://gianpaolobol.github.io/piantalibera/ — la scheda Render AI qui non ha backend e lo dice.
+- In locale con il servizio di render di prova:
 
 ```bash
 npm install
-npm run mock      # editor completo + servizio di prova del render: http://localhost:8787/editor/
-npm run dev       # Vite: prototipo React su /, editor su /editor/, /api inoltrato al servizio di prova
+npm run dev        # http://localhost:8787/
 ```
 
-L'editor completo (pianta 2D → 3D, librerie, import/export, render AI) è descritto in [docs/editor.md](docs/editor.md). Il contratto del render è in [docs/api-render-contract.md](docs/api-render-contract.md).
+## Cosa fa
 
-## Funzioni
+- Pianta 2D con muri a spessore, porte e finestre parametriche, più piani, coperture, quote, aggancio, undo/redo.
+- 3D in tempo reale con cielo HDRI, ombre, occlusione ambientale, texture in scala reale.
+- Librerie: ~55 arredi e verde (alberi per specie), sagome di persone, Poly Haven (CC0), libreria personale.
+- Import: DXF, PDF, immagini, modelli DAE (SketchUp) / OBJ / glTF / FBX / 3DS / STL con materiali.
+- Export: GLB e OBJ per D5 Render, 3MF/STL per stampa 3D in scala, DXF, PNG, pacchetto per l'AI, progetto JSON.
+- Render AI tramite `/api/render`: vista + profondità + contorni + camera, modalità fedele o creativa, confronto prima/dopo.
 
-- Modello iniziale di edificio con pareti, copertura e aperture schematiche.
-- Vista esterna e vista interna navigabili con mouse o touch.
-- Inserimento di volumi e arredi schematici.
-- Modifica delle dimensioni e dei materiali dell'elemento selezionato.
-- Esportazione di uno screenshot PNG.
-- Salvataggio/apertura del progetto in JSON.
-- Punto di integrazione separato per il rendering AI (nessuna API key nel frontend).
+## Struttura
 
-## Architettura
+| Percorso | |
+|---|---|
+| `editor-src/` | sorgenti dell'editor (moduli JS) |
+| `public/` | sito pronto: `index.html` generato + `assets/` |
+| `shared/contract.js` | validazione del contratto `/api/render` |
+| `worker/` | Worker Cloudflare: asset statici + API con Workers AI (FLUX.2 klein 4B) |
+| `server/mock-render-server.mjs` | servizio locale di prova |
+| `server/php/api/` | backend alternativo per hosting PHP condiviso |
+| `tests/` | test del Worker (node:test) e dell'editor (Playwright) |
 
-- React + Vite + Three.js tramite React Three Fiber e Drei.
-- Rendering realtime WebGL locale al browser.
-- Render AI in futuro: backend autenticato con rate limit, limiti di budget e provider configurabile.
-- Mai chiamare direttamente API AI con credenziali dal browser.
+Documenti: [editor](docs/editor.md) · [contratto API](docs/api-render-contract.md) · [deploy Cloudflare](docs/deploy-cloudflare.md) · [crediti asset](docs/editor-crediti-asset.md).
 
-## Limiti della prima versione
+## Comandi
 
-Questo è un prototipo di modellazione 3D, non un CAD/BIM. Aperture e coperture sono schematiche; il rendering fotorealistico AI e l'editing geometrico avanzato richiedono fasi successive. I render AI generativi possono modificare la geometria e devono essere verificati.
+| | |
+|---|---|
+| `npm run dev` | editor + API di prova su http://localhost:8787/ |
+| `npm run build:editor` | rigenera `public/index.html` da `editor-src/` |
+| `npm run build` | controlla che `public/index.html` sia aggiornato |
+| `npm test` | test del Worker e test nel browser |
+| `npm run deploy:cloudflare` | pubblica su Cloudflare (vedi docs) |
 
 ## Sicurezza
 
-Non committare segreti, token o file .env. Prima di abilitare l'AI pubblicamente servono quota per utente, anti-abuso e controllo dei costi.
+Nessuna chiave nel client o nel repository. Il render passa solo dal backend, con quote per IP, tetto giornaliero, kill switch, limiti di formato e dimensione e cancellazione dei file. I render generativi possono alterare dettagli: non sono elaborati tecnici.
 
-## Roadmap
-
-1. Modellazione precisa: pareti, spessori, porte, finestre e quote metriche.
-2. Import/export GLB/glTF e libreria materiali.
-3. Backend di rendering AI: vista RGB + depth/normal + policy geometria.
-4. Account, progetti salvati su server, limiti gratuiti e job asincroni.
-5. Test di fedeltà geometrica e rilascio pubblico.
+Il prototipo React iniziale è archiviato nel branch `archivio/prototipo-react`.
