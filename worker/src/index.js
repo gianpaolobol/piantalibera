@@ -1,0 +1,222 @@
+// Pianta Libera — Worker Cloudflare: serve l'editor (asset statici di public/) e
+// implementa il contratto /api/render con Workers AI (FLUX.2 klein 4B per i test).
+//
+// Binding: AI (Workers AI), RENDER_KV (lavori e immagini con TTL), QUOTA (Durable Object
+// per quote atomiche), ASSETS (asset statici).
+// Variabili: vedi wrangler.toml. Segreti: IP_SALT, TURNSTILE_SECRET.
+// Nessuna chiave API: Workers AI si usa tramite il binding del Worker.
+//
+// Fail-closed: senza IP_SALT valido o senza Turnstile (salvo ALLOW_NO_TURNSTILE=1, solo
+// sviluppo) il render è disattivato e /api/config lo dichiara.
+import { LIMITS, validateRenderRequest, decodeDataUrl, buildModelPrompt, jsonError } from "../../shared/contract.js";
+import { QuotaGate, estimateNeurons, dayKey } from "./quota.js";
+export { QuotaGate };
+
+const JSON_HEADERS = { "Content-Type": "application/json", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
+const json = (status, body, headers = {}) => new Response(JSON.stringify(body), { status, headers: { ...JSON_HEADERS, ...headers } });
+const secondsToMidnightUTC = () => { const n = new Date(); return Math.ceil((Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() + 1) - n) / 1000); };
+const ID_RE = /^[a-f0-9]{32}$/;
+const MAX_OUTPUT_BYTES = 12 * 1024 * 1024;
+
+async function sha256(s) {
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+function newId() { const b = new Uint8Array(16); crypto.getRandomValues(b); return [...b].map(x => x.toString(16).padStart(2, "0")).join(""); }
+const num = (v, d) => { const n = Number(v); return Number.isFinite(n) ? n : d; };
+
+/** Tipo e dimensioni di un'immagine dai primi byte; null se non è PNG, JPEG o WebP. */
+export function inspectImage(bytes) {
+  if (bytes.length < 24) return null;
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return { type: "image/png", w: dv.getUint32(16), h: dv.getUint32(20) };
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    for (let i = 2; i < bytes.length - 9;) {               // cerca il marcatore SOF per le dimensioni
+      if (bytes[i] !== 0xff) { i++; continue; }
+      const m = bytes[i + 1];
+      if (m >= 0xc0 && m <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(m)) return { type: "image/jpeg", h: dv.getUint16(i + 5), w: dv.getUint16(i + 7) };
+      i += 2 + dv.getUint16(i + 2);
+    }
+    return { type: "image/jpeg", w: null, h: null };
+  }
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return { type: "image/webp", w: null, h: null };
+  return null;
+}
+export const pngSize = bytes => { const i = inspectImage(bytes); return i?.type === "image/png" ? { w: i.w, h: i.h } : null; };
+
+function config(env) {
+  const saltOk = typeof env.IP_SALT === "string" && env.IP_SALT.length >= 16 && !/cambia|example|changeme/i.test(env.IP_SALT);
+  const turnstileOn = !!(env.TURNSTILE_SECRET && env.TURNSTILE_SITE_KEY);
+  const missing = [];
+  if (!saltOk) missing.push("IP_SALT");
+  if (!turnstileOn && env.ALLOW_NO_TURNSTILE !== "1") missing.push("TURNSTILE_SECRET/TURNSTILE_SITE_KEY");
+  if (!env.QUOTA) missing.push("QUOTA (Durable Object)");
+  if (!env.RENDER_KV) missing.push("RENDER_KV");
+  if (!env.AI) missing.push("AI");
+  return {
+    model: env.MODEL || "@cf/black-forest-labs/flux-2-klein-4b",
+    perIpDaily: num(env.PER_IP_DAILY, 2),
+    globalDaily: num(env.GLOBAL_DAILY, 50),
+    neuronBudget: num(env.NEURON_DAILY_BUDGET, 9000),        // sotto i 10.000 gratuiti
+    rates: { outTile: num(env.NEURONS_PER_OUTPUT_TILE, 26.05), inTile: num(env.NEURONS_PER_INPUT_TILE, 5.37) },
+    maxConcurrent: num(env.MAX_CONCURRENT_PER_IP, 1),
+    retention: Math.max(60, num(env.RETENTION_SECONDS, 3600)),
+    maxVariants: Math.min(LIMITS.maxVariants, num(env.MAX_VARIANTS, 1)),
+    maxInputSide: num(env.MAX_INPUT_SIDE, 512),
+    timeoutMs: num(env.PROVIDER_TIMEOUT_MS, 60000),
+    allowedOrigins: (env.ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean),
+    turnstileOn, turnstileSiteKey: turnstileOn ? env.TURNSTILE_SITE_KEY : null,
+    missing, ready: missing.length === 0,
+  };
+}
+const killed = async env => env.KILL_SWITCH === "1" || (await env.RENDER_KV?.get("config:kill")) === "1";
+const quotaStub = env => env.QUOTA.get(env.QUOTA.idFromName("global"));
+async function quotaCall(env, path, body) {
+  const r = await quotaStub(env).fetch(`https://quota${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  return r.json();
+}
+
+async function turnstileOk(env, token, ip) {
+  if (!token || typeof token !== "string" || token.length > 2048) return false;
+  const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: new URLSearchParams({ secret: env.TURNSTILE_SECRET, response: token, remoteip: ip }) });
+  return r.ok && (await r.json()).success === true;
+}
+
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(`il modello non ha risposto entro ${Math.round(ms / 1000)} s`)), ms))]);
+
+/** Adattatore Workers AI per FLUX.2 klein: multipart con prompt, dimensioni, seed e immagini di riferimento.
+ *  Output atteso (schema del modello): {image: <base64>}. Tutto il resto è rifiutato. */
+export async function runKlein(env, cfg, v, seed) {
+  const form = new FormData();
+  const refs = [["image", v.image]];
+  if (v.params.use_guides && v.depth) refs.push(["depth", v.depth]);
+  if (v.params.use_guides && v.lines) refs.push(["lines", v.lines]);
+  const idx = {}; refs.forEach(([k], i) => { if (k !== "image") idx[k] = i; });
+  form.append("prompt", buildModelPrompt(v, idx));
+  form.append("width", String(v.params.width));
+  form.append("height", String(v.params.height));
+  form.append("seed", String(seed));
+  refs.forEach(([k, d], i) => { const { bytes, type } = decodeDataUrl(d); form.append(`input_image_${i}`, new Blob([bytes], { type }), `${k}.${type.split("/")[1]}`); });
+  const body = new Response(form);
+  const out = await withTimeout(env.AI.run(cfg.model, { multipart: { body: body.body, contentType: body.headers.get("content-type") } }), cfg.timeoutMs);
+  return parseModelOutput(out, v.params);
+}
+export function parseModelOutput(out, params) {
+  if (!out || typeof out !== "object" || typeof out.image !== "string") throw Object.assign(new Error("risposta del modello senza campo image"), { code: "invalid_provider_output" });
+  const b64 = out.image;
+  if (b64.length > MAX_OUTPUT_BYTES * 1.37 || !/^[A-Za-z0-9+/]+={0,2}$/.test(b64)) throw Object.assign(new Error("immagine del modello non in base64 valido o troppo grande"), { code: "invalid_provider_output" });
+  let bin; try { bin = atob(b64); } catch { throw Object.assign(new Error("base64 non decodificabile"), { code: "invalid_provider_output" }); }
+  const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const info = inspectImage(bytes);
+  if (!info) throw Object.assign(new Error("il modello non ha restituito PNG, JPEG o WebP"), { code: "invalid_provider_output" });
+  if (info.w && info.h && (info.w > Math.max(2048, params.width * 1.1) || info.h > Math.max(2048, params.height * 1.1))) throw Object.assign(new Error("dimensioni dell'immagine inattese"), { code: "invalid_provider_output" });
+  return { bytes, type: info.type };
+}
+
+async function createJob(request, env, cfg) {
+  if (!cfg.ready) return jsonError(503, "config_incomplete", "il render non è configurato su questo server");
+  if (await killed(env)) return jsonError(503, "disabled", "il render AI è momentaneamente sospeso");
+  if (!(request.headers.get("content-type") || "").includes("application/json")) return jsonError(415, "unsupported_media_type", "serve application/json");
+  if (num(request.headers.get("content-length"), 0) > LIMITS.maxBodyBytes) return jsonError(413, "too_large", "richiesta troppo grande");
+  let body;
+  try { const text = await request.text(); if (text.length > LIMITS.maxBodyBytes) return jsonError(413, "too_large", "richiesta troppo grande"); body = JSON.parse(text); }
+  catch { return jsonError(400, "invalid_json", "JSON non valido"); }
+  const checked = validateRenderRequest(body, { ...LIMITS, maxVariants: cfg.maxVariants });
+  if (checked.error) return jsonError(checked.error.status, checked.error.code, checked.error.message);
+  const v = checked.value;
+  if (body.consent !== true) return jsonError(400, "consent_required", "serve il consenso all'invio delle immagini al fornitore AI");
+  for (const k of ["image", "depth", "lines"]) {
+    if (!v[k]) continue;
+    const info = inspectImage(decodeDataUrl(v[k]).bytes);
+    if (!info) return jsonError(400, "invalid_input", `${k}: il contenuto non è un'immagine PNG, JPEG o WebP`);
+    if (info.w && (info.w > cfg.maxInputSide || info.h > cfg.maxInputSide)) return jsonError(400, "invalid_input", `${k}: il modello accetta immagini di riferimento fino a ${cfg.maxInputSide} px per lato`);
+  }
+  const ip = request.headers.get("cf-connecting-ip") || "0.0.0.0";
+  if (cfg.turnstileOn && !(await turnstileOk(env, v.turnstile, ip))) return jsonError(403, "bot_check_failed", "verifica anti-bot non superata");
+
+  const ipHash = await sha256(ip + env.IP_SALT);
+  const inputs = 1 + (v.params.use_guides ? (v.depth ? 1 : 0) + (v.lines ? 1 : 0) : 0);
+  const neurons = estimateNeurons({ width: v.params.width, height: v.params.height, variants: v.params.variants, inputs }, cfg.rates);
+  const day = dayKey();
+  const q = await quotaCall(env, "/reserve", { ipHash, neurons, perIpDaily: cfg.perIpDaily, maxConcurrent: cfg.maxConcurrent, neuronBudget: cfg.neuronBudget, globalDaily: cfg.globalDaily });
+  if (!q.ok) {
+    const msg = { quota_exceeded: `hai usato i ${cfg.perIpDaily} render disponibili oggi`, too_many_concurrent: "c'è già un render in corso: attendi che finisca", global_quota_exceeded: "limite giornaliero del servizio raggiunto", budget_exceeded: "budget giornaliero del servizio esaurito" }[q.reason] || "quota non disponibile";
+    return jsonError(429, q.reason, msg, q.reason === "too_many_concurrent" ? { "Retry-After": "30" } : { "Retry-After": String(secondsToMidnightUTC()) });
+  }
+
+  const id = newId(), now = Date.now(), ttl = { expirationTtl: cfg.retention };
+  const job = { id, status: "running", mode: v.mode, created_at: new Date(now).toISOString(), expires_at: new Date(now + cfg.retention * 1000).toISOString(), provider: "Cloudflare Workers AI", model: cfg.model, generated: true, images: [], neurons_estimated: neurons };
+  let failed = false;
+  try {
+    await env.RENDER_KV.put(`job:${id}`, JSON.stringify(job), ttl);
+    for (let i = 0; i < v.params.variants; i++) {
+      const { bytes, type } = await runKlein(env, cfg, v, v.params.seed + i);
+      await env.RENDER_KV.put(`img:${id}:${i}`, bytes, { ...ttl, metadata: { type } });
+      job.images.push(`/api/render/${id}/image/${i}`);
+    }
+    job.status = "succeeded";
+  } catch (e) {
+    failed = true; job.status = "failed"; job.error = { code: e?.code || "provider_error", message: String(e?.message || e).slice(0, 300) };
+  } finally {
+    await quotaCall(env, "/release", { ipHash, neurons, failed, reservedDay: day }).catch(() => {});
+  }
+  job.duration_ms = Date.now() - now;
+  await env.RENDER_KV.put(`job:${id}`, JSON.stringify(job), ttl);
+  console.log(JSON.stringify({ evt: "render", id, status: job.status, ms: job.duration_ms, neurons, day_neurons: q.neurons, day_renders: q.renders, mode: v.mode }));
+  const remaining = Math.max(0, cfg.perIpDaily - (failed ? q.ip - 1 : q.ip));
+  return json(job.status === "succeeded" ? 200 : 502, job, { Location: `/api/render/${id}`, "X-Quota-Remaining": String(remaining) });
+}
+
+async function getConfig(request, env, cfg) {
+  const ip = request.headers.get("cf-connecting-ip") || "0.0.0.0";
+  let usedToday = null;
+  if (cfg.ready) { try { usedToday = (await quotaCall(env, "/status", { ipHash: await sha256(ip + env.IP_SALT) })).ip; } catch {} }
+  const enabled = cfg.ready && !(await killed(env));
+  return json(200, {
+    enabled, reason: !cfg.ready ? "config_incomplete" : enabled ? null : "disabled",
+    provider: "Cloudflare Workers AI", model: cfg.model, generated: true,
+    turnstile_site_key: cfg.turnstileSiteKey,
+    quota: { per_ip_daily: cfg.perIpDaily, used_today: usedToday },
+    limits: { max_input_side: cfg.maxInputSide, max_side: LIMITS.maxSide, max_variants: cfg.maxVariants },
+    retention_seconds: cfg.retention,
+    privacy: "Vista, profondità, contorni, prompt e camera vengono inviati a Cloudflare Workers AI per generare l'immagine. Lavori e immagini sono cancellati dopo il periodo indicato; l'IP è conservato solo come hash per le quote giornaliere.",
+  });
+}
+
+async function handleApi(request, env, url) {
+  const cfg = config(env);
+  const origin = request.headers.get("origin");
+  if (origin && origin !== url.origin && !cfg.allowedOrigins.includes(origin)) return jsonError(403, "origin_not_allowed", "origine non consentita");
+  if (url.pathname === "/api/config" && request.method === "GET") return getConfig(request, env, cfg);
+  const m = url.pathname.match(/^\/api\/render(?:\/([^/]+)(?:\/image\/(\d+))?)?\/?$/);
+  if (!m) return jsonError(404, "not_found", "endpoint inesistente");
+  const [, id, img] = m;
+  if (!id) { if (request.method === "POST") return createJob(request, env, cfg); return jsonError(405, "method_not_allowed", "usa POST /api/render"); }
+  if (!ID_RE.test(id)) return jsonError(400, "invalid_id", "id non valido");
+  if (img != null) {
+    if (request.method !== "GET") return jsonError(405, "method_not_allowed", "solo GET");
+    const { value, metadata } = await env.RENDER_KV.getWithMetadata(`img:${id}:${img}`, { type: "arrayBuffer" });
+    if (!value) return jsonError(404, "not_found", "immagine inesistente o scaduta");
+    return new Response(value, { headers: { "Content-Type": metadata?.type || "application/octet-stream", "Cache-Control": "private, max-age=600", "X-Content-Type-Options": "nosniff", "Content-Disposition": "inline" } });
+  }
+  if (request.method === "GET") { const j = await env.RENDER_KV.get(`job:${id}`); return j ? json(200, JSON.parse(j)) : jsonError(404, "not_found", "lavoro inesistente o scaduto"); }
+  if (request.method === "DELETE") {
+    const j = await env.RENDER_KV.get(`job:${id}`);
+    if (j) { const n = JSON.parse(j).images?.length || 0; await Promise.all([env.RENDER_KV.delete(`job:${id}`), ...Array.from({ length: n }, (_, i) => env.RENDER_KV.delete(`img:${id}:${i}`))]); }
+    return new Response(null, { status: 204 });
+  }
+  return jsonError(405, "method_not_allowed", "metodo non supportato");
+}
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    try {
+      if (url.pathname.startsWith("/api/")) return await handleApi(request, env, url);
+      return env.ASSETS.fetch(request);
+    } catch (e) {
+      console.error(e);
+      return jsonError(500, "internal", "errore interno");
+    }
+  },
+};

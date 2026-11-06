@@ -5,3 +5,9 @@ dist/
 !.env.example
 .DS_Store
 *.local
+server/php/data/
+server/php/api/config.php
+test-results/
+playwright-report/
+.wrangler/
+.dev.vars

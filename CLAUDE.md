@@ -4,6 +4,14 @@
 > Repository canonico: https://github.com/gianpaolobol/piantalibera
 > **ATTENZIONE:** il proprietario dichiara che Claude sta già sviluppando il modellatore 3D e il livello di chiamata delle API di rendering. Non sostituire o sovrascrivere lavoro esistente senza prima ispezionare stato locale, branch e diff.
 
+## Decisioni confermate dal proprietario — 6/11/2026 (annotate da Claude)
+
+- **Codice canonico: l'editor in `editor-src/` → `public/`** (JavaScript + Three.js r147). Il prototipo React è archiviato nel branch `archivio/prototipo-react`.
+- **Fornitore per i test: Cloudflare Workers AI, `@cf/black-forest-labs/flux-2-klein-4b`**, tramite il Worker in `worker/` (contratto in `docs/api-render-contract.md`).
+- **Produzione su Cloudflare** (asset statici + Worker + KV); backend PHP in `server/php/` solo come alternativa.
+- **Repository pubblico.**
+- Stato, test e passi successivi: PR e issue di coordinamento #1.
+
 ## Visione e obiettivo
 
 **Pianta Libera** è una web app di modellazione architettonica e rendering AI per **interni ed esterni**, fruibile via browser e destinata anche a visitatori che non pagano. L'utente modella un ambiente o un edificio, sceglie vista/camera, materiali e illuminazione, quindi produce un'immagine fotorealistica a partire **dalla scena modellata**, non soltanto da un prompt generico.

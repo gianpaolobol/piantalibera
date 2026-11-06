@@ -2,7 +2,9 @@
 
 ## Stato
 
-Il pulsante AI nella UI è volutamente non operativo: **nessuna chiamata ai modelli AI viene ancora eseguita**.
+- Editor: client del render sul contratto [api-render-contract.md](api-render-contract.md).
+- Worker Cloudflare con Workers AI (FLUX.2 klein 4B) pronto e testato con un modello finto; **la prima generazione reale richiede il deploy sull'account Cloudflare del proprietario** ([deploy-cloudflare.md](deploy-cloudflare.md)).
+- Servizio di prova (`npm run dev`) e backend PHP in modalità `mock` per lo sviluppo.
 
 ## Flusso previsto
 

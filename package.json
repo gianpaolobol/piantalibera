@@ -1,22 +1,22 @@
 {
   "name": "piantalibera",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@react-three/drei": "^9.121.4",
-    "@react-three/fiber": "^8.18.0",
-    "three": "^0.170.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "dev": "node server/mock-render-server.mjs",
+    "build": "npm run build:editor -- --check",
+    "build:editor": "node scripts/build-editor.mjs",
+    "test": "npm run test:unit && npm run test:php && npm run test:e2e",
+    "test:unit": "node --test tests/worker.test.mjs",
+    "test:e2e": "playwright test",
+    "deploy:cloudflare": "npx wrangler deploy --config worker/wrangler.toml",
+    "test:php": "node --test tests/php.test.mjs"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^6.0.7"
+    "@playwright/test": "1.63.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
