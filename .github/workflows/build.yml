@@ -19,6 +19,8 @@ jobs:
         run: npm run build
       - name: Test del Worker e del contratto
         run: npm run test:unit
+      - name: Test del backend PHP
+        run: npm run test:php
       - name: Browser per i test
         run: npx playwright install --with-deps chromium
       - name: Test dell'editor nel browser

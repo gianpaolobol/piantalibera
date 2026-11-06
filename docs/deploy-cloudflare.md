@@ -8,9 +8,13 @@ Un solo Worker serve l'editor (`public/`, come asset statici) e l'API `/api/rend
 npm install
 npx wrangler login
 npx wrangler kv namespace create RENDER_KV          # copia l'id in worker/wrangler.toml
-npx wrangler secret put IP_SALT --config worker/wrangler.toml          # stringa casuale lunga
-npx wrangler secret put TURNSTILE_SECRET --config worker/wrangler.toml # facoltativo, vedi sotto
+npx wrangler secret put IP_SALT --config worker/wrangler.toml          # stringa casuale ≥ 16 caratteri (es. openssl rand -hex 24)
+npx wrangler secret put TURNSTILE_SECRET --config worker/wrangler.toml # dal pannello Turnstile; la chiave pubblica va in TURNSTILE_SITE_KEY
 ```
+
+Il Durable Object `QuotaGate` (quote atomiche) si crea al primo deploy con la migrazione `v1` già presente in `wrangler.toml`.
+
+**Fail-closed:** se manca `IP_SALT` (o è un valore d'esempio), se mancano `TURNSTILE_SECRET`/`TURNSTILE_SITE_KEY`, o se mancano i binding `AI`, `RENDER_KV`, `QUOTA`, il Worker risponde `503 config_incomplete` e non chiama il modello. `GET /api/config` dice se il servizio è attivo e perché. Solo in locale (`wrangler dev`) si può saltare Turnstile con `ALLOW_NO_TURNSTILE=1` in `worker/.dev.vars`.
 
 ## Pubblicare
 
@@ -26,15 +30,22 @@ L'indirizzo è `https://pianta-libera.<tuo-account>.workers.dev/`; un dominio pe
 | Nome | Predefinito | Note |
 |---|---|---|
 | `MODEL` | `@cf/black-forest-labs/flux-2-klein-4b` | per confronti: `@cf/black-forest-labs/flux-2-klein-9b` (molto più costoso) |
-| `PER_IP_DAILY` | 2 | render al giorno per IP (IP salvati come hash) |
-| `GLOBAL_DAILY` | 50 | tetto complessivo giornaliero = tetto di spesa |
+| `PER_IP_DAILY` | 2 | render al giorno per IP (IP salvati come hash con sale) |
+| `MAX_CONCURRENT_PER_IP` | 1 | lavori contemporanei per IP |
+| `GLOBAL_DAILY` | 50 | richieste accettate al giorno in totale |
+| `NEURON_DAILY_BUDGET` | 9000 | **tetto di spesa**: Neurons stimati impegnati al giorno; oltre → `429 budget_exceeded` prima di chiamare il modello |
+| `NEURONS_PER_OUTPUT_TILE` / `NEURONS_PER_INPUT_TILE` | 26.05 / 5.37 | tariffe klein 4B usate per la stima; aggiornarle se cambiano |
+| `PROVIDER_TIMEOUT_MS` | 60000 | oltre, il lavoro è `failed` |
+| `TURNSTILE_SITE_KEY` | vuoto | chiave pubblica del widget, letta dall'editor via `/api/config` |
 | `KILL_SWITCH` | 0 | `1` sospende i render; senza nuovo deploy: `npx wrangler kv key put --binding RENDER_KV config:kill 1` |
 | `RETENTION_SECONDS` | 3600 | lavori e immagini cancellati (TTL di KV) |
 | `MAX_VARIANTS` | 1 | varianti per richiesta (max 2) |
 | `ALLOWED_ORIGINS` | vuoto | origini ammesse oltre allo stesso dominio, separate da virgola |
 | `MAX_INPUT_SIDE` | 512 | lato massimo delle immagini di riferimento accettato da klein |
 
-Segreti: `IP_SALT`, `TURNSTILE_SECRET` (se impostato, ogni POST deve includere il token Turnstile nel campo `turnstile`; il widget nell'editor è il prossimo passo).
+Segreti: `IP_SALT`, `TURNSTILE_SECRET`. Ogni POST deve includere `consent: true` e il token Turnstile nel campo `turnstile`; l'editor mostra la casella di consenso e il widget quando legge `/api/config`.
+
+Contabilità (Durable Object, per giorno UTC): la prenotazione controlla in un'unica operazione quota IP, concorrenza, tetto di richieste e tetto di Neurons. Se il modello fallisce, il render torna all'utente ma i Neurons stimati restano conteggiati (una chiamata fallita può essere fatturata).
 
 ## Costi stimati (da verificare con l'uso reale)
 
@@ -46,11 +57,12 @@ Dalla pagina prezzi di Workers AI (novembre 2026): 10.000 Neurons gratuiti al gi
 | 1536×1152 | 9 | ~250 | ~40 |
 | 1920×1440 | 12 | ~330 | ~30 |
 
-`GLOBAL_DAILY = 50` a 1024×768 resta dentro la quota gratuita.
+Con `NEURON_DAILY_BUDGET = 9000` la spesa stimata resta sotto i 10.000 Neurons gratuiti, qualunque sia la risoluzione richiesta. La stima è nostra: confrontarla con il consumo reale nel pannello Workers AI durante i test.
 
 ## Limiti noti
 
-- Quote su KV: KV non è transazionale, con richieste simultanee il conteggio può sforare di poco. Per il pubblico passare a un Durable Object o a D1.
+- La stima dei Neurons usa le tariffe pubblicate; se Cloudflare conteggia diversamente, il tetto reale va tarato sui dati del pannello.
+- L'hash dell'IP limita gli abusi semplici, non chi cambia IP: Turnstile e il tetto globale restano la difesa principale.
 - Il Worker attende il modello nella stessa richiesta (klein a 4 passi è rapido). Per modelli lenti usare una coda (Queues) e lasciare `status: running`.
 - La licenza d'uso commerciale di FLUX.2 klein 4B va confermata sui termini di Black Forest Labs prima dell'apertura al pubblico.
 - La fedeltà geometrica non è garantita: le immagini di riferimento sono a 512 px e il modello non è un ControlNet. Va misurata sulle scene di prova (docs/editor.md).

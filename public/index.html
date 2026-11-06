@@ -92,6 +92,8 @@ button{cursor:pointer}
 .f input[type=range]{width:100%;accent-color:var(--accent)}
 .chk{display:flex;align-items:center;gap:7px;font-size:12.5px}
 .chk input{accent-color:var(--accent)}
+#panel-ai .chk{align-items:flex-start}#panel-ai .chk input{margin-top:3px}
+.ts{min-height:65px;margin:6px 0}
 .note{font-size:12px;color:var(--muted);line-height:1.45;margin:0}
 .note b{color:var(--ink)}
 .note.warn{color:var(--warn)}
@@ -2076,7 +2078,9 @@ const CONTRACT_TEMPLATE = `{
   "lines": "{{lines_dataurl}}",
   "camera": {{camera}},
   "params": {"strength": {{strength}}, "seed": {{seed}}, "variants": {{variants}}, "width": {{width}}, "height": {{height}}, "use_guides": {{use_guides}}},
-  "project": {"name": "{{project}}"}
+  "project": {"name": "{{project}}"},
+  "consent": {{consent}},
+  "turnstile": "{{turnstile}}"
 }`;
 const AI_PRESETS = {
   pianta: {nome:"Backend Pianta Libera (/api/render)", contentType:"json", url:"/api/render", backend:true, resultPath:"images", jobIdPath:"id", pollTemplate:"/api/render/{{job}}", statusPath:"status", doneValues:"succeeded", failValues:"failed,canceled,error",
@@ -2119,6 +2123,45 @@ function aiDefaults(){ return {
 }; function pick(p){ const {nome, ...r} = p; return r; } }
 let AI = (() => { try { const s = JSON.parse(localStorage.getItem(AI_KEY)); if (s?.base && s?.adv) return {...aiDefaults(), ...s, base:{...aiDefaults().base, ...s.base}, adv:{...aiDefaults().adv, ...s.adv}}; } catch(e){} return aiDefaults(); })();
 const aiResults = []; let aiLastRaw = "", aiBusy = false;
+/* --- Backend del progetto: configurazione pubblica, consenso, Turnstile --- */
+const CONSENT_KEY = "pianta-libera-ai-consenso-v1";
+let aiConsent = (() => { try { return localStorage.getItem(CONSENT_KEY) === "1"; } catch(e){ return false; } })();
+const backendCfg = {url:"", data:null, error:"", loading:false};
+let tsToken = "", tsWidget = null, tsLoading = null, aiQuotaLeft = null;
+function isBackendCfg(c){ return AI.mode === "base" && !!AI_PRESETS[c.preset]?.backend; }
+// /api/render → /api/config · …/render.php → …/render.php?config=1
+function configUrlFor(u){ if (!u) return ""; if (/render\.php$/.test(u)) return u + "?config=1"; if (/\/render\/?$/.test(u)) return u.replace(/\/render\/?$/, "/config"); return ""; }
+async function loadBackendConfig(force){
+  const u = configUrlFor(AI.base.url);
+  if (!u || (!force && backendCfg.url === u && (backendCfg.data || backendCfg.loading || backendCfg.error))) return;
+  Object.assign(backendCfg, {url:u, data:null, error:"", loading:true});
+  try { const r = await fetch(u, {headers:{Accept:"application/json"}}); const d = await r.json(); if (!r.ok || typeof d !== "object") throw new Error("HTTP " + r.status); backendCfg.data = d; }
+  catch(e){ backendCfg.error = "Configurazione del servizio non disponibile (" + (e.message || e) + ")."; }
+  backendCfg.loading = false; if (S.tab === "ai" && !aiBusy) renderAI();
+}
+function loadTurnstile(){
+  if (window.turnstile) return Promise.resolve();
+  return tsLoading ||= new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"; sc.async = true; sc.onload = ok; sc.onerror = () => { tsLoading = null; ko(new Error("verifica anti-bot non caricata")); }; document.head.appendChild(sc); });
+}
+async function mountTurnstile(){
+  const key = backendCfg.data?.turnstile_site_key, box = $("#aiTurnstile"); if (!key || !box) return;
+  try { await loadTurnstile(); if (!document.body.contains(box) || box.childElementCount) return; try { if (tsWidget != null) window.turnstile.remove(tsWidget); } catch(_){} tsToken = ""; tsWidget = window.turnstile.render(box, {sitekey:key, size:"flexible", language:"it", callback:t => { tsToken = t; }, "expired-callback":() => { tsToken = ""; }, "error-callback":() => { tsToken = ""; }}); }
+  catch(e){ box.textContent = "Verifica anti-bot non disponibile: " + e.message; }
+}
+function resetTurnstile(){ tsToken = ""; try { if (tsWidget != null && window.turnstile) window.turnstile.reset(tsWidget); } catch(e){} }
+function backendBlock(){
+  const d = backendCfg.data;
+  const info = backendCfg.loading ? `<p class="note">Leggo la configurazione del servizio…</p>`
+    : backendCfg.error ? `<p class="note warn">${esc(backendCfg.error)}</p>`
+    : d ? `<p class="note">${d.mock ? "<b>Servizio di prova</b>: restituisce la vista inviata, non genera immagini." : `Fornitore: <b>${esc(d.provider || "?")}</b>${d.model ? ` · modello <code>${esc(d.model)}</code>` : ""}.`}
+        ${d.quota ? ` Render disponibili oggi: <b>${Math.max(0, (aiQuotaLeft ?? (d.quota.per_ip_daily - (d.quota.used_today || 0))))}</b> su ${d.quota.per_ip_daily}.` : ""}
+        ${d.retention_seconds ? ` Immagini cancellate dal server dopo ${Math.round(d.retention_seconds/60)} minuti.` : ""}</p>
+        ${d.enabled === false ? `<p class="note warn">Render AI non attivo su questo sito${d.reason ? ` (${esc(d.reason)})` : ""}.</p>` : ""}` : "";
+  return `${info}
+    <label class="chk"><input type="checkbox" id="aiConsent" ${aiConsent?"checked":""}> Acconsento all'invio della vista, delle mappe di profondità e contorni e del prompt ${d?.provider && !d.mock ? `a <b>${esc(d.provider)}</b>` : "al servizio di render"} per generare l'immagine.</label>
+    ${d?.privacy ? `<details><summary class="lbl">Informativa</summary><p class="note">${esc(d.privacy)}</p><p class="note"><a href="https://github.com/gianpaolobol/piantalibera/blob/main/docs/privacy.md" target="_blank" rel="noopener">Testo completo</a></p></details>` : ""}
+    ${d?.turnstile_site_key ? `<div id="aiTurnstile" class="ts"></div>` : ""}`;
+}
 function aiSave(){ try { localStorage.setItem(AI_KEY, JSON.stringify(AI)); } catch(e){} }
 const AF = (id, label, val, extra="") => `<div class="f"><label class="lbl" for="${id}">${label}</label><input id="${id}" class="inp" value="${esc(val)}" ${extra}></div>`;
 function connBlock(pf, c){
@@ -2147,6 +2190,7 @@ function renderAI(){
     <p class="note">Valori bassi rispettano di più la geometria della vista.</p>
     <div class="f"><label class="lbl" for="b_prompt">Prompt</label><textarea id="b_prompt" class="inp">${esc(b.prompt || aiPrompt())}</textarea></div>
     <div class="btns"><button class="btn" id="b_resetPrompt">Prompt dal progetto</button></div>
+    ${isBackendCfg(b) ? backendBlock() : ""}
   </div>` : `
   <div class="exp"><header><h4>Modalità avanzata</h4><span class="tag">ControlNet · varianti · lavori asincroni</span></header>
     ${connBlock("a", a)}
@@ -2176,12 +2220,15 @@ function renderAI(){
   ${aiResults.length ? `<div class="sec"><h3>Render ottenuti</h3><div class="gallery">${aiResults.map((r,i)=>`<figure><img src="${esc(r.src)}" data-cmp="${i}" alt="Render ${i+1}"><figcaption><span>${r.time} · ${r.mode}</span><span><button data-cmp="${i}">Confronta</button> · <button data-aisave="${i}">Salva</button></span></figcaption></figure>`).join("")}</div></div>` : ""}
   ${aiLastRaw ? `<details class="exp"><summary>Ultima risposta del servizio</summary><pre class="raw">${esc(aiLastRaw)}</pre></details>` : ""}
   <details class="exp"><summary>Configurazioni</summary><div class="btns"><button class="btn" id="aiExport">Esporta configurazione</button><button class="btn" id="aiReset">Ripristina predefiniti</button></div><p class="note">L'esportazione non include le chiavi.</p></details>`;
+  if (isBackendCfg(b)){ loadBackendConfig(); if (backendCfg.data?.turnstile_site_key) mountTurnstile(); }
 }
 const PA = $("#panel-ai");
 function aiField(id, val){ const [pf, ...rest] = id.split("_"); const key = rest.join("_"); const tgt = pf === "b" ? AI.base : pf === "a" ? AI.adv : null; if (!tgt || !(key in tgt)) return false; const numeric = typeof aiDefaults()[pf === "b" ? "base" : "adv"][key] === "number"; tgt[key] = numeric ? (num(val) ?? tgt[key]) : val; aiSave(); return true; }
 PA.addEventListener("input", e => { const t = e.target; if (t.id === "b_strength"){ AI.base.strength = +t.value; t.previousElementSibling.textContent = "Libertà creativa · " + fmt(AI.base.strength,2); aiSave(); return; } if (t.tagName === "TEXTAREA") aiField(t.id, t.value); });
 PA.addEventListener("change", e => { const t = e.target;
   if (t.id === "b_guides"){ AI.base.guides = t.checked; aiSave(); return; }
+  if (t.id === "aiConsent"){ aiConsent = t.checked; try { localStorage.setItem(CONSENT_KEY, aiConsent ? "1" : "0"); } catch(e){} return; }
+  if (t.id === "b_url"){ aiField(t.id, t.value); loadBackendConfig(true); return; }
   if (t.id === "b_preset"){ const p = AI_PRESETS[t.value]; const {nome, backend, ...rest} = p; AI.base = {...AI.base, preset:t.value, resultPath:"", pollUrlPath:"", jobIdPath:"", pollTemplate:"", statusPath:"", doneValues:"", failValues:"", url:"", ...rest}; aiSave(); renderAI(); return; }
   aiField(t.id, t.value);
 });
@@ -2245,9 +2292,17 @@ async function runAI(test){
   if (aiBusy) return; const cfg = aiConfig();
   const endpoint = cfg.url;
   if (!endpoint){ aiStatus("Inserisci l'endpoint: /api/render per il backend del progetto, oppure l'indirizzo di un servizio per una prova locale.", "err"); return; }
+  const viaBackend = isBackendCfg(cfg);
+  if (viaBackend){
+    if (!aiConsent){ aiStatus("Per generare il render serve il consenso all'invio delle immagini al servizio (casella sopra).", "err"); return; }
+    if (backendCfg.data?.enabled === false){ aiStatus("Render AI non attivo su questo sito" + (backendCfg.data.reason ? ` (${backendCfg.data.reason})` : "") + ".", "err"); return; }
+    if (backendCfg.data?.turnstile_site_key && !tsToken){ aiStatus("Completa la verifica anti-bot sopra, poi riprova.", "err"); return; }
+  }
+  const token = tsToken;
   aiBusy = true; renderAI(); aiStatus(test ? "Provo la connessione con un'immagine piccola…" : "Preparo vista, profondità e contorni…");
   try {
     const vars = await buildVars(cfg, test);
+    vars.consent = viaBackend ? aiConsent : false; vars.turnstile = viaBackend ? token : "";
     const headers = {};
     if (cfg.authValue) headers[cfg.authHeader || "Authorization"] = cfg.authValue;
     for (const line of (cfg.extraHeaders || "").split(/\n|;/)){ const m = line.match(/^\s*([^:]+):\s*(.+)$/); if (m) headers[m[1].trim()] = m[2].trim(); }
@@ -2262,8 +2317,9 @@ async function runAI(test){
     } else { body = fillTemplate(cfg.template, vars); try { JSON.parse(body); } catch(err){ throw new Error("il modello della richiesta non è un JSON valido: " + err.message); } headers["Content-Type"] = "application/json"; }
     aiStatus("Invio al servizio…");
     const t0 = Date.now(); let r = await aiFetch(cfg, endpoint, {method:"POST", headers, body}); let data = await readBody(r);
+    if (viaBackend){ tsToken = ""; const q = r.headers.get("x-quota-remaining"); if (q !== null && q !== "") aiQuotaLeft = +q; }
     aiLastRaw = `HTTP ${r.status}\n` + JSON.stringify(data, (k,v) => typeof v === "string" && v.length > 300 ? v.slice(0,120) + `…(${v.length})` : v, 2).slice(0, 6000);
-    if (!r.ok){ const code = data?.error?.code, msg = data?.error?.message; throw new Error(r.status === 429 ? `quota esaurita${msg ? ": " + msg : ""}` : r.status === 503 ? `servizio di render sospeso${msg ? ": " + msg : ""}` : `il servizio ha risposto ${r.status}${code ? " (" + code + ")" : ""}${msg ? ": " + msg : ""}. Dettagli sotto.`); }
+    if (!r.ok){ const code = data?.error?.code, msg = data?.error?.message; throw new Error(code === "consent_required" ? "serve il consenso all'invio delle immagini" : code === "bot_check_failed" ? "verifica anti-bot non superata: ripetila e riprova" : code === "config_incomplete" ? "il servizio di render non è ancora configurato su questo sito" : r.status === 429 ? `quota esaurita${msg ? ": " + msg : ""}` : r.status === 503 ? `servizio di render sospeso${msg ? ": " + msg : ""}` : `il servizio ha risposto ${r.status}${code ? " (" + code + ")" : ""}${msg ? ": " + msg : ""}. Dettagli sotto.`); }
     // lavoro asincrono
     let pollUrl = cfg.pollUrlPath ? getPath(data, cfg.pollUrlPath) : (cfg.jobIdPath && cfg.pollTemplate ? fillTemplate(cfg.pollTemplate, {job:getPath(data, cfg.jobIdPath)}) : null);
     if (pollUrl){
@@ -2290,6 +2346,7 @@ async function runAI(test){
     aiBusy = false; renderAI(); aiStatus(test ? `Connessione riuscita: ${imgs.length} immagine ricevuta in ${Math.round((Date.now()-t0)/1000)} s.` : `${imgs.length} render ricevuti in ${Math.round((Date.now()-t0)/1000)} s.${data.mock ? " Servizio di prova: l'immagine è la vista inviata, non un render AI." : ""}`, "ok");
     if (!test) openCompare(aiResults[0]);
   } catch(err){ console.warn(err); aiBusy = false; renderAI(); aiStatus("Non riuscito: " + (err.message || err), "err"); }
+  finally { if (isBackendCfg(cfg)) resetTurnstile(); }
 }
 function openCompare(r){ if (!r) return; $("#cmpBefore").src = r.before; $("#cmpAfter").src = r.src; $("#compare").hidden = false; $("#compare")._r = r; setCut(50); $("#cmpCut").value = 50; }
 function setCut(v){ $("#cmpStage").style.setProperty("--cut", v + "%"); $("#cmpStage").querySelector(".after").style.clipPath = `inset(0 0 0 ${v}%)`; $("#cmpStage").querySelector(".divider").style.left = v + "%"; }
