@@ -6,10 +6,10 @@ function commit(){ const s = JSON.stringify(P); if (s === snap) return; if (snap
 function undo(){ if (!past.length) return; future.push(snap); snap = past.pop(); P = JSON.parse(snap); afterLoad(); }
 function redo(){ if (!future.length) return; past.push(snap); snap = future.pop(); P = JSON.parse(snap); afterLoad(); }
 function afterLoad(){ for (const k of Object.keys(matCache)) if (!MATS[k]) invalidateMat(k); fixSel(); save(); refresh(); }
-function fixSel(){ if (!level(S.level)) S.level = P.levels[0].id; if (S.sel && !findSel()) S.sel = null; }
+function fixSel(){ if (!level(S.level)) S.level = P.levels[0].id; P.dims = P.dims || []; setSel(selList().filter(x => itemOf(x))); }
 let saveWarned = false;
-function save(){ try { localStorage.setItem("pianta-libera-v2", JSON.stringify(P)); } catch(e){ if (!saveWarned && e?.name === "QuotaExceededError"){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio automatico: usa Esporta → Salva progetto", true); } } }
-function findSel(){ if (!S.sel) return null; const k = {wall:"walls", opening:"openings", room:"rooms", object:"objects"}[S.sel.type]; return P[k]?.find(x => x.id === S.sel.id) || null; }
+function save(){ try { localStorage.setItem("pianta-libera-v2", JSON.stringify(P)); savedAt = new Date(); updateStatusInfo(); } catch(e){ if (!saveWarned && e?.name === "QuotaExceededError"){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio automatico: usa Esporta → Salva progetto", true); } } }
+function findSel(){ if (!S.sel) return null; const k = {wall:"walls", opening:"openings", room:"rooms", object:"objects", dim:"dims"}[S.sel.type]; return P[k]?.find(x => x.id === S.sel.id) || null; }
 
 const c2d = $("#c2d"), ctx = c2d.getContext("2d");
 const V = {cx:5.5, cy:4, s:40};
@@ -45,7 +45,7 @@ function draw2D(){
     if (r.pts.length < 2) continue;
     g.beginPath(); r.pts.forEach((p,i)=>{ const s = toS(p); i ? g.lineTo(s[0],s[1]) : g.moveTo(s[0],s[1]); }); g.closePath();
     g.fillStyle = C.room; g.fill();
-    if (S.sel?.id === r.id){ g.strokeStyle = C.sel; g.lineWidth = 2; g.setLineDash([6,4]); g.stroke(); g.setLineDash([]); }
+    if (isSelected(r.id)){ g.strokeStyle = C.sel; g.lineWidth = 2; g.setLineDash([6,4]); g.stroke(); g.setLineDash([]); }
   }
   const ws = wallsOf(L.id), ranges = ws.map(w => wallSolidRanges(w));
   g.fillStyle = C.poche; g.strokeStyle = C.poche; g.lineWidth = 1.5;
@@ -59,8 +59,14 @@ function draw2D(){
       g.fillStyle = C.muted; g.font = `${clamp(V.s*.27, 9, 12)}px "IBM Plex Mono", ui-monospace, monospace`; g.fillText(`${fmt(A,1)} m²`, c[0], c[1]+8); }
   }
   for (const o of P.objects.filter(o=>o.level===L.id)) drawObject2D(g, o);
-  const sel = findSel();
-  if (S.sel?.type === "wall" && sel){ const f = wallFrame(sel), a = toS(sel.a), b = toS(sel.b);
+  drawDims(g);
+  const sel = findSel(), multi = S.multi?.length > 1;
+  if (multi) for (const x of selItems()) if (x.s.type === "wall"){ const a = toS(x.it.a), b = toS(x.it.b); g.strokeStyle = C.sel; g.lineWidth = 2; g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke(); }
+  if (!multi && S.sel?.type === "object" && sel) drawObjHandles(g, sel);
+  if (drag?.type === "object" && drag.moved) for (const d of wallDistances(drag.o)) dimLine(g, d.a, d.b, 0, fmt(d.t) + " m", C.text, true);
+  if (S.guides?.length){ g.save(); g.strokeStyle = C.sel; g.globalAlpha = .55; g.setLineDash([3,4]); g.lineWidth = 1; g.beginPath(); for (const [a,b] of S.guides){ const A = toS(a), B = toS(b); g.moveTo(A[0],A[1]); g.lineTo(B[0],B[1]); } g.stroke(); g.restore(); }
+  if (drag?.type === "box"){ const a = drag.sp, b = drag.cur || a; g.save(); g.fillStyle = C.sel; g.globalAlpha = .08; g.fillRect(a[0], a[1], b[0]-a[0], b[1]-a[1]); g.globalAlpha = 1; g.strokeStyle = C.sel; g.setLineDash([4,3]); g.strokeRect(a[0]+.5, a[1]+.5, b[0]-a[0], b[1]-a[1]); g.restore(); }
+  if (!multi && S.sel?.type === "wall" && sel){ const f = wallFrame(sel), a = toS(sel.a), b = toS(sel.b);
     g.strokeStyle = C.sel; g.lineWidth = 2; g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke();
     for (const p of [a,b]){ g.fillStyle = C.bg; g.beginPath(); g.arc(p[0],p[1],6,0,7); g.fill(); g.stroke(); }
     dimLine(g, sel.a, sel.b, sel.thick/2 + .6, fmt(f.len) + " m");
@@ -71,13 +77,13 @@ function draw2D(){
   g.save(); g.translate(W2 - 34, 40); g.strokeStyle = C.text; g.fillStyle = C.text; g.lineWidth = 1.2;
   g.beginPath(); g.arc(0,0,14,0,7); g.stroke(); g.beginPath(); g.moveTo(0,-12); g.lineTo(5,6); g.lineTo(0,2); g.lineTo(-5,6); g.closePath(); g.fill();
   g.font = `600 10px Archivo, system-ui, sans-serif`; g.fillText("N", 0, -22); g.restore();
-  const sbm = V.s > 60 ? 1 : V.s > 25 ? 2 : V.s > 10 ? 5 : 10, sbx = W2 - 20 - sbm*V.s, sby = H2 - 22;
+  const sbm = V.s > 60 ? 1 : V.s > 25 ? 2 : V.s > 10 ? 5 : 10, sbx = W2 - 20 - sbm*V.s, sby = H2 - 44;
   g.fillStyle = C.text; g.fillRect(sbx, sby, sbm*V.s/2, 4); g.strokeStyle = C.text; g.lineWidth=1; g.strokeRect(sbx+.5, sby+.5, sbm*V.s, 4);
   g.font = `10px "IBM Plex Mono", monospace`; g.textAlign = "right"; g.fillText(`${sbm} m`, W2 - 20, sby - 8);
   hud2d();
 }
 function drawObject2D(g, o){
-  const fp = objFootprint(o), a = -THREE.MathUtils.degToRad(o.rot||0), it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null, isSel = S.sel?.id === o.id;
+  const fp = objFootprint(o), a = -THREE.MathUtils.degToRad(o.rot||0), it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null, isSel = isSelected(o.id);
   g.save(); const s = toS([o.x,o.y]); g.translate(s[0],s[1]); g.rotate(-a);
   const loading = !objTemplate(o);
   if (it?.plan === "tree" && !loading){
@@ -98,12 +104,23 @@ function drawObject2D(g, o){
   const showLabel = isSel || loading || (V.s > 55 && fp.w*V.s > 70);
   if (showLabel && it?.plan !== "tree"){ const ra = -a, lx = fp.cx*Math.cos(ra) - fp.cz*Math.sin(ra), lz = fp.cx*Math.sin(ra) + fp.cz*Math.cos(ra); g.fillStyle = isSel ? C.sel : C.muted; g.font = `10px Archivo, system-ui, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(loading ? "caricamento…" : (o.name||""), s[0] + lx*V.s, s[1] + lz*V.s + (it?.plan === "person" ? .45*V.s : 0)); }
 }
+/* maniglie dell'oggetto selezionato: rotazione (cerchio) e misura (quadrato) */
+function objHandles(o){
+  const fp = objFootprint(o), a = THREE.MathUtils.degToRad(o.rot || 0), L = (lx, lz) => [o.x + lx*Math.cos(a) - lz*Math.sin(a), o.y + lx*Math.sin(a) + lz*Math.cos(a)];
+  const top = L(fp.cx, fp.cz - fp.d/2), rot = L(fp.cx, fp.cz - fp.d/2 - 18/V.s - .1), size = L(fp.cx + fp.w/2, fp.cz + fp.d/2);
+  return {top, rot, size, center:L(fp.cx, fp.cz)};
+}
+function drawObjHandles(g, o){
+  const h = objHandles(o), T = toS(h.top), R = toS(h.rot), Z = toS(h.size);
+  g.save(); g.strokeStyle = C.sel; g.fillStyle = C.bg; g.lineWidth = 1.5; g.beginPath(); g.moveTo(T[0],T[1]); g.lineTo(R[0],R[1]); g.stroke();
+  g.beginPath(); g.arc(R[0], R[1], 6, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.rect(Z[0]-5, Z[1]-5, 10, 10); g.fill(); g.stroke(); g.restore();
+}
 function wallQuad(w, s0, s1){ const h = w.thick/2; return [ptOnWall(w,s0,-h), ptOnWall(w,s1,-h), ptOnWall(w,s1,h), ptOnWall(w,s0,h)].map(toS); }
 function quadPath(g, q){ g.moveTo(q[0][0],q[0][1]); for (let i=1;i<4;i++) g.lineTo(q[i][0],q[i][1]); g.closePath(); }
 function strokeWall(g, w, solids){ g.beginPath(); for (const [a,b] of solids) quadPath(g, wallQuad(w,a,b)); g.stroke(); }
 function fillWall(g, w, solids){ g.beginPath(); for (const [a,b] of solids) quadPath(g, wallQuad(w,a,b)); g.fill(); }
 function drawOpening(g, w, c){
-  const o = c.o, h = w.thick/2, isSel = S.sel?.id === o.id; g.strokeStyle = isSel ? C.sel : C.poche; g.lineWidth = isSel ? 2 : 1;
+  const o = c.o, h = w.thick/2, isSel = isSelected(o.id); g.strokeStyle = isSel ? C.sel : C.poche; g.lineWidth = isSel ? 2 : 1;
   const L = (s, off) => toS(ptOnWall(w, s, off));
   g.beginPath(); for (const s of [c.s0, c.s1]){ const a=L(s,-h), b=L(s,h); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); } g.stroke();
   if (o.type === "window"){
@@ -118,15 +135,17 @@ function drawOpening(g, w, c){
     g.setLineDash([3,3]); g.beginPath(); g.arc(H[0],H[1], r, a1, a2, d < 0); g.stroke(); g.setLineDash([]);
   }
 }
-function dimLine(g, a, b, off, label){
+function dimLine(g, a, b, off, label, col, quiet){
   const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1, nx=-dy/L, ny=dx/L;
   const A = toS([a[0]+nx*off, a[1]+ny*off]), B = toS([b[0]+nx*off, b[1]+ny*off]);
-  g.save(); g.strokeStyle = C.sel; g.fillStyle = C.sel; g.lineWidth = 1;
+  col = col || C.sel; if (quiet && Math.hypot(B[0]-A[0], B[1]-A[1]) < 34) return;
+  g.save(); g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1;
+  if (off && !quiet){ const a0 = toS(a), b0 = toS(b); g.globalAlpha = .6; g.beginPath(); g.moveTo(a0[0],a0[1]); g.lineTo(A[0],A[1]); g.moveTo(b0[0],b0[1]); g.lineTo(B[0],B[1]); g.stroke(); g.globalAlpha = 1; }
   g.beginPath(); g.moveTo(A[0],A[1]); g.lineTo(B[0],B[1]); g.stroke();
   for (const Q of [A,B]){ g.beginPath(); g.moveTo(Q[0]-4,Q[1]+4); g.lineTo(Q[0]+4,Q[1]-4); g.stroke(); }
   const m = [(A[0]+B[0])/2, (A[1]+B[1])/2]; let ang = Math.atan2(B[1]-A[1], B[0]-A[0]); if (ang > Math.PI/2 || ang < -Math.PI/2) ang += Math.PI;
-  g.translate(m[0], m[1]); g.rotate(ang); g.font = `500 11px "IBM Plex Mono", monospace`; g.textAlign = "center"; g.textBaseline = "bottom";
-  const tw = g.measureText(label).width + 8; g.fillStyle = C.bg; g.fillRect(-tw/2, -17, tw, 15); g.fillStyle = C.sel; g.fillText(label, 0, -4); g.restore();
+  g.translate(m[0], m[1]); g.rotate(ang); g.font = `500 ${quiet ? 10 : 11}px "IBM Plex Mono", monospace`; g.textAlign = "center"; g.textBaseline = "bottom";
+  const tw = g.measureText(label).width + 8; g.fillStyle = C.bg; g.fillRect(-tw/2, -17, tw, 15); g.fillStyle = col; g.fillText(label, 0, -4); g.restore();
 }
 function drawToolPreview(g){
   const d = S.draw, hp = S.hover;
@@ -134,12 +153,18 @@ function drawToolPreview(g){
   if (S.tool === "wall" && d?.start && hp){
     const end = wallEndFromTyped(d.start, hp.p); const a = toS(d.start), b = toS(end);
     g.setLineDash([6,4]); g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke(); g.setLineDash([]);
+    const off = wallOffsetVec(d.start, end); if (off[0] || off[1]){ const A2 = toS([d.start[0]+off[0], d.start[1]+off[1]]), B2 = toS([end[0]+off[0], end[1]+off[1]]); g.save(); g.globalAlpha = .35; g.lineWidth = Math.max(2, S.defaults.wallThick*V.s); g.beginPath(); g.moveTo(A2[0],A2[1]); g.lineTo(B2[0],B2[1]); g.stroke(); g.restore(); }
     dimLine(g, d.start, end, S.defaults.wallThick/2 + .5, fmt(Math.hypot(end[0]-d.start[0], end[1]-d.start[1])) + " m");
+    const ang = (Math.atan2(-(end[1]-d.start[1]), end[0]-d.start[0]) * 180 / Math.PI + 360) % 360;
+    const L1 = S.typedField === "ang" ? (S.typed || "—") : (S.typed ? S.typed + "▏" : fmt(Math.hypot(end[0]-d.start[0], end[1]-d.start[1]))), A1 = S.typedField === "ang" ? (S.typedAng || "") + "▏" : (S.typedAng || Math.round(ang));
+    const bx = b[0] + 14, by = b[1] + 14, txt = `L ${L1} m   ∠ ${A1}°`; g.font = `500 11px "IBM Plex Mono", monospace`; const tw = g.measureText(txt).width + 12;
+    g.fillStyle = C.bg; g.strokeStyle = C.sel; g.lineWidth = 1; g.fillRect(bx, by, tw, 20); g.strokeRect(bx+.5, by+.5, tw, 20); g.fillStyle = C.sel; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(txt, bx + 6, by + 10);
   }
   if (S.tool === "rect" && d?.start && hp){
     const a = toS(d.start), b = toS(hp.p); g.setLineDash([6,4]); g.strokeRect(a[0], a[1], b[0]-a[0], b[1]-a[1]); g.setLineDash([]);
     const xa = Math.min(d.start[0],hp.p[0]), xb = Math.max(d.start[0],hp.p[0]), ya = Math.min(d.start[1],hp.p[1]), yb = Math.max(d.start[1],hp.p[1]);
-    dimLine(g, [xb, ya], [xa, ya], .6, fmt(xb-xa) + " m"); dimLine(g, [xb, yb], [xb, ya], .6, fmt(yb-ya) + " m");
+    const lab = {asse:"in asse", interno:"interne", esterno:"esterne"}[PREFS.rectRef] || "";
+    dimLine(g, [xb, ya], [xa, ya], .6, `${fmt(xb-xa)} m ${lab}`); dimLine(g, [xb, yb], [xb, ya], .6, `${fmt(yb-ya)} m`);
   }
   if (S.tool === "room" && d?.pts?.length){
     g.setLineDash([6,4]); g.beginPath(); d.pts.forEach((p,i)=>{ const s=toS(p); i?g.lineTo(s[0],s[1]):g.moveTo(s[0],s[1]); }); if (hp){ const s=toS(hp.p); g.lineTo(s[0],s[1]); } g.stroke(); g.setLineDash([]);
@@ -149,36 +174,57 @@ function drawToolPreview(g){
     const w = hp.wall, wd = S.tool === "door" ? S.defaults.door.w : S.defaults.win.w; const A = toS(ptOnWall(w, hp.s - wd/2)), B = toS(ptOnWall(w, hp.s + wd/2));
     g.lineWidth = Math.max(3, w.thick*V.s); g.globalAlpha = .45; g.beginPath(); g.moveTo(A[0],A[1]); g.lineTo(B[0],B[1]); g.stroke(); g.globalAlpha = 1;
   }
+  if (S.tool === "dim" && d?.a && hp){ const b = d.b || hp.p, off = d.b ? dimOffsetFrom(d.a, d.b, hp.p) : 0; dimLine(g, d.a, b, off, fmt(Math.hypot(b[0]-d.a[0], b[1]-d.a[1])) + " m"); }
   if (S.tool === "calib" && S.calib?.p1){ const a = toS(S.calib.p1), b = S.calib.p2 ? toS(S.calib.p2) : hp ? toS(hp.p) : a; g.setLineDash([4,3]); g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke(); g.setLineDash([]); for (const p of [a,b]){ g.beginPath(); g.arc(p[0],p[1],4,0,7); g.fill(); } }
-  if (hp?.snapped && ["wall","rect","room","calib"].includes(S.tool)){ const s = toS(hp.p); g.lineWidth = 1.5; g.beginPath(); g.arc(s[0],s[1],7,0,7); g.stroke(); }
+  if (hp?.snapped && ["wall","rect","room","calib","dim"].includes(S.tool)){ const s = toS(hp.p); g.lineWidth = 1.5; g.beginPath(); g.arc(s[0],s[1],7,0,7); g.stroke(); }
   g.restore();
 }
 function hud2d(){
   const hp = S.hover, L = level();
   const tips = {select:"Clic per selezionare · trascina per spostare · rotella per zoom · trascina il vuoto per spostare la vista",
-    wall:S.draw?.start ? `Clic per il punto successivo · Esc per finire · digita una misura e Invio${S.typed?` → ${S.typed} m`:""}` : "Clic per iniziare il muro",
+    wall:S.draw?.start ? "Clic per il punto successivo · cifre per la lunghezza, Tab per l'angolo, Invio · Esc per finire" : "Clic per iniziare il muro",
+    dim:S.draw?.b ? "Sposta per scegliere la distanza della quota, poi clic" : S.draw?.a ? "Clic sul secondo punto" : "Clic sul primo punto da quotare",
     rect:"Trascina per disegnare una stanza con i suoi muri", room:"Clic sui vertici · Invio o clic sul primo punto per chiudere",
     door:"Clic su un muro per inserire la porta", window:"Clic su un muro per inserire la finestra", furn:"Scegli a destra, poi clic in pianta per posizionare",
     calib:S.calib?.p2 ? "Inserisci la misura reale a destra" : "Clic su due punti di cui conosci la distanza", moveunder:"Trascina per spostare la base di ricalco"};
-  $("#hud2d").innerHTML = `<span>${esc(tips[S.tool])}</span>${hp ? `<span>x ${fmt(hp.p[0])} · y ${fmt(hp.p[1])}</span>` : ""}`;
-  $("#tag2d").textContent = `Pianta · ${L?.name || ""} · quota ${fmt(L?.elev||0)} m`;
+  const n = selList().length;
+  $("#hud2d").innerHTML = `<span>${esc(n > 1 && S.tool === "select" ? `${n} elementi selezionati · trascina per spostarli · tasto destro per il menu` : tips[S.tool])}</span>${hp ? `<span>x ${fmt(hp.p[0])} · y ${fmt(hp.p[1])}</span>` : ""}`;
+  updateStatusInfo();
 }
 
-const GRID = .05;
+Object.defineProperty(globalThis, "GRID", {get: () => PREFS.grid || .05, configurable:true});
 function snapPoint(p, opts={}){
-  const tol = 10 / V.s; let best = null, bd = tol;
-  for (const w of wallsOf(S.level)){ for (const q of [w.a, w.b]){ const d = Math.hypot(q[0]-p[0], q[1]-p[1]); if (d < bd){ bd = d; best = [q[0], q[1]]; } } }
+  const tol = 10 / V.s; let best = null, bd = tol; S.guides = [];
+  const ws = wallsOf(S.level).filter(w => !(opts.skip instanceof Set ? opts.skip.has(w) : w === opts.skip)), skip = null;
+  if (PREFS.snapEnds){ for (const w of ws){ if (w === skip) continue; for (const q of [w.a, w.b]){ const d = Math.hypot(q[0]-p[0], q[1]-p[1]); if (d < bd){ bd = d; best = [q[0], q[1]]; } } }
+    for (const r of P.rooms) if (r.level === S.level && r !== opts.skipRoom) for (const q of r.pts){ const d = Math.hypot(q[0]-p[0], q[1]-p[1]); if (d < bd){ bd = d; best = [q[0], q[1]]; } } }
+  if (PREFS.snapMid) for (const w of ws){ if (w === skip) continue; const q = [(w.a[0]+w.b[0])/2, (w.a[1]+w.b[1])/2], d = Math.hypot(q[0]-p[0], q[1]-p[1]); if (d < bd){ bd = d; best = q; } }
   if (best) return {p:best, snapped:true};
-  if (opts.onWall !== false){ for (const w of wallsOf(S.level)){ const r = projOnSeg(p, w.a, w.b); if (r.d < 6/V.s && r.t > 0 && r.t < 1) return {p:r.q, snapped:true}; } }
-  return {p:[Math.round(p[0]/GRID)*GRID, Math.round(p[1]/GRID)*GRID], snapped:false};
+  if (PREFS.snapWall && opts.onWall !== false){ for (const w of ws){ if (w === skip) continue; const r = projOnSeg(p, w.a, w.b); if (r.d < 6/V.s && r.t > 0 && r.t < 1) return {p:r.q, snapped:true}; } }
+  let q = PREFS.snapGrid ? [Math.round(p[0]/GRID)*GRID, Math.round(p[1]/GRID)*GRID] : p.slice();
+  if (PREFS.guides && opts.guides !== false){ let gx = null, gy = null, dx = 7/V.s, dy = 7/V.s;
+    for (const w of ws){ if (w === skip) continue; for (const e of [w.a, w.b]){ if (Math.abs(e[0]-p[0]) < dx){ dx = Math.abs(e[0]-p[0]); gx = e; } if (Math.abs(e[1]-p[1]) < dy){ dy = Math.abs(e[1]-p[1]); gy = e; } } }
+    if (opts.from){ if (Math.abs(opts.from[0]-p[0]) < dx){ gx = opts.from; } if (Math.abs(opts.from[1]-p[1]) < dy){ gy = opts.from; } }
+    if (gx){ q[0] = gx[0]; S.guides.push([gx, [gx[0], q[1]]]); } if (gy){ q[1] = gy[1]; S.guides.push([gy, [q[0], gy[1]]]); }
+    if (gx || gy) return {p:q, snapped:false, guided:true};
+  }
+  return {p:q, snapped:false};
 }
-function constrainAngle(a, p, on){ if (!on) return p; const dx=p[0]-a[0], dy=p[1]-a[1], L=Math.hypot(dx,dy), ang=Math.round(Math.atan2(dy,dx)/(Math.PI/12))*(Math.PI/12); return [a[0]+Math.cos(ang)*L, a[1]+Math.sin(ang)*L]; }
-function wallEndFromTyped(a, p){ const v = num(S.typed); if (!v) return p; const dx=p[0]-a[0], dy=p[1]-a[1], L=Math.hypot(dx,dy)||1; return [a[0]+dx/L*v, a[1]+dy/L*v]; }
+/* Maiusc: angoli a 15°; con «Ortogonale» attivo i muri vanno a 90° e Maiusc li libera */
+function constrainAngle(a, p, shift){ const step = PREFS.ortho ? (shift ? 0 : Math.PI/2) : (shift ? Math.PI/12 : 0); if (!step) return p; const dx=p[0]-a[0], dy=p[1]-a[1], L=Math.hypot(dx,dy), ang=Math.round(Math.atan2(dy,dx)/step)*step; return [a[0]+Math.cos(ang)*L, a[1]+Math.sin(ang)*L]; }
+/* lunghezza e angolo digitati (angolo in gradi, antiorario da est come in un CAD) */
+function wallEndFromTyped(a, p){
+  const v = num(S.typed), ag = num(S.typedAng); let dx=p[0]-a[0], dy=p[1]-a[1], L=Math.hypot(dx,dy)||1;
+  if (ag !== null && S.typedAng !== ""){ const r = ag*Math.PI/180; dx = Math.cos(r); dy = -Math.sin(r); L = 1; if (!v){ const pr = (p[0]-a[0])*dx + (p[1]-a[1])*dy; return [a[0]+dx*Math.max(pr, 0), a[1]+dy*Math.max(pr, 0)]; } }
+  if (!v) return p; return [a[0]+dx/L*v, a[1]+dy/L*v]; }
+/* muro disegnato sul filo: l'asse si sposta di mezzo spessore */
+function wallOffsetVec(a, b){ const ref = PREFS.wallRef; if (ref !== "sinistra" && ref !== "destra") return [0, 0]; const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1, h = S.defaults.wallThick/2, sg = ref === "sinistra" ? 1 : -1; return [-dy/L*h*sg, dx/L*h*sg]; }
+function dimOffsetFrom(a, b, p){ const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1; return ((p[0]-a[0])*(-dy/L) + (p[1]-a[1])*(dx/L)); }
 function nearestWall(p, maxD=.6){ let best=null, bd=Infinity; for (const w of wallsOf(S.level)){ const r = projOnSeg(p, w.a, w.b); if (r.d < w.thick/2 + maxD && r.d < bd){ bd = r.d; best = {wall:w, s:r.t*wallFrame(w).len, d:r.d}; } } return best; }
 function hitTest(p){
-  const tol = 6/V.s;
+  const tol = 6/V.s; const dh = dimHit(p); if (dh) return dh;
   for (const o of P.openings){ const w = wallById(o.wall); if (!w || w.level !== S.level) continue; const r = projOnSeg(p, w.a, w.b), s = r.t*wallFrame(w).len; if (r.d < w.thick/2 + tol && Math.abs(s - o.t) < o.w/2) return {type:"opening", id:o.id}; }
-  for (const o of [...P.objects].reverse()){ if (o.level !== S.level) continue; const fp = objFootprint(o), a = THREE.MathUtils.degToRad(o.rot||0); const dx=p[0]-o.x, dy=p[1]-o.y; const lx = dx*Math.cos(a) - dy*Math.sin(a), ly = dx*Math.sin(a) + dy*Math.cos(a);
+  for (const o of [...P.objects].reverse()){ if (o.level !== S.level) continue; const fp = objFootprint(o), a = THREE.MathUtils.degToRad(o.rot||0); const dx=p[0]-o.x, dy=p[1]-o.y; const lx = dx*Math.cos(a) + dy*Math.sin(a), ly = -dx*Math.sin(a) + dy*Math.cos(a);
     const it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null; const shrink = it?.plan === "tree" ? .5 : 1;
     if (Math.abs(lx-fp.cx) < fp.w/2*shrink && Math.abs(ly-fp.cz) < fp.d/2*shrink) return {type:"object", id:o.id}; }
   for (const w of wallsOf(S.level)){ const r = projOnSeg(p, w.a, w.b); if (r.d < w.thick/2 + tol) return {type:"wall", id:w.id}; }
@@ -191,24 +237,39 @@ c2d.addEventListener("pointerdown", e => {
   c2d.setPointerCapture(e.pointerId); const sp = evP(e); pointers.set(e.pointerId, sp);
   if (pointers.size === 2){ const [p1,p2] = [...pointers.values()]; drag = {type:"pinch", d0:Math.hypot(p1[0]-p2[0],p1[1]-p2[1]), s0:V.s, c0:toW((p1[0]+p2[0])/2,(p1[1]+p2[1])/2)}; return; }
   const raw = toW(...sp); const sn = snapPoint(raw);
-  if (e.button === 1 || e.button === 2 || (e.button === 0 && spaceDown)){ drag = {type:"pan", sp, c:[V.cx,V.cy]}; e.preventDefault(); return; }
+  if (e.button === 2){ drag = {type:"pan", sp, c:[V.cx,V.cy], right:true, raw}; e.preventDefault(); return; }
+  if (e.button === 1 || (e.button === 0 && spaceDown)){ drag = {type:"pan", sp, c:[V.cx,V.cy]}; e.preventDefault(); return; }
+  closeCtxMenu();
   const t = S.tool;
   if (t === "select"){
-    const sel = findSel();
-    if (S.sel?.type === "wall" && sel){ for (const k of ["a","b"]){ const s = toS(sel[k]); if (Math.hypot(s[0]-sp[0], s[1]-sp[1]) < 9){ drag = {type:"wallEnd", links: linkedEnds(sel[k]), moved:false}; return; } } }
-    if (S.sel?.type === "room" && sel){ for (let i=0;i<sel.pts.length;i++){ const s = toS(sel.pts[i]); if (Math.hypot(s[0]-sp[0], s[1]-sp[1]) < 8){ drag = {type:"roomPt", room:sel, i, moved:false}; return; } } }
-    const h = hitTest(raw); S.sel = h; renderInspector();
-    if (!h){ drag = {type:"pan", sp, c:[V.cx,V.cy]}; draw2D(); return; }
+    const sel = findSel(), single = selList().length === 1;
+    if (single && S.sel?.type === "object" && sel){ const hd = objHandles(sel), R = toS(hd.rot), Z = toS(hd.size);
+      if (Math.hypot(R[0]-sp[0], R[1]-sp[1]) < 9){ drag = {type:"objRot", o:sel, moved:false}; return; }
+      if (Math.hypot(Z[0]-sp[0], Z[1]-sp[1]) < 9){ drag = {type:"objScale", o:sel, c:hd.center, d0:Math.hypot(hd.size[0]-hd.center[0], hd.size[1]-hd.center[1]), s0:sel.scale || 1, moved:false}; return; } }
+    if (single && S.sel?.type === "wall" && sel){ for (const k of ["a","b"]){ const s = toS(sel[k]); if (Math.hypot(s[0]-sp[0], s[1]-sp[1]) < 9){ drag = {type:"wallEnd", w:sel, links: linkedEnds(sel[k]), moved:false}; return; } } }
+    if (single && S.sel?.type === "room" && sel){ for (let i=0;i<sel.pts.length;i++){ const s = toS(sel.pts[i]); if (Math.hypot(s[0]-sp[0], s[1]-sp[1]) < 8){ drag = {type:"roomPt", room:sel, i, moved:false}; return; } } }
+    const h = hitTest(raw);
+    if (e.shiftKey && h){ toggleSel(h); renderInspector(); draw2D(); return; }
+    if (!h){ if (e.pointerType === "touch"){ drag = {type:"pan", sp, c:[V.cx,V.cy]}; } else drag = {type:"box", sp, cur:sp, add:e.shiftKey}; if (!e.shiftKey){ setSel([]); renderInspector(); } draw2D(); return; }
+    if (selList().length > 1 && isSelected(h.id)){ drag = {type:"group", start:raw, snap:groupSnapshot(), moved:false}; return; }
+    setSel([h]); renderInspector();
     const obj = findSel();
     if (h.type === "opening") drag = {type:"opening", o:obj, moved:false};
     else if (h.type === "object") drag = {type:"object", o:obj, start:raw, orig:[obj.x,obj.y], moved:false};
     else if (h.type === "wall") drag = {type:"wallMove", w:obj, start:raw, a:obj.a.slice(), b:obj.b.slice(), la:linkedEnds(obj.a, obj), lb:linkedEnds(obj.b, obj), moved:false};
     else if (h.type === "room") drag = {type:"roomMove", r:obj, start:raw, orig:obj.pts.map(p=>p.slice()), moved:false};
+    else if (h.type === "dim") drag = {type:"group", start:raw, snap:groupSnapshot(), moved:false};
     draw2D(); return;
   }
   if (t === "wall"){
-    let p = sn.p; if (S.draw?.start){ p = wallEndFromTyped(S.draw.start, constrainAngle(S.draw.start, p, e.shiftKey)); addWall(S.draw.start, p); }
-    S.draw = {start:p}; S.typed = ""; draw2D(); return;
+    let p = sn.p; if (S.draw?.start){ p = wallEndFromTyped(S.draw.start, constrainAngle(S.draw.start, p, e.shiftKey)); addWall(S.draw.start, p, true); }
+    S.draw = {start:p, chain:S.draw?.chain}; S.typed = ""; S.typedAng = ""; S.typedField = "len"; draw2D(); return;
+  }
+  if (t === "dim"){
+    const d = S.draw || (S.draw = {});
+    if (!d.a) d.a = sn.p; else if (!d.b){ if (Math.hypot(sn.p[0]-d.a[0], sn.p[1]-d.a[1]) > .02) d.b = sn.p; }
+    else { P.dims = P.dims || []; const dm = {id:uid(), level:S.level, a:d.a, b:d.b, off:+dimOffsetFrom(d.a, d.b, raw).toFixed(3)}; P.dims.push(dm); S.draw = null; setSel([{type:"dim", id:dm.id}]); commit(); }
+    draw2D(); return;
   }
   if (t === "rect"){ S.draw = {start:sn.p}; drag = {type:"rect"}; return; }
   if (t === "room"){
@@ -230,7 +291,8 @@ c2d.addEventListener("pointermove", e => {
   const sp = evP(e); if (pointers.has(e.pointerId)) pointers.set(e.pointerId, sp);
   const raw = toW(...sp);
   if (drag?.type === "pinch" && pointers.size === 2){ const [p1,p2] = [...pointers.values()]; const d = Math.hypot(p1[0]-p2[0],p1[1]-p2[1]); V.s = clamp(drag.s0 * d/drag.d0, 3, 400); const c = toW((p1[0]+p2[0])/2,(p1[1]+p2[1])/2); V.cx += drag.c0[0]-c[0]; V.cy += drag.c0[1]-c[1]; draw2D(); return; }
-  let sn = snapPoint(raw, {onWall: S.tool !== "select"});
+  if (drag?.type === "box"){ drag.cur = sp; draw2D(); return; }
+  let sn = snapPoint(raw, {onWall: S.tool !== "select", guides: S.tool !== "select", from: S.draw?.start});
   if (S.tool === "wall" && S.draw?.start) sn = {p:constrainAngle(S.draw.start, sn.p, e.shiftKey), snapped:sn.snapped};
   if (S.tool === "door" || S.tool === "window"){ const nw = nearestWall(raw); S.hover = {p:raw, wall:nw?.wall, s:nw?.s}; }
   else S.hover = {p:sn.p, snapped:sn.snapped};
@@ -238,12 +300,15 @@ c2d.addEventListener("pointermove", e => {
   const dx = raw[0] - (drag.start?.[0] ?? raw[0]), dy = raw[1] - (drag.start?.[1] ?? raw[1]);
   const g = v => Math.round(v/GRID)*GRID;
   switch (drag.type){
-    case "pan": V.cx = drag.c[0] - (sp[0]-drag.sp[0])/V.s; V.cy = drag.c[1] - (sp[1]-drag.sp[1])/V.s; break;
-    case "wallEnd": { const q = snapPoint(raw, {onWall:false}).p; for (const [w,k] of drag.links) w[k] = q.slice(); drag.moved = true; rebuild3D(); renderInspector(); break; }
+    case "pan": V.cx = drag.c[0] - (sp[0]-drag.sp[0])/V.s; V.cy = drag.c[1] - (sp[1]-drag.sp[1])/V.s; if (Math.hypot(sp[0]-drag.sp[0], sp[1]-drag.sp[1]) > 4) drag.panned = true; break;
+    case "group": drag.moved = true; applyGroupMove(drag.snap, g(dx), g(dy)); rebuild3D(); break;
+    case "objRot": { const c = [drag.o.x, drag.o.y]; let deg = Math.atan2(raw[0]-c[0], -(raw[1]-c[1])) * 180 / Math.PI; if (!e.altKey) deg = Math.round(deg/15)*15; drag.o.rot = ((deg % 360) + 360) % 360; drag.moved = true; rebuild3D(); renderInspector(); break; }
+    case "objScale": { const d = Math.hypot(raw[0]-drag.c[0], raw[1]-drag.c[1]); drag.o.scale = clamp(+(drag.s0 * d / Math.max(drag.d0, .01)).toFixed(2), .1, 10); drag.moved = true; rebuild3D(); renderInspector(); break; }
+    case "wallEnd": { const q = snapPoint(raw, {onWall:false, skip:new Set(drag.links.map(l => l[0]))}).p; for (const [w,k] of drag.links) w[k] = q.slice(); drag.moved = true; rebuild3D(); renderInspector(); break; }
     case "wallMove": { const ox = g(dx), oy = g(dy); drag.w.a = [drag.a[0]+ox, drag.a[1]+oy]; drag.w.b = [drag.b[0]+ox, drag.b[1]+oy]; for (const [w,k] of drag.la) w[k] = drag.w.a.slice(); for (const [w,k] of drag.lb) w[k] = drag.w.b.slice(); drag.moved = true; rebuild3D(); break; }
     case "opening": { const w = wallById(drag.o.wall), r = projOnSeg(raw, w.a, w.b), f = wallFrame(w); drag.o.t = clamp(g(r.t*f.len), drag.o.w/2+.05, f.len-drag.o.w/2-.05); drag.moved = true; rebuild3D(); renderInspector(); break; }
     case "object": drag.o.x = g(drag.orig[0]+dx); drag.o.y = g(drag.orig[1]+dy); drag.moved = true; rebuild3D(); renderInspector(); break;
-    case "roomPt": drag.room.pts[drag.i] = snapPoint(raw).p; drag.moved = true; rebuild3D(); break;
+    case "roomPt": drag.room.pts[drag.i] = snapPoint(raw, {skipRoom:drag.room, guides:false}).p; drag.moved = true; rebuild3D(); break;
     case "roomMove": drag.r.pts = drag.orig.map(p => [p[0]+g(dx), p[1]+g(dy)]); drag.moved = true; rebuild3D(); break;
     case "under": { const U = level().underlay; U.ox = drag.o[0]+dx; U.oy = drag.o[1]+dy; drag.moved = true; break; }
   }
@@ -252,19 +317,41 @@ c2d.addEventListener("pointermove", e => {
 function endDrag(e){
   pointers.delete(e.pointerId);
   if (!drag) return;
+  if (drag.type === "pan" && drag.right && !drag.panned){ const sp = drag.sp, raw = drag.raw; drag = null; if (S.tool === "wall" || S.tool === "dim"){ S.draw = null; draw2D(); return; } openCtxMenu(sp, raw); return; }
+  if (drag.type === "box"){ const a = toW(...drag.sp), b = toW(...drag.cur), x0 = Math.min(a[0],b[0]), x1 = Math.max(a[0],b[0]), y0 = Math.min(a[1],b[1]), y1 = Math.max(a[1],b[1]);
+    if (Math.abs(drag.cur[0]-drag.sp[0]) + Math.abs(drag.cur[1]-drag.sp[1]) > 6){
+      const inside = p => p[0] >= x0 && p[0] <= x1 && p[1] >= y0 && p[1] <= y1, found = [];
+      for (const w of wallsOf(S.level)) if (inside(w.a) && inside(w.b)) found.push({type:"wall", id:w.id});
+      for (const r of P.rooms) if (r.level === S.level && r.pts.every(inside)) found.push({type:"room", id:r.id});
+      for (const o of P.objects) if (o.level === S.level && inside([o.x, o.y])) found.push({type:"object", id:o.id});
+      for (const d of P.dims || []) if (d.level === S.level && inside(d.a) && inside(d.b)) found.push({type:"dim", id:d.id});
+      for (const o of P.openings){ const w = wallById(o.wall); if (w && w.level === S.level && !found.some(f => f.id === w.id) && inside(ptOnWall(w, o.t))) found.push({type:"opening", id:o.id}); }
+      setSel(drag.add ? [...selList(), ...found] : found); renderInspector(); }
+    drag = null; draw2D(); return; }
   if (drag.type === "rect" && S.draw?.start && S.hover){ const a = S.draw.start, b = S.hover.p; if (Math.abs(a[0]-b[0]) > .4 && Math.abs(a[1]-b[1]) > .4) addRectRoom(a, b); S.draw = null; }
   else if (drag.moved) commit();
   if (drag.type !== "pinch" || pointers.size < 2) drag = null; draw2D();
 }
 c2d.addEventListener("pointerup", endDrag); c2d.addEventListener("pointercancel", endDrag);
 c2d.addEventListener("pointerleave", () => { if (!drag){ S.hover = null; draw2D(); } });
-c2d.addEventListener("contextmenu", e => { e.preventDefault(); if (S.tool === "wall"){ S.draw = null; draw2D(); } });
-c2d.addEventListener("dblclick", () => { if (S.tool === "wall"){ S.draw = null; draw2D(); } if (S.tool === "room") finishRoom(); });
+c2d.addEventListener("contextmenu", e => e.preventDefault());
+c2d.addEventListener("dblclick", e => { if (S.tool === "wall"){ S.draw = null; draw2D(); } if (S.tool === "room") finishRoom();
+  if (S.tool === "select"){ const raw = toW(...evP(e)), h = hitTest(raw); if (h){ setSel([h]); focusInspector(); } else autoRoomAt(raw); } });
 c2d.addEventListener("wheel", e => { e.preventDefault(); const sp = evP(e), before = toW(...sp); V.s = clamp(V.s * Math.exp(-e.deltaY*.0015), 3, 400); const after = toW(...sp); V.cx += before[0]-after[0]; V.cy += before[1]-after[1]; draw2D(); }, {passive:false});
 function linkedEnds(pt, except){ const out = []; for (const w of wallsOf(S.level)){ if (w === except) continue; for (const k of ["a","b"]) if (Math.hypot(w[k][0]-pt[0], w[k][1]-pt[1]) < 1e-4) out.push([w,k]); } return out; }
-function addWall(a, b){ if (Math.hypot(b[0]-a[0], b[1]-a[1]) < .05) return; const d = S.defaults; const w = {id:uid(), level:S.level, a:a.slice(), b:b.slice(), thick:d.wallThick, height:null, mat:d.wallMat}; P.walls.push(w); S.sel = {type:"wall", id:w.id}; commit(); }
+function addWall(a, b, chained){
+  if (Math.hypot(b[0]-a[0], b[1]-a[1]) < .05) return; const d = S.defaults, o = wallOffsetVec(a, b);
+  let A = [a[0]+o[0], a[1]+o[1]], B = [b[0]+o[0], b[1]+o[1]];
+  const prev = chained && S.draw?.chain && wallById(S.draw.chain.id);
+  if (prev && (o[0] || o[1])){ // spigolo: intersezione tra il muro precedente e questo, entrambi spostati
+    const p1 = prev.a, d1 = [prev.b[0]-prev.a[0], prev.b[1]-prev.a[1]], d2 = [B[0]-A[0], B[1]-A[1]], den = d1[0]*d2[1] - d1[1]*d2[0];
+    if (Math.abs(den) > 1e-9){ const t = ((A[0]-p1[0])*d2[1] - (A[1]-p1[1])*d2[0]) / den, X = [+(p1[0]+d1[0]*t).toFixed(4), +(p1[1]+d1[1]*t).toFixed(4)]; prev.b = X.slice(); A = X.slice(); }
+  }
+  const w = {id:uid(), level:S.level, a:A, b:B, thick:d.wallThick, height:null, mat:d.wallMat}; P.walls.push(w); setSel([{type:"wall", id:w.id}]);
+  if (S.draw) S.draw.chain = {id:w.id}; commit(); }
 function addRectRoom(a, b){
-  const x0=Math.min(a[0],b[0]), x1=Math.max(a[0],b[0]), y0=Math.min(a[1],b[1]), y1=Math.max(a[1],b[1]), d=S.defaults, t=d.wallThick;
+  const d=S.defaults, t=d.wallThick, k = PREFS.rectRef === "interno" ? t/2 : PREFS.rectRef === "esterno" ? -t/2 : 0;
+  const x0=Math.min(a[0],b[0])-k, x1=Math.max(a[0],b[0])+k, y0=Math.min(a[1],b[1])-k, y1=Math.max(a[1],b[1])+k;
   const C4 = [[x0,y0],[x1,y0],[x1,y1],[x0,y1]];
   for (let i=0;i<4;i++){ const p=C4[i], q=C4[(i+1)%4]; const same = (u,v) => Math.hypot(u[0]-v[0],u[1]-v[1]) < 1e-4; const exists = wallsOf(S.level).some(w => (same(w.a,p) && same(w.b,q)) || (same(w.a,q) && same(w.b,p))); if (!exists) P.walls.push({id:uid(), level:S.level, a:p.slice(), b:q.slice(), thick:t, height:null, mat:d.wallMat}); }
   const r = {id:uid(), level:S.level, name:"Locale " + (P.rooms.filter(r=>r.level===S.level).length+1), mat:d.roomMat, pts:[[x0+t/2,y0+t/2],[x1-t/2,y0+t/2],[x1-t/2,y1-t/2],[x0+t/2,y1-t/2]]};
@@ -272,28 +359,42 @@ function addRectRoom(a, b){
 }
 function finishRoom(){ const pts = S.draw?.pts; if (pts && pts.length >= 3){ const r = {id:uid(), level:S.level, name:"Locale " + (P.rooms.filter(r=>r.level===S.level).length+1), mat:S.defaults.roomMat, pts:pts.map(p=>p.slice())}; P.rooms.push(r); S.sel = {type:"room", id:r.id}; commit(); } S.draw = null; draw2D(); }
 function deleteSel(){
-  const s = S.sel; if (!s) return;
-  if (s.type === "wall"){ P.walls = P.walls.filter(w=>w.id!==s.id); P.openings = P.openings.filter(o=>o.wall!==s.id); }
-  if (s.type === "opening") P.openings = P.openings.filter(o=>o.id!==s.id);
-  if (s.type === "room") P.rooms = P.rooms.filter(r=>r.id!==s.id);
-  if (s.type === "object") P.objects = P.objects.filter(o=>o.id!==s.id);
-  S.sel = null; commit();
+  const l = selList(); if (!l.length) return;
+  for (const s of l){
+    if (s.type === "wall"){ P.walls = P.walls.filter(w=>w.id!==s.id); P.openings = P.openings.filter(o=>o.wall!==s.id); }
+    if (s.type === "opening") P.openings = P.openings.filter(o=>o.id!==s.id);
+    if (s.type === "room") P.rooms = P.rooms.filter(r=>r.id!==s.id);
+    if (s.type === "object") P.objects = P.objects.filter(o=>o.id!==s.id);
+    if (s.type === "dim") P.dims = (P.dims || []).filter(d=>d.id!==s.id);
+  }
+  setSel([]); commit();
 }
 document.addEventListener("keydown", e => {
   if (e.target.closest("input,textarea,select")) return;
-  const k = e.key;
-  if ((e.ctrlKey||e.metaKey) && k.toLowerCase() === "z"){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
-  if ((e.ctrlKey||e.metaKey) && k.toLowerCase() === "y"){ e.preventDefault(); redo(); return; }
+  const k = e.key, mod = e.ctrlKey || e.metaKey;
+  if (k === "Escape" && (document.getElementById("helpBox") || document.getElementById("ctxMenu"))){ closeHelp(); closeCtxMenu(); return; }
+  if (mod && k.toLowerCase() === "z"){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if (mod && k.toLowerCase() === "y"){ e.preventDefault(); redo(); return; }
+  if (mod && k.toLowerCase() === "c"){ if (selList().length){ e.preventDefault(); copySel(); } return; }
+  if (mod && k.toLowerCase() === "v"){ if (CLIP){ e.preventDefault(); pasteClip(S.hover?.p || null); } return; }
+  if (mod && k.toLowerCase() === "d"){ e.preventDefault(); duplicateSel(); return; }
+  if (mod && k.toLowerCase() === "a"){ e.preventDefault(); if (S.tool !== "select") setTool("select"); selectAll(); return; }
   if (k === " "){ spaceDown = true; e.preventDefault(); return; }
-  if (k === "Escape"){ S.draw = null; S.typed = ""; S.calib = null; $("#compare").hidden = true; if (S.tool === "select"){ S.sel = null; renderInspector(); } draw2D(); return; }
-  if (S.tool === "wall" && S.draw?.start && /^[0-9.,]$/.test(k)){ S.typed += k; draw2D(); return; }
-  if (S.tool === "wall" && k === "Backspace" && S.typed){ S.typed = S.typed.slice(0,-1); draw2D(); return; }
-  if (k === "Enter"){ if (S.tool === "room") finishRoom(); if (S.tool === "wall" && S.draw?.start && S.typed && S.hover){ const p = wallEndFromTyped(S.draw.start, S.hover.p); addWall(S.draw.start, p); S.draw = {start:p}; S.typed = ""; draw2D(); } return; }
+  if (k === "?"){ openHelp(); return; }
+  if (k === "Escape"){ S.draw = null; S.typed = ""; S.typedAng = ""; S.typedField = "len"; S.calib = null; S.guides = []; $("#compare").hidden = true; if (S.tool === "select"){ setSel([]); renderInspector(); } draw2D(); return; }
+  if (S.tool === "wall" && S.draw?.start){
+    if (k === "Tab"){ e.preventDefault(); S.typedField = S.typedField === "ang" ? "len" : "ang"; draw2D(); return; }
+    if (/^[0-9.,\-]$/.test(k)){ if (S.typedField === "ang") S.typedAng = (S.typedAng || "") + k; else S.typed += k; draw2D(); return; }
+    if (k === "Backspace" && (S.typedField === "ang" ? S.typedAng : S.typed)){ if (S.typedField === "ang") S.typedAng = S.typedAng.slice(0,-1); else S.typed = S.typed.slice(0,-1); draw2D(); return; }
+  }
+  if (k === "Enter"){ if (S.tool === "room") finishRoom(); if (S.tool === "wall" && S.draw?.start && (S.typed || S.typedAng) && S.hover){ const p = wallEndFromTyped(S.draw.start, S.hover.p); addWall(S.draw.start, p, true); S.draw = {start:p, chain:S.draw?.chain}; S.typed = ""; S.typedAng = ""; S.typedField = "len"; draw2D(); } return; }
   if (k === "Delete" || k === "Backspace"){ deleteSel(); return; }
-  const map = {v:"select", w:"wall", r:"rect", p:"room", d:"door", f:"window", a:"furn", c:"calib", m:"moveunder"}; if (map[k.toLowerCase()] && !e.ctrlKey && !e.metaKey) setTool(map[k.toLowerCase()]);
+  if (S.tool === "select" && selList().length && (k === "[" || k === "]")){ transformSel("rot", k === "]" ? 90 : -90); return; }
+  if (S.tool === "select" && selList().length && k.startsWith("Arrow")){ e.preventDefault(); const st = GRID * (e.shiftKey ? 10 : 1), d = {ArrowLeft:[-st,0], ArrowRight:[st,0], ArrowUp:[0,-st], ArrowDown:[0,st]}[k]; applyGroupMove(groupSnapshot(), d[0], d[1]); commit(); return; }
+  const map = {v:"select", w:"wall", r:"rect", p:"room", d:"door", f:"window", a:"furn", c:"calib", m:"moveunder", q:"dim"}; if (map[k.toLowerCase()] && !mod && !e.altKey) setTool(map[k.toLowerCase()]);
 });
 document.addEventListener("keyup", e => { if (e.key === " ") spaceDown = false; });
-function setTool(t){ S.tool = t; S.draw = null; S.typed = ""; if (t !== "calib") S.calib = null; $$(".tool").forEach(b => b.setAttribute("aria-pressed", b.dataset.tool === t)); if (S.tab !== "props"){ S.tab = "props"; renderTabs(); } renderInspector(); draw2D(); }
+function setTool(t){ S.tool = t; S.draw = null; S.typed = ""; S.typedAng = ""; S.typedField = "len"; S.guides = []; if (t !== "calib") S.calib = null; $$(".tool").forEach(b => b.setAttribute("aria-pressed", b.dataset.tool === t)); if (S.tab !== "props"){ S.tab = "props"; renderTabs(); } renderInspector(); draw2D(); }
 $("#tools").addEventListener("click", e => { const b = e.target.closest(".tool"); if (b) setTool(b.dataset.tool); });
 function fitPlan(){ const ws = wallsOf(S.level); let pts = ws.flatMap(w=>[w.a,w.b]); if (!pts.length) pts = P.rooms.filter(r=>r.level===S.level).flatMap(r=>r.pts); if (!pts.length){ V.cx = 5; V.cy = 4; V.s = 40; draw2D(); return; } const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]); const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys); V.cx=(x0+x1)/2; V.cy=(y0+y1)/2; V.s = clamp(Math.min(W2/((x1-x0)+4), H2/((y1-y0)+4)), 3, 200); draw2D(); }
 function placeFurniture(p){

@@ -37,13 +37,27 @@ function renderInspector(){
     const d = S.defaults;
     h += `<div class="sec"><h3>Nuovi muri</h3><div class="row">${F("dThick","Spessore (m)",fmt(d.wallThick),'inputmode="decimal"')}<div class="f"><span class="lbl">Tipologia</span><select id="dPreset" class="inp"><option value="">—</option><option value=".30">Esterno 30</option><option value=".40">Esterno 40</option><option value=".12">Tramezzo 12</option><option value=".08">Tramezzo 8</option></select></div></div>
       <span class="lbl">Finitura</span>${swatches(WALL_MATS, d.wallMat, "dwm")}
-      ${S.tool==="rect" ? `<span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, d.roomMat, "drm")}` : `<p class="note">Tieni premuto <b>Maiusc</b> per angoli a 15°. Mentre disegni puoi digitare la lunghezza (es. <b>4,25</b>) e premere Invio.</p>`}</div>`;
+      ${S.tool==="rect" ? `<div class="f"><span class="lbl">Le misure che disegni sono</span><select id="rectRef" class="inp"><option value="interno" ${PREFS.rectRef==="interno"?"selected":""}>Interne (filo interno dei muri)</option><option value="asse" ${PREFS.rectRef==="asse"?"selected":""}>In asse ai muri</option><option value="esterno" ${PREFS.rectRef==="esterno"?"selected":""}>Esterne (filo esterno)</option></select></div><span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, d.roomMat, "drm")}`
+        : `<div class="f"><span class="lbl">La linea che disegni è</span><select id="wallRef" class="inp"><option value="asse" ${PREFS.wallRef==="asse"?"selected":""}>L'asse del muro</option><option value="sinistra" ${PREFS.wallRef==="sinistra"?"selected":""}>Il filo sinistro (muro a destra)</option><option value="destra" ${PREFS.wallRef==="destra"?"selected":""}>Il filo destro (muro a sinistra)</option></select></div>
+          <p class="note">Digita la lunghezza (es. <b>4,25</b>), <b>Tab</b> per l'angolo, poi <b>Invio</b>. <b>Maiusc</b>: angoli a 15°${PREFS.ortho ? " (con Ortogonale attivo: liberi)" : ""}. Doppio clic o Esc per finire.</p>`}</div>`;
+  }
+  else if (S.tool === "dim"){
+    h += `<div class="sec"><h3>Quote</h3><p class="note">Clic sul primo e sul secondo punto (agganciano estremi e punti medi dei muri), poi sposta il mouse per la distanza della quota e clic. La quota si seleziona, si sposta e si elimina come gli altri elementi.</p>
+      <label class="chk"><input type="checkbox" id="autoDimsChk" ${PREFS.autoDims?"checked":""}> Mostra la lunghezza di tutti i muri</label></div>`;
   }
   else if (["door","window"].includes(S.tool)){
     const d = S.tool === "door" ? S.defaults.door : S.defaults.win;
     h += `<div class="sec"><h3>${S.tool==="door"?"Nuove porte":"Nuove finestre"}</h3><div class="row3">${F("dOw","Larghezza",fmt(d.w),'inputmode="decimal"')}${F("dOh","Altezza",fmt(d.h),'inputmode="decimal"')}${S.tool==="window"?F("dOs","Davanzale",fmt(d.sill),'inputmode="decimal"'):""}</div><p class="note">Misure in metri. Clicca su un muro per inserire.</p></div>`;
   }
-  if (sel && S.sel){
+  if (S.multi?.length > 1){
+    const cnt = {}; for (const x of S.multi) cnt[x.type] = (cnt[x.type] || 0) + 1;
+    const names = {wall:["muro","muri"], room:["locale","locali"], object:["oggetto","oggetti"], opening:["apertura","aperture"], dim:["quota","quote"]};
+    h += `<div class="sec"><h3>${S.multi.length} elementi selezionati</h3><p class="note">${Object.entries(cnt).map(([k, n]) => `${n} ${names[k][n > 1 ? 1 : 0]}`).join(" · ")}</p>
+      <div class="btns"><button class="btn" id="grRotL">Ruota −90°</button><button class="btn" id="grRot">Ruota 90°</button><button class="btn" id="grMir">Specchia</button><button class="btn" id="grDup">Duplica</button><button class="btn danger" id="delSel">Elimina</button></div>
+      <p class="note">Trascina un elemento selezionato per spostarli tutti; frecce per spostamenti precisi (Maiusc ×10).</p></div>`;
+  } else if (sel && S.sel){
+    if (S.sel.type === "dim"){ const L0 = Math.hypot(sel.b[0]-sel.a[0], sel.b[1]-sel.a[1]);
+      h += `<div class="sec"><h3>Quota</h3><div class="row">${F("dimLen","Lunghezza (m)",fmt(L0,3),'inputmode="decimal"')}${F("dimOff","Distanza dalla linea (m)",fmt(sel.off),'inputmode="decimal"')}</div><p class="note">Cambiando la lunghezza si sposta il secondo punto.</p><div class="btns"><button class="btn danger" id="delSel">Elimina</button></div></div>`; }
     if (S.sel.type === "wall"){ const f = wallFrame(sel);
       h += `<div class="sec"><h3>Muro</h3><div class="row">${F("wLen","Lunghezza (m)",fmt(f.len),'inputmode="decimal"')}${F("wThick","Spessore (m)",fmt(sel.thick),'inputmode="decimal"')}</div>
         <div class="row">${F("wH","Altezza (m)",sel.height?fmt(sel.height):"",`inputmode="decimal" placeholder="${fmt(L.height)} (piano)"`)}<div class="f"><span class="lbl">Aperture</span><div class="inp" style="font-family:var(--f-data)">${P.openings.filter(o=>o.wall===sel.id).length}</div></div></div>
@@ -95,6 +109,7 @@ function renderInspector(){
 const P_ = $("#panel-props");
 P_.addEventListener("change", e => {
   const id = e.target.id, v = num(e.target.value), sel = findSel(), L = level(), D = S.defaults;
+  if (/^(ob|w[A-Z]|o[A-Z]|r[A-Z]|dim[A-Z])/.test(id) && !sel) return; // campo di un elemento non più selezionato
   switch (id){
     case "dThick": if (v>0) D.wallThick = v; break;
     case "dPreset": if (e.target.value){ D.wallThick = +e.target.value; renderInspector(); } break;
@@ -121,6 +136,11 @@ P_.addEventListener("change", e => {
     case "lH": if (v>0){ L.height = v; commit(); } break;
     case "lSlab": if (v>0){ L.slab = v; commit(); } break;
     case "lRoof": L.roof.type = e.target.value; commit(); break;
+    case "wallRef": PREFS.wallRef = e.target.value; savePrefs(); draw2D(); break;
+    case "rectRef": PREFS.rectRef = e.target.value; savePrefs(); draw2D(); break;
+    case "autoDimsChk": PREFS.autoDims = e.target.checked; savePrefs(); renderStatus(); draw2D(); break;
+    case "dimLen": if (v > 0 && sel){ const dx = sel.b[0]-sel.a[0], dy = sel.b[1]-sel.a[1], l = Math.hypot(dx, dy) || 1; sel.b = [sel.a[0]+dx/l*v, sel.a[1]+dy/l*v]; commit(); } break;
+    case "dimOff": if (v !== null && sel){ sel.off = v; commit(); } break;
     case "lPitch": if (v>0){ L.roof.pitch = clamp(v,5,60); commit(); } break;
     case "lOv": if (v>=0){ L.roof.overhang = v; commit(); } break;
     case "lRidge": if (e.target.value) L.roof.ridge = e.target.value; else delete L.roof.ridge; commit(); break;
@@ -153,6 +173,10 @@ P_.addEventListener("click", e => {
   if (b.dataset.q !== undefined){ S.hq = b.dataset.q === "1"; render3D(); renderInspector(); return; }
   switch (b.id){
     case "delSel": deleteSel(); break;
+    case "grRot": transformSel("rot", 90); break;
+    case "grRotL": transformSel("rot", -90); break;
+    case "grMir": transformSel("mirror"); break;
+    case "grDup": duplicateSel(); break;
     case "wFlip": { [sel.a, sel.b] = [sel.b, sel.a]; const len = wallFrame(sel).len; P.openings.filter(o=>o.wall===sel.id).forEach(o=>o.t = len - o.t); commit(); break; }
     case "wAll": wallsOf(L.id).forEach(w => w.mat = sel.mat); commit(); break;
     case "oFlip": sel.flip = ((sel.flip||0)+1) % 4; commit(); break;
@@ -171,7 +195,7 @@ P_.addEventListener("click", e => {
       S.calib = null; commit(); toast(`Scala applicata: ×${fmt(k,3)}`); setTool("wall"); break; }
   }
 });
-function renderLevels(){ const s = $("#levelSel"); s.innerHTML = [...P.levels].sort((a,b)=>b.elev-a.elev).map(l=>`<option value="${l.id}">${esc(l.name)} (${fmt(l.elev)} m)</option>`).join(""); s.value = S.level; }
+function renderLevels(){ renderLevelTabs(); const s = $("#levelSel"); s.innerHTML = [...P.levels].sort((a,b)=>b.elev-a.elev).map(l=>`<option value="${l.id}">${esc(l.name)} (${fmt(l.elev)} m)</option>`).join(""); s.value = S.level; }
 $("#levelSel").addEventListener("change", e => { S.level = e.target.value; S.sel = null; S.draw = null; applyVisibility(); render3D(); refresh(); });
 $("#addLevel").addEventListener("click", () => {
   const top = P.levels.reduce((a,l)=> l.elev > a.elev ? l : a, P.levels[0]);

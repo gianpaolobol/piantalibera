@@ -26,6 +26,7 @@ Avvio: `npm install` → `npm run dev` → apri `http://localhost:8787/`.
 | `02-lib.js` | libreria: alberi procedurali per specie, sagome di persone, ~55 arredi parametrici e realistici, libreria personale |
 | `03-model.js` | scena Three.js, cieli HDRI, occlusione ambientale, costruzione del modello dai dati di pianta, pass per l'AI (vista, profondità, contorni, materiali) |
 | `04-plan.js` | pianta 2D: disegno, aggancio, selezione, trascinamento, undo/redo |
+| `045-plan-pro.js` | pianta di precisione: selezione multipla, appunti, rotazione/specchio, quote, snap, menu contestuale, barra di stato, piani a schede, aiuto |
 | `05-ui.js` | ispettore, piani, schede |
 | `06-online.js` | Poly Haven (modelli, HDRI, texture CC0) e libreria personale |
 | `07-io.js` | esportazioni (GLB, OBJ+MTL, 3MF/STL, DXF, PNG, pacchetto AI, JSON) e importazioni (DWG, DXF, PDF, immagini, DAE/OBJ/glTF/FBX/3DS/STL anche in .zip con texture) |
@@ -46,6 +47,19 @@ Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, ve
 - Import da SketchUp tramite COLLADA con texture: i materiali entrano nella libreria del progetto e si applicano a muri, pavimenti e coperture.
 - Export: GLB e OBJ per D5 Render (un oggetto per materiale, nomi leggibili), 3MF/STL per la stampa 3D in scala con parete minima, basamento e piani separati, DXF della pianta, PNG, pacchetto AI, progetto JSON (schema versione 2 con migrazione dalla 1).
 - Render AI: preset «Backend Pianta Libera» sul contratto `/api/render` (vista + profondità + contorni + camera), modalità fedele/creativo, polling dei lavori, galleria con confronto. Preset diretti verso servizi esterni solo per prove locali.
+
+## Pianta di precisione (fase 1 della roadmap d'interfaccia)
+
+- **Selezione**: clic, Maiusc+clic per aggiungere/togliere, trascinamento nel vuoto = selezione a riquadro (su touch sposta la vista), Ctrl+A. Più elementi si spostano insieme trascinandone uno o con le frecce (Maiusc ×10); i muri non selezionati collegati seguono.
+- **Modifica**: Ctrl+C / Ctrl+V (incolla al cursore) / Ctrl+D, `[` e `]` ruotano di ∓90°, Specchia, Canc. Maniglie sull'oggetto selezionato: cerchio = rotazione a passi di 15° (Alt libera), quadrato = scala. Mentre si trascina un oggetto compaiono le distanze libere dai muri nelle quattro direzioni.
+- **Menu col tasto destro** (il trascinamento col destro sposta ancora la vista): proprietà, copia, duplica, incolla qui, ruota, specchia, dividi il muro, inverti apertura, elimina; nel vuoto: crea il locale, seleziona tutto, inquadra.
+- **Quote** (strumento Q): due punti e la distanza; selezionabili, modificabili (lunghezza, distanza), salvate nel progetto (`P.dims`). «Quote» nella barra di stato mostra la lunghezza di tutti i muri.
+- **Disegno muri**: lunghezza digitata, Tab per l'angolo (gradi, antiorario da est), Invio; la linea può essere l'asse o uno dei due fili (gli spigoli si ricalcolano); stanza rettangolare con misure interne, in asse o esterne; «Orto» blocca i muri a 90°; dividere un muro dal menu.
+- **Aggancio** (barra di stato): griglia (1–25 cm), estremi di muri e locali, punti medi, lungo i muri, linee guida di allineamento; preferenze salvate nel browser.
+- **Locale automatico**: doppio clic nel vuoto dentro muri chiusi (bordo agganciato alle facce dei muri).
+- **Piani a schede** sopra la pianta, piano inferiore in trasparenza; doppio clic su un elemento apre le proprietà; `?` mostra tutte le scorciatoie.
+
+Restano della fase 1: muri ad arco, tabella dei livelli, etichette dei locali spostabili con area lorda/netta, unità di misura a scelta.
 
 ## Da pianta e prospetti al 3D
 

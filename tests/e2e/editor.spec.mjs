@@ -146,6 +146,46 @@ test("da tavola DXF (pianta + prospetti) al modello 3D", async ({ page }) => {
   expect(r.roof.type).toBe("gable"); expect(r.roof.ridge).toBe("x");
 });
 
+test("pianta di precisione: riquadro, duplica, quote, menu, locale automatico, lunghezza e angolo", async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => { PREFS.ortho = false; PREFS.autoDims = false; });
+  const box = await page.locator("#c2d").boundingBox();
+  const at = async p => { const s = await page.evaluate(q => toS(q), p); return [box.x + s[0], box.y + s[1]]; };
+  // selezione a riquadro di tutta la casa e duplicazione
+  const [ax, ay] = await at([-0.5, -0.5]), [bx, by] = await at([11.5, 8.5]);
+  await page.mouse.move(ax, ay); await page.mouse.down(); await page.mouse.move(bx, by, { steps: 6 }); await page.mouse.up();
+  expect(await page.evaluate(() => selList().filter(s => s.type === "wall").length)).toBe(5);
+  await expect(page.locator("#panel-props")).toContainText("elementi selezionati");
+  await page.keyboard.press("Control+d");
+  expect(await page.evaluate(() => P.walls.length)).toBe(10);
+  await page.keyboard.press("Control+z");
+  expect(await page.evaluate(() => P.walls.length)).toBe(5);
+  // quota su tre clic
+  await page.keyboard.press("q");
+  for (const p of [[0, 0], [11, 0], [5, -1.2]]){ const [x, y] = await at(p); await page.mouse.click(x, y); }
+  expect(await page.evaluate(() => P.dims.length)).toBe(1);
+  expect(await page.evaluate(() => Math.hypot(P.dims[0].b[0] - P.dims[0].a[0], P.dims[0].b[1] - P.dims[0].a[1]))).toBeCloseTo(11, 2);
+  // menu col tasto destro su un muro: dividere
+  await page.keyboard.press("v");
+  const [mx, my] = await at([3, 8]); await page.mouse.click(mx, my, { button: "right" });
+  await expect(page.locator("#ctxMenu")).toContainText("Dividi il muro qui");
+  await page.locator("#ctxMenu button", { hasText: "Dividi il muro qui" }).click();
+  expect(await page.evaluate(() => P.walls.length)).toBe(6);
+  // locale automatico con doppio clic dentro i muri
+  await page.evaluate(() => { P.rooms = []; commit(); });
+  const [rx, ry] = await at([8.3, 5]); await page.mouse.dblclick(rx, ry);
+  expect(await page.evaluate(() => P.rooms.length)).toBe(1);
+  expect(await page.evaluate(() => Math.abs(polyArea(P.rooms[0].pts)))).toBeCloseTo(33.03, 1);
+  // muro con lunghezza e angolo digitati
+  await page.locator("#c2d").click({ position: { x: 5, y: 200 } }); await page.keyboard.press("Escape");
+  await page.keyboard.press("w"); const [sx, sy] = await at([0, 12]); await page.mouse.click(sx, sy); await page.mouse.move(sx + 60, sy - 10);
+  await page.keyboard.type("3"); await page.keyboard.press("Tab"); await page.keyboard.type("90"); await page.keyboard.press("Enter");
+  expect(await page.evaluate(() => P.walls.at(-1).b.map(v => +v.toFixed(2)))).toEqual([0, 9]);
+  // aiuto
+  await page.keyboard.press("Escape"); await page.keyboard.press("v"); await page.keyboard.press("?");
+  await expect(page.locator("#helpBox")).toContainText("Scorciatoie");
+});
+
 test("telefono: nessuno scorrimento orizzontale", async ({ page }) => {
   await page.setViewportSize({ width: 400, height: 860 });
   await open(page);

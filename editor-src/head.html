@@ -63,6 +63,31 @@ button{cursor:pointer}
 .pane{position:relative;min-width:0;min-height:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--plan-bg)}
 .pane canvas{display:block;width:100%;height:100%;touch-action:none}
 .pane-tag{position:absolute;left:8px;top:8px;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:color-mix(in srgb, var(--panel) 85%, transparent);padding:3px 6px;border-radius:3px;pointer-events:none}
+#tag2d{display:flex;gap:2px;padding:2px;pointer-events:auto;text-transform:none;letter-spacing:0}
+#tag2d .lvl{border:0;background:none;color:var(--muted);font:600 11px var(--f-ui, inherit);padding:3px 8px;border-radius:3px;cursor:pointer}
+#tag2d .lvl[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink)}
+.statusbar{position:absolute;left:0;right:0;bottom:0;height:28px;display:flex;align-items:center;gap:8px;padding:0 6px;border-top:1px solid var(--line);background:color-mix(in srgb, var(--panel) 94%, transparent);font:10.5px var(--f-data);color:var(--muted)}
+.sb-left{flex:1;min-width:0;display:flex;gap:10px;overflow:hidden;white-space:nowrap}.sb-left span{overflow:hidden;text-overflow:ellipsis}.sb-left span+span{flex:none}
+.sb-right{display:flex;align-items:center;gap:2px;flex:none;position:relative}
+.statusbar .sb{border:1px solid transparent;background:none;color:var(--muted);font:500 10.5px var(--f-data);padding:2px 6px;border-radius:3px;cursor:pointer;white-space:nowrap}
+.statusbar .sb[aria-pressed="true"]{color:var(--ink);background:var(--accent-soft);border-color:color-mix(in srgb, var(--accent) 40%, transparent)}
+.statusbar select.sb{border-color:var(--line);background:var(--bg)}
+.statusbar .sb-info{padding:2px 4px;white-space:nowrap}
+.snapmenu{position:absolute;right:0;bottom:30px;display:flex;flex-direction:column;gap:2px;min-width:170px;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);box-shadow:0 8px 24px rgba(0,0,0,.16);z-index:5}
+.snapmenu .sb{text-align:left;font-size:11.5px;padding:4px 8px}
+@media (max-width:700px){.sb-left span:first-child{display:none}.statusbar .sb-info{display:none}}
+.ctx{position:fixed;z-index:60;min-width:220px;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px;display:flex;flex-direction:column}
+.ctx button{display:flex;justify-content:space-between;gap:16px;border:0;background:none;color:var(--ink);text-align:left;padding:6px 10px;border-radius:4px;font-size:13px;cursor:pointer}
+.ctx button:hover,.ctx button:focus-visible{background:var(--accent-soft)}
+.ctx kbd{font:10.5px var(--f-data);color:var(--muted)}
+.ctx hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
+.help{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.35);display:grid;place-items:center;padding:16px}
+.help-in{background:var(--panel);border:1px solid var(--line);border-radius:8px;max-width:760px;width:100%;max-height:90vh;overflow:auto;padding:16px}
+.help-in header{display:flex;justify-content:space-between;align-items:center}.help-in h3{margin:0;font-size:16px}
+.help-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px 20px;margin-top:10px}
+.help-grid h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.help-grid dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:0;font-size:12.5px}.help-grid dd{margin:0}
+.help-grid kbd{font:11px var(--f-data);border:1px solid var(--line);border-radius:3px;padding:0 4px;white-space:nowrap}
 .hud{position:absolute;left:8px;bottom:8px;right:8px;font-family:var(--f-data);font-size:11px;color:var(--muted);pointer-events:none;display:flex;gap:12px;flex-wrap:wrap}
 .hud span{background:color-mix(in srgb, var(--panel) 88%, transparent);padding:3px 6px;border-radius:3px}
 .cam{position:absolute;right:8px;top:8px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 90px)}
@@ -196,12 +221,13 @@ pre.raw{margin:0;max-height:160px;overflow:auto;font-family:var(--f-data);font-s
       <button class="tool" data-tool="window" title="Finestra (F) — clic su un muro"><svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="6"/><path d="M3 12h18"/></svg><kbd>F</kbd></button>
       <button class="tool" data-tool="furn" title="Arredi, verde e persone (A)"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="6" rx="1"/><path d="M6 10V7h12v3M6 16v2M18 16v2"/></svg><kbd>A</kbd></button>
       <div class="tool-sep"></div>
+      <button class="tool" data-tool="dim" title="Quota (Q) — due punti, poi la distanza"><svg viewBox="0 0 24 24"><path d="M4 8v8M20 8v8M4 12h16"/><path d="M7 10l-3 2 3 2M17 10l3 2-3 2"/></svg><kbd>Q</kbd></button>
       <button class="tool" data-tool="calib" title="Calibra la base di ricalco (C) — due punti e una misura"><svg viewBox="0 0 24 24"><path d="M3 17L17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg><kbd>C</kbd></button>
       <button class="tool" data-tool="moveunder" title="Sposta la base di ricalco (M)"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg><kbd>M</kbd></button>
     </nav>
 
     <section class="views" id="views" data-mode="both">
-      <div class="pane" id="pane2d"><canvas id="c2d" aria-label="Pianta"></canvas><div class="pane-tag" id="tag2d">Pianta</div><div class="hud" id="hud2d"></div></div>
+      <div class="pane" id="pane2d"><canvas id="c2d" aria-label="Pianta"></canvas><div class="pane-tag" id="tag2d">Pianta</div><div class="statusbar" id="status2d" aria-label="Stato e aggancio"><div class="sb-left" id="hud2d"></div><div class="sb-right" id="sbRight"></div></div></div>
       <div class="pane" id="pane3d"><canvas id="c3d" aria-label="Modello 3D"></canvas><div class="pane-tag">Modello 3D</div>
         <div class="cam">
           <button class="btn" data-cam="ext">Esterno</button><button class="btn" data-cam="bird">Volo d'uccello</button><button class="btn" data-cam="int">Interno</button><button class="btn" data-cam="top">Dall'alto</button>
