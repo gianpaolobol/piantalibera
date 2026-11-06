@@ -52,7 +52,7 @@ L'indirizzo è `https://pianta-libera.<tuo-account>.workers.dev/`; un dominio pe
 | Nome | Predefinito | Note |
 |---|---|---|
 | `MODEL` | `@cf/black-forest-labs/flux-2-klein-4b` | per confronti: `@cf/black-forest-labs/flux-2-klein-9b` (molto più costoso) |
-| `PER_IP_DAILY` | 2 | render al giorno per IP (IP salvati come hash con sale) |
+| `PER_IP_DAILY` | 10 (test) | render al giorno per IP (IP salvati come hash con sale) |
 | `MAX_CONCURRENT_PER_IP` | 1 | lavori contemporanei per IP |
 | `GLOBAL_DAILY` | 50 | richieste accettate al giorno in totale |
 | `NEURON_DAILY_BUDGET` | 9000 | **tetto di spesa**: Neurons stimati impegnati al giorno; oltre → `429 budget_exceeded` prima di chiamare il modello |
