@@ -85,8 +85,8 @@ function duplicateSel(){ if (copySel()) pasteClip(null); }
 
 /* ---------- quote ---------- */
 function drawDims(g){
-  for (const d of (P.dims || []).filter(d => d.level === S.level)) dimLine(g, d.a, d.b, d.off, fmt(Math.hypot(d.b[0]-d.a[0], d.b[1]-d.a[1])) + " m", isSelected(d.id) ? C.sel : C.text);
-  if (PREFS.autoDims) for (const w of wallsOf(S.level)){ const f = wallFrame(w); if (f.len < .3) continue; dimLine(g, w.a, w.b, -(w.thick/2 + .35), fmt(f.len), C.muted, true); }
+  for (const d of (P.dims || []).filter(d => d.level === S.level)) dimLine(g, d.a, d.b, d.off, fmtL(Math.hypot(d.b[0]-d.a[0], d.b[1]-d.a[1])), isSelected(d.id) ? C.sel : C.text);
+  if (PREFS.autoDims) for (const w of wallsOf(S.level)){ const f = wallFrame(w); if (f.len < .3) continue; dimLine(g, w.a, w.b, -(w.thick/2 + .35), fmtL(f.len).replace(/ (m|cm|mm)$/, ""), C.muted, true); }
 }
 function dimHit(p){ const tol = 6 / V.s; for (const d of (P.dims || []).filter(d => d.level === S.level)){ const dx = d.b[0]-d.a[0], dy = d.b[1]-d.a[1], L = Math.hypot(dx, dy) || 1, nx = -dy/L, ny = dx/L; const r = projOnSeg(p, [d.a[0]+nx*d.off, d.a[1]+ny*d.off], [d.b[0]+nx*d.off, d.b[1]+ny*d.off]); if (r.d < tol) return {type:"dim", id:d.id}; } return null; }
 /* distanze libere dall'oggetto ai muri nelle quattro direzioni, mentre lo si trascina */
@@ -147,7 +147,8 @@ function splitWallAt(w, p){
 const SHORTCUTS = [["Strumenti", [["V", "Seleziona"], ["W", "Muro"], ["R", "Stanza rettangolare"], ["P", "Pavimento a poligono"], ["D", "Porta"], ["F", "Finestra"], ["Q", "Quota"], ["A", "Arredi"], ["C / M", "Calibra / sposta la base"]]],
   ["Selezione", [["Clic", "seleziona"], ["Maiusc + clic", "aggiunge o toglie"], ["Trascina nel vuoto", "selezione a riquadro"], ["Ctrl+A", "seleziona tutto"], ["Doppio clic", "proprietà · nel vuoto: crea il locale"], ["Tasto destro", "menu"], ["Esc", "annulla il comando"]]],
   ["Modifica", [["Ctrl+C / V / D", "copia, incolla, duplica"], ["Canc", "elimina"], ["[ e ]", "ruota di −90° / +90°"], ["Frecce", "sposta di 1 passo griglia (Maiusc: ×10)"], ["Ctrl+Z / Ctrl+Y", "annulla / ripristina"]]],
-  ["Disegno", [["Cifre + Invio", "lunghezza del muro"], ["Tab", "passa all'angolo"], ["Maiusc", "angoli a 15° (con Ortogonale: liberi)"], ["Alt", "rotazione libera dell'oggetto"], ["Spazio + trascina, tasto centrale", "sposta la vista"], ["Rotella", "zoom"]]]];
+  ["Disegno", [["Cifre + Invio", "lunghezza del muro"], ["Tab", "passa all'angolo"], ["Maiusc", "angoli a 15° (con Ortogonale: liberi)"], ["Alt", "rotazione libera dell'oggetto"], ["Spazio + trascina, tasto centrale", "sposta la vista"], ["Rotella", "zoom"]]],
+  ["Vista 3D", [["Clic", "seleziona"], ["Trascina un oggetto", "lo sposta"], ["A piedi: W A S D, frecce", "cammina · Maiusc corre"], ["Trascina", "guarda intorno"], ["Esc", "esce dalla visita o cancella le misure"]]]];
 function openHelp(){
   closeHelp();
   const d = document.createElement("div"); d.id = "helpBox"; d.className = "help"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Scorciatoie");
@@ -165,6 +166,7 @@ function renderStatus(){
     <button class="sb" id="snapBtn" aria-expanded="${snapOpen}" title="Cosa aggancia il cursore">Aggancio ▾</button>
     <select class="sb" id="gridSel" aria-label="Passo della griglia" title="Passo della griglia">${[[.01,"1 cm"],[.05,"5 cm"],[.1,"10 cm"],[.25,"25 cm"]].map(([v, n]) => `<option value="${v}" ${PREFS.grid === v ? "selected" : ""}>${n}</option>`).join("")}</select>
     <button class="sb" data-pref="ortho" aria-pressed="${!!PREFS.ortho}" title="Muri solo a 90° (Maiusc per liberarli)">Orto</button>
+    <select class="sb" id="unitSel" aria-label="Unità delle quote" title="Unità delle quote">${["m","cm","mm"].map(u => `<option ${PREFS.units === u ? "selected" : ""}>${u}</option>`).join("")}</select>
     <button class="sb" data-pref="autoDims" aria-pressed="${!!PREFS.autoDims}" title="Lunghezza di tutti i muri">Quote</button>
     <span class="sb-info" id="zoomInfo"></span><span class="sb-info" id="saveInfo"></span><button class="sb" id="helpBtn" aria-label="Scorciatoie" title="Scorciatoie (?)">?</button>`;
   updateStatusInfo();
@@ -174,7 +176,7 @@ $("#sbRight")?.addEventListener("click", e => { const b = e.target.closest("butt
   if (b.dataset.pref){ PREFS[b.dataset.pref] = !PREFS[b.dataset.pref]; savePrefs(); renderStatus(); draw2D(); if (["wall","dim"].includes(S.tool)) renderInspector(); }
   if (b.id === "snapBtn"){ snapOpen = !snapOpen; renderStatus(); }
   if (b.id === "helpBtn") openHelp(); });
-$("#sbRight")?.addEventListener("change", e => { if (e.target.id === "gridSel"){ PREFS.grid = +e.target.value; savePrefs(); } });
+$("#sbRight")?.addEventListener("change", e => { if (e.target.id === "gridSel"){ PREFS.grid = +e.target.value; savePrefs(); } if (e.target.id === "unitSel"){ PREFS.units = e.target.value; savePrefs(); draw2D(); renderInspector(); } });
 document.addEventListener("pointerdown", e => { if (snapOpen && !e.target.closest("#sbRight")){ snapOpen = false; renderStatus(); } }, true);
 
 /* ---------- piani a schede sopra la pianta ---------- */

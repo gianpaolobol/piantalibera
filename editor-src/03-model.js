@@ -147,7 +147,7 @@ function buildModel(opts={}){
       const sh = new THREE.Shape(r.pts.map(p=>new THREE.Vector2(p[0],p[1])));
       const g = new THREE.ExtrudeGeometry(sh, {depth:L.slab, bevelEnabled:false}); g.rotateX(Math.PI/2); g.translate(0, e0, 0);
       add(L.id, r.mat, "floor", g);
-      if (!opts.print){ const cg = new THREE.ShapeGeometry(sh); cg.rotateX(Math.PI/2); cg.translate(0, e0 + L.height - .005, 0); add(L.id, "soffitto", "ceiling", cg); }
+      if (!opts.print && !r.noCeiling){ const cg = new THREE.ShapeGeometry(sh); cg.rotateX(Math.PI/2); cg.translate(0, e0 + L.height - .005, 0); add(L.id, "soffitto", "ceiling", cg); }
     }
     if (L.roof && L.roof.type !== "none" && opts.roof !== false){
       const ws = wallsOf(L.id); if (ws.length){
@@ -192,7 +192,7 @@ function buildModel(opts={}){
   }
   if (opts.objects !== false){
     for (const o of P.objects){
-      const t = objTemplate(o), L = level(o.level); if (!t || !L) continue;
+      if (o.hidden) continue; const t = objTemplate(o), L = level(o.level); if (!t || !L) continue;
       const c = t.clone(true); c.name = o.name || "Oggetto"; c.position.set(o.x, L.elev + (o.z||0), o.y); c.rotation.y = -THREE.MathUtils.degToRad(o.rot||0); c.scale.setScalar(o.scale||1);
       c.userData = {cat:"object", level:L.id, objId:o.id};
       c.traverse(m => { if (m.isMesh && m !== c) m.userData = {...m.userData, level:L.id, inObject:true}; });
@@ -218,7 +218,7 @@ function rebuild3D(){
     scene.remove(modelGroup);
     modelGroup.traverse(o => { if (o.isMesh && !o.userData.inObject && o.userData.cat && o.userData.cat !== "object") o.geometry?.dispose?.(); });
     modelGroup = buildModel({ground:S.ground}).root; scene.add(modelGroup);
-    applyVisibility(); placeSun(); render3D();
+    applyVisibility(); placeSun(); render3D(); if (typeof afterRebuild3D === "function") afterRebuild3D();
   });
 }
 function applyVisibility(){
@@ -227,10 +227,12 @@ function applyVisibility(){
     if (!o.userData || o === modelGroup) return;
     const lv = level(o.userData.level);
     if (o.userData.cat && lv && cur && S.show3d !== "all" && !o.userData.inObject) o.visible = lv.elev <= cur.elev + 1e-6;
-    if (o.userData.cat === "ceiling") o.visible = S.show3d !== "section";
+    if (o.userData.cat === "ceiling") o.visible = S.show3d !== "section" && S.ceilings !== false;
     if (o.userData.cat === "roof" || o.userData.cat === "gable") o.visible = S.show3d === "all" || (lv && cur && lv.elev < cur.elev);
   });
-  renderer.clippingPlanes = cut && cur ? [new THREE.Plane(new THREE.Vector3(0,-1,0), cur.elev + 1.2)] : [];
+  const planes = cut && cur ? [new THREE.Plane(new THREE.Vector3(0,-1,0), cur.elev + 1.2)] : [];
+  if (S.vcut?.axis){ const b = archBox(), x = S.vcut.axis === "x", lo = x ? b.min.x : b.min.z, hi = x ? b.max.x : b.max.z, at = lo + (hi - lo) * S.vcut.pos / 100; planes.push(new THREE.Plane(x ? new THREE.Vector3(-1,0,0) : new THREE.Vector3(0,0,-1), at)); }
+  renderer.clippingPlanes = planes;
 }
 function placeSun(){
   const b = archBox(), c = b.getCenter(new THREE.Vector3()), r = Math.max(10, b.getSize(new THREE.Vector3()).length()*.9);
@@ -243,7 +245,7 @@ function placeSun(){
   renderer.toneMappingExposure = S.exposure;
 }
 let rq = false;
-function render3D(){ if (rq) return; rq = true; requestAnimationFrame(()=>{ rq=false; drawFrame(); hud3d(); }); }
+function render3D(){ if (rq) return; rq = true; requestAnimationFrame(()=>{ rq=false; drawFrame(); hud3d(); if (typeof afterFrame3D === "function") afterFrame3D(); }); }
 controls.addEventListener("change", render3D);
 function hud3d(){ const L = level(); if (!L) return; $("#hud3d").innerHTML = `<span>Sole az ${Math.round(P.sun.az)}° · alt ${Math.round(P.sun.el)}°</span><span>${S.show3d==="all"?"Tutti i piani":S.show3d==="below"?"Fino a: "+esc(L.name):"Sezione a +1,20 m"}</span>${S.hq?"<span>Qualità alta</span>":""}`; }
 function resize3D(){ const r = c3d.parentElement.getBoundingClientRect(); if (r.width < 2) return; renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.setSize(r.width, r.height, false); camera.aspect = r.width/r.height; camera.updateProjectionMatrix(); if (ssao) ssao.setSize(r.width, r.height); render3D(); }

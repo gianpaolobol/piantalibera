@@ -12,18 +12,19 @@ function furnPanel(){
   let h = `<div class="sec"><h3>Arredi, verde e persone</h3><div class="seg" id="furnSrc"><button data-fs="lib" aria-pressed="${src==="lib"}">Libreria interna</button><button data-fs="online" aria-pressed="${src==="online"}">Poly Haven</button><button data-fs="personal" aria-pressed="${src==="personal"}">Personale</button></div>`;
   if (src === "lib"){
     const it = LIBMAP[S.furn], st = TPL[S.furn]?.status;
-    h += `${it ? `<div class="libsel">${thumbImg(it.ref)}<div><b>${esc(it.nome)}</b><small>${esc(it.cat)} · ${esc(it.dim)}${it.credit ? ` · ${esc(it.credit)}` : ""}</small><p class="note">${st === "loading" ? "Carico il modello…" : st === "err" ? "Modello non disponibile: manca la cartella assets?" : "Clicca in pianta per posizionarlo · poi ruotalo e scalalo qui."}</p></div></div>` : ""}
+    h += `${it ? `<div class="libsel">${thumbImg(it.ref)}<div><b>${esc(it.nome)}</b><small>${esc(it.cat)} · ${esc(it.dim)}${it.credit ? ` · ${esc(it.credit)}` : ""}</small><p class="note">${st === "loading" ? "Carico il modello…" : st === "err" ? "Modello non disponibile: manca la cartella assets?" : "Clic in pianta o trascinalo in pianta o nel 3D."}</p><button class="btn" id="favBtn" aria-pressed="${PREFS.favs.includes(it.ref)}">${PREFS.favs.includes(it.ref) ? "★ Nei preferiti" : "☆ Aggiungi ai preferiti"}</button></div></div>` : ""}
       <div class="f"><input id="libQ" class="inp" type="search" placeholder="Cerca nella libreria (es. sedia, olivo, doccia)" value="${esc(S.libQ || "")}" aria-label="Cerca nella libreria"></div>
-      <div class="cats">${LIB_CATS.map(c=>`<button data-fcat="${esc(c)}" aria-pressed="${!S.libQ && S.furnCat===c}">${esc(c)} <span>${LIB.filter(x=>x.cat===c).length}</span></button>`).join("")}</div>
+      <div class="cats"><button data-fcat="★" aria-pressed="${!S.libQ && S.furnCat==="★"}" title="Preferiti">★ <span>${PREFS.favs.length}</span></button><button data-fcat="⟲" aria-pressed="${!S.libQ && S.furnCat==="⟲"}" title="Usati di recente">Recenti <span>${PREFS.recent.length}</span></button>${LIB_CATS.map(c=>`<button data-fcat="${esc(c)}" aria-pressed="${!S.libQ && S.furnCat===c}">${esc(c)} <span>${LIB.filter(x=>x.cat===c).length}</span></button>`).join("")}</div>
       <div class="grid-lib" id="libGrid">${libGridHTML()}</div>
       <p class="note">I modelli <b>reali</b> si caricano dalla cartella <b>assets</b> al primo uso.</p>`;
   } else h += onlinePanelHTML();
   return h + `</div>`;
 }
-function libItems(){ const q = (S.libQ || "").trim().toLowerCase(); return q ? LIB.filter(x => (x.nome + " " + x.cat + " " + x.ref).toLowerCase().includes(q)) : LIB.filter(x => x.cat === S.furnCat); }
+function libItems(){ const q = (S.libQ || "").trim().toLowerCase(); if (q) return LIB.filter(x => (x.nome + " " + x.cat + " " + x.ref).toLowerCase().includes(q));
+  if (S.furnCat === "★") return PREFS.favs.map(r => LIBMAP[r]).filter(Boolean); if (S.furnCat === "⟲") return PREFS.recent.map(r => LIBMAP[r]).filter(Boolean); return LIB.filter(x => x.cat === S.furnCat); }
 function libGridHTML(){
   const items = libItems(); if (!items.length) return `<p class="note">Nessun oggetto trovato.</p>`;
-  return items.map(it => `<button data-furn="${esc(it.ref)}" aria-pressed="${S.furn===it.ref}" title="${esc(it.nome)}"><span class="th">${thumbImg(it.ref)}${it.real ? '<span class="badge">reale</span>' : ""}</span><span class="nm">${esc(it.nome)}</span><small>${esc(it.dim)}</small></button>`).join("");
+  return items.map(it => `<button draggable="true" data-furn="${esc(it.ref)}" aria-pressed="${S.furn===it.ref}" title="${esc(it.nome)}"><span class="th">${thumbImg(it.ref)}${it.real ? '<span class="badge">reale</span>' : ""}</span><span class="nm">${esc(it.nome)}</span><small>${esc(it.dim)}</small></button>`).join("");
 }
 function renderInspector(){
   const el = $("#panel-props"); if (!P) return; const sel = findSel(), L = level(); let h = "";
@@ -38,7 +39,8 @@ function renderInspector(){
     h += `<div class="sec"><h3>Nuovi muri</h3><div class="row">${F("dThick","Spessore (m)",fmt(d.wallThick),'inputmode="decimal"')}<div class="f"><span class="lbl">Tipologia</span><select id="dPreset" class="inp"><option value="">—</option><option value=".30">Esterno 30</option><option value=".40">Esterno 40</option><option value=".12">Tramezzo 12</option><option value=".08">Tramezzo 8</option></select></div></div>
       <span class="lbl">Finitura</span>${swatches(WALL_MATS, d.wallMat, "dwm")}
       ${S.tool==="rect" ? `<div class="f"><span class="lbl">Le misure che disegni sono</span><select id="rectRef" class="inp"><option value="interno" ${PREFS.rectRef==="interno"?"selected":""}>Interne (filo interno dei muri)</option><option value="asse" ${PREFS.rectRef==="asse"?"selected":""}>In asse ai muri</option><option value="esterno" ${PREFS.rectRef==="esterno"?"selected":""}>Esterne (filo esterno)</option></select></div><span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, d.roomMat, "drm")}`
-        : `<div class="f"><span class="lbl">La linea che disegni è</span><select id="wallRef" class="inp"><option value="asse" ${PREFS.wallRef==="asse"?"selected":""}>L'asse del muro</option><option value="sinistra" ${PREFS.wallRef==="sinistra"?"selected":""}>Il filo sinistro (muro a destra)</option><option value="destra" ${PREFS.wallRef==="destra"?"selected":""}>Il filo destro (muro a sinistra)</option></select></div>
+        : `<div class="f"><span class="lbl">Forma</span><select id="wallShape" class="inp"><option value="dritto" ${PREFS.wallShape!=="arco"?"selected":""}>Muro dritto</option><option value="arco" ${PREFS.wallShape==="arco"?"selected":""}>Muro ad arco (estremi, poi curvatura)</option></select></div>
+          <div class="f"><span class="lbl">La linea che disegni è</span><select id="wallRef" class="inp"><option value="asse" ${PREFS.wallRef==="asse"?"selected":""}>L'asse del muro</option><option value="sinistra" ${PREFS.wallRef==="sinistra"?"selected":""}>Il filo sinistro (muro a destra)</option><option value="destra" ${PREFS.wallRef==="destra"?"selected":""}>Il filo destro (muro a sinistra)</option></select></div>
           <p class="note">Digita la lunghezza (es. <b>4,25</b>), <b>Tab</b> per l'angolo, poi <b>Invio</b>. <b>Maiusc</b>: angoli a 15°${PREFS.ortho ? " (con Ortogonale attivo: liberi)" : ""}. Doppio clic o Esc per finire.</p>`}</div>`;
   }
   else if (S.tool === "dim"){
@@ -49,7 +51,9 @@ function renderInspector(){
     const d = S.tool === "door" ? S.defaults.door : S.defaults.win;
     h += `<div class="sec"><h3>${S.tool==="door"?"Nuove porte":"Nuove finestre"}</h3><div class="row3">${F("dOw","Larghezza",fmt(d.w),'inputmode="decimal"')}${F("dOh","Altezza",fmt(d.h),'inputmode="decimal"')}${S.tool==="window"?F("dOs","Davanzale",fmt(d.sill),'inputmode="decimal"'):""}</div><p class="note">Misure in metri. Clicca su un muro per inserire.</p></div>`;
   }
-  if (S.multi?.length > 1){
+  const arcG = S.multi?.length > 1 && arcGroupOf(S.multi);
+  if (arcG) h += arcPanelHTML(arcG);
+  else if (S.multi?.length > 1){
     const cnt = {}; for (const x of S.multi) cnt[x.type] = (cnt[x.type] || 0) + 1;
     const names = {wall:["muro","muri"], room:["locale","locali"], object:["oggetto","oggetti"], opening:["apertura","aperture"], dim:["quota","quote"]};
     h += `<div class="sec"><h3>${S.multi.length} elementi selezionati</h3><p class="note">${Object.entries(cnt).map(([k, n]) => `${n} ${names[k][n > 1 ? 1 : 0]}`).join(" · ")}</p>
@@ -69,7 +73,9 @@ function renderInspector(){
         <p class="note">Distanza misurata dall'inizio del muro (${fmt(wallFrame(w).len)} m).</p>
         <div class="btns">${sel.type==="door"?`<button class="btn" id="oFlip">Ribalta apertura</button>`:""}<button class="btn danger" id="delSel">Elimina</button></div></div>`; }
     if (S.sel.type === "room"){ const A = Math.abs(polyArea(sel.pts));
-      h += `<div class="sec"><h3>Locale</h3>${F("rName","Nome",sel.name)}<dl class="kv"><dt>Superficie</dt><dd>${fmt(A)} m²</dd><dt>Volume netto</dt><dd>${fmt(A*L.height,1)} m³</dd><dt>Vertici</dt><dd>${sel.pts.length}</dd></dl>
+      const ra = roomAreas(sel);
+      h += `<div class="sec"><h3>Locale</h3>${F("rName","Nome",sel.name)}<dl class="kv"><dt>Superficie netta</dt><dd>${fmt(A)} m²</dd><dt>Superficie lorda</dt><dd>${fmt(ra.gross)} m² <small>con metà muri</small></dd><dt>Perimetro</dt><dd>${fmtL(ra.per)}</dd><dt>Volume netto</dt><dd>${fmt(A*L.height,1)} m³</dd></dl>
+        <label class="chk"><input type="checkbox" id="rNoCeil" ${sel.noCeiling?"checked":""}> Senza soffitto (vista dall'alto)</label><p class="note">L'etichetta del locale si trascina in pianta.</p>
         <span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, sel.mat, "rm")}<div class="btns"><button class="btn" id="camRoom">Vista interna</button><button class="btn danger" id="delSel">Elimina</button></div></div>`; }
     if (S.sel.type === "object"){
       const it = sel.kind === "lib" ? LIBMAP[libRef(sel.ref)] : null, imp = sel.kind === "import" ? importStore[sel.ref] : null, fp = objFootprint(sel);
@@ -86,12 +92,14 @@ function renderInspector(){
       <div class="row"><div class="f"><span class="lbl">Copertura</span><select id="lRoof" class="inp"><option value="none">Nessuna</option><option value="flat">Piana</option><option value="gable">A due falde</option></select></div>
       ${L.roof.type==="gable"?F("lPitch","Pendenza °",L.roof.pitch,'inputmode="decimal"'):"<div></div>"}</div>
       ${L.roof.type!=="none"?`<div class="row">${F("lOv","Sporto (m)",fmt(L.roof.overhang),'inputmode="decimal"')}${L.roof.type==="gable"?`<div class="f"><span class="lbl">Colmo</span><select id="lRidge" class="inp"><option value="">Lato lungo</option><option value="x" ${L.roof.ridge==="x"?"selected":""}>Est–ovest</option><option value="y" ${L.roof.ridge==="y"?"selected":""}>Nord–sud</option></select></div>`:"<div></div>"}</div><span class="lbl">Manto</span>${swatches(ROOF_MATS, L.roof.mat, "roofm")}`:""}
-      ${P.levels.length>1?`<div class="btns"><button class="btn danger" id="lDel">Elimina piano</button></div>`:""}</div>
+      ${P.levels.length>1?`<div class="btns"><button class="btn danger" id="lDel">Elimina piano</button></div>`:""}${levelsTableHTML()}</div>${camerasHTML()}
       ${U?`<div class="sec"><h3>Base di ricalco</h3><div class="f"><label class="lbl" for="uOp">Opacità</label><input type="range" id="uOp" min="0.05" max="1" step="0.05" value="${U.opacity}"></div><div class="btns"><button class="btn" data-tool-go="calib">Calibra scala</button><button class="btn" data-tool-go="moveunder">Sposta</button><button class="btn danger" id="uDel">Rimuovi</button></div></div>`:""}
       <div class="sec"><h3>Vista 3D</h3><div class="seg" id="show3d"><button data-s="all">Tutto</button><button data-s="below">Fino a questo piano</button><button data-s="section">Sezione</button></div>
       <div class="row"><div class="f"><span class="lbl">Cielo e luce</span><select id="skySel" class="inp">${SKIES.map(s=>`<option value="${s.id}">${s.nome}</option>`).join("")}${P.sky?.kind==="ph"?`<option value="ph">${esc(P.sky.nome||"Poly Haven")}</option>`:""}</select></div>
       <div class="f"><span class="lbl">Qualità</span><div class="seg"><button data-q="0" aria-pressed="${!S.hq}">Rapida</button><button data-q="1" aria-pressed="${S.hq}">Alta</button></div></div></div>
       <label class="chk"><input type="checkbox" id="gChk" ${S.ground?"checked":""}> Terreno a prato</label>
+      <label class="chk"><input type="checkbox" id="ceilChk" ${S.ceilings!==false?"checked":""}> Soffitti</label>
+      <div class="row"><div class="f"><span class="lbl">Taglio verticale</span><select id="vcutAxis" class="inp"><option value="">Nessuno</option><option value="x" ${S.vcut?.axis==="x"?"selected":""}>Da est (asse x)</option><option value="z" ${S.vcut?.axis==="z"?"selected":""}>Da sud (asse y)</option></select></div>${S.vcut?.axis?`<div class="f"><label class="lbl" for="vcutPos">Posizione · ${S.vcut.pos}%</label><input type="range" id="vcutPos" min="0" max="100" value="${S.vcut.pos}"></div>`:"<div></div>"}</div>
       <div class="f"><label class="lbl" for="sAz">Orientamento sole · ${Math.round(P.sun.az)}°</label><input type="range" id="sAz" min="0" max="360" value="${P.sun.az}"></div>
       <div class="f"><label class="lbl" for="sEl">Altezza sole · ${Math.round(P.sun.el)}°</label><input type="range" id="sEl" min="3" max="80" value="${P.sun.el}"></div>
       <div class="f"><label class="lbl" for="sEx">Esposizione · ${fmt(S.exposure,2)}</label><input type="range" id="sEx" min="0.4" max="1.8" step="0.05" value="${S.exposure}"></div>
@@ -208,6 +216,6 @@ $("#projName").addEventListener("change", e => { P.name = e.target.value; commit
 $("#viewSeg").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; S.view = b.dataset.v; $("#views").dataset.mode = S.view; $$("#viewSeg button").forEach(x=>x.setAttribute("aria-pressed", x===b)); requestAnimationFrame(()=>{ resize2D(); resize3D(); }); });
 $$("[data-cam]").forEach(b => b.addEventListener("click", () => camPreset(b.dataset.cam)));
 $(".tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (!b) return; S.tab = b.dataset.tab; renderTabs(); });
-function renderTabs(){ $$(".tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === S.tab)); for (const t of ["props","import","export","ai"]) $("#panel-"+t).hidden = S.tab !== t; if (S.tab === "export") renderExport(); if (S.tab === "import") renderImport(); if (S.tab === "ai") renderAI(); }
+function renderTabs(){ $$(".tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === S.tab)); for (const t of ["props","list","import","export","ai"]) $("#panel-"+t).hidden = S.tab !== t; if (S.tab === "list") renderList(); if (S.tab === "export") renderExport(); if (S.tab === "import") renderImport(); if (S.tab === "ai") renderAI(); }
 $("#undoBtn").addEventListener("click", undo); $("#redoBtn").addEventListener("click", redo);
-function refresh(){ renderLevels(); renderInspector(); draw2D(); rebuild3D(); $("#undoBtn").disabled = !past.length; $("#redoBtn").disabled = !future.length; if (S.tab === "export") renderExport(); }
+function refresh(){ renderLevels(); renderInspector(); draw2D(); rebuild3D(); $("#undoBtn").disabled = !past.length; $("#redoBtn").disabled = !future.length; if (S.tab === "export") renderExport(); if (S.tab === "list") renderList(); renderCamSel(); }
