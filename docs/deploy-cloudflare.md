@@ -2,7 +2,29 @@
 
 Un solo Worker serve l'editor (`public/`, come asset statici) e l'API `/api/render`, che usa **Workers AI** con il modello `@cf/black-forest-labs/flux-2-klein-4b`. Nessuna chiave API: il modello si chiama tramite il binding `AI` del Worker.
 
-## Una tantum
+## Deploy automatico da GitHub (consigliato)
+
+Il workflow `.github/workflows/deploy-cloudflare.yml` fa tutto da solo: crea il namespace KV, crea il widget Turnstile per `pianta-libera.<sottodominio>.workers.dev`, pubblica il Worker, imposta `TURNSTILE_SECRET` e genera `IP_SALT` (una volta sola), poi controlla `/api/config`.
+
+Una tantum:
+
+1. Cloudflare → *My Profile → API Tokens → Create Token → Create Custom Token*, con questi permessi (Account Resources: il tuo account):
+   - Account · **Workers Scripts** · Edit
+   - Account · **Workers KV Storage** · Edit
+   - Account · **Turnstile** · Edit
+   - Account · **Workers AI** · Read
+   - Account · **Account Settings** · Read
+   - User · **User Details** · Read · User · **Memberships** · Read
+2. GitHub → *Settings → Secrets and variables → Actions → New repository secret*:
+   - `CLOUDFLARE_API_TOKEN` = il token appena creato
+   - `CLOUDFLARE_ACCOUNT_ID` = l'ID dell'account (pannello Cloudflare, *Workers & Pages*, colonna destra)
+3. GitHub → *Actions → Deploy su Cloudflare → Run workflow*. Il riepilogo del run riporta l'indirizzo.
+
+Se l'account non ha mai usato Workers, apri una volta *Workers & Pages* nel pannello per creare il sottodominio `workers.dev`. Senza i due secrets il workflow si salta da solo. Dopo il primo deploy, ogni push su `main` che tocca `worker/`, `shared/` o `public/` ripubblica.
+
+Sul piano gratuito di Workers, oltre i 10.000 Neurons al giorno le chiamate falliscono invece di essere addebitate; il tetto `NEURON_DAILY_BUDGET` (9000) le ferma prima.
+
+## Deploy manuale (in alternativa)
 
 ```bash
 npm install
