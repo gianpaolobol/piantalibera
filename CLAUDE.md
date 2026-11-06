@@ -11,6 +11,7 @@
 - **Produzione su Cloudflare** (asset statici + Worker + KV); backend PHP in `server/php/` solo come alternativa.
 - **Repository pubblico.**
 - Stato, test e passi successivi: PR e issue di coordinamento #1.
+- **Pacchetto locale sempre aggiornato** (richiesta del proprietario, 6/11/2026): il workflow `pacchetto.yml` lo ricostruisce e pubblica a ogni push su `main` (release `locale-latest`). Chi cambia avvio, requisiti, comandi o funzioni locali aggiorna nello stesso PR `docs/installazione-locale.md` (copia esterna: documento «Pianta Libera in locale — guida all'installazione» del proprietario).
 
 ## Visione e obiettivo
 
