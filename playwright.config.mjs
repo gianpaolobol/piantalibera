@@ -8,10 +8,10 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
-    baseURL: "http://localhost:8787",
+    baseURL: "http://127.0.0.1:8787",
     viewport: { width: 1440, height: 860 },
     launchOptions: { args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] },
     screenshot: "only-on-failure",
   },
-  webServer: { command: "node server/mock-render-server.mjs", url: "http://localhost:8787/", reuseExistingServer: !process.env.CI, timeout: 20_000 },
+  webServer: { command: "node server/mock-render-server.mjs", url: "http://127.0.0.1:8787/", reuseExistingServer: !process.env.CI, timeout: 20_000 },
 });

@@ -21,7 +21,7 @@ try {
     return existsSync(p) ? r.fulfill({ body: readFileSync(p), contentType: "application/javascript" }) : r.abort();
   });
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ body: "", contentType: "text/css" }));
-  for (let i = 0; i < 40; i++){ try { await page.goto(`http://localhost:${PORT}/`); break; } catch { await new Promise(r => setTimeout(r, 250)); } }
+  for (let i = 0; i < 40; i++){ try { await page.goto(`http://127.0.0.1:${PORT}/`); break; } catch { await new Promise(r => setTimeout(r, 250)); } }
   await page.waitForFunction(() => typeof renderThumb === "function" && typeof P !== "undefined" && P);
   const refs = await page.evaluate(() => LIB.filter(x => !x.ref.startsWith("pers_")).map(x => x.ref));
   let n = 0;

@@ -50,3 +50,8 @@ Documenti: [editor](docs/editor.md) · [contratto API](docs/api-render-contract.
 Nessuna chiave nel client o nel repository. Il render passa solo dal backend, con quote per IP, tetto giornaliero, kill switch, limiti di formato e dimensione e cancellazione dei file. I render generativi possono alterare dettagli: non sono elaborati tecnici.
 
 Il prototipo React iniziale è archiviato nel branch `archivio/prototipo-react`.
+
+## Uso in locale
+
+Pacchetto sempre aggiornato (funziona senza internet; usa la GPU del computer tramite il browser e, per il render AI, ComfyUI in locale):
+https://github.com/gianpaolobol/piantalibera/releases/download/locale-latest/pianta-libera-locale.zip — guida: [docs/installazione-locale.md](docs/installazione-locale.md).
