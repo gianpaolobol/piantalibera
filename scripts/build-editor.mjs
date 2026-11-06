@@ -18,7 +18,7 @@ const scripts = [
   "examples/js/shaders/GammaCorrectionShader.js", "examples/js/postprocessing/EffectComposer.js",
   "examples/js/postprocessing/RenderPass.js", "examples/js/postprocessing/ShaderPass.js", "examples/js/postprocessing/SSAOPass.js",
 ];
-const parts = ["01-base.js", "02-lib.js", "03-model.js", "04-plan.js", "05-ui.js", "06-online.js", "07-io.js", "075-auto3d.js", "076-auto3d-ui.js", "08-ai.js", "09-init.js"];
+const parts = ["01-base.js", "02-lib.js", "03-model.js", "04-plan.js", "045-plan-pro.js", "05-ui.js", "06-online.js", "07-io.js", "075-auto3d.js", "076-auto3d-ui.js", "08-ai.js", "09-init.js"];
 
 const js = parts.map(f => `/* ---- ${f} ---- */\n` + readFileSync(join(src, f), "utf8")).join("\n");
 // controllo sintattico prima di scrivere

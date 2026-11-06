@@ -33,7 +33,7 @@ function sampleProject(){
   };
 }
 function migrate(p){
-  p.materials = p.materials || {}; p.sky = p.sky || {kind:"asset", id:"giorno"}; p.sun = p.sun || {az:245, el:36};
+  p.materials = p.materials || {}; p.dims = p.dims || []; p.sky = p.sky || {kind:"asset", id:"giorno"}; p.sun = p.sun || {az:245, el:36};
   for (const L of p.levels){ L.roof = L.roof || {type:"none", pitch:30, overhang:.5, mat:"tegole"}; L.slab = L.slab ?? .25; }
   for (const o of p.objects || []) if (o.kind === "lib") o.ref = libRef(o.ref);
   p.version = 2; return p;
@@ -42,7 +42,7 @@ function readCanvasColors(){ readColors(); draw2D(); render3D(); }
 function init(){
   let saved = null; try { saved = JSON.parse(localStorage.getItem("pianta-libera-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v1")); } catch(e){}
   P = migrate(saved?.levels?.length ? saved : sampleProject()); S.level = P.levels[0].id; snap = JSON.stringify(P);
-  $("#projName").value = P.name; readColors(); setTool("select");
+  $("#projName").value = P.name; readColors(); setTool("select"); renderStatus();
   new ResizeObserver(() => { resize2D(); resize3D(); }).observe($("#views"));
   resize2D(); resize3D(); fitPlan(); rebuild3D(); applySky(); setTimeout(() => camPreset("ext"), 80); renderLevels();
   matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { readCanvasColors(); applySky(); });

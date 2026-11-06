@@ -192,6 +192,12 @@ const A3 = (() => {
       if (n * cell * cell >= 1.2){ const pts = traceRoom(G, nx, ny, lab, k, x0, y0, cell); if (pts.length >= 3) rooms.push({pts, area:+(n*cell*cell).toFixed(2)}); }
       lab++;
     }
+    // i bordi del raster (5 cm) si agganciano alle facce dei muri vicine
+    const fx = [], fy = [];
+    for (const w of walls){ const dx = w.b[0]-w.a[0], dy = w.b[1]-w.a[1], L = Math.hypot(dx, dy) || 1;
+      if (Math.abs(dy) / L < .01) fy.push(w.a[1] - w.thick/2, w.a[1] + w.thick/2); else if (Math.abs(dx) / L < .01) fx.push(w.a[0] - w.thick/2, w.a[0] + w.thick/2); }
+    const snapTo = (v, list) => { let b = v, bd = .1; for (const f of list){ const d = Math.abs(f - v); if (d < bd){ bd = d; b = f; } } return +b.toFixed(3); };
+    for (const r of rooms){ r.pts = r.pts.map(([x, y]) => [snapTo(x, fx), snapTo(y, fy)]); const A = r.pts.reduce((s, p, i) => { const q = r.pts[(i+1) % r.pts.length]; return s + p[0]*q[1] - q[0]*p[1]; }, 0); r.area = +Math.abs(A/2).toFixed(2); }
     const inPoly = (x, y, p) => { let c = false; for (let i = 0, j = p.length-1; i < p.length; j = i++) if ((p[i][1] > y) !== (p[j][1] > y) && x < (p[j][0]-p[i][0]) * (y-p[i][1]) / (p[j][1]-p[i][1]) + p[i][0]) c = !c; return c; };
     const skip = /^\s*([\d.,]+\s*(m|mq|m2|m²|cm)?|h\s*[=:].*|s\.?\s*=.*|sup.*|superf.*|[\d.,]+\s*[x×]\s*[\d.,]+.*)\s*$/i;
     for (const r of rooms){
