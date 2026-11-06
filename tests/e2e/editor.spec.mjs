@@ -94,7 +94,8 @@ test("render AI: errore chiaro se il backend non risponde", async ({ page }) => 
 test("render AI: con Turnstile richiesto non invia finché la verifica non è completata", async ({ page }) => {
   await page.route("**/api/config", r => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ enabled: true, provider: "Cloudflare Workers AI", model: "@cf/black-forest-labs/flux-2-klein-4b", generated: true, turnstile_site_key: "1x00000000000000000000AA", quota: { per_ip_daily: 2, used_today: 1 }, retention_seconds: 3600, privacy: "Le immagini sono inviate a Cloudflare." }) }));
   await page.route("https://challenges.cloudflare.com/**", r => r.fulfill({ status: 200, contentType: "text/javascript", body: "window.turnstile={render:(el,o)=>{window.__ts=o;return 1},reset(){},remove(){}};" }));
-  let posted = 0; await page.route("**/api/render", r => { posted++; r.fulfill({ status: 200, contentType: "application/json", headers: { "X-Quota-Remaining": "0" }, body: JSON.stringify({ id: "a".repeat(32), status: "succeeded", images: ["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="] }) }); });
+  let posted = 0; await page.route("**/api/render", r => { posted++; r.fulfill({ status: 200, contentType: "application/json", headers: { "X-Quota-Remaining": "0" }, body: JSON.stringify({ id: "a".repeat(32), status: "succeeded", generated: true, images: ["/api/render/" + "a".repeat(32) + "/image/0"] }) }); });
+  await page.route("**/api/render/*/image/0", r => r.fulfill({ status: 200, contentType: "image/png", body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64") }));
   await open(page);
   await page.click('[data-tab="ai"]');
   await expect(page.locator("#panel-ai")).toContainText("Cloudflare Workers AI");
@@ -108,6 +109,9 @@ test("render AI: con Turnstile richiesto non invia finché la verifica non è co
   expect(JSON.parse((await sent).postData()).turnstile).toBe("token-di-prova");
   await expect(page.locator("#aiStatus")).toContainText("render ricevuti", { timeout: 20_000 });
   await expect(page.locator("#panel-ai")).toContainText("disponibili oggi: 0 su 2");
+  // il risultato è un URL relativo del backend, non base64
+  expect(await page.locator("#cmpAfter").getAttribute("src")).toMatch(/^https?:\/\/[^/]+\/api\/render\/a{32}\/image\/0$/);
+  expect(await page.locator("#cmpAfter").evaluate(img => img.complete && img.naturalWidth)).toBe(1);
 });
 
 test("telefono: nessuno scorrimento orizzontale", async ({ page }) => {

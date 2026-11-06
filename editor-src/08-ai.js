@@ -82,7 +82,7 @@ function loadTurnstile(){
 }
 async function mountTurnstile(){
   const key = backendCfg.data?.turnstile_site_key, box = $("#aiTurnstile"); if (!key || !box) return;
-  try { await loadTurnstile(); if (!document.body.contains(box) || box.childElementCount) return; try { if (tsWidget != null) window.turnstile.remove(tsWidget); } catch(_){} tsToken = ""; tsWidget = window.turnstile.render(box, {sitekey:key, size:"flexible", language:"it", callback:t => { tsToken = t; }, "expired-callback":() => { tsToken = ""; }, "error-callback":() => { tsToken = ""; }}); }
+  try { await loadTurnstile(); if (!document.body.contains(box) || box.childElementCount) return; try { if (tsWidget != null) window.turnstile.remove(tsWidget); } catch(_){} tsToken = ""; tsWidget = window.turnstile.render(box, {sitekey:key, size: box.clientWidth >= 300 ? "flexible" : "compact", language:"it", callback:t => { tsToken = t; }, "expired-callback":() => { tsToken = ""; }, "error-callback":() => { tsToken = ""; }}); }
   catch(e){ box.textContent = "Verifica anti-bot non disponibile: " + e.message; }
 }
 function resetTurnstile(){ tsToken = ""; try { if (tsWidget != null && window.turnstile) window.turnstile.reset(tsWidget); } catch(e){} }
@@ -95,7 +95,7 @@ function backendBlock(){
         ${d.retention_seconds ? ` Immagini cancellate dal server dopo ${Math.round(d.retention_seconds/60)} minuti.` : ""}</p>
         ${d.enabled === false ? `<p class="note warn">Render AI non attivo su questo sito${d.reason ? ` (${esc(d.reason)})` : ""}.</p>` : ""}` : "";
   return `${info}
-    <label class="chk"><input type="checkbox" id="aiConsent" ${aiConsent?"checked":""}> Acconsento all'invio della vista, delle mappe di profondità e contorni e del prompt ${d?.provider && !d.mock ? `a <b>${esc(d.provider)}</b>` : "al servizio di render"} per generare l'immagine.</label>
+    <label class="chk"><input type="checkbox" id="aiConsent" ${aiConsent?"checked":""}><span>Acconsento all'invio della vista, delle mappe di profondità e contorni e del prompt ${d?.provider && !d.mock ? `a <b>${esc(d.provider)}</b>` : "al servizio di render"} per generare l'immagine.</span></label>
     ${d?.privacy ? `<details><summary class="lbl">Informativa</summary><p class="note">${esc(d.privacy)}</p><p class="note"><a href="https://github.com/gianpaolobol/piantalibera/blob/main/docs/privacy.md" target="_blank" rel="noopener">Testo completo</a></p></details>` : ""}
     ${d?.turnstile_site_key ? `<div id="aiTurnstile" class="ts"></div>` : ""}`;
 }
@@ -187,6 +187,7 @@ const getPath = (obj, path) => !path ? obj : path.split(".").reduce((o, k) => o 
 function fillTemplate(tpl, vars){
   return tpl.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_, k) => { const v = vars[k]; if (v === undefined) return ""; if (typeof v === "number") return String(v); if (typeof v === "object") return JSON.stringify(v); return JSON.stringify(String(v)).slice(1, -1); });
 }
+function aiBaseUrl(){ try { return new URL(aiConfig().url || "/", location.href).href; } catch(e){ return location.href; } }
 function findImages(x, out=[]){
   if (out.length > 8 || x == null) return out;
   if (typeof x === "string"){ if (/^data:image\//.test(x)) out.push(x); else if (/^https?:\/\/\S+/.test(x) && /(\.png|\.jpe?g|\.webp)(\?|$)|\/(output|image|result|file|download)/i.test(x)) out.push(x); else if (x.length > 2000 && /^[A-Za-z0-9+/=\s]+$/.test(x.slice(0, 200))) out.push("data:image/png;base64," + x.replace(/\s/g,"")); return out; }
@@ -194,7 +195,7 @@ function findImages(x, out=[]){
   if (typeof x === "object") for (const v of Object.values(x)) findImages(v, out);
   return out;
 }
-function toImageList(v){ if (v == null) return []; if (Array.isArray(v)) return v.flatMap(toImageList); if (typeof v === "object") return findImages(v); const s = String(v); if (/^(data:|https?:|blob:)/.test(s)) return [s]; return ["data:image/png;base64," + s]; }
+function toImageList(v){ if (v == null) return []; if (Array.isArray(v)) return v.flatMap(toImageList); if (typeof v === "object") return findImages(v); const s = String(v); if (/^(data:|https?:|blob:)/.test(s)) return [s]; if (/^(\/|\.\.?\/)[^\s]*$/.test(s) || /^[\w.-]+\.php\?/.test(s)) return [new URL(s, aiBaseUrl()).href]; return ["data:image/png;base64," + s]; }
 async function buildVars(cfg, test){
   const size = renderer.getSize(new THREE.Vector2()), long = test ? 256 : (cfg.longSide || 1536);
   const opts = {longSide: long};
