@@ -186,6 +186,60 @@ test("pianta di precisione: riquadro, duplica, quote, menu, locale automatico, l
   await expect(page.locator("#helpBox")).toContainText("Scorciatoie");
 });
 
+test("fase 1 completata: muro ad arco, etichette locali, superfici e unità", async ({ page }) => {
+  const errors = await open(page);
+  const box = await page.locator("#c2d").boundingBox();
+  const at = async p => { const s = await page.evaluate(q => toS(q), p); return [box.x + s[0], box.y + s[1]]; };
+  await page.keyboard.press("w"); await page.selectOption("#wallShape", "arco");
+  for (const p of [[0, 11], [6, 11], [3, 9.5]]){ const [x, y] = await at(p); await page.mouse.move(x, y); await page.mouse.click(x, y); }
+  expect(await page.evaluate(() => P.walls.filter(w => w.arc).length)).toBeGreaterThan(8);
+  await page.fill("#arcH", "2"); await page.press("#arcH", "Enter");
+  expect(await page.evaluate(() => P.walls.find(w => w.arc).arc.h)).toBeCloseTo(2, 2);
+  await page.selectOption("#wallShape", "dritto").catch(() => {});
+  await page.keyboard.press("Escape"); await page.keyboard.press("v");
+  const pos = await page.evaluate(() => roomLabelPos(P.rooms[0])); const [lx, ly] = await at(pos);
+  await page.mouse.move(lx, ly); await page.mouse.down(); await page.mouse.move(lx + 40, ly + 30, { steps: 4 }); await page.mouse.up();
+  expect(await page.evaluate(() => !!P.rooms[0].lab)).toBe(true);
+  const a = await page.evaluate(() => roomAreas(P.rooms[0]));
+  expect(a.gross).toBeGreaterThan(a.net);
+  await page.selectOption("#unitSel", "cm");
+  expect(await page.evaluate(() => fmtL(3.25))).toBe("325 cm");
+  expect(errors).toEqual([]);
+});
+
+test("fase 2: selezione e trascinamento in 3D, camere, metro, elenco e trascina dal catalogo", async ({ page }) => {
+  const errors = await open(page);
+  const box = await page.locator("#c2d").boundingBox(), b3 = await page.locator("#c3d").boundingBox();
+  const at = async p => { const s = await page.evaluate(q => toS(q), p); return [box.x + s[0], box.y + s[1]]; };
+  const proj = (x, y, z) => page.evaluate(([x, y, z]) => { const v = new THREE.Vector3(x, y, z).project(camera); const r = c3d.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }, [x, y, z]);
+  await page.evaluate(() => { camPreset("bird"); setSel([]); }); await page.waitForTimeout(600);
+  const o = await page.evaluate(() => { const o = P.objects.find(o => o.ref === "letto2"); return [o.x, level(o.level).elev + .5, o.y]; });
+  const [sx, sy] = await proj(o[0], o[1], o[2]);
+  await page.mouse.click(sx, sy);
+  expect(await page.evaluate(() => selList().map(s => itemOf(s)?.ref))).toEqual(["letto2"]);
+  const before = await page.evaluate(() => P.objects.find(o => o.ref === "letto2").x);
+  await page.mouse.move(sx, sy); await page.mouse.down(); await page.mouse.move(sx + 60, sy + 10, { steps: 6 }); await page.mouse.up();
+  expect(await page.evaluate(() => P.objects.find(o => o.ref === "letto2").x)).not.toBe(before);
+  await page.selectOption("#camSel", "__save");
+  expect(await page.evaluate(() => P.cameras.length)).toBe(1);
+  await page.click("#m3Btn");
+  const pA = await proj(0, 1, 0), pB = await proj(4, 1, 0);
+  await page.mouse.click(pA[0], pA[1]); await page.mouse.click(pB[0], pB[1]);
+  expect(await page.evaluate(() => M3.list.length)).toBe(1);
+  await page.click("#m3Btn");
+  await page.click('[data-tab="list"]');
+  expect(await page.locator("#panel-list tr[data-oid]").count()).toBeGreaterThan(10);
+  await page.locator("#panel-list [data-ohide]").first().click();
+  expect(await page.evaluate(() => P.objects.filter(o => o.hidden).length)).toBe(1);
+  await page.click('[data-tab="props"]'); await page.keyboard.press("a"); await page.waitForTimeout(300);
+  const n = await page.evaluate(() => P.objects.length), [tx, ty] = await at([4, 12]);
+  await page.locator("#libGrid button").first().dragTo(page.locator("#c2d"), { targetPosition: { x: tx - box.x, y: ty - box.y } });
+  expect(await page.evaluate(() => P.objects.length)).toBe(n + 1);
+  await page.click("#walkBtn"); expect(await page.evaluate(() => WALK.on)).toBe(true);
+  await page.keyboard.press("Escape"); expect(await page.evaluate(() => WALK.on)).toBe(false);
+  expect(errors).toEqual([]);
+});
+
 test("telefono: nessuno scorrimento orizzontale", async ({ page }) => {
   await page.setViewportSize({ width: 400, height: 860 });
   await open(page);

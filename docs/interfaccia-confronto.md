@@ -14,4 +14,4 @@
 | 3 · Architettura | pennello materiali e posa piastrelle, battiscopa e controsoffitti, luci artificiali e sole da data/ora/nord, più tipi di porte e finestre, scale e ringhiere, tetti complessi, coda di render/4K/360°, gestione progetti | 19–26 |
 | 4 · Avanguardia | tavole quotate con prospetti e sezioni (PDF/DWG/SVG), computi, condivisione e commenti del cliente, AI nel progetto e con maschere, video, pannelli staccabili, tablet, IFC, anteprima di stampa 3D | 27–36 |
 
-Stato: fase 1 in corso (vedi docs/editor.md, «Pianta di precisione»).
+Stato: fasi 1 e 2 completate (vedi docs/editor.md, «Pianta di precisione» e «3D e pannelli»); prossima la fase 3.

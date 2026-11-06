@@ -54,7 +54,7 @@ function draw2D(){
   ws.forEach((w,i) => { for (const c of ranges[i].cuts) drawOpening(g, w, c); });
   g.textAlign = "center"; g.textBaseline = "middle";
   for (const r of P.rooms.filter(r=>r.level===L.id)){
-    if (r.pts.length < 3) continue; const c = toS(polyCentroid(r.pts)), A = Math.abs(polyArea(r.pts));
+    if (r.pts.length < 3) continue; const c = toS(roomLabelPos(r)), A = Math.abs(polyArea(r.pts));
     if (V.s > 14){ g.fillStyle = C.text; g.font = `600 ${clamp(V.s*.32, 10, 15)}px Archivo, system-ui, sans-serif`; g.fillText(r.name || "Locale", c[0], c[1]-8);
       g.fillStyle = C.muted; g.font = `${clamp(V.s*.27, 9, 12)}px "IBM Plex Mono", ui-monospace, monospace`; g.fillText(`${fmt(A,1)} m²`, c[0], c[1]+8); }
   }
@@ -63,29 +63,29 @@ function draw2D(){
   const sel = findSel(), multi = S.multi?.length > 1;
   if (multi) for (const x of selItems()) if (x.s.type === "wall"){ const a = toS(x.it.a), b = toS(x.it.b); g.strokeStyle = C.sel; g.lineWidth = 2; g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke(); }
   if (!multi && S.sel?.type === "object" && sel) drawObjHandles(g, sel);
-  if (drag?.type === "object" && drag.moved) for (const d of wallDistances(drag.o)) dimLine(g, d.a, d.b, 0, fmt(d.t) + " m", C.text, true);
+  if (drag?.type === "object" && drag.moved) for (const d of wallDistances(drag.o)) dimLine(g, d.a, d.b, 0, fmtL(d.t), C.text, true);
   if (S.guides?.length){ g.save(); g.strokeStyle = C.sel; g.globalAlpha = .55; g.setLineDash([3,4]); g.lineWidth = 1; g.beginPath(); for (const [a,b] of S.guides){ const A = toS(a), B = toS(b); g.moveTo(A[0],A[1]); g.lineTo(B[0],B[1]); } g.stroke(); g.restore(); }
   if (drag?.type === "box"){ const a = drag.sp, b = drag.cur || a; g.save(); g.fillStyle = C.sel; g.globalAlpha = .08; g.fillRect(a[0], a[1], b[0]-a[0], b[1]-a[1]); g.globalAlpha = 1; g.strokeStyle = C.sel; g.setLineDash([4,3]); g.strokeRect(a[0]+.5, a[1]+.5, b[0]-a[0], b[1]-a[1]); g.restore(); }
   if (!multi && S.sel?.type === "wall" && sel){ const f = wallFrame(sel), a = toS(sel.a), b = toS(sel.b);
     g.strokeStyle = C.sel; g.lineWidth = 2; g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke();
     for (const p of [a,b]){ g.fillStyle = C.bg; g.beginPath(); g.arc(p[0],p[1],6,0,7); g.fill(); g.stroke(); }
-    dimLine(g, sel.a, sel.b, sel.thick/2 + .6, fmt(f.len) + " m");
+    dimLine(g, sel.a, sel.b, sel.thick/2 + .6, fmtL(f.len));
   }
   if (S.sel?.type === "room" && sel){ for (const p of sel.pts){ const s = toS(p); g.fillStyle = C.bg; g.strokeStyle = C.sel; g.lineWidth = 2; g.beginPath(); g.rect(s[0]-4,s[1]-4,8,8); g.fill(); g.stroke(); } }
-  if (S.sel?.type === "opening" && sel){ const w = wallById(sel.wall); if (w){ const p0 = ptOnWall(w, sel.t - sel.w/2), p1 = ptOnWall(w, sel.t + sel.w/2); dimLine(g, p0, p1, w.thick/2 + .45, fmt(sel.w) + " m"); } }
-  drawToolPreview(g);
+  if (S.sel?.type === "opening" && sel){ const w = wallById(sel.wall); if (w){ const p0 = ptOnWall(w, sel.t - sel.w/2), p1 = ptOnWall(w, sel.t + sel.w/2); dimLine(g, p0, p1, w.thick/2 + .45, fmtL(sel.w)); } }
+  drawToolPreview(g); drawArcPreview(g); drawObserver(g);
   g.save(); g.translate(W2 - 34, 40); g.strokeStyle = C.text; g.fillStyle = C.text; g.lineWidth = 1.2;
   g.beginPath(); g.arc(0,0,14,0,7); g.stroke(); g.beginPath(); g.moveTo(0,-12); g.lineTo(5,6); g.lineTo(0,2); g.lineTo(-5,6); g.closePath(); g.fill();
   g.font = `600 10px Archivo, system-ui, sans-serif`; g.fillText("N", 0, -22); g.restore();
   const sbm = V.s > 60 ? 1 : V.s > 25 ? 2 : V.s > 10 ? 5 : 10, sbx = W2 - 20 - sbm*V.s, sby = H2 - 44;
   g.fillStyle = C.text; g.fillRect(sbx, sby, sbm*V.s/2, 4); g.strokeStyle = C.text; g.lineWidth=1; g.strokeRect(sbx+.5, sby+.5, sbm*V.s, 4);
   g.font = `10px "IBM Plex Mono", monospace`; g.textAlign = "right"; g.fillText(`${sbm} m`, W2 - 20, sby - 8);
-  hud2d();
+  hud2d(); updateSel3D();
 }
 function drawObject2D(g, o){
   const fp = objFootprint(o), a = -THREE.MathUtils.degToRad(o.rot||0), it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null, isSel = isSelected(o.id);
   g.save(); const s = toS([o.x,o.y]); g.translate(s[0],s[1]); g.rotate(-a);
-  const loading = !objTemplate(o);
+  const loading = !objTemplate(o); if (o.hidden) g.globalAlpha = .25;
   if (it?.plan === "tree" && !loading){
     const r = Math.max(fp.w, fp.d)/2*V.s; g.fillStyle = C.green; g.globalAlpha = .22; g.beginPath();
     for (let i=0;i<=24;i++){ const t = i/24*Math.PI*2, rr = r*(1 + .06*Math.sin(t*7)); g.lineTo(Math.cos(t)*rr + fp.cx*V.s, Math.sin(t)*rr + fp.cz*V.s); } g.fill(); g.globalAlpha = 1;
@@ -154,7 +154,7 @@ function drawToolPreview(g){
     const end = wallEndFromTyped(d.start, hp.p); const a = toS(d.start), b = toS(end);
     g.setLineDash([6,4]); g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke(); g.setLineDash([]);
     const off = wallOffsetVec(d.start, end); if (off[0] || off[1]){ const A2 = toS([d.start[0]+off[0], d.start[1]+off[1]]), B2 = toS([end[0]+off[0], end[1]+off[1]]); g.save(); g.globalAlpha = .35; g.lineWidth = Math.max(2, S.defaults.wallThick*V.s); g.beginPath(); g.moveTo(A2[0],A2[1]); g.lineTo(B2[0],B2[1]); g.stroke(); g.restore(); }
-    dimLine(g, d.start, end, S.defaults.wallThick/2 + .5, fmt(Math.hypot(end[0]-d.start[0], end[1]-d.start[1])) + " m");
+    dimLine(g, d.start, end, S.defaults.wallThick/2 + .5, fmtL(Math.hypot(end[0]-d.start[0], end[1]-d.start[1])));
     const ang = (Math.atan2(-(end[1]-d.start[1]), end[0]-d.start[0]) * 180 / Math.PI + 360) % 360;
     const L1 = S.typedField === "ang" ? (S.typed || "—") : (S.typed ? S.typed + "▏" : fmt(Math.hypot(end[0]-d.start[0], end[1]-d.start[1]))), A1 = S.typedField === "ang" ? (S.typedAng || "") + "▏" : (S.typedAng || Math.round(ang));
     const bx = b[0] + 14, by = b[1] + 14, txt = `L ${L1} m   ∠ ${A1}°`; g.font = `500 11px "IBM Plex Mono", monospace`; const tw = g.measureText(txt).width + 12;
@@ -164,7 +164,7 @@ function drawToolPreview(g){
     const a = toS(d.start), b = toS(hp.p); g.setLineDash([6,4]); g.strokeRect(a[0], a[1], b[0]-a[0], b[1]-a[1]); g.setLineDash([]);
     const xa = Math.min(d.start[0],hp.p[0]), xb = Math.max(d.start[0],hp.p[0]), ya = Math.min(d.start[1],hp.p[1]), yb = Math.max(d.start[1],hp.p[1]);
     const lab = {asse:"in asse", interno:"interne", esterno:"esterne"}[PREFS.rectRef] || "";
-    dimLine(g, [xb, ya], [xa, ya], .6, `${fmt(xb-xa)} m ${lab}`); dimLine(g, [xb, yb], [xb, ya], .6, `${fmt(yb-ya)} m`);
+    dimLine(g, [xb, ya], [xa, ya], .6, `${fmtL(xb-xa)} ${lab}`); dimLine(g, [xb, yb], [xb, ya], .6, fmtL(yb-ya));
   }
   if (S.tool === "room" && d?.pts?.length){
     g.setLineDash([6,4]); g.beginPath(); d.pts.forEach((p,i)=>{ const s=toS(p); i?g.lineTo(s[0],s[1]):g.moveTo(s[0],s[1]); }); if (hp){ const s=toS(hp.p); g.lineTo(s[0],s[1]); } g.stroke(); g.setLineDash([]);
@@ -174,7 +174,7 @@ function drawToolPreview(g){
     const w = hp.wall, wd = S.tool === "door" ? S.defaults.door.w : S.defaults.win.w; const A = toS(ptOnWall(w, hp.s - wd/2)), B = toS(ptOnWall(w, hp.s + wd/2));
     g.lineWidth = Math.max(3, w.thick*V.s); g.globalAlpha = .45; g.beginPath(); g.moveTo(A[0],A[1]); g.lineTo(B[0],B[1]); g.stroke(); g.globalAlpha = 1;
   }
-  if (S.tool === "dim" && d?.a && hp){ const b = d.b || hp.p, off = d.b ? dimOffsetFrom(d.a, d.b, hp.p) : 0; dimLine(g, d.a, b, off, fmt(Math.hypot(b[0]-d.a[0], b[1]-d.a[1])) + " m"); }
+  if (S.tool === "dim" && d?.a && hp){ const b = d.b || hp.p, off = d.b ? dimOffsetFrom(d.a, d.b, hp.p) : 0; dimLine(g, d.a, b, off, fmtL(Math.hypot(b[0]-d.a[0], b[1]-d.a[1]))); }
   if (S.tool === "calib" && S.calib?.p1){ const a = toS(S.calib.p1), b = S.calib.p2 ? toS(S.calib.p2) : hp ? toS(hp.p) : a; g.setLineDash([4,3]); g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke(); g.setLineDash([]); for (const p of [a,b]){ g.beginPath(); g.arc(p[0],p[1],4,0,7); g.fill(); } }
   if (hp?.snapped && ["wall","rect","room","calib","dim"].includes(S.tool)){ const s = toS(hp.p); g.lineWidth = 1.5; g.beginPath(); g.arc(s[0],s[1],7,0,7); g.stroke(); }
   g.restore();
@@ -182,7 +182,7 @@ function drawToolPreview(g){
 function hud2d(){
   const hp = S.hover, L = level();
   const tips = {select:"Clic per selezionare · trascina per spostare · rotella per zoom · trascina il vuoto per spostare la vista",
-    wall:S.draw?.start ? "Clic per il punto successivo · cifre per la lunghezza, Tab per l'angolo, Invio · Esc per finire" : "Clic per iniziare il muro",
+    wall:PREFS.wallShape === "arco" ? (S.draw?.arcB ? "Sposta per curvare il muro, poi clic" : S.draw?.arcA ? "Clic sull'altra estremità dell'arco" : "Clic sul primo estremo dell'arco") : S.draw?.start ? "Clic per il punto successivo · cifre per la lunghezza, Tab per l'angolo, Invio · Esc per finire" : "Clic per iniziare il muro",
     dim:S.draw?.b ? "Sposta per scegliere la distanza della quota, poi clic" : S.draw?.a ? "Clic sul secondo punto" : "Clic sul primo punto da quotare",
     rect:"Trascina per disegnare una stanza con i suoi muri", room:"Clic sui vertici · Invio o clic sul primo punto per chiudere",
     door:"Clic su un muro per inserire la porta", window:"Clic su un muro per inserire la finestra", furn:"Scegli a destra, poi clic in pianta per posizionare",
@@ -224,7 +224,7 @@ function nearestWall(p, maxD=.6){ let best=null, bd=Infinity; for (const w of wa
 function hitTest(p){
   const tol = 6/V.s; const dh = dimHit(p); if (dh) return dh;
   for (const o of P.openings){ const w = wallById(o.wall); if (!w || w.level !== S.level) continue; const r = projOnSeg(p, w.a, w.b), s = r.t*wallFrame(w).len; if (r.d < w.thick/2 + tol && Math.abs(s - o.t) < o.w/2) return {type:"opening", id:o.id}; }
-  for (const o of [...P.objects].reverse()){ if (o.level !== S.level) continue; const fp = objFootprint(o), a = THREE.MathUtils.degToRad(o.rot||0); const dx=p[0]-o.x, dy=p[1]-o.y; const lx = dx*Math.cos(a) + dy*Math.sin(a), ly = -dx*Math.sin(a) + dy*Math.cos(a);
+  for (const o of [...P.objects].reverse()){ if (o.level !== S.level || o.locked || o.hidden) continue; const fp = objFootprint(o), a = THREE.MathUtils.degToRad(o.rot||0); const dx=p[0]-o.x, dy=p[1]-o.y; const lx = dx*Math.cos(a) + dy*Math.sin(a), ly = -dx*Math.sin(a) + dy*Math.cos(a);
     const it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null; const shrink = it?.plan === "tree" ? .5 : 1;
     if (Math.abs(lx-fp.cx) < fp.w/2*shrink && Math.abs(ly-fp.cz) < fp.d/2*shrink) return {type:"object", id:o.id}; }
   for (const w of wallsOf(S.level)){ const r = projOnSeg(p, w.a, w.b); if (r.d < w.thick/2 + tol) return {type:"wall", id:w.id}; }
@@ -248,10 +248,12 @@ c2d.addEventListener("pointerdown", e => {
       if (Math.hypot(Z[0]-sp[0], Z[1]-sp[1]) < 9){ drag = {type:"objScale", o:sel, c:hd.center, d0:Math.hypot(hd.size[0]-hd.center[0], hd.size[1]-hd.center[1]), s0:sel.scale || 1, moved:false}; return; } }
     if (single && S.sel?.type === "wall" && sel){ for (const k of ["a","b"]){ const s = toS(sel[k]); if (Math.hypot(s[0]-sp[0], s[1]-sp[1]) < 9){ drag = {type:"wallEnd", w:sel, links: linkedEnds(sel[k]), moved:false}; return; } } }
     if (single && S.sel?.type === "room" && sel){ for (let i=0;i<sel.pts.length;i++){ const s = toS(sel.pts[i]); if (Math.hypot(s[0]-sp[0], s[1]-sp[1]) < 8){ drag = {type:"roomPt", room:sel, i, moved:false}; return; } } }
+    const lab = !e.shiftKey && roomLabelHit(sp); if (lab){ setSel([{type:"room", id:lab.id}]); renderInspector(); drag = {type:"roomLabel", r:lab, start:raw, orig:(lab.lab || [0,0]).slice(), moved:false}; draw2D(); return; }
     const h = hitTest(raw);
     if (e.shiftKey && h){ toggleSel(h); renderInspector(); draw2D(); return; }
     if (!h){ if (e.pointerType === "touch"){ drag = {type:"pan", sp, c:[V.cx,V.cy]}; } else drag = {type:"box", sp, cur:sp, add:e.shiftKey}; if (!e.shiftKey){ setSel([]); renderInspector(); } draw2D(); return; }
     if (selList().length > 1 && isSelected(h.id)){ drag = {type:"group", start:raw, snap:groupSnapshot(), moved:false}; return; }
+    const grp = expandGroup(h); if (grp.length > 1){ setSel(grp); renderInspector(); drag = {type:"group", start:raw, snap:groupSnapshot(), moved:false}; draw2D(); return; }
     setSel([h]); renderInspector();
     const obj = findSel();
     if (h.type === "opening") drag = {type:"opening", o:obj, moved:false};
@@ -261,6 +263,7 @@ c2d.addEventListener("pointerdown", e => {
     else if (h.type === "dim") drag = {type:"group", start:raw, snap:groupSnapshot(), moved:false};
     draw2D(); return;
   }
+  if (t === "wall" && PREFS.wallShape === "arco"){ arcToolClick(sn.p, raw); return; }
   if (t === "wall"){
     let p = sn.p; if (S.draw?.start){ p = wallEndFromTyped(S.draw.start, constrainAngle(S.draw.start, p, e.shiftKey)); addWall(S.draw.start, p, true); }
     S.draw = {start:p, chain:S.draw?.chain}; S.typed = ""; S.typedAng = ""; S.typedField = "len"; draw2D(); return;
@@ -309,6 +312,7 @@ c2d.addEventListener("pointermove", e => {
     case "opening": { const w = wallById(drag.o.wall), r = projOnSeg(raw, w.a, w.b), f = wallFrame(w); drag.o.t = clamp(g(r.t*f.len), drag.o.w/2+.05, f.len-drag.o.w/2-.05); drag.moved = true; rebuild3D(); renderInspector(); break; }
     case "object": drag.o.x = g(drag.orig[0]+dx); drag.o.y = g(drag.orig[1]+dy); drag.moved = true; rebuild3D(); renderInspector(); break;
     case "roomPt": drag.room.pts[drag.i] = snapPoint(raw, {skipRoom:drag.room, guides:false}).p; drag.moved = true; rebuild3D(); break;
+    case "roomLabel": drag.r.lab = [+(drag.orig[0]+dx).toFixed(2), +(drag.orig[1]+dy).toFixed(2)]; drag.moved = true; break;
     case "roomMove": drag.r.pts = drag.orig.map(p => [p[0]+g(dx), p[1]+g(dy)]); drag.moved = true; rebuild3D(); break;
     case "under": { const U = level().underlay; U.ox = drag.o[0]+dx; U.oy = drag.o[1]+dy; drag.moved = true; break; }
   }
@@ -323,7 +327,7 @@ function endDrag(e){
       const inside = p => p[0] >= x0 && p[0] <= x1 && p[1] >= y0 && p[1] <= y1, found = [];
       for (const w of wallsOf(S.level)) if (inside(w.a) && inside(w.b)) found.push({type:"wall", id:w.id});
       for (const r of P.rooms) if (r.level === S.level && r.pts.every(inside)) found.push({type:"room", id:r.id});
-      for (const o of P.objects) if (o.level === S.level && inside([o.x, o.y])) found.push({type:"object", id:o.id});
+      for (const o of P.objects) if (o.level === S.level && !o.locked && !o.hidden && inside([o.x, o.y])) found.push({type:"object", id:o.id});
       for (const d of P.dims || []) if (d.level === S.level && inside(d.a) && inside(d.b)) found.push({type:"dim", id:d.id});
       for (const o of P.openings){ const w = wallById(o.wall); if (w && w.level === S.level && !found.some(f => f.id === w.id) && inside(ptOnWall(w, o.t))) found.push({type:"opening", id:o.id}); }
       setSel(drag.add ? [...selList(), ...found] : found); renderInspector(); }
@@ -400,7 +404,7 @@ function fitPlan(){ const ws = wallsOf(S.level); let pts = ws.flatMap(w=>[w.a,w.
 function placeFurniture(p){
   if (S.furnSrc === "lib"){
     const it = LIBMAP[S.furn]; const o = {id:uid(), level:S.level, kind:"lib", ref:S.furn, name:it?.nome || "Arredo", x:p[0], y:p[1], rot:0, scale:1, z:0};
-    P.objects.push(o); S.sel = {type:"object", id:o.id}; commit(); return;
+    P.objects.push(o); setSel([{type:"object", id:o.id}]); PREFS.recent = [S.furn, ...PREFS.recent.filter(r => r !== S.furn)].slice(0, 12); savePrefs(); commit(); return;
   }
   if (S.furnSrc === "online" || S.furnSrc === "personal"){
     const pick = S.onlinePick; if (!pick){ toast("Scegli prima un modello dalla libreria", true); return; }

@@ -33,7 +33,7 @@ function sampleProject(){
   };
 }
 function migrate(p){
-  p.materials = p.materials || {}; p.dims = p.dims || []; p.sky = p.sky || {kind:"asset", id:"giorno"}; p.sun = p.sun || {az:245, el:36};
+  p.materials = p.materials || {}; p.dims = p.dims || []; p.cameras = p.cameras || []; p.sky = p.sky || {kind:"asset", id:"giorno"}; p.sun = p.sun || {az:245, el:36};
   for (const L of p.levels){ L.roof = L.roof || {type:"none", pitch:30, overhang:.5, mat:"tegole"}; L.slab = L.slab ?? .25; }
   for (const o of p.objects || []) if (o.kind === "lib") o.ref = libRef(o.ref);
   p.version = 2; return p;

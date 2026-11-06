@@ -27,6 +27,7 @@ Avvio: `npm install` → `npm run dev` → apri `http://localhost:8787/`.
 | `03-model.js` | scena Three.js, cieli HDRI, occlusione ambientale, costruzione del modello dai dati di pianta, pass per l'AI (vista, profondità, contorni, materiali) |
 | `04-plan.js` | pianta 2D: disegno, aggancio, selezione, trascinamento, undo/redo |
 | `045-plan-pro.js` | pianta di precisione: selezione multipla, appunti, rotazione/specchio, quote, snap, menu contestuale, barra di stato, piani a schede, aiuto |
+| `047-fase2.js` | muri ad arco, etichette e superfici dei locali, unità, tabella dei livelli; nel 3D selezione/trascinamento, visita a piedi, camere salvate, metro, taglio verticale; elenco oggetti; trascina dal catalogo |
 | `05-ui.js` | ispettore, piani, schede |
 | `06-online.js` | Poly Haven (modelli, HDRI, texture CC0) e libreria personale |
 | `07-io.js` | esportazioni (GLB, OBJ+MTL, 3MF/STL, DXF, PNG, pacchetto AI, JSON) e importazioni (DWG, DXF, PDF, immagini, DAE/OBJ/glTF/FBX/3DS/STL anche in .zip con texture) |
@@ -59,7 +60,22 @@ Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, ve
 - **Locale automatico**: doppio clic nel vuoto dentro muri chiusi (bordo agganciato alle facce dei muri).
 - **Piani a schede** sopra la pianta, piano inferiore in trasparenza; doppio clic su un elemento apre le proprietà; `?` mostra tutte le scorciatoie.
 
-Restano della fase 1: muri ad arco, tabella dei livelli, etichette dei locali spostabili con area lorda/netta, unità di misura a scelta.
+- **Muri ad arco**: strumento Muro, forma «Arco»: due clic per gli estremi, il terzo fissa la freccia. L'arco resta un gruppo (freccia e spessore modificabili, si seleziona intero).
+- **Locali**: l'etichetta si trascina; superficie netta, lorda (fino alla mezzeria dei muri), perimetro e volume nell'ispettore; locale senza soffitto.
+- **Unità** m / cm / mm nella barra di stato (quote, etichette, misure).
+- **Tabella dei livelli** nella sezione Piano: nome, quota, altezza, spessore solaio modificabili in un colpo.
+
+Fase 1 completata.
+
+## 3D e pannelli (fase 2)
+
+- **Nel 3D**: clic su un oggetto o muro = selezione condivisa con la pianta (Maiusc aggiunge); trascinamento di un oggetto sul suo piano con aggancio alla griglia.
+- **A piedi**: W A S D o frecce (Maiusc corre), trascinare per guardarsi intorno, Esc per uscire; l'osservatore compare in pianta.
+- **Camere salvate**: menu «Camere…» nella barra 3D (salva, richiama, rinomina ed elimina anche nella sezione Piano); salvate nel progetto (`P.cameras`).
+- **Metro 3D**: due clic sulle superfici, distanza a schermo; «Metro» di nuovo per chiudere.
+- **Vista 3D**: soffitti visibili o no, taglio verticale lungo X o Z con posizione in %.
+- **Scheda Elenco**: oggetti ordinabili per colonna, nascondi/blocca, clic per selezionare; tabella dei locali con netta/lorda/perimetro e totali; esportazione CSV.
+- **Catalogo**: le schede si trascinano nella pianta o nel 3D; ★ per i preferiti, «Recenti» per gli ultimi inseriti.
 
 ## Da pianta e prospetti al 3D
 
@@ -87,5 +103,5 @@ Scelte tecniche che restano diverse dalla bozza iniziale: editor in JavaScript s
 
 - `npm run build` (controllo che `public/index.html` corrisponda ai sorgenti).
 - `npm run test:unit`: 13 test del Worker e del contratto con AI, KV e asset finti (multipart verso klein, guide facoltative, quote per IP e globali, kill switch, origini, lato massimo 512 px senza consumo di quota, errore del modello, Turnstile, cancellazione).
-- `npm run test:e2e`: 7 test Playwright (apertura senza errori, stanza + undo/redo, persistenza, esportazioni DXF/3MF/GLB, render contro il servizio di prova con controllo del corpo inviato, errore 503 mostrato, telefono 400 px). Gli stessi test girano in CI.
+- `npm run test:e2e`: 13 test Playwright (apertura senza errori, stanza + undo/redo, persistenza, esportazioni, render di prova ed errori, Turnstile, libreria, DXF → 3D, pianta di precisione, fase 1 completa, fase 2 nel 3D, telefono 400 px). Gli stessi test girano in CI. La visita a piedi è provata solo come entrata/uscita (il browser senza GPU di CI va a pochi fotogrammi al secondo).
 - **Non provati**: Workers AI reale (serve l'account Cloudflare), Poly Haven dal vivo, file SketchUp reale, D5 Render e slicer.
