@@ -1,0 +1,49 @@
+name: Pacchetto locale
+# A ogni modifica dell'app su main: costruisce il pacchetto per l'uso in locale, lo prova senza
+# internet e lo pubblica nella release «locale-latest» (link fisso, sempre l'ultima versione):
+# https://github.com/gianpaolobol/piantalibera/releases/download/locale-latest/pianta-libera-locale.zip
+on:
+  push:
+    branches: [main]
+    paths: ["editor-src/**", "public/**", "server/**", "shared/**", "scripts/build-package.mjs", "scripts/smoke-package.mjs", "package.json", ".github/workflows/pacchetto.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: pacchetto-locale
+  cancel-in-progress: true
+jobs:
+  pacchetto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Costruisci il pacchetto
+        run: npm run build:pacchetto
+      - name: Browser per la prova
+        run: npx playwright install --with-deps chromium
+      - name: Prova senza internet
+        run: node scripts/smoke-package.mjs
+      - name: Pubblica nella release locale-latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VER=$(node -p "require('./package.json').version")
+          NOTES="Pacchetto per l'uso in locale di Pianta Libera ${VER} (commit ${GITHUB_SHA::7}, $(date -u +%Y-%m-%d)).
+
+          Scarica pianta-libera-locale.zip, estrai e avvia con doppio clic. Guida: https://github.com/${GITHUB_REPOSITORY}/blob/main/docs/installazione-locale.md"
+          git tag -f locale-latest "$GITHUB_SHA"
+          git push -f origin refs/tags/locale-latest
+          if gh release view locale-latest >/dev/null 2>&1; then
+            gh release upload locale-latest dist/pianta-libera-locale.zip --clobber
+            gh release edit locale-latest --title "Pianta Libera ${VER} — pacchetto locale" --notes "$NOTES"
+          else
+            gh release create locale-latest dist/pianta-libera-locale.zip --title "Pianta Libera ${VER} — pacchetto locale" --notes "$NOTES" --latest
+          fi
+          echo "### Pacchetto pubblicato: https://github.com/${GITHUB_REPOSITORY}/releases/download/locale-latest/pianta-libera-locale.zip" >> "$GITHUB_STEP_SUMMARY"

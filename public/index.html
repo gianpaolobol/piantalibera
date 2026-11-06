@@ -2040,7 +2040,7 @@ function setUnderlayImage(src, name, mppGuess){
 async function loadPDF(f){
   toast("Apro il PDF…");
   await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js");
-  const lib = window.pdfjsLib, WS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+  const lib = window.pdfjsLib, WS = new URL("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js", location.href).href; // assoluto anche nel pacchetto locale
   lib.GlobalWorkerOptions.workerSrc = WS;
   try { if (!lib.GlobalWorkerOptions.workerPort) lib.GlobalWorkerOptions.workerPort = new Worker(URL.createObjectURL(new Blob([`importScripts("${WS}");`], {type:"text/javascript"}))); } catch(_){}
   const doc = await lib.getDocument({data: new Uint8Array(await readAs(f, "readAsArrayBuffer"))}).promise;
