@@ -2,6 +2,7 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { tavolaDXF } from "../fixtures/casa.mjs";
 
 // Senza rete (sandbox) le librerie three.js possono arrivare da una copia locale: PL_LOCAL_THREE=<cartella del pacchetto three@0.147.0>
 const LOCAL = process.env.PL_LOCAL_THREE;
@@ -10,6 +11,8 @@ test.beforeEach(async ({ page }) => {
     const p = join(LOCAL, r.request().url().split("three@0.147.0/")[1]);
     return existsSync(p) ? r.fulfill({ body: readFileSync(p), contentType: "application/javascript" }) : r.abort();
   });
+  // anche il lettore DXF, in sandbox: PL_LOCAL_DXF=<file dxf-parser.js>
+  if (process.env.PL_LOCAL_DXF) await page.route(/dxf-parser@1\.1\.2\/dist\/dxf-parser\.js/, r => r.fulfill({ body: readFileSync(process.env.PL_LOCAL_DXF), contentType: "application/javascript" }));
   if (LOCAL) await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ body: "", contentType: "text/css" }));
 });
 async function open(page){
@@ -112,6 +115,35 @@ test("render AI: con Turnstile richiesto non invia finché la verifica non è co
   // il risultato è un URL relativo del backend, non base64
   expect(await page.locator("#cmpAfter").getAttribute("src")).toMatch(/^https?:\/\/[^/]+\/api\/render\/a{32}\/image\/0$/);
   expect(await page.locator("#cmpAfter").evaluate(img => img.complete && img.naturalWidth)).toBe(1);
+});
+
+test("libreria: ogni oggetto ha un'anteprima e la ricerca filtra", async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => setTool("furn"));
+  const cards = page.locator("#libGrid button");
+  await expect(cards.first().locator("img")).toHaveJSProperty("complete", true);
+  expect(await cards.count()).toBeGreaterThan(5);
+  const broken = await page.evaluate(async () => { const imgs = [...document.querySelectorAll("#libGrid img")]; await Promise.all(imgs.map(i => i.decode().catch(() => {}))); return imgs.filter(i => !i.naturalWidth).length; });
+  expect(broken).toBe(0);
+  await page.fill("#libQ", "olivo");
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toContainText("Olivo");
+  await cards.first().click();
+  await expect(page.locator(".libsel b")).toHaveText("Olivo");
+});
+
+test("da tavola DXF (pianta + prospetti) al modello 3D", async ({ page }) => {
+  await open(page);
+  await page.click('[data-tab="import"]');
+  await page.setInputFiles("#fA3", { name: "tavola-casa.dxf", mimeType: "application/dxf", buffer: Buffer.from(tavolaDXF()) });
+  await expect(page.locator(".a3grid figure")).toHaveCount(3, { timeout: 15_000 });
+  const roles = await page.locator(".a3grid select").evaluateAll(s => s.map(x => x.value).sort());
+  expect(roles).toEqual(["est", "pianta", "sud"]);
+  await page.click("#a3Go");
+  await expect(page.locator(".a3rep")).toContainText("Creati 5 muri, 2 porte, 3 finestre e 2 locali");
+  const r = await page.evaluate(() => ({ walls: P.walls.filter(w => w.level === S.level).length, rooms: P.rooms.filter(x => x.level === S.level).map(x => x.name).sort(), h: level().height, roof: level().roof }));
+  expect(r.walls).toBe(5); expect(r.rooms).toEqual(["Camera", "Soggiorno"]); expect(r.h).toBe(3);
+  expect(r.roof.type).toBe("gable"); expect(r.roof.ridge).toBe("x");
 });
 
 test("telefono: nessuno scorrimento orizzontale", async ({ page }) => {

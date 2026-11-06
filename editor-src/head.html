@@ -100,11 +100,28 @@ button{cursor:pointer}
 .cats{display:flex;flex-wrap:wrap;gap:4px}
 .cats button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:3px 9px;font-size:12px}
 .cats button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
-.grid-lib{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.grid-lib button{text-align:left;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);min-width:0}
-.grid-lib button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
-.grid-lib small{display:block;color:var(--muted);font-family:var(--f-data);font-size:10.5px;margin-top:2px}
-.grid-lib .badge{display:inline-block;font-size:9.5px;font-family:var(--f-data);border:1px solid var(--line);border-radius:3px;padding:0 4px;margin-left:4px;color:var(--muted)}
+.grid-lib{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}
+.grid-lib button{display:flex;flex-direction:column;gap:2px;text-align:left;padding:0 0 7px;border:1px solid var(--line);border-radius:6px;background:var(--bg);min-width:0;overflow:hidden;transition:border-color .12s,box-shadow .12s,transform .12s}
+.grid-lib button:hover{border-color:var(--muted);transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08)}
+.grid-lib button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.grid-lib .th{position:relative;display:block;background:linear-gradient(180deg,var(--panel),var(--bg));border-bottom:1px solid var(--line)}
+.grid-lib .th img{display:block;width:100%;aspect-ratio:4/3;object-fit:contain}
+.grid-lib .nm{display:block;padding:5px 8px 0;font-size:12px;font-weight:600;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.grid-lib small{display:block;padding:0 8px;color:var(--muted);font-family:var(--f-data);font-size:10.5px}
+.grid-lib .badge{position:absolute;top:5px;right:5px;font-size:9.5px;font-family:var(--f-data);border:1px solid var(--line);border-radius:3px;padding:0 4px;background:var(--bg);color:var(--muted)}
+.cats button span{color:var(--muted);font-family:var(--f-data);font-size:10.5px}
+.a3grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
+.a3grid figure{margin:0;border:1px solid var(--line);border-radius:6px;background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
+.a3grid figure.off{opacity:.5}
+.a3grid svg{display:block;width:100%;aspect-ratio:4/3;color:var(--ink);background:var(--panel);border-bottom:1px solid var(--line)}
+.a3grid figcaption{display:flex;flex-direction:column;gap:3px;padding:5px}
+.a3grid figcaption .inp{font-size:12px;padding:4px 6px}
+.a3grid select[aria-invalid="true"]{border-color:var(--warn)}
+.a3grid small{color:var(--muted);font-family:var(--f-data);font-size:10px;line-height:1.3}
+.a3rep{border-left:3px solid var(--accent);padding:4px 10px;font-size:12.5px}.a3rep ul{margin:4px 0 0;padding-left:18px;color:var(--muted)}
+.libsel{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:6px;background:var(--bg)}
+.libsel img{width:112px;flex:none;aspect-ratio:4/3;object-fit:contain;border-radius:4px;background:linear-gradient(180deg,var(--panel),var(--bg))}
+.libsel b{display:block;font-size:13px}.libsel small{display:block;color:var(--muted);font-family:var(--f-data);font-size:10.5px;margin-top:2px}.libsel .note{margin:4px 0 0}
 .grid-online{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px}
 .grid-online button{padding:0;border:1px solid var(--line);border-radius:4px;background:var(--bg);overflow:hidden;text-align:left;min-width:0}
 .grid-online img{display:block;width:100%;aspect-ratio:1;object-fit:cover;background:var(--line)}
@@ -212,7 +229,8 @@ pre.raw{margin:0;max-height:160px;overflow:auto;font-family:var(--f-data);font-s
     </aside>
   </div>
   <div id="toast" role="status"></div>
-  <input type="file" id="fPlan" accept=".dxf,.pdf,.png,.jpg,.jpeg,.webp" hidden>
+  <input type="file" id="fPlan" accept=".dxf,.dwg,.pdf,.png,.jpg,.jpeg,.webp" hidden>
+  <input type="file" id="fA3" accept=".dxf,.dwg" multiple hidden>
   <input type="file" id="fModel" accept=".dae,.zip,.glb,.gltf,.bin,.obj,.mtl,.fbx,.3ds,.stl,.png,.jpg,.jpeg,.tga,.bmp,.webp" multiple hidden>
   <input type="file" id="fProj" accept=".json" hidden>
   <input type="file" id="fTex" accept=".png,.jpg,.jpeg,.webp" hidden>

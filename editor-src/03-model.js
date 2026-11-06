@@ -157,7 +157,7 @@ function buildModel(opts={}){
         if (L.roof.type === "flat"){
           add(lid, rm, "roof", boxGeo((x0+x1)/2, topY+th/2, (z0+z1)/2, x1-x0+2*o, th, z1-z0+2*o));
         } else {
-          const p = THREE.MathUtils.degToRad(clamp(L.roof.pitch, 5, 60)), along = (x1-x0) >= (z1-z0);
+          const p = THREE.MathUtils.degToRad(clamp(L.roof.pitch, 5, 60)), along = L.roof.ridge === "x" ? true : L.roof.ridge === "y" ? false : (x1-x0) >= (z1-z0);
           const W0 = along ? z1-z0 : x1-x0, Lr = (along ? x1-x0 : z1-z0) + 2*o, cx=(x0+x1)/2, cz=(z0+z1)/2;
           const rise0 = W0/2*Math.tan(p), half = W0/2 + o, sl = half/Math.cos(p), eave = topY - o*Math.tan(p), midY = eave + half*Math.tan(p)/2;
           if (along){

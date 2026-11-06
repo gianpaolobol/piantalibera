@@ -103,11 +103,28 @@ button{cursor:pointer}
 .cats{display:flex;flex-wrap:wrap;gap:4px}
 .cats button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:3px 9px;font-size:12px}
 .cats button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
-.grid-lib{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.grid-lib button{text-align:left;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);min-width:0}
-.grid-lib button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
-.grid-lib small{display:block;color:var(--muted);font-family:var(--f-data);font-size:10.5px;margin-top:2px}
-.grid-lib .badge{display:inline-block;font-size:9.5px;font-family:var(--f-data);border:1px solid var(--line);border-radius:3px;padding:0 4px;margin-left:4px;color:var(--muted)}
+.grid-lib{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}
+.grid-lib button{display:flex;flex-direction:column;gap:2px;text-align:left;padding:0 0 7px;border:1px solid var(--line);border-radius:6px;background:var(--bg);min-width:0;overflow:hidden;transition:border-color .12s,box-shadow .12s,transform .12s}
+.grid-lib button:hover{border-color:var(--muted);transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08)}
+.grid-lib button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.grid-lib .th{position:relative;display:block;background:linear-gradient(180deg,var(--panel),var(--bg));border-bottom:1px solid var(--line)}
+.grid-lib .th img{display:block;width:100%;aspect-ratio:4/3;object-fit:contain}
+.grid-lib .nm{display:block;padding:5px 8px 0;font-size:12px;font-weight:600;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.grid-lib small{display:block;padding:0 8px;color:var(--muted);font-family:var(--f-data);font-size:10.5px}
+.grid-lib .badge{position:absolute;top:5px;right:5px;font-size:9.5px;font-family:var(--f-data);border:1px solid var(--line);border-radius:3px;padding:0 4px;background:var(--bg);color:var(--muted)}
+.cats button span{color:var(--muted);font-family:var(--f-data);font-size:10.5px}
+.a3grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
+.a3grid figure{margin:0;border:1px solid var(--line);border-radius:6px;background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
+.a3grid figure.off{opacity:.5}
+.a3grid svg{display:block;width:100%;aspect-ratio:4/3;color:var(--ink);background:var(--panel);border-bottom:1px solid var(--line)}
+.a3grid figcaption{display:flex;flex-direction:column;gap:3px;padding:5px}
+.a3grid figcaption .inp{font-size:12px;padding:4px 6px}
+.a3grid select[aria-invalid="true"]{border-color:var(--warn)}
+.a3grid small{color:var(--muted);font-family:var(--f-data);font-size:10px;line-height:1.3}
+.a3rep{border-left:3px solid var(--accent);padding:4px 10px;font-size:12.5px}.a3rep ul{margin:4px 0 0;padding-left:18px;color:var(--muted)}
+.libsel{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:6px;background:var(--bg)}
+.libsel img{width:112px;flex:none;aspect-ratio:4/3;object-fit:contain;border-radius:4px;background:linear-gradient(180deg,var(--panel),var(--bg))}
+.libsel b{display:block;font-size:13px}.libsel small{display:block;color:var(--muted);font-family:var(--f-data);font-size:10.5px;margin-top:2px}.libsel .note{margin:4px 0 0}
 .grid-online{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px}
 .grid-online button{padding:0;border:1px solid var(--line);border-radius:4px;background:var(--bg);overflow:hidden;text-align:left;min-width:0}
 .grid-online img{display:block;width:100%;aspect-ratio:1;object-fit:cover;background:var(--line)}
@@ -215,7 +232,8 @@ pre.raw{margin:0;max-height:160px;overflow:auto;font-family:var(--f-data);font-s
     </aside>
   </div>
   <div id="toast" role="status"></div>
-  <input type="file" id="fPlan" accept=".dxf,.pdf,.png,.jpg,.jpeg,.webp" hidden>
+  <input type="file" id="fPlan" accept=".dxf,.dwg,.pdf,.png,.jpg,.jpeg,.webp" hidden>
+  <input type="file" id="fA3" accept=".dxf,.dwg" multiple hidden>
   <input type="file" id="fModel" accept=".dae,.zip,.glb,.gltf,.bin,.obj,.mtl,.fbx,.3ds,.stl,.png,.jpg,.jpeg,.tga,.bmp,.webp" multiple hidden>
   <input type="file" id="fProj" accept=".json" hidden>
   <input type="file" id="fTex" accept=".png,.jpg,.jpeg,.webp" hidden>
@@ -748,10 +766,10 @@ function objTemplate(o){
   return importStore[o.ref]?.obj || null;
 }
 let tplPending = 0;
-async function loadTpl(ref){
+async function loadTpl(ref, quiet){
   TPL[ref] = {status:"loading"}; tplPending++; busy(`Carico ${LIBMAP[ref].nome}…`);
   try { TPL[ref] = {status:"ok", obj:finishTpl(await LIBMAP[ref].load())}; }
-  catch(e){ TPL[ref] = {status:"err"}; console.warn(e); toast(`Non riesco a caricare «${LIBMAP[ref].nome}»: manca la cartella assets accanto alla pagina?`, true); }
+  catch(e){ TPL[ref] = {status:"err"}; console.warn(e); if (!quiet) toast(`Non riesco a caricare «${LIBMAP[ref].nome}»: manca la cartella assets accanto alla pagina?`, true); }
   tplPending--; if (!tplPending) busy(""); rebuild3D(); draw2D(); if (S.tab === "props") renderInspector();
 }
 function objFootprint(o){
@@ -772,6 +790,70 @@ async function loadPersonalIndex(){
   }
   LIB_CATS = [...new Set(LIB.map(x => x.cat))];
   if (S.tool === "furn") renderInspector(); draw2D(); rebuild3D();
+}
+
+/* ---------- Anteprime della libreria ----------
+   Ogni oggetto ha un'immagine: prima si cerca assets/anteprime/<ref>.webp (generate con
+   npm run build:anteprime), altrimenti la si disegna qui con un renderer dedicato. */
+const THUMB = {w:240, h:180};
+const thumbCache = {};
+let thumbR = null;
+function thumbRenderer(){
+  if (thumbR) return thumbR;
+  const r = new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true});
+  r.setPixelRatio(1); r.setSize(THUMB.w, THUMB.h); r.outputEncoding = THREE.sRGBEncoding; r.toneMapping = THREE.ACESFilmicToneMapping;
+  r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+  const sc = new THREE.Scene(), pm = new THREE.PMREMGenerator(r); sc.environment = pm.fromScene(new THREE.RoomEnvironment(), .04).texture;
+  sc.add(new THREE.HemisphereLight("#eef3f7", "#8a8578", .45));
+  const key = new THREE.DirectionalLight("#fff6ea", 2.1); key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.radius = 5; key.shadow.bias = -.0006; key.shadow.normalBias = .02; sc.add(key, key.target);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShadowMaterial({opacity:.2})); ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; sc.add(ground);
+  const cam = new THREE.PerspectiveCamera(26, THUMB.w/THUMB.h, .01, 1000);
+  return thumbR = {r, sc, key, ground, cam};
+}
+/** Disegna un oggetto 3D in un'immagine 240×180 vista di tre quarti, con ombra a terra. */
+function renderThumb(obj, type = "image/webp"){
+  const T = thumbRenderer(), c = obj.clone(true);
+  const box = new THREE.Box3().setFromObject(c); if (box.isEmpty()) return null;
+  const size = box.getSize(new THREE.Vector3()), ctr = box.getCenter(new THREE.Vector3()), rad = Math.max(size.length()/2, .05);
+  const tall = size.y > 1.6 * Math.max(size.x, size.z);
+  const dir = new THREE.Vector3(.72, tall ? .28 : .62, 1).normalize();
+  const fov = THREE.MathUtils.degToRad(T.cam.fov), fit = Math.max(rad / Math.sin(fov/2), rad / Math.sin(Math.atan(Math.tan(fov/2) * T.cam.aspect)));
+  T.cam.position.copy(ctr).addScaledVector(dir, fit * .92); T.cam.near = fit / 50; T.cam.far = fit * 10; T.cam.lookAt(ctr); T.cam.updateProjectionMatrix();
+  T.ground.position.set(ctr.x, box.min.y + .001, ctr.z); T.ground.scale.setScalar(rad * 8);
+  T.key.position.set(ctr.x - rad * 1.6, ctr.y + rad * 4, ctr.z + rad * 2.2); T.key.target.position.copy(ctr);
+  const sc = T.key.shadow.camera; sc.left = sc.bottom = -rad * 2; sc.right = sc.top = rad * 2; sc.near = .01; sc.far = rad * 12; sc.updateProjectionMatrix();
+  T.sc.add(c); T.r.render(T.sc, T.cam); T.sc.remove(c);
+  return T.r.domElement.toDataURL(type, .86);
+}
+const THUMB_PLACEHOLDER = "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180"><g fill="none" stroke="#8f9a96" stroke-width="3" stroke-linejoin="round"><path d="M120 52 172 78v52l-52 26-52-26V78z"/><path d="M68 78l52 26 52-26M120 104v52"/></g></svg>`);
+const thumbQueue = []; let thumbBusy = false;
+/** Chiamata quando manca l'anteprima statica: la genera (anche per i modelli da caricare) e la mette in cache. */
+function queueThumb(img){
+  const ref = img.dataset.thumb; if (!ref) return;
+  if (thumbCache[ref]){ img.src = thumbCache[ref]; return; }
+  img.src = THUMB_PLACEHOLDER; thumbQueue.push(img); if (!thumbBusy) pumpThumbs();
+}
+function pumpThumbs(){
+  const img = thumbQueue.shift(); if (!img){ thumbBusy = false; return; } thumbBusy = true;
+  const ref = img.dataset.thumb, it = LIBMAP[ref];
+  const next = () => (window.requestIdleCallback || setTimeout)(pumpThumbs, 30);
+  if (thumbCache[ref]){ img.src = thumbCache[ref]; return next(); }
+  if (!it){ return next(); }
+  const t = TPL[ref];
+  if (it.load && t?.status !== "ok"){ if (!t) loadTpl(ref, true); return next(); } // al termine il pannello si ridisegna
+  try { const o = objTemplate({kind:"lib", ref}); const url = o && renderThumb(o); if (url){ thumbCache[ref] = url; if (img.isConnected) img.src = url; } }
+  catch(e){ console.warn("anteprima", ref, e); }
+  next();
+}
+function thumbImg(ref, cls = ""){
+  return `<img class="${cls}" src="${thumbCache[ref] || ASSET + "anteprime/" + ref + ".webp"}" data-thumb="${esc(ref)}" alt="" loading="lazy" decoding="async">`;
+}
+function hydrateThumbs(root){
+  root.querySelectorAll("img[data-thumb]").forEach(img => {
+    if (thumbCache[img.dataset.thumb]) return;
+    if (img.complete && img.naturalWidth === 0 && img.src.indexOf("data:") !== 0) queueThumb(img);
+    else img.addEventListener("error", () => queueThumb(img), {once:true});
+  });
 }
 
 /* ---- 03-model.js ---- */
@@ -934,7 +1016,7 @@ function buildModel(opts={}){
         if (L.roof.type === "flat"){
           add(lid, rm, "roof", boxGeo((x0+x1)/2, topY+th/2, (z0+z1)/2, x1-x0+2*o, th, z1-z0+2*o));
         } else {
-          const p = THREE.MathUtils.degToRad(clamp(L.roof.pitch, 5, 60)), along = (x1-x0) >= (z1-z0);
+          const p = THREE.MathUtils.degToRad(clamp(L.roof.pitch, 5, 60)), along = L.roof.ridge === "x" ? true : L.roof.ridge === "y" ? false : (x1-x0) >= (z1-z0);
           const W0 = along ? z1-z0 : x1-x0, Lr = (along ? x1-x0 : z1-z0) + 2*o, cx=(x0+x1)/2, cz=(z0+z1)/2;
           const rise0 = W0/2*Math.tan(p), half = W0/2 + o, sl = half/Math.cos(p), eave = topY - o*Math.tan(p), midY = eave + half*Math.tan(p)/2;
           if (along){
@@ -1406,11 +1488,19 @@ function furnPanel(){
   const src = S.furnSrc;
   let h = `<div class="sec"><h3>Arredi, verde e persone</h3><div class="seg" id="furnSrc"><button data-fs="lib" aria-pressed="${src==="lib"}">Libreria interna</button><button data-fs="online" aria-pressed="${src==="online"}">Poly Haven</button><button data-fs="personal" aria-pressed="${src==="personal"}">Personale</button></div>`;
   if (src === "lib"){
-    h += `<div class="cats">${LIB_CATS.map(c=>`<button data-fcat="${c}" aria-pressed="${S.furnCat===c}">${c}</button>`).join("")}</div>
-      <div class="grid-lib">${LIB.filter(it=>it.cat===S.furnCat).map(it=>`<button data-furn="${it.ref}" aria-pressed="${S.furn===it.ref}">${esc(it.nome)}${it.real?'<span class="badge">reale</span>':""}<small>${it.dim}${it.credit?` · ${esc(it.credit)}`:""}</small></button>`).join("")}</div>
-      <p class="note">Clicca in pianta per posizionare. I modelli <b>reali</b> si caricano dalla cartella <b>assets</b> al primo uso.</p>`;
+    const it = LIBMAP[S.furn], st = TPL[S.furn]?.status;
+    h += `${it ? `<div class="libsel">${thumbImg(it.ref)}<div><b>${esc(it.nome)}</b><small>${esc(it.cat)} · ${esc(it.dim)}${it.credit ? ` · ${esc(it.credit)}` : ""}</small><p class="note">${st === "loading" ? "Carico il modello…" : st === "err" ? "Modello non disponibile: manca la cartella assets?" : "Clicca in pianta per posizionarlo · poi ruotalo e scalalo qui."}</p></div></div>` : ""}
+      <div class="f"><input id="libQ" class="inp" type="search" placeholder="Cerca nella libreria (es. sedia, olivo, doccia)" value="${esc(S.libQ || "")}" aria-label="Cerca nella libreria"></div>
+      <div class="cats">${LIB_CATS.map(c=>`<button data-fcat="${esc(c)}" aria-pressed="${!S.libQ && S.furnCat===c}">${esc(c)} <span>${LIB.filter(x=>x.cat===c).length}</span></button>`).join("")}</div>
+      <div class="grid-lib" id="libGrid">${libGridHTML()}</div>
+      <p class="note">I modelli <b>reali</b> si caricano dalla cartella <b>assets</b> al primo uso.</p>`;
   } else h += onlinePanelHTML();
   return h + `</div>`;
+}
+function libItems(){ const q = (S.libQ || "").trim().toLowerCase(); return q ? LIB.filter(x => (x.nome + " " + x.cat + " " + x.ref).toLowerCase().includes(q)) : LIB.filter(x => x.cat === S.furnCat); }
+function libGridHTML(){
+  const items = libItems(); if (!items.length) return `<p class="note">Nessun oggetto trovato.</p>`;
+  return items.map(it => `<button data-furn="${esc(it.ref)}" aria-pressed="${S.furn===it.ref}" title="${esc(it.nome)}"><span class="th">${thumbImg(it.ref)}${it.real ? '<span class="badge">reale</span>' : ""}</span><span class="nm">${esc(it.nome)}</span><small>${esc(it.dim)}</small></button>`).join("");
 }
 function renderInspector(){
   const el = $("#panel-props"); if (!P) return; const sel = findSel(), L = level(); let h = "";
@@ -1446,7 +1536,7 @@ function renderInspector(){
         <span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, sel.mat, "rm")}<div class="btns"><button class="btn" id="camRoom">Vista interna</button><button class="btn danger" id="delSel">Elimina</button></div></div>`; }
     if (S.sel.type === "object"){
       const it = sel.kind === "lib" ? LIBMAP[libRef(sel.ref)] : null, imp = sel.kind === "import" ? importStore[sel.ref] : null, fp = objFootprint(sel);
-      h += `<div class="sec"><h3>${it ? esc(it.cat) : imp?.source?.type === "polyhaven" ? "Poly Haven" : "Modello importato"}</h3>${F("obName","Nome",sel.name)}<div class="row">${F("obX","X (m)",fmt(sel.x),'inputmode="decimal"')}${F("obY","Y (m)",fmt(sel.y),'inputmode="decimal"')}</div>
+      h += `<div class="sec"><h3>${it ? esc(it.cat) : imp?.source?.type === "polyhaven" ? "Poly Haven" : "Modello importato"}</h3>${it ? `<div class="libsel">${thumbImg(it.ref)}<div><b>${esc(it.nome)}</b><small>${esc(it.dim)}${it.credit ? ` · ${esc(it.credit)}` : ""}</small></div></div>` : ""}${F("obName","Nome",sel.name)}<div class="row">${F("obX","X (m)",fmt(sel.x),'inputmode="decimal"')}${F("obY","Y (m)",fmt(sel.y),'inputmode="decimal"')}</div>
         <div class="row3">${F("obR","Rotazione °",Math.round(sel.rot||0),'inputmode="decimal"')}${F("obS","Scala",fmt(sel.scale,2),'inputmode="decimal"')}${F("obZ","Quota (m)",fmt(sel.z||0),'inputmode="decimal"')}</div>
         <dl class="kv"><dt>Ingombro</dt><dd>${fmt(fp.w)} × ${fmt(fp.d)} × ${fmt(fp.h||0)} m</dd>${it?.credit?`<dt>Fonte</dt><dd>${esc(it.credit)}</dd>`:""}${imp?.source?.credit?`<dt>Fonte</dt><dd>${esc(imp.source.credit)}</dd>`:""}</dl>
         ${!objTemplate(sel) ? `<p class="note warn">${sel.kind === "import" ? "Il file di questo modello non è in memoria. Riapri il progetto salvato in JSON per ricaricarlo." : "Caricamento in corso…"}</p>` : ""}
@@ -1458,7 +1548,7 @@ function renderInspector(){
     h += `<div class="sec"><h3>Piano</h3>${F("lName","Nome",L.name)}<div class="row3">${F("lElev","Quota (m)",fmt(L.elev),'inputmode="decimal"')}${F("lH","Altezza muri",fmt(L.height),'inputmode="decimal"')}${F("lSlab","Solaio",fmt(L.slab),'inputmode="decimal"')}</div>
       <div class="row"><div class="f"><span class="lbl">Copertura</span><select id="lRoof" class="inp"><option value="none">Nessuna</option><option value="flat">Piana</option><option value="gable">A due falde</option></select></div>
       ${L.roof.type==="gable"?F("lPitch","Pendenza °",L.roof.pitch,'inputmode="decimal"'):"<div></div>"}</div>
-      ${L.roof.type!=="none"?`<div class="row">${F("lOv","Sporto (m)",fmt(L.roof.overhang),'inputmode="decimal"')}<div></div></div><span class="lbl">Manto</span>${swatches(ROOF_MATS, L.roof.mat, "roofm")}`:""}
+      ${L.roof.type!=="none"?`<div class="row">${F("lOv","Sporto (m)",fmt(L.roof.overhang),'inputmode="decimal"')}${L.roof.type==="gable"?`<div class="f"><span class="lbl">Colmo</span><select id="lRidge" class="inp"><option value="">Lato lungo</option><option value="x" ${L.roof.ridge==="x"?"selected":""}>Est–ovest</option><option value="y" ${L.roof.ridge==="y"?"selected":""}>Nord–sud</option></select></div>`:"<div></div>"}</div><span class="lbl">Manto</span>${swatches(ROOF_MATS, L.roof.mat, "roofm")}`:""}
       ${P.levels.length>1?`<div class="btns"><button class="btn danger" id="lDel">Elimina piano</button></div>`:""}</div>
       ${U?`<div class="sec"><h3>Base di ricalco</h3><div class="f"><label class="lbl" for="uOp">Opacità</label><input type="range" id="uOp" min="0.05" max="1" step="0.05" value="${U.opacity}"></div><div class="btns"><button class="btn" data-tool-go="calib">Calibra scala</button><button class="btn" data-tool-go="moveunder">Sposta</button><button class="btn danger" id="uDel">Rimuovi</button></div></div>`:""}
       <div class="sec"><h3>Vista 3D</h3><div class="seg" id="show3d"><button data-s="all">Tutto</button><button data-s="below">Fino a questo piano</button><button data-s="section">Sezione</button></div>
@@ -1477,6 +1567,7 @@ function renderInspector(){
   const sk = $("#skySel", el); if (sk) sk.value = P.sky?.kind === "ph" ? "ph" : (P.sky?.id || "giorno");
   $$("#show3d button", el).forEach(b => b.setAttribute("aria-pressed", b.dataset.s === S.show3d));
   if (S.tool === "furn" && S.furnSrc !== "lib") hydrateOnline();
+  hydrateThumbs(el);
 }
 const P_ = $("#panel-props");
 P_.addEventListener("change", e => {
@@ -1509,6 +1600,7 @@ P_.addEventListener("change", e => {
     case "lRoof": L.roof.type = e.target.value; commit(); break;
     case "lPitch": if (v>0){ L.roof.pitch = clamp(v,5,60); commit(); } break;
     case "lOv": if (v>=0){ L.roof.overhang = v; commit(); } break;
+    case "lRidge": if (e.target.value) L.roof.ridge = e.target.value; else delete L.roof.ridge; commit(); break;
     case "gChk": S.ground = e.target.checked; rebuild3D(); break;
     case "skySel": { const s = SKIES.find(x => x.id === e.target.value); if (s){ P.sky = {kind:"asset", id:s.id}; if (s.sun) P.sun.el = s.sun.el; save(); applySky(); placeSun(); renderInspector(); } break; }
     case "phSearch": hydrateOnline(); break;
@@ -1519,11 +1611,12 @@ P_.addEventListener("input", e => {
   if (t.id === "sAz" || t.id === "sEl"){ P.sun[t.id === "sAz" ? "az" : "el"] = +t.value; t.previousElementSibling.textContent = (t.id==="sAz"?"Orientamento sole · ":"Altezza sole · ") + t.value + "°"; placeSun(); render3D(); save(); }
   if (t.id === "sEx"){ S.exposure = +t.value; t.previousElementSibling.textContent = "Esposizione · " + fmt(S.exposure,2); placeSun(); render3D(); }
   if (t.id === "uOp"){ level().underlay.opacity = +t.value; draw2D(); save(); }
+  if (t.id === "libQ"){ S.libQ = t.value; const g = $("#libGrid"); if (g){ g.innerHTML = libGridHTML(); hydrateThumbs(g); } $$("[data-fcat]", P_).forEach(b => b.setAttribute("aria-pressed", !S.libQ && b.dataset.fcat === S.furnCat)); }
 });
 P_.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return; const sel = findSel(), L = level();
   if (b.dataset.fs){ S.furnSrc = b.dataset.fs; S.onlinePick = null; renderInspector(); return; }
-  if (b.dataset.fcat){ S.furnCat = b.dataset.fcat; renderInspector(); return; }
+  if (b.dataset.fcat){ S.furnCat = b.dataset.fcat; S.libQ = ""; renderInspector(); return; }
   if (b.dataset.furn){ S.furn = b.dataset.furn; const it = LIBMAP[S.furn]; if (it.load && !TPL[S.furn]) loadTpl(S.furn); renderInspector(); return; }
   if (b.dataset.phcat !== undefined){ S.phCat = b.dataset.phcat; hydrateOnline(); return; }
   if (b.dataset.pick){ S.onlinePick = JSON.parse(b.dataset.pick); $$("[data-pick]", P_).forEach(x => x.setAttribute("aria-pressed", x === b)); toast(`«${S.onlinePick.nome}»: clicca in pianta per posizionarlo`); return; }
@@ -1880,10 +1973,11 @@ let dxfPending = null;
 function renderImport(){
   const el = $("#panel-import"); const pm = projMatKeys();
   el.innerHTML = `
-  <div class="exp"><header><h4>Pianta da ricalcare</h4><span class="tag">DXF · PDF · PNG · JPG</span></header>
+  ${autoPanelHTML()}
+  <div class="exp"><header><h4>Pianta da ricalcare</h4><span class="tag">DWG · DXF · PDF · PNG · JPG</span></header>
     <p class="note">La pianta diventa la base del piano corrente. Poi la calibri con una misura nota e ci disegni sopra muri e aperture.</p>
     <button class="btn primary" id="imPlan">Scegli file della pianta</button>
-    <p class="note">Hai un DWG? Salvalo come DXF dal tuo CAD: il DWG è un formato chiuso.</p></div>
+    <p class="note">Anche DWG: il lettore (libredwg) si scarica alla prima apertura.</p></div>
   ${dxfPending ? dxfPanel() : ""}
   <div class="exp"><header><h4>Modello 3D con materiali</h4><span class="tag">SketchUp · DAE · OBJ · glTF · FBX · 3DS · STL</span></header>
     <p class="note"><b>Da SketchUp:</b> File → Esporta → Modello 3D → <b>COLLADA (.dae)</b> con «Esporta mappe di texture». Seleziona insieme il file .dae e la cartella delle texture (o comprimi tutto in un .zip). Vanno bene anche OBJ+MTL+texture e glTF.</p>
@@ -1931,7 +2025,7 @@ PI.addEventListener("change", e => { const t = e.target;
 const readAs = (f, how) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r[how](f); });
 $("#fPlan").addEventListener("change", async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return;
   const ext = f.name.split(".").pop().toLowerCase();
-  try { if (ext === "dxf") await loadDXF(f); else if (ext === "pdf") await loadPDF(f); else setUnderlayImage(await readAs(f, "readAsDataURL"), f.name); }
+  try { if (ext === "dxf" || ext === "dwg") await loadDXF(f); else if (ext === "pdf") await loadPDF(f); else setUnderlayImage(await readAs(f, "readAsDataURL"), f.name); }
   catch(err){ console.error(err); toast("Non riesco a leggere il file: " + (err.message||err), true); }
 });
 $("#fTex").addEventListener("change", async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return;
@@ -1956,25 +2050,77 @@ async function loadPDF(f){
   setUnderlayImage(cv.toDataURL("image/jpeg", .85), f.name, (0.0254/72) * 100 / scale);
   toast("PDF caricato con ipotesi 1:100: verifica con Calibra");
 }
-async function loadDXF(f){
+/* ---------- Lettura CAD: DXF (dxf-parser) e DWG (libredwg in WebAssembly) ---------- */
+const DWG_LIB = "https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web@0.8.2";
+let dwgLib = null;
+async function readCAD(f){
+  const ext = f.name.split(".").pop().toLowerCase();
+  if (ext === "dwg"){
+    if (!dwgLib){
+      busy("Carico il lettore DWG (circa 11 MB, solo la prima volta)…");
+      try { const m = await import(DWG_LIB + "/dist/libredwg-web.js"); dwgLib = await m.LibreDwg.create(DWG_LIB + "/wasm"); }
+      catch(e){ console.warn(e); throw new Error("lettore DWG non disponibile (serve la connessione). In alternativa salva il disegno come DXF"); }
+      finally { busy(""); }
+    }
+    let db;
+    try { const ptr = dwgLib.dwg_read_data(await readAs(f, "readAsArrayBuffer"), 0); if (!ptr) throw new Error("file non riconosciuto"); db = dwgLib.convert(ptr); dwgLib.dwg_free(ptr); }
+    catch(e){ console.warn(e); throw new Error("questo DWG non si legge (versione o contenuto non supportati): salvalo come DXF dal tuo CAD e riprova"); }
+    return dwgToDxf(db);
+  }
   await loadScript("https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js");
-  const Parser = window.DxfParser?.default || window.DxfParser; const dxf = new Parser().parseSync(await readAs(f, "readAsText"));
-  const segs = [];
-  const T = (p, tr) => { const x = p.x*tr.sx, y = p.y*tr.sy; const c = Math.cos(tr.r), s = Math.sin(tr.r); return [x*c - y*s + tr.x, x*s + y*c + tr.y]; };
+  const Parser = window.DxfParser?.default || window.DxfParser; return new Parser().parseSync(await readAs(f, "readAsText"));
+}
+/** Database di libredwg → stessa forma di dxf-parser, così il resto del codice è uno solo. */
+function dwgToDxf(db){
+  const P2 = p => p ? {x:p.x || 0, y:p.y || 0} : {x:0, y:0};
+  const conv = e => { const layer = e.layer || "0";
+    switch (e.type){
+      case "LINE": return {type:"LINE", layer, vertices:[P2(e.startPoint), P2(e.endPoint)]};
+      case "LWPOLYLINE": case "POLYLINE2D": case "POLYLINE3D": return {type:"LWPOLYLINE", layer, vertices:(e.vertices || []).map(P2), shape:!!((e.flag || 0) & 513)};
+      case "ARC": return {type:"ARC", layer, center:P2(e.center), radius:e.radius, startAngle:e.startAngle, endAngle:e.endAngle};
+      case "CIRCLE": return {type:"CIRCLE", layer, center:P2(e.center), radius:e.radius};
+      case "TEXT": return {type:"TEXT", layer, text:e.text, startPoint:P2(e.startPoint || e.insertionPoint), textHeight:e.textHeight};
+      case "MTEXT": return {type:"MTEXT", layer, text:e.text, position:P2(e.insertionPoint), height:e.textHeight};
+      case "INSERT": return {type:"INSERT", layer, name:e.name, position:P2(e.insertionPoint), xScale:e.xScale || 1, yScale:e.yScale || 1, rotation:(e.rotation || 0) * 180 / Math.PI,
+        attribs:(e.attribs || []).map(a => ({type:"TEXT", layer:a.layer || layer, text:a.text?.text ?? a.text, startPoint:P2(a.text?.startPoint || a.startPoint)}))};
+      default: return null;
+    } };
+  const blocks = {};
+  for (const b of db.tables?.BLOCK_RECORD?.entries || []) if (b.name && !/^\*(model|paper)_space/i.test(b.name)) blocks[b.name] = {position:P2(b.basePoint), entities:(b.entities || []).map(conv).filter(Boolean)};
+  return {entities:(db.entities || []).map(conv).filter(Boolean), blocks, header:{$INSUNITS:db.header?.INSUNITS}};
+}
+/** Esplode blocchi e polilinee: segmenti, archi (centro e raggio) e testi, nelle unità del disegno, y verso l'alto. */
+function flattenCAD(dxf){
+  const segs = [], arcs = [], texts = [];
+  const T = (p, tr) => { const x = (p?.x||0)*tr.sx, y = (p?.y||0)*tr.sy; const c = Math.cos(tr.r), s = Math.sin(tr.r); return [x*c - y*s + tr.x, x*s + y*c + tr.y]; };
   const walk = (ents, tr, depth, layerOverride) => { for (const en of ents || []){ const lay = (en.layer === "0" && layerOverride) ? layerOverride : (en.layer || "0");
     if (en.type === "LINE" && en.vertices?.length >= 2){ const a = T(en.vertices[0], tr), b = T(en.vertices[1], tr); segs.push([a[0],a[1],b[0],b[1],lay]); }
     else if ((en.type === "LWPOLYLINE" || en.type === "POLYLINE") && en.vertices?.length){ const v = en.vertices.map(p=>T(p,tr)); for (let i=0;i<v.length-1;i++) segs.push([v[i][0],v[i][1],v[i+1][0],v[i+1][1],lay]); if (en.shape || en.closed) segs.push([v[v.length-1][0],v[v.length-1][1],v[0][0],v[0][1],lay]); }
-    else if (en.type === "ARC" || en.type === "CIRCLE"){ let a0 = en.startAngle ?? 0, a1 = en.endAngle ?? Math.PI*2; if (a1 < a0) a1 += Math.PI*2; const n = Math.max(6, Math.ceil((a1-a0)/(Math.PI/16))); let prev = null; for (let i=0;i<=n;i++){ const a = a0 + (a1-a0)*i/n, p = T({x:en.center.x + Math.cos(a)*en.radius, y:en.center.y + Math.sin(a)*en.radius}, tr); if (prev) segs.push([prev[0],prev[1],p[0],p[1],lay]); prev = p; } }
-    else if (en.type === "INSERT" && depth < 4){ const bl = dxf.blocks?.[en.name]; if (bl){ const r = (en.rotation||0)*Math.PI/180, sx = en.xScale||1, sy = en.yScale||1; const bx = bl.position?.x||0, by = bl.position?.y||0;
+    else if (en.type === "ARC" || en.type === "CIRCLE"){ let a0 = en.startAngle ?? 0, a1 = en.endAngle ?? Math.PI*2; if (a1 < a0) a1 += Math.PI*2; const sc = Math.abs(tr.sx); const cc = T(en.center, tr); arcs.push({cx:cc[0], cy:cc[1], r:en.radius*sc, layer:lay, full:en.type === "CIRCLE"});
+      const n = Math.max(6, Math.ceil((a1-a0)/(Math.PI/16))); let prev = null; for (let i=0;i<=n;i++){ const a = a0 + (a1-a0)*i/n, p = T({x:en.center.x + Math.cos(a)*en.radius, y:en.center.y + Math.sin(a)*en.radius}, tr); if (prev) segs.push([prev[0],prev[1],p[0],p[1],lay]); prev = p; } }
+    else if ((en.type === "TEXT" || en.type === "MTEXT") && en.text){ const p = T(en.startPoint || en.position || en.insertionPoint, tr); texts.push({x:p[0], y:p[1], text:en.text, layer:lay}); }
+    else if (en.type === "INSERT" && depth < 4){
+      for (const a of en.attribs || []) if (a.text){ const p = T(a.startPoint, {sx:1, sy:1, r:0, x:0, y:0}); texts.push({x:p[0], y:p[1], text:a.text, layer:a.layer || lay}); }
+      const bl = dxf.blocks?.[en.name]; if (bl){ const r = (en.rotation||0)*Math.PI/180, sx = en.xScale||1, sy = en.yScale||1; const bx = bl.position?.x||0, by = bl.position?.y||0;
       const sub = {sx: tr.sx*sx, sy: tr.sy*sy, r: tr.r + r, x: 0, y: 0}; const ip = T(en.position, tr); const c = Math.cos(sub.r), s = Math.sin(sub.r); sub.x = ip[0] - (bx*sub.sx*c - by*sub.sy*s); sub.y = ip[1] - (bx*sub.sx*s + by*sub.sy*c); walk(bl.entities, sub, depth+1, lay); } } } };
   walk(dxf.entities, {sx:1, sy:1, r:0, x:0, y:0}, 0);
-  if (!segs.length) throw new Error("nessuna linea trovata nel DXF");
+  const ins = dxf.header?.$INSUNITS; const unit = ins === 4 ? .001 : ins === 5 ? .01 : ins === 6 ? 1 : segs.length ? guessUnit(segs, arcs) : 1;
+  return {segs, arcs, texts, unit};
+}
+async function loadDXF(f){
+  const {segs, unit} = flattenCAD(await readCAD(f));
+  if (!segs.length) throw new Error("nessuna linea trovata nel disegno");
   const layers = {}; segs.forEach(s => layers[s[4]] = (layers[s[4]]||0) + 1);
-  const ins = dxf.header?.$INSUNITS; const unit = ins === 4 ? .001 : ins === 5 ? .01 : ins === 6 ? 1 : guessUnit(segs);
   dxfPending = {name:f.name, segs, layers, sel:new Set(Object.keys(layers)), mode:"vec", unit, count:segs.length};
   S.tab = "import"; renderTabs();
 }
-function guessUnit(segs){ const xs = segs.flatMap(s=>[s[0],s[2]]), w = Math.max(...xs) - Math.min(...xs); return w > 2000 ? .001 : w > 200 ? .01 : 1; }
+/** Unità del disegno quando l'intestazione non la dice: prima dai raggi delle porte (~0,8–1 m), poi dalla larghezza. */
+function guessUnit(segs, arcs = []){
+  const rs = arcs.filter(a => !a.full).map(a => a.r).sort((a,b) => a-b);
+  if (rs.length >= 2){ const r = rs[rs.length >> 1]; for (const u of [1, .01, .001]) if (r * u > .5 && r * u < 1.4) return u; }
+  let x0 = Infinity, x1 = -Infinity; for (const s of segs){ if (s[0] < x0) x0 = s[0]; if (s[2] < x0) x0 = s[2]; if (s[0] > x1) x1 = s[0]; if (s[2] > x1) x1 = s[2]; }
+  const w = x1 - x0; return w > 30000 ? .001 : w > 300 ? .01 : 1;
+}
 function applyDXF(){
   const d = dxfPending, u = d.unit, segs = d.segs.filter(s => d.sel.has(s[4])); if (!segs.length){ toast("Seleziona almeno un layer", true); return; }
   const xs = segs.flatMap(s=>[s[0],s[2]]), ys = segs.flatMap(s=>[s[1],s[3]]); const minX = Math.min(...xs), maxY = Math.max(...ys);
@@ -2065,6 +2211,460 @@ $("#fProj").addEventListener("change", async e => { const f = e.target.files[0];
     commit(); fitPlan(); applySky(); camPreset("ext"); toast("Progetto aperto");
   } catch(err){ toast("Non riesco ad aprire il progetto: " + (err.message||err), true); }
 });
+
+/* ---- 075-auto3d.js ---- */
+/* ============================================================
+   Da pianta e prospetti (DXF/DWG) a modello 3D — motore
+   Funzioni pure, senza DOM: testate in tests/auto3d.test.mjs.
+   Unità: metri. Pianta in coordinate dell'editor (x a destra, y verso sud);
+   prospetti con y verso l'alto.
+   ============================================================ */
+const A3 = (() => {
+  const D2R = Math.PI / 180;
+  const segLen = s => Math.hypot(s[2]-s[0], s[3]-s[1]);
+  const median = a => { if (!a.length) return NaN; const b = [...a].sort((x,y)=>x-y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m-1]+b[m])/2; };
+  const cleanText = t => String(t || "").replace(/\\[Pp]/g, " ").replace(/\\[A-Za-z][^;\\{}]*;/g, "").replace(/[{}]/g, "").replace(/\\~/g, " ").replace(/\s+/g, " ").trim();
+
+  /* ---------- raggruppamento dei disegni di una tavola ---------- */
+  const SIDES = {sud:"sud", south:"sud", s:"sud", nord:"nord", north:"nord", n:"nord", est:"est", east:"est", e:"est", ovest:"ovest", west:"ovest", o:"ovest", w:"ovest"};
+  function sideFromText(t){
+    const s = cleanText(t).toLowerCase();
+    const m = s.match(/(?:prospett\w*|fronte|facciata|elevation|elev\.?|vista)\s*(?:lato\s*)?(sud|nord|est|ovest|south|north|east|west)\b/) || s.match(/\b(sud|nord|est|ovest|south|north|east|west)\b/);
+    if (m && /prosp|front|facc|elev|vista/.test(s)) return SIDES[m[1]];
+    if (m && s.length <= 12) return SIDES[m[1]];
+    return null;
+  }
+  const isPlanText = t => /\b(pianta|plan|piano terra|piano primo|floor)\b/i.test(cleanText(t));
+  /** Raggruppa i segmenti in disegni separati (pianta, prospetti…) per vicinanza. drawing: {segs, arcs, texts} in metri, y verso l'alto. */
+  function clusterDrawings(dr, gap = 1.2){
+    const n = dr.segs.length, par = Int32Array.from({length:n}, (_, i) => i);
+    const find = i => { while (par[i] !== i){ par[i] = par[par[i]]; i = par[i]; } return i; };
+    const cells = new Map(), cs = gap;
+    dr.segs.forEach((s, i) => {
+      const x0 = Math.floor((Math.min(s[0], s[2]) - gap/2) / cs), x1 = Math.floor((Math.max(s[0], s[2]) + gap/2) / cs);
+      const y0 = Math.floor((Math.min(s[1], s[3]) - gap/2) / cs), y1 = Math.floor((Math.max(s[1], s[3]) + gap/2) / cs);
+      if ((x1-x0+1) * (y1-y0+1) > 4000) return; // linee enormi (cornici, assi): non uniscono i disegni
+      for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++){
+        const k = x + "," + y, o = cells.get(k);
+        if (o === undefined) cells.set(k, i); else { const a = find(o), b = find(i); if (a !== b) par[a] = b; }
+      }
+    });
+    const groups = new Map();
+    for (let i = 0; i < n; i++){ const r = find(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(i); }
+    let cl = [...groups.values()].map(idx => {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const i of idx){ const s = dr.segs[i]; x0 = Math.min(x0, s[0], s[2]); x1 = Math.max(x1, s[0], s[2]); y0 = Math.min(y0, s[1], s[3]); y1 = Math.max(y1, s[1], s[3]); }
+      return {idx, bbox:[x0, y0, x1, y1], arcs:[], texts:[]};
+    }).filter(c => c.idx.length >= 4 && (c.bbox[2]-c.bbox[0]) > 1 && (c.bbox[3]-c.bbox[1]) > .8);
+    const dist = (c, x, y) => Math.hypot(Math.max(c.bbox[0]-x, 0, x-c.bbox[2]), Math.max(c.bbox[1]-y, 0, y-c.bbox[3]));
+    for (const a of dr.arcs || []){ const c = cl.find(c => dist(c, a.cx, a.cy) < .01); if (c) c.arcs.push(a); }
+    for (const t of dr.texts || []){ let best = null, bd = Infinity; for (const c of cl){ const d = dist(c, t.x, t.y); if (d < bd){ bd = d; best = c; } } if (best && bd < Math.max(4, (best.bbox[3]-best.bbox[1]) * .35)) best.texts.push({...t, inside: bd < .01}); }
+    for (const c of cl){
+      const segs = c.idx.map(i => dr.segs[i]), w = c.bbox[2]-c.bbox[0], h = c.bbox[3]-c.bbox[1];
+      const doorArcs = c.arcs.filter(a => a.r > .5 && a.r < 1.6).length;
+      const label = c.texts.find(t => sideFromText(t.text)) || c.texts.find(t => isPlanText(t.text));
+      const side = label ? sideFromText(label.text) : null;
+      const sloped = segs.filter(s => { const a = Math.abs(Math.atan2(s[3]-s[1], s[2]-s[0])) / D2R, b = Math.min(a, 180 - a); return b > 8 && b < 70 && segLen(s) > .8; }).length;
+      const ground = segs.some(s => Math.abs(s[3]-s[1]) < .01 && segLen(s) > .7 * w && Math.min(s[1], s[3]) < c.bbox[1] + .05);
+      c.n = segs.length; c.w = w; c.h = h;
+      c.guess = side ? side : label && isPlanText(label.text) ? "pianta" : doorArcs >= 1 && !sloped ? "pianta" : (ground && h < 25) ? "prospetto" : "ignora";
+      c.reason = label ? `etichetta «${cleanText(label.text).slice(0, 40)}»` : doorArcs ? `${doorArcs} archi di porta` : ground ? "linea di terra" : "";
+    }
+    // una sola pianta: quella con più archi di porta / più segmenti
+    const plans = cl.filter(c => c.guess === "pianta").sort((a,b) => (b.arcs.length - a.arcs.length) || (b.n - a.n));
+    plans.slice(1).forEach(c => { if (!c.reason.startsWith("etichetta")) c.guess = "ignora"; });
+    if (!plans.length && cl.length){ const big = [...cl].sort((a,b) => b.n - a.n)[0]; if (big.guess !== "prospetto" || cl.length === 1) big.guess = "pianta"; }
+    return cl.sort((a,b) => (a.bbox[1] === b.bbox[1] ? a.bbox[0]-b.bbox[0] : b.bbox[3]-a.bbox[3]));
+  }
+
+  /* ---------- pianta: muri, aperture, locali ---------- */
+  function analyzePlan(segsIn, arcs = [], texts = [], opt = {}){
+    const minT = opt.minThick ?? .05, maxT = opt.maxThick ?? .7;
+    const segs = segsIn.filter(s => segLen(s) >= .05).map(s => { const L = segLen(s); let ang = Math.atan2(s[3]-s[1], s[2]-s[0]); if (ang < 0) ang += Math.PI; if (ang >= Math.PI - 1e-9) ang -= Math.PI; return {s, L, ang}; });
+    // gruppi di direzione (tolleranza 1°), con il caso 0°/180°
+    const order = segs.map((_, i) => i).sort((a,b) => segs[a].ang - segs[b].ang);
+    const groups = []; let cur = null;
+    for (const i of order){ if (!cur || segs[i].ang - cur.last > D2R * .6){ cur = {ids:[], last:segs[i].ang}; groups.push(cur); } cur.ids.push(i); cur.last = segs[i].ang; }
+    if (groups.length > 1 && (Math.PI - groups[groups.length-1].last) + segs[groups[0].ids[0]].ang < D2R * .6){ groups[0].ids.push(...groups.pop().ids); }
+    const pairs = [];
+    for (const g of groups){
+      const a0 = median(g.ids.map(i => segs[i].ang)), u = [Math.cos(a0), Math.sin(a0)], n = [-u[1], u[0]];
+      g.u = u; g.n = n;
+      const L = g.ids.filter(i => segs[i].L >= .15).map(i => { const s = segs[i].s; const p0 = s[0]*u[0] + s[1]*u[1], p1 = s[2]*u[0] + s[3]*u[1]; const o0 = s[0]*n[0] + s[1]*n[1], o1 = s[2]*n[0] + s[3]*n[1]; return {i, a:Math.min(p0,p1), b:Math.max(p0,p1), off:(o0+o1)/2, skew:Math.abs(o0-o1)}; }).filter(x => x.skew < .03).sort((x,y) => x.off - y.off);
+      g.lines = L;
+      for (let x = 0; x < L.length; x++) for (let y = x+1; y < L.length && L[y].off - L[x].off <= maxT; y++){
+        const d = L[y].off - L[x].off; if (d < minT) continue;
+        const o0 = Math.max(L[x].a, L[y].a), o1 = Math.min(L[x].b, L[y].b);
+        if (o1 - o0 >= .15) pairs.push({g, A:L[x], B:L[y], d, o0, o1});
+      }
+    }
+    // spessori ricorrenti: istogramma pesato sulla lunghezza (scarta vetri, arredi, campiture)
+    const hist = new Map(); let tot = 0;
+    for (const p of pairs){ const k = Math.round(p.d * 100); const w = p.o1 - p.o0; hist.set(k, (hist.get(k) || 0) + w); tot += w; }
+    const peaks = [...hist.entries()].filter(([k, w]) => { const nb = (hist.get(k-1)||0) + w + (hist.get(k+1)||0); return nb >= Math.max(.04 * tot, 1.5) && w >= (hist.get(k-1)||0) && w >= (hist.get(k+1)||0); }).map(([k]) => k / 100);
+    const top = Math.max(0, ...peaks.map(t => [-1, 0, 1].reduce((s, q) => s + (hist.get(Math.round(t*100) + q) || 0), 0)));
+    peaks.splice(0, peaks.length, ...peaks.filter(t => [-1, 0, 1].reduce((s, q) => s + (hist.get(Math.round(t*100) + q) || 0), 0) >= .06 * top));
+    const okT = d => peaks.some(t => Math.abs(t - d) <= .015);
+    // ogni tratto di linea appartiene a un solo muro: si scelgono prima le coppie più lunghe
+    const used = new Map(); // indice linea -> intervalli occupati
+    const freeParts = (li, a, b) => { let parts = [[a, b]]; for (const [u0, u1] of used.get(li) || []) parts = parts.flatMap(([p0, p1]) => (u1 <= p0 || u0 >= p1) ? [[p0, p1]] : [[p0, u0], [u1, p1]].filter(([q0, q1]) => q1 - q0 > .02)); return parts; };
+    const take = (li, a, b) => { if (!used.has(li)) used.set(li, []); used.get(li).push([a, b]); };
+    const pieces = [];
+    for (const p of pairs.filter(p => okT(p.d)).sort((a,b) => (b.o1-b.o0) - (a.o1-a.o0) || a.d - b.d)){
+      for (const [a, b] of freeParts(p.A.i, p.o0, p.o1)) for (const [c, d] of freeParts(p.B.i, a, b)){
+        if (d - c < .1) continue; take(p.A.i, c, d); take(p.B.i, c, d);
+        pieces.push({g:p.g, off:(p.A.off + p.B.off)/2, t:p.d, a:c, b:d});
+      }
+    }
+    // linee di muro: pezzi allineati, uniti; i vuoti tra 0,5 e 3,2 m sono aperture
+    const lines = [];
+    for (const pc of pieces.sort((x,y) => x.off - y.off)){
+      let ln = lines.find(l => l.g === pc.g && Math.abs(l.off - pc.off) < .04 && Math.abs(l.t - pc.t) < .035);
+      if (!ln){ ln = {g:pc.g, off:pc.off, t:pc.t, pcs:[]}; lines.push(ln); }
+      ln.pcs.push(pc);
+    }
+    const walls = [], openings = [];
+    for (const ln of lines){
+      const ps = ln.pcs.sort((x,y) => x.a - y.a), runs = [];
+      for (const pc of ps){ const r = runs[runs.length-1]; if (r && pc.a - r.b < .45) r.b = Math.max(r.b, pc.b); else runs.push({a:pc.a, b:pc.b}); }
+      let wall = null;
+      const P = (s) => [ln.g.u[0]*s + ln.g.n[0]*ln.off, ln.g.u[1]*s + ln.g.n[1]*ln.off];
+      for (let k = 0; k < runs.length; k++){
+        const r = runs[k], prev = runs[k-1], gap = prev ? r.a - prev.b : Infinity;
+        if (wall && gap <= 3.2){ wall.ops.push({s0:prev.b, s1:r.a}); wall.b = r.b; }
+        else { wall = {g:ln.g, off:ln.off, t:Math.round(ln.t * 100) / 100, a:r.a, b:r.b, ops:[]}; walls.push(wall); }
+      }
+      for (const w of walls.filter(w => w.g === ln.g && w.off === ln.off)) w.P = P;
+    }
+    // piccoli pezzi isolati (stipiti, pilastrini) sotto i 40 cm: scartati
+    let W = walls.filter(w => w.b - w.a >= .4 || w.ops.length);
+    // giunzioni: le estremità si allungano fino all'asse del muro che incontrano
+    const toXY = w => ({A:w.P(w.a), B:w.P(w.b)});
+    for (const w of W){
+      for (const end of ["a", "b"]){
+        const sgn = end === "a" ? -1 : 1, E = w.P(w[end]); let best = null;
+        for (const v of W){
+          if (v === w) continue; const cr = w.g.u[0]*v.g.u[1] - w.g.u[1]*v.g.u[0]; if (Math.abs(cr) < .5) continue;
+          // intersezione tra la retta di w e l'asse di v
+          const V = toXY(v), vd = [V.B[0]-V.A[0], V.B[1]-V.A[1]], vl = Math.hypot(...vd);
+          const den = w.g.u[0]*vd[1] - w.g.u[1]*vd[0]; if (Math.abs(den) < 1e-9) continue;
+          const lam = ((V.A[0]-E[0])*vd[1] - (V.A[1]-E[1])*vd[0]) / den; // distanza lungo u da E
+          const mu = ((V.A[0]-E[0])*w.g.u[1] - (V.A[1]-E[1])*w.g.u[0]) / den; // parametro su v (0..1)
+          const reach = sgn * lam, slack = (w.t + v.t) / 2 + .12;
+          if (reach < -v.t/2 - .02 || reach > v.t/2 + .2) continue;
+          if (mu * vl < -slack || mu * vl > vl + slack) continue;
+          if (!best || Math.abs(reach) < Math.abs(best.reach)) best = {reach, lam};
+        }
+        if (best) w[end] += best.lam;
+      }
+    }
+    W = W.filter(w => w.b - w.a > .1);
+    // muri isolati di spessore secondario (arredi, campiture): scartati
+    const mainT = peaks.length ? peaks.reduce((m, t) => ((hist.get(Math.round(t*100)) || 0) > (hist.get(Math.round(m*100)) || 0) ? t : m), peaks[0]) : 0;
+    const segDist = (p, A, B) => { const d = [B[0]-A[0], B[1]-A[1]], l2 = d[0]*d[0] + d[1]*d[1] || 1e-12; const t = Math.max(0, Math.min(1, ((p[0]-A[0])*d[0] + (p[1]-A[1])*d[1]) / l2)); return Math.hypot(p[0]-A[0]-t*d[0], p[1]-A[1]-t*d[1]); };
+    const linked = w => { const E = [w.P(w.a), w.P(w.b)]; return W.some(v => v !== w && (() => { const A = v.P(v.a), B = v.P(v.b), Ew = [A, B]; return E.some(p => segDist(p, A, B) < (w.t + v.t)/2 + .1) || Ew.some(p => segDist(p, E[0], E[1]) < (w.t + v.t)/2 + .1); })()); };
+    W = W.filter(w => Math.abs(w.t - mainT) <= .015 || linked(w));
+    // porte e finestre nei vuoti
+    let nid = 0;
+    const out = W.map(w => ({id:"w" + (nid++), a:w.P(w.a), b:w.P(w.b), thick:w.t, _w:w}));
+    for (const ow of out){
+      const w = ow._w;
+      for (const o of w.ops){
+        const width = o.s1 - o.s0; if (width < .45) continue;
+        const j0 = w.P(o.s0), j1 = w.P(o.s1);
+        const arc = arcs.find(a => a.r > .45 && a.r < 1.7 && (Math.hypot(a.cx-j0[0], a.cy-j0[1]) < w.t/2 + .25 || Math.hypot(a.cx-j1[0], a.cy-j1[1]) < w.t/2 + .25) && (Math.abs(a.r - width) < .3 || Math.abs(a.r - width/2) < .2));
+        const glass = (w.g.lines || []).some(l => Math.abs(l.off - w.off) < w.t/2 + .02 && Math.min(l.b, o.s1) - Math.max(l.a, o.s0) > .5 * width);
+        const type = arc ? "door" : glass ? "window" : width >= 2.6 ? "window" : "door";
+        openings.push({wall:ow.id, t:(o.s0 + o.s1)/2 - w.a, w:+width.toFixed(3), type, from:arc ? "arco" : glass ? "vetro" : "vuoto"});
+      }
+    }
+    const rooms = findRooms(out, texts);
+    return {walls:out.map(({_w, ...r}) => r), openings, rooms, thicknesses:[...new Set(out.map(w => w.thick))].sort((a,b) => a-b)};
+  }
+
+  /* locali: aree chiuse dai muri (raster 5 cm) con il nome preso dai testi della pianta */
+  function findRooms(walls, texts, cell = .05){
+    if (!walls.length) return [];
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const w of walls) for (const p of [w.a, w.b]){ x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+    x0 -= 1; y0 -= 1; x1 += 1; y1 += 1;
+    const nx = Math.ceil((x1-x0)/cell), ny = Math.ceil((y1-y0)/cell); if (nx * ny > 6e6) return [];
+    const G = new Uint8Array(nx * ny); // 0 libero, 1 muro, 2 esterno, 3+ locale
+    for (const w of walls){
+      const d = [w.b[0]-w.a[0], w.b[1]-w.a[1]], L = Math.hypot(...d), u = [d[0]/L, d[1]/L], h = w.thick/2 + cell*.6;
+      const bx0 = Math.max(0, Math.floor((Math.min(w.a[0], w.b[0]) - h - x0)/cell)), bx1 = Math.min(nx-1, Math.ceil((Math.max(w.a[0], w.b[0]) + h - x0)/cell));
+      const by0 = Math.max(0, Math.floor((Math.min(w.a[1], w.b[1]) - h - y0)/cell)), by1 = Math.min(ny-1, Math.ceil((Math.max(w.a[1], w.b[1]) + h - y0)/cell));
+      for (let j = by0; j <= by1; j++) for (let i = bx0; i <= bx1; i++){
+        const px = x0 + (i+.5)*cell - w.a[0], py = y0 + (j+.5)*cell - w.a[1], s = px*u[0] + py*u[1], o = -px*u[1] + py*u[0];
+        if (s >= -h && s <= L + h && Math.abs(o) <= h) G[j*nx + i] = 1;
+      }
+    }
+    const flood = (start, val) => { const st = [start]; G[start] = val; let n = 0, sx = 0, sy = 0; while (st.length){ const k = st.pop(); n++; const i = k % nx, j = (k / nx) | 0; sx += i; sy += j; for (const q of [i > 0 ? k-1 : -1, i < nx-1 ? k+1 : -1, j > 0 ? k-nx : -1, j < ny-1 ? k+nx : -1]) if (q >= 0 && G[q] === 0){ G[q] = val; st.push(q); } } return n; };
+    flood(0, 2);
+    const rooms = []; let lab = 3;
+    for (let k = 0; k < G.length && lab < 250; k++){
+      if (G[k] !== 0) continue; const n = flood(k, lab);
+      if (n * cell * cell >= 1.2){ const pts = traceRoom(G, nx, ny, lab, k, x0, y0, cell); if (pts.length >= 3) rooms.push({pts, area:+(n*cell*cell).toFixed(2)}); }
+      lab++;
+    }
+    const inPoly = (x, y, p) => { let c = false; for (let i = 0, j = p.length-1; i < p.length; j = i++) if ((p[i][1] > y) !== (p[j][1] > y) && x < (p[j][0]-p[i][0]) * (y-p[i][1]) / (p[j][1]-p[i][1]) + p[i][0]) c = !c; return c; };
+    const skip = /^\s*([\d.,]+\s*(m|mq|m2|m²|cm)?|h\s*[=:].*|s\.?\s*=.*|sup.*|superf.*|[\d.,]+\s*[x×]\s*[\d.,]+.*)\s*$/i;
+    for (const r of rooms){
+      const cand = texts.filter(t => inPoly(t.x, t.y, r.pts)).map(t => cleanText(t.text)).filter(t => t && t.length <= 30 && !skip.test(t) && /[a-zà-ù]{2}/i.test(t));
+      const name = cand[0] || ""; r.name = name ? name[0].toUpperCase() + name.slice(1).toLowerCase() : "";
+      r.mat = /bagn|wc|doccia|lavand|cucin|kitchen|bath|lavanderia|centrale|tecnic/i.test(name) ? "gres" : /terraz|balcon|portic|loggi|cortil/i.test(name) ? "pietra" : /garage|box|cantin|riposti/i.test(name) ? "cemento" : "parquet";
+    }
+    return rooms;
+  }
+  // contorno di un'area (Moore) semplificato con Douglas–Peucker e raddrizzato sugli assi
+  function traceRoom(G, nx, ny, lab, k0, x0, y0, cell){
+    const inside = (i, j) => i >= 0 && j >= 0 && i < nx && j < ny && G[j*nx+i] === lab;
+    let si = k0 % nx, sj = (k0 / nx) | 0; // primo pixel in ordine di scansione: bordo superiore-sinistro
+    const dirs = [[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+    const pts = [[si, sj]]; let ci = si, cj = sj, d = 6, guard = 0;
+    while (guard++ < 200000){
+      let found = false;
+      for (let t = 0; t < 8; t++){ const dd = (d + 6 + t) % 8, ni = ci + dirs[dd][0], nj = cj + dirs[dd][1]; if (inside(ni, nj)){ ci = ni; cj = nj; d = dd; found = true; break; } }
+      if (!found || (ci === si && cj === sj)) break;
+      pts.push([ci, cj]);
+    }
+    const P = pts.map(([i, j]) => [x0 + (i+.5)*cell, y0 + (j+.5)*cell]);
+    const dp = (a, eps) => { if (a.length < 3) return a; let im = 0, dm = 0; const [A, B] = [a[0], a[a.length-1]], L = Math.hypot(B[0]-A[0], B[1]-A[1]) || 1e-9; for (let i = 1; i < a.length-1; i++){ const dd = Math.abs((B[0]-A[0])*(A[1]-a[i][1]) - (A[0]-a[i][0])*(B[1]-A[1])) / L; if (dd > dm){ dm = dd; im = i; } } return dm > eps ? [...dp(a.slice(0, im+1), eps).slice(0, -1), ...dp(a.slice(im), eps)] : [A, B]; };
+    // chiusura: si divide l'anello nel punto più lontano dall'inizio
+    let far = 0, fd = 0; P.forEach((p, i) => { const dd = Math.hypot(p[0]-P[0][0], p[1]-P[0][1]); if (dd > fd){ fd = dd; far = i; } });
+    let poly = [...dp(P.slice(0, far+1), cell*1.6).slice(0, -1), ...dp([...P.slice(far), P[0]], cell*1.6).slice(0, -1)];
+    // lati quasi orizzontali/verticali raddrizzati
+    for (let it = 0; it < 2; it++) for (let i = 0; i < poly.length; i++){ const a = poly[i], b = poly[(i+1) % poly.length]; if (Math.abs(a[1]-b[1]) < cell*1.5 && Math.abs(a[0]-b[0]) > cell*3){ const y = (a[1]+b[1])/2; a[1] = b[1] = y; } else if (Math.abs(a[0]-b[0]) < cell*1.5 && Math.abs(a[1]-b[1]) > cell*3){ const x = (a[0]+b[0])/2; a[0] = b[0] = x; } }
+    poly = poly.filter((p, i) => { const q = poly[(i+1) % poly.length]; return Math.hypot(p[0]-q[0], p[1]-q[1]) > cell * .5; });
+    // il raster sta mezzo pixel dentro: si riporta il bordo sulla faccia del muro
+    const cx = poly.reduce((s, p) => s + p[0], 0) / poly.length, cy = poly.reduce((s, p) => s + p[1], 0) / poly.length;
+    return poly.map(([x, y]) => [+(x + Math.sign(x - cx) * cell/2).toFixed(3), +(y + Math.sign(y - cy) * cell/2).toFixed(3)]);
+  }
+
+  /* ---------- prospetto: altezze, aperture, copertura ---------- */
+  function analyzeElevation(segsIn){
+    const segs = segsIn.filter(s => segLen(s) > .02);
+    if (!segs.length) return null;
+    const hor = segs.filter(s => Math.abs(s[3]-s[1]) < .01 * Math.max(segLen(s), .1)).map(s => ({y:(s[1]+s[3])/2, x0:Math.min(s[0], s[2]), x1:Math.max(s[0], s[2])}));
+    const ver = segs.filter(s => Math.abs(s[2]-s[0]) < .01 * Math.max(segLen(s), .1)).map(s => ({x:(s[0]+s[2])/2, y0:Math.min(s[1], s[3]), y1:Math.max(s[1], s[3])}));
+    let X0 = Infinity, X1 = -Infinity, Y0 = Infinity, Y1 = -Infinity; for (const s of segs){ X0 = Math.min(X0, s[0], s[2]); X1 = Math.max(X1, s[0], s[2]); Y0 = Math.min(Y0, s[1], s[3]); Y1 = Math.max(Y1, s[1], s[3]); }
+    const W = X1 - X0;
+    const longH = hor.filter(h => h.x1 - h.x0 >= .4 * W);
+    const ground = longH.length ? Math.min(...longH.map(h => h.y)) : Y0;
+    const walls = ver.filter(v => v.y0 < ground + .45 && v.y1 - v.y0 >= 1.5);
+    const xa = walls.length ? Math.min(...walls.map(v => v.x)) : X0, xb = walls.length ? Math.max(...walls.map(v => v.x)) : X1;
+    const edgeTop = walls.filter(v => Math.abs(v.x - xa) < .06 || Math.abs(v.x - xb) < .06).map(v => v.y1);
+    let eave = (edgeTop.length ? Math.max(...edgeTop) : Y1) - ground;
+    const sloped = segs.map(s => { const a = Math.atan2(s[3]-s[1], s[2]-s[0]) / D2R; const b = ((a % 180) + 180) % 180; return {s, ang:b > 90 ? 180 - b : b, up:(b > 0 && b < 90), y:Math.max(s[1], s[3]) - ground, len:segLen(s)}; }).filter(o => o.ang > 8 && o.ang < 70 && o.len > .6 && o.y > eave - .3);
+    let roof = {kind:"flat", ridge:null, pitch:null, overhang:null};
+    if (sloped.some(o => o.up) && sloped.some(o => !o.up)){
+      const top = Math.max(...sloped.map(o => o.y)), minX = Math.min(...sloped.map(o => Math.min(o.s[0], o.s[2])));
+      roof = {kind:"gable-end", ridge:top, pitch:+median(sloped.map(o => o.ang)).toFixed(1), overhang:Math.max(0, Math.min(1.5, xa - minX))};
+    } else {
+      const band = hor.filter(h => h.y - ground > eave + .4 && h.x1 - h.x0 >= .5 * (xb - xa));
+      if (band.length) roof = {kind:"gable-side", ridge:Math.max(...band.map(h => h.y)) - ground, pitch:null, overhang:Math.max(0, Math.min(1.5, xa - Math.min(...band.map(h => h.x0))))};
+      else { const top = Math.max(...ver.filter(v => v.x >= xa - .05 && v.x <= xb + .05).map(v => v.y1)) - ground; if (top > eave) eave = top; }
+    }
+    // aperture: rettangoli chiusi (polilinee o 4 linee) dentro la facciata
+    const tol = .03, rects = [];
+    const hasH = (y, a, b) => hor.some(h => Math.abs(h.y - y) < tol && h.x0 <= a + tol && h.x1 >= b - tol);
+    const vs = ver.filter(v => v.y1 - v.y0 >= .3 && v.y1 - ground <= eave + .1).sort((p, q) => p.x - q.x);
+    for (let i = 0; i < vs.length; i++) for (let j = i+1; j < vs.length; j++){
+      const A = vs[i], B = vs[j], w = B.x - A.x; if (w < .3) continue; if (w > 4) break;
+      if (Math.abs(A.y0 - B.y0) > tol || Math.abs(A.y1 - B.y1) > tol) continue;
+      const y0 = (A.y0 + B.y0)/2, y1 = (A.y1 + B.y1)/2;
+      if (hasH(y0, A.x, B.x) && hasH(y1, A.x, B.x)) rects.push({x0:A.x, x1:B.x, y0, y1});
+    }
+    let ops = rects.filter(r => r.x0 >= xa - .05 && r.x1 <= xb + .05 && r.y0 >= ground - .05 && r.x1 - r.x0 < .9 * (xb - xa) && r.y1 - r.y0 < eave);
+    ops = ops.filter(r => !ops.some(q => q !== r && q.x0 <= r.x0 + .01 && q.x1 >= r.x1 - .01 && q.y0 <= r.y0 + .01 && q.y1 >= r.y1 - .01 && (q.x1-q.x0)*(q.y1-q.y0) > (r.x1-r.x0)*(r.y1-r.y0) + 1e-6)); // telai interni
+    ops = ops.filter((r, i) => !ops.some((q, k) => k < i && Math.abs(q.x0-r.x0) < .01 && Math.abs(q.x1-r.x1) < .01 && Math.abs(q.y0-r.y0) < .01 && Math.abs(q.y1-r.y1) < .01));
+    // persiane: rettangoli stretti affiancati a un'apertura della stessa altezza
+    ops = ops.filter(r => !ops.some(q => q !== r && Math.abs(q.y0 - r.y0) < .05 && Math.abs(q.y1 - r.y1) < .05 && (Math.abs(q.x0 - r.x1) < .06 || Math.abs(q.x1 - r.x0) < .06) && (r.x1 - r.x0) <= .6 * (q.x1 - q.x0)));
+    return {width:+(xb - xa).toFixed(3), eave:+eave.toFixed(3), roof, openings:ops.map(r => ({u0:+(r.x0 - xa).toFixed(3), u1:+(r.x1 - xa).toFixed(3), sill:+Math.max(0, r.y0 - ground).toFixed(3), h:+(r.y1 - r.y0).toFixed(3)})).sort((a,b) => a.u0 - b.u0)};
+  }
+
+  /** Prospetto disegnato in un'unità diversa dalla pianta (cm, mm): fattore 10^n che porta la sua larghezza vicina a quella attesa. */
+  function unitFactor(segs, expectedWidth){
+    let x0 = Infinity, x1 = -Infinity; for (const s of segs){ x0 = Math.min(x0, s[0], s[2]); x1 = Math.max(x1, s[0], s[2]); }
+    const r = expectedWidth / Math.max(x1 - x0, 1e-9), p = Math.pow(10, Math.round(Math.log10(r)));
+    return p !== 1 && r / p > .6 && r / p < 1.6 ? p : 1;
+  }
+  const scaleSegs = (segs, k) => k === 1 ? segs : segs.map(s => [s[0]*k, s[1]*k, s[2]*k, s[3]*k, s[4]]);
+  /** Larghezza della pianta vista da un lato (per controllare le unità dei prospetti). */
+  function sideWidth(plan, side){ let a = Infinity, b = -Infinity; const ax = VIEW[side].axis; for (const w of plan.walls) for (const p of [w.a, w.b]){ a = Math.min(a, p[ax] - w.thick/2); b = Math.max(b, p[ax] + w.thick/2); } return b - a; }
+  function prepareElevation(segs, plan, side){ const k = plan && VIEW[side] ? unitFactor(segs, sideWidth(plan, side)) : 1; const d = analyzeElevation(scaleSegs(segs, k)); if (d) d.unitFactor = k; return d; }
+
+  /* ---------- unione: la pianta riceve altezze e aperture dai prospetti ---------- */
+  // per ogni lato: asse del prospetto (da sinistra a destra) e verso dell'esterno
+  const VIEW = {sud:{axis:0, rev:false, out:[0, 1]}, nord:{axis:0, rev:true, out:[0, -1]}, est:{axis:1, rev:true, out:[1, 0]}, ovest:{axis:1, rev:false, out:[-1, 0]}};
+  function combine(plan, elevs = [], opt = {}){
+    const notes = [], walls = plan.walls.map(w => ({...w})), openings = plan.openings.map(o => ({...o}));
+    let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity;
+    for (const w of walls) for (const p of [w.a, w.b]){ bx0 = Math.min(bx0, p[0] - w.thick/2); bx1 = Math.max(bx1, p[0] + w.thick/2); by0 = Math.min(by0, p[1] - w.thick/2); by1 = Math.max(by1, p[1] + w.thick/2); }
+    const eaves = [], roofs = [];
+    for (const e of elevs){
+      const V = VIEW[e.side], d = e.data; if (!V || !d) continue;
+      const planW = V.axis === 0 ? bx1 - bx0 : by1 - by0;
+      // stessa unità: k = 1; unità diverse (cm/mm): potenza di 10; altrimenti si adatta solo la larghezza
+      let kx = 1, kz = 1; const ratio = planW / d.width;
+      if (ratio < .9 || ratio > 1.1){ const p10 = Math.pow(10, Math.round(Math.log10(ratio))); if (ratio / p10 > .9 && ratio / p10 < 1.1 && p10 !== 1){ kx = kz = p10; } else { kx = ratio; notes.push(`Prospetto ${e.side}: largo ${(d.width).toFixed(2)} m contro ${planW.toFixed(2)} m della pianta; adattato alla pianta.`); } }
+      eaves.push(d.eave * kz); roofs.push({side:e.side, ...d.roof, ridge:d.roof.ridge != null ? d.roof.ridge * kz : null, overhang:d.roof.overhang != null ? d.roof.overhang * kx : null});
+      let matched = 0, added = 0;
+      for (const op of d.openings){
+        const u0 = op.u0 * kx, u1 = op.u1 * kx, uc = (u0 + u1)/2, w = u1 - u0;
+        const along = V.rev ? (V.axis === 0 ? bx1 - uc : by1 - uc) : (V.axis === 0 ? bx0 + uc : by0 + uc);
+        // muro parallelo che copre quel punto, il più esterno nella direzione di vista
+        let best = null, bestOut = -Infinity;
+        for (const wl of walls){
+          const dx = wl.b[0]-wl.a[0], dy = wl.b[1]-wl.a[1], L = Math.hypot(dx, dy); if (L < .3) continue;
+          const par = V.axis === 0 ? Math.abs(dx)/L : Math.abs(dy)/L; if (par < .97) continue;
+          const lo = V.axis === 0 ? Math.min(wl.a[0], wl.b[0]) : Math.min(wl.a[1], wl.b[1]), hi = V.axis === 0 ? Math.max(wl.a[0], wl.b[0]) : Math.max(wl.a[1], wl.b[1]);
+          if (along < lo - .05 || along > hi + .05) continue;
+          const outPos = ((wl.a[0]+wl.b[0])/2) * V.out[0] + ((wl.a[1]+wl.b[1])/2) * V.out[1];
+          if (outPos > bestOut){ bestOut = outPos; best = wl; }
+        }
+        if (!best) continue;
+        const dx = best.b[0]-best.a[0], dy = best.b[1]-best.a[1], L = Math.hypot(dx, dy);
+        const pt = V.axis === 0 ? [along, best.a[1] + (along - best.a[0]) * dy / (dx || 1e-9)] : [best.a[0] + (along - best.a[1]) * dx / (dy || 1e-9), along];
+        const t = ((pt[0]-best.a[0])*dx + (pt[1]-best.a[1])*dy) / L;
+        const sill = op.sill * kz, h = op.h * kz, type = sill < .15 ? "door" : "window";
+        const ex = openings.filter(o => o.wall === best.id && !o.fromElev).sort((a,b) => Math.abs(a.t - t) - Math.abs(b.t - t))[0];
+        if (ex && Math.abs(ex.t - t) <= Math.max(ex.w, w)/2 + .2){ Object.assign(ex, {sill:+sill.toFixed(3), h:+h.toFixed(3), type, fromElev:true}); if (ex.from === "vuoto") ex.w = +w.toFixed(3); matched++; }
+        else if (t - w/2 > .05 && t + w/2 < L - .05){ openings.push({wall:best.id, t:+t.toFixed(3), w:+w.toFixed(3), h:+h.toFixed(3), sill:+sill.toFixed(3), type, from:"prospetto", fromElev:true}); added++; }
+      }
+      notes.push(`Prospetto ${e.side}: ${d.openings.length} aperture lette, ${matched} abbinate alla pianta${added ? `, ${added} aggiunte` : ""}.`);
+    }
+    const height = eaves.length ? +median(eaves).toFixed(2) : (opt.height || 2.7);
+    // copertura
+    let roof = {type:"flat", pitch:20, overhang:.3, mat:"tegole"};
+    const gEnd = roofs.find(r => r.kind === "gable-end"), gSide = roofs.find(r => r.kind === "gable-side");
+    if (gEnd || gSide){
+      // timpano visto da sud/nord → colmo lungo y; falda vista da sud/nord → colmo lungo x
+      const ridgeAxis = gEnd ? (VIEW[gEnd.side].axis === 0 ? "y" : "x") : (VIEW[gSide.side].axis === 0 ? "x" : "y");
+      const depth = ridgeAxis === "x" ? by1 - by0 : bx1 - bx0;
+      const ridgeH = (gEnd || gSide).ridge;
+      const pitch = gEnd?.pitch || (ridgeH ? Math.atan((ridgeH - height) / (depth/2)) / D2R : 25);
+      roof = {type:"gable", pitch:+Math.max(5, Math.min(60, pitch)).toFixed(1), overhang:+((gEnd || gSide).overhang ?? .4).toFixed(2), mat:"tegole", ridge:ridgeAxis};
+    } else if (!elevs.length) roof = {type:"flat", pitch:20, overhang:0, mat:"cemento"};
+    for (const o of openings){
+      if (o.h == null){ if (o.type === "door"){ o.sill = 0; o.h = Math.min(2.1, height - .2); } else { o.sill = .9; o.h = Math.min(1.4, height - 1.1); } }
+      o.h = Math.min(o.h, height - o.sill - .05);
+      delete o.fromElev; delete o.from;
+    }
+    if (height > 4.6) notes.push(`Altezza di gronda ${height.toFixed(2)} m: probabilmente più piani. Per ora il volume è unico; i solai intermedi vanno aggiunti a mano.`);
+    return {walls, openings, rooms:plan.rooms, height, roof, notes, bbox:[bx0, by0, bx1, by1]};
+  }
+  return {clusterDrawings, analyzePlan, analyzeElevation, prepareElevation, unitFactor, combine, sideFromText, cleanText, findRooms};
+})();
+
+/* ---- 076-auto3d-ui.js ---- */
+/* ============================================================
+   Da pianta e prospetti al 3D — pannello nella scheda Importa
+   ============================================================ */
+const A3S = {files:[], clusters:[], layersOff:null, report:null};
+const A3_SKIP_LAYERS = /quot|dim|cot[ae]|text|testo|scritt|hatch|tratt|camp|retin|arred|mobil|furn|sanit|asse|axis|grid|grigl|cartig|squadr|defpoints|viewport|^vp/i;
+const A3_ROLES = [["pianta","Pianta"],["sud","Prospetto sud"],["nord","Prospetto nord"],["est","Prospetto est"],["ovest","Prospetto ovest"],["ignora","Ignora"]];
+
+function autoPanelHTML(){
+  const R = A3S.report;
+  return `<div class="exp" id="a3Box"><header><h4>Da pianta e prospetti al 3D</h4><span class="tag">DWG · DXF</span></header>
+    <p class="note">Carica la pianta e i prospetti, anche tutti nella stessa tavola. Dalla pianta riconosco muri (le due linee di ogni muro), porte (gli archi), finestre (i vetri) e locali (i nomi scritti dentro); dai prospetti altezze, davanzali, aperture mancanti e copertura.</p>
+    <div class="btns"><button class="btn primary" id="a3Files">Scegli i file DWG/DXF</button>${A3S.files.length ? `<button class="btn" id="a3Clear">Ricomincia</button>` : ""}</div>
+    ${A3S.files.length ? a3ListHTML() : ""}
+    ${R ? `<div class="a3rep"><b>${esc(R.title)}</b><ul>${R.lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul></div>` : ""}
+  </div>`;
+}
+function a3ListHTML(){
+  const layers = {}; for (const f of A3S.files) for (const s of f.flat.segs) layers[s[4]] = (layers[s[4]] || 0) + 1;
+  const units = [[1,"Metri"],[.01,"Centimetri"],[.001,"Millimetri"]];
+  return `${A3S.files.map((f, i) => `<div class="row"><div class="f"><span class="lbl">${esc(f.name)}</span><select class="inp" data-a3unit="${i}">${units.map(([u, n]) => `<option value="${u}" ${f.unit === u ? "selected" : ""}>${n}</option>`).join("")}</select></div><div class="f" style="justify-content:flex-end"><span class="tag">${f.flat.segs.length} linee · ${f.flat.arcs.length} archi · ${f.flat.texts.length} testi</span></div></div>`).join("")}
+    <details><summary class="lbl">Layer usati (${Object.keys(layers).length - A3S.layersOff.size} di ${Object.keys(layers).length})</summary><div class="layers">${Object.entries(layers).sort((a,b) => b[1]-a[1]).map(([n, c]) => `<label class="chk"><input type="checkbox" data-a3layer="${esc(n)}" ${A3S.layersOff.has(n) ? "" : "checked"}> ${esc(n)} <span class="tag">${c}</span></label>`).join("")}</div><p class="note">Quote, testi, campiture e arredi sono esclusi in automatico: non sono muri.</p></details>
+    <span class="lbl">Disegni trovati</span>
+    <div class="a3grid">${A3S.clusters.map((c, i) => `<figure class="${c.role === "ignora" ? "off" : ""}">${a3SVG(c)}<figcaption><select class="inp" data-a3role="${i}" ${c.role === "prospetto" ? 'aria-invalid="true"' : ""}>${c.role === "prospetto" ? `<option value="prospetto" selected>Prospetto: quale lato?</option>` : ""}${A3_ROLES.map(([k, n]) => `<option value="${k}" ${c.role === k ? "selected" : ""}>${n}</option>`).join("")}</select><small>${esc(c.file)} · ${fmt(c.w,1)}×${fmt(c.h,1)} m${c.reason ? " · " + esc(c.reason) : ""}</small></figcaption></figure>`).join("")}</div>
+    ${F("a3H", "Altezza muri se mancano i prospetti (m)", fmt(A3S.height ?? 2.7), 'inputmode="decimal"')}
+    <div class="btns"><button class="btn primary" id="a3Go">Genera il modello 3D</button></div>
+    <p class="note">Il piano corrente («${esc(level().name)}») viene sostituito: muri, aperture e locali. Con Annulla torni indietro.</p>`;
+}
+function a3SVG(c){
+  const [x0, y0, x1, y1] = c.bbox, w = x1 - x0 || 1, h = y1 - y0 || 1, step = Math.max(1, Math.ceil(c.segs.length / 3000));
+  let d = ""; for (let i = 0; i < c.segs.length; i += step){ const s = c.segs[i]; d += `M${(s[0]-x0).toFixed(2)} ${(y1-s[1]).toFixed(2)}L${(s[2]-x0).toFixed(2)} ${(y1-s[3]).toFixed(2)}`; }
+  const pad = Math.max(w, h) * .04;
+  return `<svg viewBox="${-pad} ${-pad} ${w + 2*pad} ${h + 2*pad}" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="${d}" fill="none" stroke="currentColor" stroke-width="${(Math.max(w, h) / 260).toFixed(3)}"/></svg>`;
+}
+/** Dai file caricati ai disegni (in metri), con i layer attivi. */
+function a3Cluster(){
+  const all = [];
+  for (const f of A3S.files){
+    const u = f.unit, keep = s => !A3S.layersOff.has(s[4]);
+    const dr = {segs:f.flat.segs.filter(keep).map(s => [s[0]*u, s[1]*u, s[2]*u, s[3]*u, s[4]]), arcs:f.flat.arcs.filter(a => !A3S.layersOff.has(a.layer)).map(a => ({...a, cx:a.cx*u, cy:a.cy*u, r:a.r*u})), texts:f.flat.texts.map(t => ({...t, x:t.x*u, y:t.y*u}))};
+    const cl = A3.clusterDrawings(dr);
+    const fileSide = A3.sideFromText("prospetto " + f.name.replace(/[_\-.]+/g, " ")), filePlan = /pianta|plan/i.test(f.name);
+    for (const c of cl){
+      c.file = f.name; c.segs = c.idx.map(i => dr.segs[i]);
+      c.role = cl.length === 1 && fileSide ? fileSide : cl.length === 1 && filePlan ? "pianta" : c.guess;
+      if (cl.length === 1 && (fileSide || filePlan)) c.reason = "nome del file";
+      all.push(c);
+    }
+  }
+  // una sola pianta in tutto
+  const plans = all.filter(c => c.role === "pianta"); plans.slice(1).forEach(c => { if (c.reason !== "nome del file" && !c.reason.startsWith("etichetta")) c.role = "ignora"; });
+  A3S.clusters = all;
+}
+async function a3AddFiles(files){
+  for (const f of files){
+    try { busy(`Leggo ${f.name}…`); const flat = flattenCAD(await readCAD(f)); if (!flat.segs.length) throw new Error("nessuna linea"); A3S.files.push({name:f.name, flat, unit:flat.unit}); }
+    catch(e){ console.warn(e); toast(`${f.name}: ${e.message || e}`, true); }
+    finally { busy(""); }
+  }
+  if (!A3S.layersOff){ A3S.layersOff = new Set(); }
+  for (const f of A3S.files) for (const s of f.flat.segs) if (A3_SKIP_LAYERS.test(s[4])) A3S.layersOff.add(s[4]);
+  a3Cluster(); A3S.report = null; S.tab = "import"; renderTabs();
+}
+function a3Generate(){
+  const plan = A3S.clusters.filter(c => c.role === "pianta");
+  if (plan.length !== 1){ toast(plan.length ? "Scegli una sola pianta" : "Indica quale disegno è la pianta", true); return; }
+  const pending = A3S.clusters.filter(c => c.role === "prospetto"); if (pending.length) toast(`${pending.length} prospett${pending.length > 1 ? "i" : "o"} senza lato: ${pending.length > 1 ? "vengono ignorati" : "viene ignorato"}`);
+  const pc = plan[0], [bx0, , , by1] = pc.bbox;
+  const toApp = (x, y) => [+(x - bx0).toFixed(4), +(by1 - y).toFixed(4)];
+  const segs = pc.segs.map(s => [...toApp(s[0], s[1]), ...toApp(s[2], s[3]), s[4]]);
+  const arcs = pc.arcs.map(a => { const [cx, cy] = toApp(a.cx, a.cy); return {...a, cx, cy}; });
+  const texts = pc.texts.map(t => { const [x, y] = toApp(t.x, t.y); return {...t, x, y}; });
+  busy("Riconosco muri, aperture e locali…");
+  try {
+    const pr = A3.analyzePlan(segs, arcs, texts);
+    if (!pr.walls.length){ toast("Non trovo muri: controlla i layer e l'unità del disegno", true); return; }
+    const elevs = A3S.clusters.filter(c => ["sud","nord","est","ovest"].includes(c.role)).map(c => { const [ex0, ey0] = c.bbox; return {side:c.role, data:A3.prepareElevation(c.segs.map(s => [s[0]-ex0, s[1]-ey0, s[2]-ex0, s[3]-ey0, s[4]]), pr, c.role)}; }).filter(e => e.data);
+    const m = A3.combine(pr, elevs, {height:A3S.height ?? 2.7});
+    const L = level(), lid = L.id, oldW = new Set(P.walls.filter(w => w.level === lid).map(w => w.id));
+    P.walls = P.walls.filter(w => w.level !== lid); P.openings = P.openings.filter(o => !oldW.has(o.wall)); P.rooms = P.rooms.filter(r => r.level !== lid);
+    const ids = {};
+    for (const w of m.walls){ const id = uid(); ids[w.id] = id; P.walls.push({id, level:lid, a:w.a, b:w.b, thick:w.thick, height:null, mat:S.defaults.wallMat}); }
+    for (const o of m.openings) if (ids[o.wall]) P.openings.push({id:uid(), wall:ids[o.wall], t:o.t, w:o.w, h:o.h, sill:o.sill, type:o.type, flip:0});
+    m.rooms.forEach((r, i) => P.rooms.push({id:uid(), level:lid, name:r.name || `Locale ${i+1}`, mat:FLOOR_MATS.includes(r.mat) ? r.mat : S.defaults.roomMat, pts:r.pts}));
+    L.height = m.height; L.roof = {...L.roof, ...m.roof}; if (!m.roof.ridge) delete L.roof.ridge;
+    L.underlay = {kind:"vec", lines:segs.map(s => s.slice(0, 4)), ox:0, oy:0, k:1, opacity:.3, name:pc.file};
+    const nD = m.openings.filter(o => o.type === "door").length, nF = m.openings.length - nD;
+    A3S.report = {title:`Creati ${m.walls.length} muri, ${nD} porte, ${nF} finestre e ${m.rooms.length} locali`, lines:[
+      `Spessori riconosciuti: ${pr.thicknesses.map(t => fmt(t*100, 0) + " cm").join(", ") || "—"}.`,
+      elevs.length ? `Altezza di gronda ${fmt(m.height, 2)} m da ${elevs.length} prospett${elevs.length > 1 ? "i" : "o"}.` : `Nessun prospetto: altezza ${fmt(m.height, 2)} m e aperture con misure tipiche.`,
+      m.roof.type === "gable" ? `Copertura a due falde, pendenza ${fmt(m.roof.pitch, 1)}°, colmo ${m.roof.ridge === "x" ? "est–ovest" : "nord–sud"}.` : "Copertura piana.",
+      ...m.notes, "Controlla il risultato: la pianta originale resta sotto come base di ricalco."]};
+    commit(); fitPlan(); renderImport(); toast(A3S.report.title);
+  } catch(e){ console.error(e); toast("Generazione non riuscita: " + (e.message || e), true); }
+  finally { busy(""); }
+}
+PI.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+  if (b.id === "a3Files") $("#fA3").click();
+  if (b.id === "a3Clear"){ Object.assign(A3S, {files:[], clusters:[], layersOff:null, report:null}); renderImport(); }
+  if (b.id === "a3Go") a3Generate();
+});
+PI.addEventListener("change", e => { const t = e.target;
+  if (t.dataset.a3role !== undefined){ A3S.clusters[+t.dataset.a3role].role = t.value; renderImport(); }
+  if (t.dataset.a3unit !== undefined){ A3S.files[+t.dataset.a3unit].unit = +t.value; a3Cluster(); renderImport(); }
+  if (t.dataset.a3layer !== undefined){ t.checked ? A3S.layersOff.delete(t.dataset.a3layer) : A3S.layersOff.add(t.dataset.a3layer); a3Cluster(); renderImport(); }
+  if (t.id === "a3H"){ const v = num(t.value); if (v > 1.5) A3S.height = v; }
+});
+$("#fA3").addEventListener("change", async e => { const fs = [...e.target.files]; e.target.value = ""; if (fs.length) await a3AddFiles(fs); });
 
 /* ---- 08-ai.js ---- */
 /* ============================================================
