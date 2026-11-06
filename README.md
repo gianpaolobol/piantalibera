@@ -10,10 +10,11 @@ Prima versione (MVP) con editor 3D nel browser, viste esterno/interno, elementi 
 
 ```bash
 npm install
-npm run dev
+npm run mock      # editor completo + servizio di prova del render: http://localhost:8787/editor/
+npm run dev       # Vite: prototipo React su /, editor su /editor/, /api inoltrato al servizio di prova
 ```
 
-Apri l'indirizzo locale stampato da Vite.
+L'editor completo (pianta 2D → 3D, librerie, import/export, render AI) è descritto in [docs/editor.md](docs/editor.md). Il contratto del render è in [docs/api-render-contract.md](docs/api-render-contract.md).
 
 ## Funzioni
 

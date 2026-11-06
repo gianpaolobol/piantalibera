@@ -2,7 +2,8 @@
 
 ## Stato
 
-Il pulsante AI nella UI è volutamente non operativo: **nessuna chiamata ai modelli AI viene ancora eseguita**.
+- Prototipo React (`/`): pulsante AI non operativo.
+- Editor (`/editor/`): client del render sul contratto [api-render-contract.md](api-render-contract.md), funzionante contro il servizio di prova (`npm run mock`) e il backend PHP in modalità `mock`. **Nessun fornitore AI reale è ancora collegato.**
 
 ## Flusso previsto
 
