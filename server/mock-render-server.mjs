@@ -35,13 +35,20 @@ createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost"), ip = req.socket.remoteAddress || "?";
   const m = url.pathname.match(/^\/api\/render(?:\/([a-f0-9]{32}))?\/?$/);
   try {
+    if (url.pathname === "/api/config" && req.method === "GET"){
+      const used = (hits.get(ip) || []).filter(t => Date.now() - t < 3600e3).length;
+      return send(res, 200, {enabled: true, mock: true, generated: false, provider: "Servizio di prova locale", model: null, turnstile_site_key: null,
+        quota: {per_ip_daily: LIMITS.perIpPerHour, used_today: used, window: "1h"}, limits: {max_side: CONTRACT.maxSide, max_variants: CONTRACT.maxVariants},
+        retention_seconds: Math.round(LIMITS.retentionMs / 1000), privacy: "Servizio di prova in locale: le immagini restano su questo computer e non vengono inviate a terzi."});
+    }
     if (m){
       const id = m[1];
       if (req.method === "POST" && !id){
         if (!(req.headers["content-type"] || "").includes("application/json")) return fail(res, 415, "unsupported_media_type", "serve application/json");
-        const wait = rateLimited(ip); if (wait) return fail(res, 429, "quota_exceeded", `limite di ${LIMITS.perIpPerHour} richieste l'ora`, {"Retry-After": String(wait)});
         let body; try { body = JSON.parse(await readBody(req)); } catch(e){ return e.code === 413 ? fail(res, 413, "too_large", "richiesta troppo grande") : fail(res, 400, "invalid_json", "JSON non valido"); }
         const checked = validateRenderRequest(body); if (checked.error) return fail(res, checked.error.status, checked.error.code, checked.error.message);
+        if (body.consent !== true) return fail(res, 400, "consent_required", "serve il consenso all'invio delle immagini (consent: true)");
+        const wait = rateLimited(ip); if (wait) return fail(res, 429, "quota_exceeded", `limite di ${LIMITS.perIpPerHour} richieste l'ora`, {"Retry-After": String(wait)});
         const v = checked.value;
         const now = Date.now(), job = {id: randomUUID().replace(/-/g, ""), status: "queued", mode: v.mode, created_at: new Date(now).toISOString(), expires_at: new Date(now + LIMITS.retentionMs).toISOString(), images: []};
         jobs.set(job.id, job);

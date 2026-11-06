@@ -1,16 +1,17 @@
 {
   "name": "piantalibera",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "node server/mock-render-server.mjs",
     "build": "npm run build:editor -- --check",
     "build:editor": "node scripts/build-editor.mjs",
-    "test": "npm run test:unit && npm run test:e2e",
+    "test": "npm run test:unit && npm run test:php && npm run test:e2e",
     "test:unit": "node --test tests/worker.test.mjs",
     "test:e2e": "playwright test",
-    "deploy:cloudflare": "npx wrangler deploy --config worker/wrangler.toml"
+    "deploy:cloudflare": "npx wrangler deploy --config worker/wrangler.toml",
+    "test:php": "node --test tests/php.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"
