@@ -26,12 +26,13 @@ Obiettivi di progetto:
 
 ## Stato al 7/11/2026 (aggiornato da Claude)
 
-- Editor completo con le quattro fasi della roadmap d'interfaccia (docs/interfaccia-confronto.md, dettagli in docs/editor.md); PR #3–#18 unite su `main`.
+- Editor completo con le quattro fasi della roadmap d'interfaccia (docs/interfaccia-confronto.md, dettagli in docs/editor.md); PR #3–#21 unite su `main`.
 - Online: Worker Cloudflare con render AI attivo (FLUX.2 klein 4B, Apache 2.0) e condivisione `/api/share`; demo statica su GitHub Pages; pacchetto locale `locale-latest`.
-- Prove: 40 test unitari, 24 nel browser (in parallelo), pacchetto locale senza internet; workflow «Prove dal vivo» sul sito pubblicato (ogni lunedì e su richiesta).
+- Prove: 41 test unitari, 29 nel browser in parallelo (5 su telefono e tablet), pacchetto locale senza internet; workflow «Prove dal vivo» sul sito pubblicato (ogni lunedì e su richiesta).
 - Licenza **AGPL-3.0**; pagina con CSP e SRI; informativa privacy e termini in `public/` (P.IVA ed e-mail del titolare da completare); schema del progetto v3 (`docs/schema-progetto.md`).
 - P4 misurato il 7/11 (`docs/misure-p4.md`): 15 render reali, recall dei contorni 0,71 (F1 0,42), ~113 Neurons reali per render a 1024×768.
 - Quote decise dal proprietario (7/11): tutto nella quota gratuita; visitatori 2/giorno e 50 in totale; proprietario senza limiti per visitatore tramite `OWNER_TOKEN` (solo il tetto totale). Link per il cliente in sola lettura o con modifica: area clienti con storico delle versioni, approvazione e «chiedi modifiche» (link con modifica: 90 giorni).
+- Telefono e tablet (7/11): disposizione compatta sotto 900 px (una vista, strumenti in striscia, pannello a scheda dal basso), gesti a tocco, app installabile (PWA) su computer Windows/Mac, Android e iOS; progetto Capacitor in `app-mobile/` con APK Android e build iOS in CI (`docs/app-mobile.md`). Store: servono gli account del proprietario.
 - Decisione del 7/11: per la demo resta tutto gratuito (editor, area clienti aperta a tutti, 2 render al giorno per visitatore, clienti compresi). In futuro i render AI diventeranno a pagamento (ipotesi: pacchetti con Stripe, 2 gratis al giorno), da progettare quando il proprietario lo chiede; servono conto Stripe e P.IVA.
 - Aperti: P.IVA/e-mail nelle pagine legali (il proprietario le darà più avanti), fedeltà degli interni, avvisi e-mail tra progettista e cliente, pulsante «Area clienti» sul sito Cargo del proprietario (gianpaolofranceschiniarchitettura.cargo.site, da fare via browser).
 - La fotografia del 6/11 (prototipo React) è superata: il prototipo resta nel branch `archivio/prototipo-react`.

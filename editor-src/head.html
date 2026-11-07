@@ -233,20 +233,50 @@ pre.raw{margin:0;max-height:160px;overflow:auto;font-family:var(--f-data);font-s
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom, 0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:4px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:calc(100% - 32px)}
 #toast.on{opacity:1}
 #toast.err{background:var(--danger);color:#fff}
-@media (max-width: 1080px){
-  .main{grid-template-columns:auto 1fr}
-  .side{grid-column:1 / -1}
-  #app{height:auto;min-height:100%}
-  .views{height:72vh}
-}
-@media (max-width: 640px){
-  .main{grid-template-columns:1fr}
-  .tools{flex-direction:row;flex-wrap:wrap;justify-content:center}
-  .tool-sep{width:1px;height:auto;margin:2px 3px}
-  .views{grid-template-columns:1fr;grid-template-rows:1fr 1fr;height:120vh}
-  .views[data-mode="2d"],.views[data-mode="3d"]{grid-template-rows:1fr;height:75vh}
+/* Tablet orizzontale e schermi medi: stessa disposizione del computer, senza scorrimento della pagina */
+@media (max-width: 1180px){
+  :root{--side-w:290px}
+  .views[data-mode="both"]{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
   .brand small{display:none}
 }
+/* Telefono e tablet verticale (classe messa da 053-mobile.js): una vista per volta a tutto schermo,
+   strumenti in una striscia orizzontale, pannello come scheda che sale dal basso con il proprio scorrimento.
+   La pagina non scorre mai: così un dito sulla pianta o sul 3D muove solo la vista. */
+body.compact{overflow:hidden;overscroll-behavior:none;--peek:calc(50px + env(safe-area-inset-bottom, 0px))}
+body.compact #app{height:100dvh;gap:6px;padding:calc(6px + env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) var(--peek) max(8px, env(safe-area-inset-left, 0px))}
+body.compact .bar{gap:6px;row-gap:6px}
+body.compact .bar .field label{display:none}
+body.compact .brand{order:0}body.compact .brand small{display:none}
+body.compact .bar .seg:last-child{order:1;margin-left:auto}
+body.compact #viewSeg{order:2}body.compact #viewSeg [data-v="both"]{display:none}
+body.compact .bar .field:has(#levelSel){order:3}
+body.compact .bar .field:has(#projName){order:4;flex:1 1 150px}body.compact #projName{width:100%!important;flex:1}
+body.compact #undoBtn,body.compact #redoBtn,body.compact #addLevel{font-size:0;min-width:40px;justify-content:center}
+body.compact #undoBtn::before{content:"↶";font-size:19px}body.compact #redoBtn::before{content:"↷";font-size:19px}body.compact #addLevel::before{content:"+";font-size:18px}
+@media (max-width:560px){body.compact .bar .field:has(#projName){order:1;flex:none}body.compact #projName{display:none}body.compact .bar .seg:last-child{order:2;margin-left:0}body.compact .brand{margin-right:auto}
+  body.compact #viewSeg{order:3}body.compact .bar .field:has(#levelSel){order:4;flex:1}body.compact #levelSel{flex:1;width:0}}
+body.compact .spacer,body.compact #sideToggle,body.compact .side-grip,body.compact .side-head,body.compact #sideFloat{display:none!important}
+body.compact .main{display:flex;flex-direction:column;gap:6px;min-height:0}
+body.compact .views{order:1;flex:1;min-height:0;grid-template-columns:1fr;grid-template-rows:1fr;height:auto}
+body.compact .views[data-mode="both"]{grid-template-rows:1fr 1fr}
+body.compact .tools{order:2;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;scrollbar-width:none;padding:4px;gap:4px;flex:none}
+body.compact .tools::-webkit-scrollbar{display:none}
+body.compact .tool{flex:0 0 46px;width:46px;height:46px}body.compact .tool kbd{display:none}
+body.compact .tool-sep{width:1px;height:auto;margin:4px 2px;flex:none}
+body.compact .side{position:fixed;left:0;right:0;bottom:0;z-index:40;height:var(--sheet-h, var(--peek));max-height:calc(100dvh - 40px);border-radius:12px 12px 0 0;border-bottom:0;
+  box-shadow:0 -6px 24px rgba(0,0,0,.18);padding-bottom:env(safe-area-inset-bottom, 0px);transition:height .22s ease;display:flex}
+body.compact.sheet-dragging .side{transition:none}
+body.compact[data-sheet="half"] .side{--sheet-h:52dvh}body.compact[data-sheet="full"] .side{--sheet-h:calc(100dvh - 56px)}
+body.compact[data-sheet="peek"] .panel{visibility:hidden}
+body.compact .panel{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+body.compact .tabs{overflow-x:auto;scrollbar-width:none;flex:none}body.compact .tabs button{flex:1 0 auto;padding:10px 10px}
+.sheet-grip{display:none}
+body.compact .sheet-grip{display:grid;place-items:center;height:18px;flex:none;cursor:ns-resize;touch-action:none}
+body.compact .sheet-grip span{width:44px;height:5px;border-radius:3px;background:var(--line)}
+body.compact .statusbar .sb-left{display:none}body.compact .statusbar{justify-content:flex-end}
+body.compact .cam{max-width:calc(100% - 16px);top:auto;bottom:8px;right:8px;left:8px;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;touch-action:pan-x}
+body.compact .cam .btn{flex:none}
+body.compact .hud{bottom:52px}
 @media (prefers-reduced-motion: reduce){ #toast{transition:none} }
 </style>
 

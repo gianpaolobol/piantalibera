@@ -19,7 +19,7 @@ const scripts = [
   "examples/js/shaders/GammaCorrectionShader.js", "examples/js/postprocessing/EffectComposer.js",
   "examples/js/postprocessing/RenderPass.js", "examples/js/postprocessing/ShaderPass.js", "examples/js/postprocessing/SSAOPass.js",
 ];
-const parts = ["01-base.js", "02-lib.js", "03-model.js", "04-plan.js", "045-plan-pro.js", "047-fase2.js", "048-fase3.js", "05-ui.js", "06-online.js", "07-io.js", "075-auto3d.js", "076-auto3d-ui.js", "08-ai.js", "049-progetti.js", "050-tavole.js", "051-condivisione.js", "052-avanguardia.js", "09-init.js"];
+const parts = ["01-base.js", "02-lib.js", "03-model.js", "04-plan.js", "045-plan-pro.js", "047-fase2.js", "048-fase3.js", "05-ui.js", "06-online.js", "07-io.js", "075-auto3d.js", "076-auto3d-ui.js", "08-ai.js", "049-progetti.js", "050-tavole.js", "051-condivisione.js", "052-avanguardia.js", "053-mobile.js", "09-init.js"];
 
 // impronte di integrità delle librerie (scripts/sri.mjs): usate dai tag statici e da loadScript()
 const SRI = existsSync(join(root, "scripts/sri.json")) ? JSON.parse(readFileSync(join(root, "scripts/sri.json"), "utf8")) : {};
@@ -47,7 +47,11 @@ const CSP = [
 const tag = s => { const u = `${THREE}/${s}`; return SRI[u] ? `<script src="${u}" integrity="${SRI[u]}" crossorigin="anonymous"></script>` : `<script src="${u}"></script>`; };
 const html = [
   "<!doctype html>",
-  `<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="${CSP}">`,
+  `<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="${CSP}">` +
+    // app installabile su telefono e tablet (manifest e icone in public/)
+    `<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes">` +
+    `<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera">` +
+    `<link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">`,
   "</head><body>",
   readFileSync(join(src, "head.html"), "utf8").trimEnd(),
   ...scripts.map(tag),

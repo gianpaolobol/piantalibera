@@ -1,0 +1,21 @@
+{
+  "name": "pianta-libera-app",
+  "private": true,
+  "version": "0.5.0",
+  "description": "Pianta Libera come app per iPhone, iPad e Android (Capacitor): apre il sito pubblicato in una finestra nativa.",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "android": "node prepara.mjs android",
+    "ios": "node prepara.mjs ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/ios": "8.6.0",
+    "@capacitor/share": "8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0"
+  }
+}

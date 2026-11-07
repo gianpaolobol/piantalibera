@@ -1,0 +1,53 @@
+# App per Android e iPhone/iPad (Capacitor, cartella app-mobile/).
+# - Android: costruisce un APK di prova installabile (artefatto «pianta-libera-android»).
+# - iOS: costruisce l'app per il simulatore, per verificare che il progetto compili.
+#   Per l'App Store servono l'account Apple Developer e la firma (vedi docs/app-mobile.md).
+name: App per telefono e tablet
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["app-mobile/**", ".github/workflows/app-mobile.yml"]
+  pull_request:
+    paths: ["app-mobile/**", ".github/workflows/app-mobile.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults: { run: { working-directory: app-mobile } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: app-mobile/package-lock.json }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - run: npm ci
+      - run: node prepara.mjs android
+      - name: APK di prova
+        run: cd android && ./gradlew --no-daemon assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pianta-libera-android
+          path: app-mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    defaults: { run: { working-directory: app-mobile } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: app-mobile/package-lock.json }
+      - run: npm ci
+      - run: node prepara.mjs ios
+      - name: Compila per il simulatore (senza firma)
+        run: |
+          cd ios/App
+          if [ -d App.xcworkspace ]; then target="-workspace App.xcworkspace"; else target="-project App.xcodeproj"; fi
+          xcodebuild $target -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build | tail -n 30

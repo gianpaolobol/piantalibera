@@ -123,6 +123,7 @@ $("#pane3d").addEventListener("pointerdown", e => {
   if (M3.on || S.tool !== "select" || e.shiftKey || S.viewer) return;
   const hit = pick3D(e), ob = hit && objOf3D(hit.object); if (!ob) return;
   const o = P.objects.find(x => x.id === ob.userData.objId); if (!o || o.locked) return;
+  if (e.pointerType === "touch" && !isSelected(o.id)) return;   // a tocco: un dito gira la vista; si sposta solo l'oggetto già selezionato
   const L = level(o.level); controls.enabled = false; c3d.setPointerCapture(e.pointerId);
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(L.elev + (o.z || 0))), p0 = new THREE.Vector3(); ray3.ray.intersectPlane(plane, p0);
   d3 = {type:"move", o, ob, plane, start:[p0.x, p0.z], orig:[o.x, o.y], x:e.clientX, y:e.clientY, moved:false};

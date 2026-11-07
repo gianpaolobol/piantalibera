@@ -211,6 +211,7 @@ test("fase 1 completata: muro ad arco, etichette locali, superfici e unità", as
 });
 
 test("fase 2: selezione e trascinamento in 3D, camere, metro, elenco e trascina dal catalogo", async ({ page }) => {
+  test.setTimeout(150_000);   // molte interazioni nel 3D: con le prove in parallelo può superare il minuto e mezzo
   const errors = await open(page);
   const box = await page.locator("#c2d").boundingBox(), b3 = await page.locator("#c3d").boundingBox();
   const at = async p => { const s = await page.evaluate(q => toS(q), p); return [box.x + s[0], box.y + s[1]]; };
@@ -487,6 +488,7 @@ test("informazioni, privacy, termini, licenza e versione dello schema", async ({
   await page.click("#infoBtn");
   const links = await page.locator("#helpBox .info-links a").evaluateAll(a => a.map(x => x.getAttribute("href")));
   expect(links).toEqual(["privacy.html", "termini.html", "https://github.com/gianpaolobol/piantalibera"]);
+  await expect(page.locator("#installBox")).toContainText("app");
   for (const [f, h] of [["privacy.html", "Informativa sul trattamento dei dati"], ["termini.html", "Termini d'uso"]]){
     const v = await context.newPage(); await v.goto("/" + f); await expect(v.locator("h1")).toHaveText(h); await expect(v.locator("body")).toContainText("GianPaolo Franceschini Architettura"); await v.close();
   }

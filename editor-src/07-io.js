@@ -13,6 +13,19 @@ async function saveFile(name, data){
     catch(e){ if (e?.code !== "declined") toast("Salvataggio non riuscito: " + (e?.message || e?.code), true); }
     return;
   }
+  // app per iPhone/iPad/Android (Capacitor): il file va nella cache dell'app e si apre il pannello «Condividi/Salva»
+  const cap = window.Capacitor, native = cap?.isNativePlatform?.() && cap.Plugins?.Filesystem && cap.Plugins?.Share;
+  if (native){
+    try { const b64 = (await blobToDataURL(blob)).split(",")[1];
+      const r = await cap.Plugins.Filesystem.writeFile({path:name, data:b64, directory:"CACHE"});
+      await cap.Plugins.Share.share({title:name, files:[r.uri]}); return; }
+    catch(e){ if (!/cancel/i.test(e?.message || "")) toast("Salvataggio non riuscito: " + (e?.message || e), true); return; }
+  }
+  // telefono e tablet nel browser: dove si può, il pannello di condivisione del sistema (Salva su File, AirDrop, Drive…)
+  if (matchMedia("(pointer: coarse)").matches && navigator.canShare){
+    try { const f = new File([blob], name, {type:blob.type || "application/octet-stream"}); if (navigator.canShare({files:[f]})){ await navigator.share({files:[f], title:name}); return; } }
+    catch(e){ if (e?.name === "AbortError") return; }   // altrimenti (gesto scaduto, tipo non ammesso) si scarica come al solito
+  }
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 2000); toast("Scaricato: " + name);
 }
 const slug = () => slugify(P.name || "progetto");
