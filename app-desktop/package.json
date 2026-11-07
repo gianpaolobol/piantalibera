@@ -1,0 +1,33 @@
+{
+  "name": "pianta-libera-desktop",
+  "productName": "Pianta Libera",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Pianta Libera per Windows e Mac: l'editor in una finestra sua, con salvataggio dei file e uso senza rete dopo la prima apertura.",
+  "license": "AGPL-3.0-only",
+  "author": "GianPaolo Franceschini Architettura",
+  "homepage": "https://github.com/gianpaolobol/piantalibera",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
+  },
+  "devDependencies": {
+    "electron": "44.9.3",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "it.piantalibera.desktop",
+    "productName": "Pianta Libera",
+    "artifactName": "Pianta-Libera-${version}-${os}-${arch}.${ext}",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["main.js", "preload.js", "offline.html", "package.json"],
+    "win": { "target": [{ "target": "nsis", "arch": ["x64", "arm64"] }], "icon": "build/icon.png" },
+    "nsis": { "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "shortcutName": "Pianta Libera" },
+    "mac": { "target": [{ "target": "dmg", "arch": ["universal"] }], "category": "public.app-category.graphics-design", "icon": "build/icon.png", "hardenedRuntime": true },
+    "dmg": { "title": "Pianta Libera" },
+    "linux": { "target": ["AppImage"], "category": "Graphics", "icon": "build/icon.png" }
+  }
+}

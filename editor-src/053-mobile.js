@@ -51,14 +51,16 @@ addEventListener("beforeinstallprompt", e => { e.preventDefault(); installPrompt
 addEventListener("appinstalled", () => { installPrompt = null; toast("Pianta Libera è installata come app"); });
 const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 function installHTML(){
-  if (isStandalone()) return `<p class="note">Stai usando Pianta Libera come app installata.</p>`;
+  if (isStandalone() || window.ReactNativeWebView || /PiantaLiberaApp|PiantaLiberaDesktop/.test(navigator.userAgent)) return `<p class="note">Stai usando Pianta Libera come app installata. Le altre versioni (Windows, Mac, Android, iPhone): <a href="scarica.html" target="_blank" rel="noopener">pagina di download</a>.</p>`;
   if (installPrompt) return `<div class="btns"><button class="btn primary" id="installBtn">Installa come app</button></div><p class="note">Si apre in una finestra sua, con l'icona tra le app, e funziona anche senza rete.</p>`;
   const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1), safariMac = /Macintosh/.test(ua) && /Safari/.test(ua) && !/Chrome|Edg|Firefox/.test(ua);
   if (ios) return `<p class="note"><b>Installala come app</b>: tocca Condividi e poi «Aggiungi alla schermata Home».</p>`;
   if (safariMac) return `<p class="note"><b>Installala come app</b>: menu File → «Aggiungi al Dock».</p>`;
-  return `<p class="note"><b>Installala come app</b> da Chrome o Edge: icona di installazione nella barra degli indirizzi, oppure menu → «Installa Pianta Libera».</p>`;
+  return `<p class="note"><b>Installala come app</b> da Chrome o Edge: icona di installazione nella barra degli indirizzi, oppure menu → «Installa Pianta Libera». Programmi per Windows e Mac e app per telefono: <a href="scarica.html" target="_blank" rel="noopener">pagina di download</a>.</p>`;
 }
 document.addEventListener("click", async e => { if (!e.target.closest("#installBtn") || !installPrompt) return; installPrompt.prompt(); const r = await installPrompt.userChoice.catch(() => null); installPrompt = null; const box = $("#installBox"); if (box) box.innerHTML = r?.outcome === "accepted" ? `<p class="note">Installazione avviata.</p>` : installHTML(); });
 if ("serviceWorker" in navigator && (location.protocol === "https:" || ["localhost", "127.0.0.1"].includes(location.hostname)) && !/[?&]nosw\b/.test(location.search)){
   addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(e => console.warn("service worker:", e.message)));
 }
+/* risposte dell'app nativa (app-mobile/) al salvataggio dei file */
+addEventListener("pl-native-error", e => toast("Salvataggio non riuscito: " + e.detail, true));

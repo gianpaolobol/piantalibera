@@ -13,14 +13,13 @@ async function saveFile(name, data){
     catch(e){ if (e?.code !== "declined") toast("Salvataggio non riuscito: " + (e?.message || e?.code), true); }
     return;
   }
-  // app per iPhone/iPad/Android (Capacitor): il file va nella cache dell'app e si apre il pannello «Condividi/Salva»
-  const cap = window.Capacitor, native = cap?.isNativePlatform?.() && cap.Plugins?.Filesystem && cap.Plugins?.Share;
-  if (native){
-    try { const b64 = (await blobToDataURL(blob)).split(",")[1];
-      const r = await cap.Plugins.Filesystem.writeFile({path:name, data:b64, directory:"CACHE"});
-      await cap.Plugins.Share.share({title:name, files:[r.uri]}); return; }
-    catch(e){ if (!/cancel/i.test(e?.message || "")) toast("Salvataggio non riuscito: " + (e?.message || e), true); return; }
+  // app per iPhone, iPad e Android (app-mobile/, Expo): il file passa all'app, che apre «Condividi/Salva»
+  if (window.ReactNativeWebView?.postMessage){
+    if (blob.size > 80 * 1024 * 1024){ toast("File troppo grande per l'app (oltre 80 MB): esportalo dal computer", true); return; }
+    const b64 = (await blobToDataURL(blob)).split(",")[1];
+    window.ReactNativeWebView.postMessage(JSON.stringify({type:"save", name, mime:blob.type || "application/octet-stream", b64})); return;
   }
+  // app per Windows e Mac (app-desktop/, Electron): il download apre la finestra «Salva con nome» (gestita dall'app)
   // telefono e tablet nel browser: dove si può, il pannello di condivisione del sistema (Salva su File, AirDrop, Drive…)
   if (matchMedia("(pointer: coarse)").matches && navigator.canShare){
     try { const f = new File([blob], name, {type:blob.type || "application/octet-stream"}); if (navigator.canShare({files:[f]})){ await navigator.share({files:[f], title:name}); return; } }
