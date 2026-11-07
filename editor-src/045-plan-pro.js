@@ -159,7 +159,7 @@ function openHelp(){
 function closeHelp(){ document.getElementById("helpBox")?.remove(); }
 /* ---------- informazioni, privacy, termini, licenza (AGPL-3.0 §13: link al codice sorgente) ---------- */
 const SOURCE_URL = "https://github.com/gianpaolobol/piantalibera";
-const INFO_LINKS = `<a href="privacy.html" target="_blank" rel="noopener">Informativa privacy</a><a href="termini.html" target="_blank" rel="noopener">Termini d'uso</a><a href="${SOURCE_URL}" target="_blank" rel="noopener">Codice sorgente (AGPL-3.0)</a>`;
+const INFO_LINKS = `<a href="privacy.html" target="_blank" rel="noopener">Informativa privacy</a><a href="termini.html" target="_blank" rel="noopener">Termini d'uso</a><a href="${SOURCE_URL}" target="_blank" rel="noopener">Codice sorgente (AGPL-3.0)</a><a href="scarica.html" target="_blank" rel="noopener">Scarica l'app</a>`;
 function openInfo(){
   closeHelp();
   const d = document.createElement("div"); d.id = "helpBox"; d.className = "help"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Informazioni");

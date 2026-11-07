@@ -487,9 +487,9 @@ test("informazioni, privacy, termini, licenza e versione dello schema", async ({
   await page.waitForTimeout(300); expect(errors.some(e => /Content Security Policy/.test(e))).toBe(true); errors.length = 0;
   await page.click("#infoBtn");
   const links = await page.locator("#helpBox .info-links a").evaluateAll(a => a.map(x => x.getAttribute("href")));
-  expect(links).toEqual(["privacy.html", "termini.html", "https://github.com/gianpaolobol/piantalibera"]);
+  expect(links).toEqual(["privacy.html", "termini.html", "https://github.com/gianpaolobol/piantalibera", "scarica.html"]);
   await expect(page.locator("#installBox")).toContainText("app");
-  for (const [f, h] of [["privacy.html", "Informativa sul trattamento dei dati"], ["termini.html", "Termini d'uso"]]){
+  for (const [f, h] of [["privacy.html", "Informativa sul trattamento dei dati"], ["termini.html", "Termini d'uso"], ["scarica.html", "Scarica Pianta Libera"]]){
     const v = await context.newPage(); await v.goto("/" + f); await expect(v.locator("h1")).toHaveText(h); await expect(v.locator("body")).toContainText("GianPaolo Franceschini Architettura"); await v.close();
   }
   await page.click("#helpClose");

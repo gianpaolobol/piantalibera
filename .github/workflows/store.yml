@@ -1,0 +1,69 @@
+# TestFlight (iPhone/iPad) e Google Play, con la stessa procedura di Fungo Italia: EAS di Expo.
+# Account Expo «gianpaolobol», team Apple BX9MDXAHKG; le credenziali Apple e Google restano in Expo,
+# mai nel repository. Serve il segreto EXPO_TOKEN in questo repository (vedi docs/app.md).
+name: Store (TestFlight e Google Play)
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Piattaforma
+        type: choice
+        options: [ios, android, all]
+        default: ios
+      submit:
+        description: Invia allo store dopo la build (TestFlight interno / Play «internal» in bozza)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: store
+  cancel-in-progress: false
+
+jobs:
+  eas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults: { run: { working-directory: app-mobile } }
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PROJECT_ID: ${{ vars.EXPO_PROJECT_ID }}
+      ASC_APP_ID: ${{ vars.ASC_APP_ID }}
+      EAS: npx -y eas-cli@24.8.0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24.3.0, cache: npm, cache-dependency-path: app-mobile/package-lock.json }
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Accesso a Expo
+        run: |
+          [ -n "$EXPO_TOKEN" ] || { echo "::error::Manca il segreto EXPO_TOKEN (Settings → Secrets and variables → Actions). Vedi docs/app.md"; exit 1; }
+          $EAS whoami
+      - name: Progetto Expo (creato la prima volta)
+        id: proj
+        run: |
+          if [ -z "$EXPO_PROJECT_ID" ]; then
+            mv app.config.js "$RUNNER_TEMP/app.config.js"          # eas init scrive l'ID solo nella configurazione statica
+            $EAS init --non-interactive --force
+            id=$(node -p "require('./app.json').expo.extra?.eas?.projectId || ''")
+            mv "$RUNNER_TEMP/app.config.js" app.config.js
+            echo "::notice::Progetto Expo creato: impostare la variabile del repository EXPO_PROJECT_ID = $id"
+            echo "id=$id" >> "$GITHUB_OUTPUT"
+          else echo "id=$EXPO_PROJECT_ID" >> "$GITHUB_OUTPUT"; fi
+      - name: App Store Connect (ID dell'app, se già noto)
+        if: env.ASC_APP_ID != ''
+        run: node -e "const f='eas.json',c=JSON.parse(require('fs').readFileSync(f));c.submit.production.ios.ascAppId=process.env.ASC_APP_ID;require('fs').writeFileSync(f,JSON.stringify(c,null,2))"
+      - name: Build firmata${{ inputs.submit && ' e invio' || '' }}
+        env:
+          EXPO_PROJECT_ID: ${{ steps.proj.outputs.id }}
+          PLATFORM: ${{ inputs.platform }}
+          SUBMIT: ${{ inputs.submit && '--auto-submit' || '' }}
+        run: |
+          echo "Build $PLATFORM da $GITHUB_SHA"
+          $EAS build --platform "$PLATFORM" --profile production $SUBMIT --non-interactive --no-wait
+          echo "### Build avviata su Expo ($PLATFORM)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Stato e log: https://expo.dev/accounts/gianpaolobol/projects/pianta-libera/builds" >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,116 @@
+# Programmi e app installabili di Pianta Libera, pubblicati nella release «app-latest»:
+#   Windows (.exe, x64 e ARM), Mac (.dmg universale Intel + Apple Silicon), Android (.apk di prova).
+# iOS: qui si verifica solo che il progetto compili; TestFlight e App Store passano da «Store» (store.yml).
+# Pagina di download: public/scarica.html (sul sito e sulla demo GitHub Pages).
+name: App per Windows, Mac e Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["app-desktop/**", "app-mobile/**", ".github/workflows/app.yml"]
+  pull_request:
+    paths: ["app-desktop/**", "app-mobile/**", ".github/workflows/app.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, cmd: "dist:win", name: windows }
+          - { os: macos-latest, cmd: "dist:mac", name: mac }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults: { run: { working-directory: app-desktop } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: app-desktop/package-lock.json }
+      - run: npm ci
+      - name: Pacchetto ${{ matrix.name }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"   # senza certificato: installer non firmato (vedi docs/app.md)
+        run: npm run ${{ matrix.cmd }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.name }}
+          path: |
+            app-desktop/dist/*-x64.exe
+            app-desktop/dist/*-arm64.exe
+            app-desktop/dist/*.dmg
+          if-no-files-found: error
+          retention-days: 14
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults: { run: { working-directory: app-mobile } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24.3.0, cache: npm, cache-dependency-path: app-mobile/package-lock.json }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx expo prebuild --platform android --no-install
+      - name: APK installabile (firmato con la chiave di prova, non per il Play Store)
+        run: cd android && ./gradlew --no-daemon assembleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: app-mobile/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  ios:
+    if: github.event_name != 'push'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    defaults: { run: { working-directory: app-mobile } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24.3.0, cache: npm, cache-dependency-path: app-mobile/package-lock.json }
+      - run: npm ci
+      - run: npx expo prebuild --platform ios
+      - name: Compila per il simulatore (senza firma)
+        run: |
+          cd ios
+          ws=$(ls -d *.xcworkspace | head -1); scheme=$(basename "$ws" .xcworkspace)
+          xcodebuild -workspace "$ws" -scheme "$scheme" -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build | tail -n 25
+
+  release:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [desktop, android]
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: out }
+      - name: Nomi stabili per la pagina di download
+        run: |
+          mkdir rel
+          cp out/desktop-windows/*-x64.exe rel/Pianta-Libera-Windows-x64.exe
+          cp out/desktop-windows/*-arm64.exe rel/Pianta-Libera-Windows-arm64.exe
+          cp out/desktop-mac/*.dmg rel/Pianta-Libera-Mac.dmg
+          cp out/android-apk/app-release.apk rel/Pianta-Libera-Android.apk
+          (cd rel && sha256sum * > SHA256SUMS.txt && ls -la)
+      - name: Pubblica la release app-latest
+        env: { GH_TOKEN: "${{ github.token }}", REPO: "${{ github.repository }}" }
+        run: |
+          notes="Programmi e app di Pianta Libera, aggiornati automaticamente da main (commit ${GITHUB_SHA::7}). Istruzioni: https://pianta-libera.gianpaolo-franceschini.workers.dev/scarica.html"
+          if gh release view app-latest -R "$REPO" >/dev/null 2>&1; then
+            gh release edit app-latest -R "$REPO" --title "Pianta Libera — app per Windows, Mac e Android" --notes "$notes"
+            gh release upload app-latest rel/* -R "$REPO" --clobber
+          else
+            gh release create app-latest rel/* -R "$REPO" --title "Pianta Libera — app per Windows, Mac e Android" --notes "$notes" --target "$GITHUB_SHA"
+          fi

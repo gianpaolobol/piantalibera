@@ -128,7 +128,7 @@ Dalla scheda **Esporta → Condividi con il cliente** il server locale crea link
 
 ### Su telefono e tablet
 
-L'editor si adatta da solo a telefono e tablet (una vista per volta, pannello che sale dal basso, gesti a tocco: vedi `docs/app-mobile.md`). Con il server avviato con `HOST=0.0.0.0` lo apri dal telefono all'indirizzo del computer (es. `http://192.168.1.20:8787/`).
+L'editor si adatta da solo a telefono e tablet (una vista per volta, pannello che sale dal basso, gesti a tocco: vedi `docs/app.md`). Con il server avviato con `HOST=0.0.0.0` lo apri dal telefono all'indirizzo del computer (es. `http://192.168.1.20:8787/`).
 
 ## 6. Aggiornare
 

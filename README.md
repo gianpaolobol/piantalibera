@@ -58,7 +58,7 @@ Il prototipo React iniziale è archiviato nel branch `archivio/prototipo-react`.
 
 ## Telefono, tablet e app
 
-Disposizione compatta per telefono e tablet, gesti a tocco, installabile come app (PWA) e progetto Capacitor per Android e iOS: [docs/app-mobile.md](docs/app-mobile.md).
+Disposizione compatta per telefono e tablet, gesti a tocco, installabile come app (PWA), programmi per Windows e Mac, app per iPhone, iPad e Android: [docs/app.md](docs/app.md) · download: `scarica.html`.
 
 ## Uso in locale
 
