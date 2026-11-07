@@ -63,9 +63,10 @@ jobs:
           echo "$r" | jq . > prove-dal-vivo/consumi.json 2>/dev/null || echo "$r" > prove-dal-vivo/consumi.json
           if echo "$r" | jq -e '.data.viewer.accounts[0].aiInferenceAdaptiveGroups' >/dev/null 2>&1; then
             { echo; echo "### Consumo reale di Workers AI (dal $d)"; echo; echo "| Giorno | Modello | Richieste | Neurons |"; echo "|---|---|---|---|";
-              echo "$r" | jq -r '.data.viewer.accounts[0].aiInferenceAdaptiveGroups[] | "| \(.dimensions.date) | \(.dimensions.modelId) | \(.count) | \(.sum.totalNeurons) |"'; } >> "$GITHUB_STEP_SUMMARY"
+              echo "$r" | jq -r '.data.viewer.accounts[0].aiInferenceAdaptiveGroups[] | "| \(.dimensions.date) | \(.dimensions.modelId) | \(.count) | \(.sum.totalNeurons) |"'; } | tee -a "$GITHUB_STEP_SUMMARY"
           else
-            { echo; echo "Consumo reale non leggibile con questo token (serve il permesso Account Analytics: Read). Risposta in consumi.json."; } >> "$GITHUB_STEP_SUMMARY"
+            { echo; echo "Consumo reale non leggibile con questo token (serve il permesso Account Analytics: Read). Risposta in consumi.json."; } | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "$r" | jq -c '.errors // .' 2>/dev/null | cut -c1-400
           fi
       - uses: actions/upload-artifact@v4
         if: always()
