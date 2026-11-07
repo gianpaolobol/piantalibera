@@ -26,10 +26,12 @@ Obiettivi di progetto:
 
 ## Stato al 7/11/2026 (aggiornato da Claude)
 
-- Editor completo con le quattro fasi della roadmap d'interfaccia (docs/interfaccia-confronto.md, dettagli in docs/editor.md); PR #3–#13 unite su `main`.
+- Editor completo con le quattro fasi della roadmap d'interfaccia (docs/interfaccia-confronto.md, dettagli in docs/editor.md); PR #3–#16 unite su `main`.
 - Online: Worker Cloudflare con render AI attivo (FLUX.2 klein 4B, Apache 2.0) e condivisione `/api/share`; demo statica su GitHub Pages; pacchetto locale `locale-latest`.
-- Prove: 36 test unitari, 21 nel browser, eseguite in CI a ogni PR.
-- Aperti: misura della fedeltà geometrica e dei consumi reali (P4), informativa privacy da completare, licenza del repository da scegliere, verifica dal vivo sul dominio pubblicato.
+- Prove: 37 test unitari, 22 nel browser (in parallelo), pacchetto locale senza internet; workflow «Prove dal vivo» sul sito pubblicato (ogni lunedì e su richiesta).
+- Licenza **AGPL-3.0**; pagina con CSP e SRI; informativa privacy e termini in `public/` (P.IVA ed e-mail del titolare da completare); schema del progetto v3 (`docs/schema-progetto.md`).
+- P4 misurato il 7/11 (`docs/misure-p4.md`): 15 render reali, recall dei contorni 0,71 (F1 0,42), ~113 Neurons reali per render a 1024×768.
+- Aperti: P.IVA/e-mail nelle pagine legali, quote per l'apertura al pubblico, fedeltà degli interni.
 - La fotografia del 6/11 (prototipo React) è superata: il prototipo resta nel branch `archivio/prototipo-react`.
 
 ## Indicazioni tecniche e architettura raccomandata
