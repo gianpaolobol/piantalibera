@@ -79,16 +79,16 @@ function cameraPath(kind){
 }
 async function recordVideo(kind, secs, hres){
   if (!window.MediaRecorder || !c3d.captureStream) throw new Error("questo browser non sa registrare video dalla vista 3D");
-  const mime = ["video/mp4;codecs=avc1", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find(t => MediaRecorder.isTypeSupported(t)); if (!mime) throw new Error("nessun formato video disponibile");
+  const mime = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4;codecs=avc1", "video/mp4"].find(t => MediaRecorder.isTypeSupported(t)); if (!mime) throw new Error("nessun formato video disponibile");
   const path = cameraPath(kind), W = hres >= 1080 ? 1920 : hres >= 720 ? 1280 : 640, H = Math.round(W * 9 / 16);
   if (WALK.on) exitWalk(); const st = camState(), size = renderer.getSize(new THREE.Vector2()), pr = renderer.getPixelRatio(), asp = camera.aspect;
   renderer.setPixelRatio(1); renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix(); controls.enabled = false;
-  const stream = c3d.captureStream(0), track = stream.getVideoTracks()[0], rec = new MediaRecorder(stream, {mimeType:mime, videoBitsPerSecond:W >= 1920 ? 16e6 : 8e6}), chunks = [];
+  const stream = c3d.captureStream(30), track = stream.getVideoTracks()[0], rec = new MediaRecorder(stream, {mimeType:mime, videoBitsPerSecond:W >= 1920 ? 16e6 : 8e6}), chunks = [];
   rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); }; const stopped = new Promise(r => rec.onstop = r);
   VID.on = true; VID.stop = false; rec.start(250); const fps = 30, N = Math.max(2, Math.round(secs * fps)), t0 = performance.now();
   try {
     for (let i = 0; i <= N && !VID.stop; i++){
-      const c = path(i / N); camera.position.copy(c.pos); camera.fov = c.fov; camera.updateProjectionMatrix(); camera.lookAt(c.target); camera.updateMatrixWorld(); drawFrame(); track.requestFrame?.();
+      const c = path(i / N); camera.position.copy(c.pos); camera.fov = c.fov; camera.updateProjectionMatrix(); camera.lookAt(c.target); camera.updateMatrixWorld(); drawFrame();
       if (i % 10 === 0) busy(`Registro il video… ${Math.round(i / N * 100)}% · Esc per fermare`);
       await sleep(Math.max(0, t0 + (i + 1) * 1000 / fps - performance.now()));
     }
@@ -96,7 +96,9 @@ async function recordVideo(kind, secs, hres){
     rec.stop(); await stopped; track.stop(); VID.on = false; busy("");
     renderer.setPixelRatio(pr); renderer.setSize(size.x, size.y, false); camera.aspect = asp; camera.updateProjectionMatrix(); controls.enabled = true; applyCamState(st); render3D();
   }
-  return {blob:new Blob(chunks, {type:mime.split(";")[0]}), ext:mime.includes("mp4") ? "mp4" : "webm"};
+  const blob = new Blob(chunks, {type:mime.split(";")[0]});
+  if (!blob.size) throw new Error("il browser non ha registrato fotogrammi: riprova con la scheda in primo piano o con un altro browser");
+  return {blob, ext:mime.includes("mp4") ? "mp4" : "webm"};
 }
 document.addEventListener("keydown", e => { if (e.key === "Escape" && VID.on) VID.stop = true; });
 
