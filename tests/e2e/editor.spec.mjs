@@ -393,8 +393,11 @@ test("fase 4: ritocco con maschera e galleria salvata nel progetto", async ({ pa
 test("fase 4: video, anteprima di stampa e pannello staccabile", async ({ page }) => {
   test.setTimeout(180_000);
   const errors = await open(page);
-  const vid = await page.evaluate(async () => { const r = await recordVideo("giro", .5, 360); return [r.ext, r.blob.size]; });
-  expect(["mp4", "webm"]).toContain(vid[0]); expect(vid[1]).toBeGreaterThan(5_000);
+  // il Chromium «headless shell» della CI non registra fotogrammi dal canvas: lì si verifica il messaggio d'errore chiaro
+  const vid = await page.evaluate(async () => { try { const r = await recordVideo("giro", .5, 360); return [r.ext, r.blob.size]; } catch(e){ return ["errore", e.message]; } });
+  if (vid[0] === "errore") expect(vid[1]).toContain("non ha registrato fotogrammi");
+  else { expect(["mp4", "webm"]).toContain(vid[0]); expect(vid[1]).toBeGreaterThan(5_000); }
+  expect(await page.evaluate(() => [renderer.getPixelRatio() > 0, controls.enabled, VID.on])).toEqual([true, true, false]);
   await page.click('[data-tab="export"]'); await page.click("#exPrev");
   await expect(page.locator("#printBox")).toContainText("Tutti i pezzi entrano nel piatto"); await page.keyboard.press("Escape");
   await page.click("#sideFloat"); expect(await page.evaluate(() => getComputedStyle(document.querySelector(".side")).position)).toBe("fixed");
