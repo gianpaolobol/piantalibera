@@ -49,7 +49,8 @@ function renderExport(){
   <div class="exp"><header><h4>Pianta in DXF</h4><span class="tag">AutoCAD · Archicad · Revit</span></header>
     <p class="note">Piano corrente, in metri: layer MURI, APERTURE, LOCALI, ARREDI e TESTI.</p><button class="btn" id="exDxf">DXF del piano${zipNeeded("dxf")?" (.zip)":""}</button></div>
   <div class="exp"><header><h4>Progetto</h4><span class="tag">.json</span></header>
-    <p class="note">Contiene tutto, compresi modelli e materiali importati. I modelli delle librerie online vengono riscaricati all'apertura.</p><button class="btn" id="exJson">Salva progetto</button></div>`;
+    <p class="note">Contiene tutto, compresi modelli e materiali importati. I modelli delle librerie online vengono riscaricati all'apertura. Tutti i progetti di questo browser sono nel pulsante <b>Progetti</b> in alto.</p><button class="btn" id="exJson">Salva progetto</button></div>
+  ${imagesExportHTML()}`;
   $("#exRes").value = EX.res;
 }
 const PE = $("#panel-export");
@@ -111,8 +112,8 @@ async function exportAI(){
 }
 function aiPrompt(){
   const ws = P.walls, mats = [...new Set(ws.map(w=>matName(w.mat).toLowerCase()))], floors = [...new Set(P.rooms.map(r=>matName(r.mat).toLowerCase()))];
-  const roofL = P.levels.find(l=>l.roof?.type !== "none"), roof = roofL ? (roofL.roof.type === "gable" ? `tetto a due falde in ${matName(roofL.roof.mat).toLowerCase()}` : `copertura piana`) : "";
-  const el = P.sun.el, luce = el < 12 ? "luce radente del tramonto, toni caldi" : el < 30 ? "luce del pomeriggio, ombre lunghe e morbide" : "luce piena del giorno, cielo con nuvole leggere";
+  const roofL = P.levels.find(l=>l.roof?.type !== "none"), roof = roofL ? ({gable:`tetto a due falde in ${matName(roofL.roof.mat).toLowerCase()}`, hip:`tetto a padiglione in ${matName(roofL.roof.mat).toLowerCase()}`, shed:`tetto a una falda in ${matName(roofL.roof.mat).toLowerCase()}`}[roofL.roof.type] || `copertura piana`) : "";
+  const el = P.sun.el, luce = el < 0 ? "scena notturna, cielo scuro, luci artificiali accese all'interno e calde riflessioni" : el < 12 ? "luce radente del tramonto, toni caldi" : el < 30 ? "luce del pomeriggio, ombre lunghe e morbide" : "luce piena del giorno, cielo con nuvole leggere";
   const trees = [...new Set(P.objects.filter(o => LIBMAP[libRef(o.ref)]?.cat === "Verde").map(o => LIBMAP[libRef(o.ref)].nome.toLowerCase()))];
   const people = P.objects.some(o => LIBMAP[libRef(o.ref)]?.cat === "Persone");
   const n = P.levels.length;
@@ -125,7 +126,7 @@ function aiPrompt(){
   return `Fotografia architettonica fotorealistica di un edificio ${n>1?`a ${n} piani`:"a un piano"}${roof?`, ${roof}`:""}, facciate in ${mats.join(" e ")}, serramenti in alluminio antracite con grandi vetrate${interno ? `, pavimenti interni in ${floors.join(" e ") || "legno"}` : ""}. ${luce[0].toUpperCase()+luce.slice(1)}. ${trees.length ? `Vegetazione: ${trees.join(", ")}, prato curato.` : "Giardino curato con prato."}${interno ? "" : " Intorno all'edificio il terreno resta a prato come nel modello, senza pavimentazioni, muri o recinzioni aggiunti."}${people ? " Alcune persone a misura d'uomo danno la scala." : ""} Obiettivo 24 mm, ${vista[0]}, colori naturali, alta definizione.
 Mantieni esattamente geometria, aperture, proporzioni e punto di vista dell'immagine di riferimento; non aggiungere piani, volumi, muri o recinzioni.
 
-EN: Photorealistic architectural photograph, ${n>1?n+"-storey":"single-storey"} building, ${roofL?.roof.type==="gable"?"pitched gable roof with clay tiles":"flat roof"}, ${ws.some(w=>w.mat==="mattone")?"exposed brick and ":""}rendered facades, anthracite aluminium window frames, ${el<12?"warm golden-hour light":el<30?"soft afternoon light":"bright daylight, light clouds"}, ${trees.length ? trees.length + " kinds of mature trees, " : ""}landscaped garden${interno ? "" : ", lawn all around exactly as in the model, no added paving, walls or fences"}${people ? ", a few people for scale" : ""}, 24mm lens, ${vista[1]}, natural colours. Keep the exact geometry, openings, proportions and camera angle of the reference image.`;
+EN: Photorealistic architectural photograph, ${n>1?n+"-storey":"single-storey"} building, ${roofL?.roof.type==="gable"?"pitched gable roof":roofL?.roof.type==="hip"?"hipped roof":roofL?.roof.type==="shed"?"single-pitch shed roof":"flat roof"}, ${ws.some(w=>w.mat==="mattone")?"exposed brick and ":""}rendered facades, anthracite aluminium window frames, ${el<0?"night scene, warm interior lights glowing":el<12?"warm golden-hour light":el<30?"soft afternoon light":"bright daylight, light clouds"}, ${trees.length ? trees.length + " kinds of mature trees, " : ""}landscaped garden${interno ? "" : ", lawn all around exactly as in the model, no added paving, walls or fences"}${people ? ", a few people for scale" : ""}, 24mm lens, ${vista[1]}, natural colours. Keep the exact geometry, openings, proportions and camera angle of the reference image.`;
 }
 /* stampa 3D */
 function printGroups(){
@@ -181,10 +182,19 @@ function exportDXF(){
   for (const o of P.objects.filter(o=>o.level===L.id)){ const fp = objFootprint(o), a = THREE.MathUtils.degToRad(o.rot||0); const pts = [[-1,-1],[1,-1],[1,1],[-1,1]].map(([sx,sz]) => { const lx = fp.cx + sx*fp.w/2, lz = fp.cz + sz*fp.d/2; return [o.x + lx*Math.cos(a) + lz*Math.sin(a), o.y - lx*Math.sin(a) + lz*Math.cos(a)]; }); for (let i=0;i<4;i++) line("ARREDI", pts[i], pts[(i+1)%4]); }
   out.push("0","ENDSEC","0","EOF"); return out.join("\n");
 }
-async function exportProject(){
+function projectData(){
   const data = JSON.parse(JSON.stringify(P)); data.imports = {};
   for (const [id, it] of Object.entries(importStore)) if (P.objects.some(o => o.kind === "import" && o.ref === id)) data.imports[id] = {file:it.file, opts:it.opts, source:it.source};
-  data.app = "Pianta Libera"; data.version = 2; await saveFile(slug() + ".json", JSON.stringify(data));
+  data.app = "Pianta Libera"; data.version = 2; return data;
+}
+async function exportProject(){ await saveFile(slug() + ".json", JSON.stringify(projectData())); }
+/* apre un progetto (file .json o raccolta): keepPid tiene l'identità del progetto nella raccolta */
+async function openProjectData(data, opts = {}){
+  if (!data?.levels || !data.walls) throw new Error("non è un progetto di Pianta Libera");
+  const imports = data.imports || {}; delete data.imports; delete data.app; if (!opts.keepPid || !data.pid) data.pid = uid();
+  P = migrate(data); S.level = P.levels[0].id; setSel([]); $("#projName").value = P.name;
+  for (const [id, it] of Object.entries(imports)){ try { if (it.file) await registerImport(id, it.file, it.opts || {unit:"auto", up:"auto"}); else if (it.source) await restoreRemote(id, it.source); } catch(err){ console.warn(err); } }
+  past.length = 0; future.length = 0; snap = null; commit(); fitPlan(); applySky(); camPreset("ext");
 }
 
 /* ---------------- Importazioni ---------------- */
@@ -424,9 +434,6 @@ $("#fModel").addEventListener("change", async e => { const files = [...e.target.
   } catch(err){ busy(""); console.error(err); toast("Import non riuscito: " + (err.message||err), true); }
 });
 $("#fProj").addEventListener("change", async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-  try { const data = JSON.parse(await readAs(f, "readAsText")); if (!data.levels || !data.walls) throw new Error("non è un progetto di Pianta Libera");
-    const imports = data.imports || {}; delete data.imports; delete data.app; P = migrate(data); S.level = P.levels[0].id; S.sel = null; $("#projName").value = P.name;
-    for (const [id, it] of Object.entries(imports)){ try { if (it.file) await registerImport(id, it.file, it.opts || {unit:"auto", up:"auto"}); else if (it.source) await restoreRemote(id, it.source); } catch(err){ console.warn(err); } }
-    commit(); fitPlan(); applySky(); camPreset("ext"); toast("Progetto aperto");
+  try { await saveToIdb(); await openProjectData(JSON.parse(await readAs(f, "readAsText"))); toast("Progetto aperto");
   } catch(err){ toast("Non riesco ad aprire il progetto: " + (err.message||err), true); }
 });

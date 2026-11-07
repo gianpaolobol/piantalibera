@@ -84,6 +84,18 @@ button{cursor:pointer}
 .help{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.35);display:grid;place-items:center;padding:16px}
 .help-in{background:var(--panel);border:1px solid var(--line);border-radius:8px;max-width:760px;width:100%;max-height:90vh;overflow:auto;padding:16px}
 .help-in header{display:flex;justify-content:space-between;align-items:center}.help-in h3{margin:0;font-size:16px}
+.proj-in{max-width:960px}
+.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:12px}
+.proj{margin:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--bg);display:flex;flex-direction:column}
+.proj.cur{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.proj img,.proj .ph{display:block;width:100%;aspect-ratio:8/5;object-fit:cover;background:var(--plan-grid)}
+.proj figcaption{padding:8px;display:flex;flex-direction:column;gap:4px}.proj figcaption small{color:var(--muted);font-size:11px}
+.proj .btns{display:flex;flex-wrap:wrap;gap:4px}.proj .btns .btn{padding:3px 8px;font-size:12px}
+.pano-in{background:var(--panel);border:1px solid var(--line);border-radius:8px;width:min(1200px,100%);height:min(760px,92vh);display:flex;flex-direction:column;padding:10px;gap:8px}
+.pano-in header{display:flex;align-items:center;gap:10px}.pano-in header h3{margin:0;font-size:15px}.pano-in header .note{flex:1;margin:0}
+#panoCv{flex:1;width:100%;min-height:0;border-radius:4px;cursor:grab;touch-action:none}
+.aiq{margin:6px 0;padding-left:20px;font-size:12.5px}.aiq li{display:flex;align-items:center;gap:8px;padding:2px 0}.aiq li span{flex:1}
+.aiq .btn{padding:0 6px;font-size:11px}.aiq small{font-family:var(--f-data);font-size:11px;color:var(--muted)}.aiq .q-ok{color:var(--accent)}.aiq .q-err{color:var(--danger,#b3412e)}.aiq .q-run{color:var(--ink)}
 .help-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px 20px;margin-top:10px}
 .help-grid h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .help-grid dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:0;font-size:12.5px}.help-grid dd{margin:0}
@@ -229,7 +241,8 @@ pre.raw{margin:0;max-height:160px;overflow:auto;font-family:var(--f-data);font-s
       <button class="tool" data-tool="room" title="Pavimento a poligono (P) — clic sui vertici, Invio per chiudere"><svg viewBox="0 0 24 24"><path d="M4 18L6 6l9-2 5 9-6 6z"/></svg><kbd>P</kbd></button>
       <button class="tool" data-tool="door" title="Porta (D) — clic su un muro"><svg viewBox="0 0 24 24"><path d="M5 19h14"/><path d="M7 19V8"/><path d="M7 8a11 11 0 0 1 11 11"/></svg><kbd>D</kbd></button>
       <button class="tool" data-tool="window" title="Finestra (F) — clic su un muro"><svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="6"/><path d="M3 12h18"/></svg><kbd>F</kbd></button>
-      <button class="tool" data-tool="furn" title="Arredi, verde e persone (A)"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="6" rx="1"/><path d="M6 10V7h12v3M6 16v2M18 16v2"/></svg><kbd>A</kbd></button>
+      <button class="tool" data-tool="paint" title="Pennello dei materiali (B) — Alt+clic preleva"><svg viewBox="0 0 24 24"><path d="M14 4l6 6-8 8H6v-6z"/><path d="M11 7l6 6"/><path d="M4 21h6"/></svg><kbd>B</kbd></button>
+      <button class="tool" data-tool="furn" title="Arredi, verde, luci, scale e persone (A)"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="6" rx="1"/><path d="M6 10V7h12v3M6 16v2M18 16v2"/></svg><kbd>A</kbd></button>
       <div class="tool-sep"></div>
       <button class="tool" data-tool="dim" title="Quota (Q) — due punti, poi la distanza"><svg viewBox="0 0 24 24"><path d="M4 8v8M20 8v8M4 12h16"/><path d="M7 10l-3 2 3 2M17 10l3 2-3 2"/></svg><kbd>Q</kbd></button>
       <button class="tool" data-tool="calib" title="Calibra la base di ricalco (C) — due punti e una misura"><svg viewBox="0 0 24 24"><path d="M3 17L17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg><kbd>C</kbd></button>

@@ -28,12 +28,14 @@ Avvio: `npm install` → `npm run dev` → apri `http://localhost:8787/`.
 | `04-plan.js` | pianta 2D: disegno, aggancio, selezione, trascinamento, undo/redo |
 | `045-plan-pro.js` | pianta di precisione: selezione multipla, appunti, rotazione/specchio, quote, snap, menu contestuale, barra di stato, piani a schede, aiuto |
 | `047-fase2.js` | muri ad arco, etichette e superfici dei locali, unità, tabella dei livelli; nel 3D selezione/trascinamento, visita a piedi, camere salvate, metro, taglio verticale; elenco oggetti; trascina dal catalogo |
+| `048-fase3.js` | pennello e lati dei muri, posa dei pavimenti, battiscopa, controsoffitti, luci artificiali, sole da luogo/data/ora, modelli di porte e finestre con oscuranti, scale e ringhiere parametriche, tetti a padiglione e a una falda |
 | `05-ui.js` | ispettore, piani, schede |
 | `06-online.js` | Poly Haven (modelli, HDRI, texture CC0) e libreria personale |
 | `07-io.js` | esportazioni (GLB, OBJ+MTL, 3MF/STL, DXF, PNG, pacchetto AI, JSON) e importazioni (DWG, DXF, PDF, immagini, DAE/OBJ/glTF/FBX/3DS/STL anche in .zip con texture) |
 | `075-auto3d.js` | motore «pianta + prospetti → 3D», funzioni pure testate in `tests/auto3d.test.mjs` |
 | `076-auto3d-ui.js` | pannello «Da pianta e prospetti al 3D» nella scheda Importa |
 | `08-ai.js` | client render: modalità base e avanzata, adattatore configurabile, polling, confronto prima/dopo |
+| `049-progetti.js` | panorama 360° con visore, immagini 4K e serie dalle camere, coda di render AI, raccolta dei progetti nel browser (IndexedDB) |
 | `09-init.js` | progetto di esempio, migrazione dello schema, avvio |
 
 Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, versioni fissate), fflate, dxf-parser e pdf.js caricati su richiesta.
@@ -77,6 +79,20 @@ Fase 1 completata.
 - **Scheda Elenco**: oggetti ordinabili per colonna, nascondi/blocca, clic per selezionare; tabella dei locali con netta/lorda/perimetro e totali; esportazione CSV.
 - **Catalogo**: le schede si trascinano nella pianta o nel 3D; ★ per i preferiti, «Recenti» per gli ultimi inseriti.
 
+## Architettura (fase 3)
+
+- **Pennello dei materiali** (B): clic su muro, pavimento, soffitto, battiscopa o copertura. Nel 3D si dipinge un lato del muro (lato A = sinistra percorrendo il muro, lato B = destra; `w.matA`, `w.matB`), in pianta il muro intero. Alt+clic o «Contagocce» preleva.
+- **Locali**: posa del pavimento (modulo, rotazione 45° per la diagonale, origine; `r.tile`), battiscopa con altezza e materiale (`r.skirt`, interrotto dalle porte), controsoffitto a quota scelta e materiale del soffitto (`r.ceilH`, `r.ceilMat`), «applica a tutto il piano».
+- **Luci**: categoria Luci del catalogo (faretto a incasso, sospensione, plafoniera, applique; si agganciano al soffitto o alla parete) più lampada da terra e comodino; flusso in lumen e temperatura di colore per oggetto (`o.light`); luci accese al tramonto e di notte, sempre o mai (`P.lightsMode`).
+- **Sole da luogo, data e ora** (`P.site`): città o coordinate, fuso, ora legale europea, nord della pianta (ruota anche la bussola); di notte niente sole né riflessi del cielo.
+- **Porte**: a battente, a due ante, a vetro, portafinestra, scorrevole esterna, a scomparsa, basculante. **Finestre**: a battente, vasistas, scorrevole, fissa; oscuranti: persiane o tapparella sul lato esterno (riconosciuto dai locali, invertibile). Simboli di pianta per ogni modello (`o.style`, `o.shut`).
+- **Scale** parametriche (una rampa, a L, a U, a chiocciola): dislivello dal piano sopra, alzate, pedata, larghezza, svolta, corrimano e ringhiera a montanti o vetro, verifica 2a + p; il solaio del piano sopra e il soffitto vengono forati sull'ingombro. **Ringhiere/parapetti** a montanti, vetro o muratura (`o.p`).
+- **Tetti** a padiglione e a una falda (con la direzione della falda e i tamponamenti dei muri), oltre a piano e a due falde.
+- **Immagini**: vista in 4K, panorama 360° equirettangolare con visore e JPG con metadati GPano, tutte le camere salvate in 4K in uno zip.
+- **Coda di render AI**: vista corrente e camere salvate in coda, elaborate una alla volta; si ferma a errore o quota esaurita.
+- **Progetti**: pulsante in alto con tutti i progetti di questo browser (IndexedDB, salvataggio automatico con anteprima): nuovo, apri, duplica, rinomina, scarica .json, elimina con conferma.
+- Anteprime del catalogo: `npm run build:anteprime -- --mancanti` genera solo quelle nuove.
+
 ## Da pianta e prospetti al 3D
 
 Scheda Importa → «Da pianta e prospetti al 3D». Si caricano uno o più file DWG/DXF; i disegni della tavola vengono separati per vicinanza e riconosciuti dalle etichette («PIANTA…», «PROSPETTO SUD…»), dal nome del file o dal contenuto. Ogni disegno ha un'anteprima e un ruolo modificabile.
@@ -103,5 +119,5 @@ Scelte tecniche che restano diverse dalla bozza iniziale: editor in JavaScript s
 
 - `npm run build` (controllo che `public/index.html` corrisponda ai sorgenti).
 - `npm run test:unit`: 13 test del Worker e del contratto con AI, KV e asset finti (multipart verso klein, guide facoltative, quote per IP e globali, kill switch, origini, lato massimo 512 px senza consumo di quota, errore del modello, Turnstile, cancellazione).
-- `npm run test:e2e`: 13 test Playwright (apertura senza errori, stanza + undo/redo, persistenza, esportazioni, render di prova ed errori, Turnstile, libreria, DXF → 3D, pianta di precisione, fase 1 completa, fase 2 nel 3D, telefono 400 px). Gli stessi test girano in CI. La visita a piedi è provata solo come entrata/uscita (il browser senza GPU di CI va a pochi fotogrammi al secondo).
+- `npm run test:e2e`: 16 test Playwright (apertura senza errori, stanza + undo/redo, persistenza, esportazioni, render di prova ed errori, Turnstile, libreria, DXF → 3D, pianta di precisione, fase 1 completa, fase 2 nel 3D, fase 3 in tre prove: pennello e finiture; aperture, scale, tetti, luci e sole; 4K, 360°, coda di render e progetti; telefono 400 px). Gli stessi test girano in CI. La visita a piedi è provata solo come entrata/uscita (il browser senza GPU di CI va a pochi fotogrammi al secondo).
 - **Non provati**: Workers AI reale (serve l'account Cloudflare), Poly Haven dal vivo, file SketchUp reale, D5 Render e slicer.

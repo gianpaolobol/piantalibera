@@ -8,7 +8,7 @@ function redo(){ if (!future.length) return; past.push(snap); snap = future.pop(
 function afterLoad(){ for (const k of Object.keys(matCache)) if (!MATS[k]) invalidateMat(k); fixSel(); save(); refresh(); }
 function fixSel(){ if (!level(S.level)) S.level = P.levels[0].id; P.dims = P.dims || []; setSel(selList().filter(x => itemOf(x))); }
 let saveWarned = false;
-function save(){ try { localStorage.setItem("pianta-libera-v2", JSON.stringify(P)); savedAt = new Date(); updateStatusInfo(); } catch(e){ if (!saveWarned && e?.name === "QuotaExceededError"){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio automatico: usa Esporta → Salva progetto", true); } } }
+function save(){ try { localStorage.setItem("pianta-libera-v2", JSON.stringify(P)); savedAt = new Date(); updateStatusInfo(); } catch(e){ if (!saveWarned && e?.name === "QuotaExceededError"){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio nel browser: resta nella raccolta Progetti, ma conviene anche Esporta → Salva progetto", true); } } queueIdbSave(); }
 function findSel(){ if (!S.sel) return null; const k = {wall:"walls", opening:"openings", room:"rooms", object:"objects", dim:"dims"}[S.sel.type]; return P[k]?.find(x => x.id === S.sel.id) || null; }
 
 const c2d = $("#c2d"), ctx = c2d.getContext("2d");
@@ -74,7 +74,7 @@ function draw2D(){
   if (S.sel?.type === "room" && sel){ for (const p of sel.pts){ const s = toS(p); g.fillStyle = C.bg; g.strokeStyle = C.sel; g.lineWidth = 2; g.beginPath(); g.rect(s[0]-4,s[1]-4,8,8); g.fill(); g.stroke(); } }
   if (S.sel?.type === "opening" && sel){ const w = wallById(sel.wall); if (w){ const p0 = ptOnWall(w, sel.t - sel.w/2), p1 = ptOnWall(w, sel.t + sel.w/2); dimLine(g, p0, p1, w.thick/2 + .45, fmtL(sel.w)); } }
   drawToolPreview(g); drawArcPreview(g); drawObserver(g);
-  g.save(); g.translate(W2 - 34, 40); g.strokeStyle = C.text; g.fillStyle = C.text; g.lineWidth = 1.2;
+  g.save(); g.translate(W2 - 34, 40); g.rotate((P.site?.north || 0) * Math.PI / 180); g.strokeStyle = C.text; g.fillStyle = C.text; g.lineWidth = 1.2;
   g.beginPath(); g.arc(0,0,14,0,7); g.stroke(); g.beginPath(); g.moveTo(0,-12); g.lineTo(5,6); g.lineTo(0,2); g.lineTo(-5,6); g.closePath(); g.fill();
   g.font = `600 10px Archivo, system-ui, sans-serif`; g.fillText("N", 0, -22); g.restore();
   const sbm = V.s > 60 ? 1 : V.s > 25 ? 2 : V.s > 10 ? 5 : 10, sbx = W2 - 20 - sbm*V.s, sby = H2 - 44;
@@ -84,6 +84,7 @@ function draw2D(){
 }
 function drawObject2D(g, o){
   const fp = objFootprint(o), a = -THREE.MathUtils.degToRad(o.rot||0), it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null, isSel = isSelected(o.id);
+  if (it?.param && drawParam2D(g, o, it, isSel)) return;
   g.save(); const s = toS([o.x,o.y]); g.translate(s[0],s[1]); g.rotate(-a);
   const loading = !objTemplate(o); if (o.hidden) g.globalAlpha = .25;
   if (it?.plan === "tree" && !loading){
@@ -123,6 +124,7 @@ function drawOpening(g, w, c){
   const o = c.o, h = w.thick/2, isSel = isSelected(o.id); g.strokeStyle = isSel ? C.sel : C.poche; g.lineWidth = isSel ? 2 : 1;
   const L = (s, off) => toS(ptOnWall(w, s, off));
   g.beginPath(); for (const s of [c.s0, c.s1]){ const a=L(s,-h), b=L(s,h); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); } g.stroke();
+  if (drawOpeningStyle(g, w, c)) return;
   if (o.type === "window"){
     g.beginPath(); for (const off of [-h, -h/4, h/4, h]){ const a=L(c.s0,off), b=L(c.s1,off); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); } g.stroke();
   } else {
@@ -185,6 +187,7 @@ function hud2d(){
     wall:PREFS.wallShape === "arco" ? (S.draw?.arcB ? "Sposta per curvare il muro, poi clic" : S.draw?.arcA ? "Clic sull'altra estremità dell'arco" : "Clic sul primo estremo dell'arco") : S.draw?.start ? "Clic per il punto successivo · cifre per la lunghezza, Tab per l'angolo, Invio · Esc per finire" : "Clic per iniziare il muro",
     dim:S.draw?.b ? "Sposta per scegliere la distanza della quota, poi clic" : S.draw?.a ? "Clic sul secondo punto" : "Clic sul primo punto da quotare",
     rect:"Trascina per disegnare una stanza con i suoi muri", room:"Clic sui vertici · Invio o clic sul primo punto per chiudere",
+    paint:"Clic su un muro o un pavimento per applicare il materiale · Alt+clic preleva · nel 3D si dipinge un lato del muro",
     door:"Clic su un muro per inserire la porta", window:"Clic su un muro per inserire la finestra", furn:"Scegli a destra, poi clic in pianta per posizionare",
     calib:S.calib?.p2 ? "Inserisci la misura reale a destra" : "Clic su due punti di cui conosci la distanza", moveunder:"Trascina per spostare la base di ricalco"};
   const n = selList().length;
@@ -263,6 +266,7 @@ c2d.addEventListener("pointerdown", e => {
     else if (h.type === "dim") drag = {type:"group", start:raw, snap:groupSnapshot(), moved:false};
     draw2D(); return;
   }
+  if (t === "paint"){ paint2D(raw, e.altKey || S.paintPick); return; }
   if (t === "wall" && PREFS.wallShape === "arco"){ arcToolClick(sn.p, raw); return; }
   if (t === "wall"){
     let p = sn.p; if (S.draw?.start){ p = wallEndFromTyped(S.draw.start, constrainAngle(S.draw.start, p, e.shiftKey)); addWall(S.draw.start, p, true); }
@@ -284,6 +288,7 @@ c2d.addEventListener("pointerdown", e => {
     const nw = nearestWall(raw); if (!nw){ toast("Clicca vicino a un muro", true); return; }
     const d = t === "door" ? S.defaults.door : S.defaults.win, f = wallFrame(nw.wall), wd = Math.min(d.w, f.len - .1);
     const o = {id:uid(), wall:nw.wall.id, t:clamp(Math.round(nw.s/GRID)*GRID, wd/2+.05, f.len-wd/2-.05), w:wd, h:d.h, sill:t==="door"?0:d.sill, type:t, flip:0};
+    if (d.style && d.style !== "battente") o.style = d.style; if (t === "window" && d.shut) o.shut = d.shut;
     P.openings.push(o); S.sel = {type:"opening", id:o.id}; commit(); return;
   }
   if (t === "furn"){ placeFurniture(sn.p); return; }
@@ -395,7 +400,7 @@ document.addEventListener("keydown", e => {
   if (k === "Delete" || k === "Backspace"){ deleteSel(); return; }
   if (S.tool === "select" && selList().length && (k === "[" || k === "]")){ transformSel("rot", k === "]" ? 90 : -90); return; }
   if (S.tool === "select" && selList().length && k.startsWith("Arrow")){ e.preventDefault(); const st = GRID * (e.shiftKey ? 10 : 1), d = {ArrowLeft:[-st,0], ArrowRight:[st,0], ArrowUp:[0,-st], ArrowDown:[0,st]}[k]; applyGroupMove(groupSnapshot(), d[0], d[1]); commit(); return; }
-  const map = {v:"select", w:"wall", r:"rect", p:"room", d:"door", f:"window", a:"furn", c:"calib", m:"moveunder", q:"dim"}; if (map[k.toLowerCase()] && !mod && !e.altKey) setTool(map[k.toLowerCase()]);
+  const map = {v:"select", w:"wall", r:"rect", p:"room", d:"door", f:"window", a:"furn", c:"calib", m:"moveunder", q:"dim", b:"paint"}; if (map[k.toLowerCase()] && !mod && !e.altKey) setTool(map[k.toLowerCase()]);
 });
 document.addEventListener("keyup", e => { if (e.key === " ") spaceDown = false; });
 function setTool(t){ S.tool = t; S.draw = null; S.typed = ""; S.typedAng = ""; S.typedField = "len"; S.guides = []; if (t !== "calib") S.calib = null; $$(".tool").forEach(b => b.setAttribute("aria-pressed", b.dataset.tool === t)); if (S.tab !== "props"){ S.tab = "props"; renderTabs(); } renderInspector(); draw2D(); }
@@ -404,6 +409,7 @@ function fitPlan(){ const ws = wallsOf(S.level); let pts = ws.flatMap(w=>[w.a,w.
 function placeFurniture(p){
   if (S.furnSrc === "lib"){
     const it = LIBMAP[S.furn]; const o = {id:uid(), level:S.level, kind:"lib", ref:S.furn, name:it?.nome || "Arredo", x:p[0], y:p[1], rot:0, scale:1, z:0};
+    initPlacedObject(o, it);
     P.objects.push(o); setSel([{type:"object", id:o.id}]); PREFS.recent = [S.furn, ...PREFS.recent.filter(r => r !== S.furn)].slice(0, 12); savePrefs(); commit(); return;
   }
   if (S.furnSrc === "online" || S.furnSrc === "personal"){

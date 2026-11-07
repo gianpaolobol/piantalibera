@@ -37,7 +37,7 @@ const SKIES = [
 const skyCache = {};
 async function applySky(){
   const sk = P.sky || {kind:"asset", id:"giorno"};
-  if (sk.id === "colore" || !sk.id){ scene.environment = roomEnv; scene.background = new THREE.Color(isDark() ? SKY_COL.dark : SKY_COL.light); hemi.intensity = .3; render3D(); return; }
+  if (sk.id === "colore" || !sk.id){ scene.environment = roomEnv; scene.background = new THREE.Color(isDark() ? SKY_COL.dark : SKY_COL.light); hemi.intensity = .3; nightCheck(); render3D(); return; }
   const key = sk.kind + ":" + sk.id;
   try {
     if (!skyCache[key]){
@@ -49,7 +49,7 @@ async function applySky(){
     }
     scene.background = skyCache[key].bg; scene.environment = skyCache[key].env; scene.backgroundBlurriness = 0; hemi.intensity = .12;
   } catch(e){ busy(""); console.warn(e); scene.environment = roomEnv; scene.background = new THREE.Color(isDark() ? SKY_COL.dark : SKY_COL.light); toast("Cielo HDRI non disponibile: uso un colore neutro", true); }
-  render3D();
+  nightCheck(); render3D();
 }
 const isDark = () => (matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light") || document.documentElement.dataset.theme === "dark";
 
@@ -113,7 +113,7 @@ function wallSolidRanges(w){
 function buildModel(opts={}){
   const root = new THREE.Group(); root.name = P.name || "Progetto";
   const buckets = new Map();
-  const add = (lid, mat, cat, geo) => { const k = lid+"|"+mat+"|"+cat; if (!buckets.has(k)) buckets.set(k, {lid, mat, cat, geos:[]}); buckets.get(k).geos.push(clean(geo)); };
+  const add = (lid, mat, cat, geo, room) => { const k = lid+"|"+mat+"|"+cat+(room ? "|"+room.id : ""); if (!buckets.has(k)) buckets.set(k, {lid, mat, cat, geos:[], tile:room?.tile}); buckets.get(k).geos.push(clean(geo)); };
   const parts = {};
   const levelGroup = lid => parts[lid] || (parts[lid] = Object.assign(new THREE.Group(), {name: level(lid)?.name || lid}));
   for (const L of P.levels){
@@ -122,13 +122,16 @@ function buildModel(opts={}){
       const {f, cuts, solids} = wallSolidRanges(w); if (f.len < .01) continue;
       const t = opts.print ? Math.max(w.thick, opts.minThick||0) : w.thick;
       const h = (w.height || L.height), rot = -Math.atan2(w.b[1]-w.a[1], w.b[0]-w.a[0]);
-      const piece = (s0,s1,y0,y1,depth,mat,cat) => { if (s1-s0 < .001 || y1-y0 < .001) return; const m=(s0+s1)/2, p=ptOnWall(w,m); add(L.id, mat, cat, boxGeo(p[0], (y0+y1)/2, p[1], s1-s0, y1-y0, depth, 0, rot, 0)); };
-      for (const [s0,s1] of solids) piece(s0,s1, base, e0+h, t, w.mat, "wall");
+      const piece = (s0,s1,y0,y1,depth,mat,cat,off=0) => { if (s1-s0 < .001 || y1-y0 < .001) return; const m=(s0+s1)/2, p=ptOnWall(w,m,off); add(L.id, mat, cat, boxGeo(p[0], (y0+y1)/2, p[1], s1-s0, y1-y0, depth, 0, rot, 0)); };
+      const skins = opts.print ? [] : wallSkins(w);
+      const solid = (s0,s1,y0,y1) => { piece(s0,s1,y0,y1, t, w.mat, "wall"); for (const k of skins) piece(s0,s1,Math.max(y0,e0),y1, .004, k.mat, "wall", k.side*(t/2+.002)); };
+      for (const [s0,s1] of solids) solid(s0,s1, base, e0+h);
       for (const c of cuts){
         const o = c.o, bot = o.type === "door" ? 0 : o.sill, topO = Math.min(h, bot + o.h);
-        piece(c.s0,c.s1, base, e0+bot, t, w.mat, "wall");
-        if (topO < h) piece(c.s0,c.s1, e0+topO, e0+h, t, w.mat, "wall");
+        solid(c.s0,c.s1, base, e0+bot);
+        if (topO < h) solid(c.s0,c.s1, e0+topO, e0+h);
         if (opts.noFill) continue;
+        if (typeof buildOpeningFill === "function"){ buildOpeningFill(w, c, piece, e0, bot, topO, t); continue; }
         const fw = .06, fd = Math.min(.09, t*.8);
         if (o.type === "window"){
           piece(c.s0, c.s0+fw, e0+bot, e0+topO, fd, "serramento", "frame"); piece(c.s1-fw, c.s1, e0+bot, e0+topO, fd, "serramento", "frame");
@@ -142,19 +145,24 @@ function buildModel(opts={}){
         }
       }
     }
+    const below = P.levels.filter(l => l.elev < L.elev - .01).sort((a,b) => b.elev - a.elev)[0], holesUp = below ? stairHoles(below.id) : [], holesHere = stairHoles(L.id);
     for (const r of P.rooms.filter(r=>r.level===L.id)){
       if (r.pts.length < 3) continue;
-      const sh = new THREE.Shape(r.pts.map(p=>new THREE.Vector2(p[0],p[1])));
+      const sh = roomShape(r, holesUp);
       const g = new THREE.ExtrudeGeometry(sh, {depth:L.slab, bevelEnabled:false}); g.rotateX(Math.PI/2); g.translate(0, e0, 0);
-      add(L.id, r.mat, "floor", g);
-      if (!opts.print && !r.noCeiling){ const cg = new THREE.ShapeGeometry(sh); cg.rotateX(Math.PI/2); cg.translate(0, e0 + L.height - .005, 0); add(L.id, "soffitto", "ceiling", cg); }
+      add(L.id, r.mat, "floor", g, r.tile ? r : null);
+      if (!opts.print && !r.noCeiling){ const csh = roomShape(r, holesHere), cm = r.ceilMat || (r.ceilH ? "cartongesso" : "soffitto");
+        if (r.ceilH){ const cg = new THREE.ExtrudeGeometry(csh, {depth:.06, bevelEnabled:false}); cg.rotateX(Math.PI/2); cg.translate(0, e0 + r.ceilH + .06, 0); add(L.id, cm, "ceiling", cg); }
+        else { const cg = new THREE.ShapeGeometry(csh); cg.rotateX(Math.PI/2); cg.translate(0, e0 + L.height - .005, 0); add(L.id, cm, "ceiling", cg); } }
+      if (!opts.print && r.skirt) for (const sg of skirtGeos(r, L)) add(L.id, r.skirt.mat || "bianco", "skirt", sg);
     }
     if (L.roof && L.roof.type !== "none" && opts.roof !== false){
       const ws = wallsOf(L.id); if (ws.length){
         let x0=Infinity,x1=-Infinity,z0=Infinity,z1=-Infinity, tMax=0;
         for (const w of ws){ for (const p of [w.a,w.b]){ x0=Math.min(x0,p[0]-w.thick/2); x1=Math.max(x1,p[0]+w.thick/2); z0=Math.min(z0,p[1]-w.thick/2); z1=Math.max(z1,p[1]+w.thick/2);} tMax=Math.max(tMax,w.thick); }
         const topY = e0 + L.height, o = L.roof.overhang, th = .22, rm = L.roof.mat, lid = "roof:"+L.id;
-        if (L.roof.type === "flat"){
+        if (L.roof.type === "hip" || L.roof.type === "shed") buildRoofX(L, {x0, x1, z0, z1, tMax, topY, o, lid, rm}, add, opts);
+        else if (L.roof.type === "flat"){
           add(lid, rm, "roof", boxGeo((x0+x1)/2, topY+th/2, (z0+z1)/2, x1-x0+2*o, th, z1-z0+2*o));
         } else {
           const p = THREE.MathUtils.degToRad(clamp(L.roof.pitch, 5, 60)), along = L.roof.ridge === "x" ? true : L.roof.ridge === "y" ? false : (x1-x0) >= (z1-z0);
@@ -181,10 +189,10 @@ function buildModel(opts={}){
   }
   for (const b of buckets.values()){
     const merged = THREE.BufferGeometryUtils.mergeBufferGeometries(b.geos, false); if (!merged) continue;
-    worldUV(merged, matDef(b.mat).size || 1);
+    if (b.tile) floorUV(merged, (matDef(b.mat).size || 1) * (b.tile.scale || 1), b.tile); else worldUV(merged, matDef(b.mat).size || 1);
     const mesh = new THREE.Mesh(merged, getMat(b.mat));
     const isRoof = b.lid.startsWith("roof:"), lv = level(isRoof ? b.lid.slice(5) : b.lid);
-    const catName = {ceiling:"Soffitti", wall:"Muri", frame:"Telai", glass:"Vetri", door:"Porte", floor:"Solai", roof:"Copertura", gable:"Timpani", sill:"Davanzali"}[b.cat];
+    const catName = {ceiling:"Soffitti", wall:"Muri", frame:"Telai", glass:"Vetri", door:"Porte", floor:"Solai", roof:"Copertura", gable:"Timpani", sill:"Davanzali", skirt:"Battiscopa"}[b.cat];
     mesh.name = `${catName} · ${matName(b.mat)} · ${lv?.name || ""}`;
     mesh.castShadow = b.cat !== "glass"; mesh.receiveShadow = true;
     mesh.userData = {cat:b.cat, level: lv?.id, mat:b.mat};
@@ -196,6 +204,7 @@ function buildModel(opts={}){
       const c = t.clone(true); c.name = o.name || "Oggetto"; c.position.set(o.x, L.elev + (o.z||0), o.y); c.rotation.y = -THREE.MathUtils.degToRad(o.rot||0); c.scale.setScalar(o.scale||1);
       c.userData = {cat:"object", level:L.id, objId:o.id};
       c.traverse(m => { if (m.isMesh && m !== c) m.userData = {...m.userData, level:L.id, inObject:true}; });
+      decorateObject3D(c, o);
       levelGroup(L.id).add(c);
     }
   }
@@ -243,6 +252,7 @@ function placeSun(){
   sun.intensity = (.8 + 2.6*Math.sin(clamp(el, 0, Math.PI/2))) * (P.sky?.id && P.sky.id !== "colore" ? .85 : 1);
   sun.color.set(P.sun.el < 12 ? "#ffc58a" : P.sun.el < 25 ? "#ffe0b8" : "#fff3e2");
   renderer.toneMappingExposure = S.exposure;
+  nightCheck();
 }
 let rq = false;
 function render3D(){ if (rq) return; rq = true; requestAnimationFrame(()=>{ rq=false; drawFrame(); hud3d(); if (typeof afterFrame3D === "function") afterFrame3D(); }); }

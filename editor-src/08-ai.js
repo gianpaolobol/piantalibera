@@ -154,6 +154,7 @@ function renderAI(){
   <div class="btns"><button class="btn primary" id="aiGo" ${aiBusy?"disabled":""}>${aiBusy ? "Render in corso…" : "Genera render dalla vista"}</button><button class="btn" id="aiTest">Prova la connessione</button><button class="btn" id="aiPreview">Anteprima di cosa invio</button></div>
   <p class="status" id="aiStatus"></p>
   <p class="note">Le immagini della vista vengono inviate al servizio configurato. Nessuna chiave viene salvata nel progetto.</p>
+  ${aiQueueHTML()}
   ${aiResults.length ? `<div class="sec"><h3>Render ottenuti</h3><div class="gallery">${aiResults.map((r,i)=>`<figure><img src="${esc(r.src)}" data-cmp="${i}" alt="Render ${i+1}"><figcaption><span>${r.time} · ${r.mode}</span><span><button data-cmp="${i}">Confronta</button> · <button data-aisave="${i}">Salva</button></span></figcaption></figure>`).join("")}</div></div>` : ""}
   ${aiLastRaw ? `<details class="exp"><summary>Ultima risposta del servizio</summary><pre class="raw">${esc(aiLastRaw)}</pre></details>` : ""}
   <details class="exp"><summary>Configurazioni</summary><div class="btns"><button class="btn" id="aiExport">Esporta configurazione</button><button class="btn" id="aiReset">Ripristina predefiniti</button></div><p class="note">L'esportazione non include le chiavi.</p></details>`;
@@ -176,7 +177,7 @@ PA.addEventListener("click", async e => {
   if (b.dataset.cmp !== undefined){ openCompare(aiResults[+b.dataset.cmp]); return; }
   if (b.dataset.aisave !== undefined){ await saveResult(aiResults[+b.dataset.aisave]); return; }
   if (b.id === "b_resetPrompt"){ AI.base.prompt = aiPrompt(); aiSave(); renderAI(); return; }
-  if (b.id === "aiGo") runAI(false);
+  if (b.id === "aiGo" && !AIQ.running) runAI(false);
   if (b.id === "aiTest") runAI(true);
   if (b.id === "aiPreview") previewAI();
   if (b.id === "aiExport"){ const c = JSON.parse(JSON.stringify(AI)); c.base.authValue = ""; c.adv.authValue = ""; await saveFile("pianta-libera-ai.json", JSON.stringify(c, null, 2)); }
@@ -226,8 +227,8 @@ async function aiFetch(cfg, url, init){
   catch(e){ throw new Error(inArtifact() ? "la connessione è bloccata: l'anteprima dentro Claude non permette chiamate a servizi esterni. Usa la versione caricata sul tuo sito." : "il servizio non risponde o non accetta richieste da questa pagina (CORS). Con la connessione «Tramite il mio sito» il problema non si pone."); }
 }
 async function readBody(r){ const ct = r.headers.get("content-type") || ""; if (ct.startsWith("image/")){ const b = await r.blob(); return {image:URL.createObjectURL(b)}; } const t = await r.text(); try { return JSON.parse(t); } catch(_){ return {text:t}; } }
-async function runAI(test){
-  if (aiBusy) return; const cfg = aiConfig();
+async function runAI(test, opts = {}){
+  if (aiBusy) return false; const cfg = aiConfig();
   const endpoint = cfg.url;
   if (!endpoint){ aiStatus("Inserisci l'endpoint: /api/render per il backend del progetto, oppure l'indirizzo di un servizio per una prova locale.", "err"); return; }
   const viaBackend = isBackendCfg(cfg);
@@ -282,8 +283,9 @@ async function runAI(test){
     imgs.forEach(src => aiResults.unshift({src, before, time:now, mode: (data.mock ? "prova · " : "") + (vars.render_mode === "creativo" ? "creativo" : "fedele"), prompt:vars.prompt}));
     if (data.mock) toast("Risposta del servizio di prova: l'immagine è la vista inviata, non un render AI");
     aiBusy = false; renderAI(); aiStatus(test ? `Connessione riuscita: ${imgs.length} immagine ricevuta in ${Math.round((Date.now()-t0)/1000)} s.` : `${imgs.length} render ricevuti in ${Math.round((Date.now()-t0)/1000)} s.${data.mock ? " Servizio di prova: l'immagine è la vista inviata, non un render AI." : ""}`, "ok");
-    if (!test) openCompare(aiResults[0]);
-  } catch(err){ console.warn(err); aiBusy = false; renderAI(); aiStatus("Non riuscito: " + (err.message || err), "err"); }
+    if (!test && !opts.queued) openCompare(aiResults[0]);
+    return true;
+  } catch(err){ console.warn(err); aiBusy = false; renderAI(); aiStatus("Non riuscito: " + (err.message || err), "err"); return false; }
   finally { if (isBackendCfg(cfg)) resetTurnstile(); }
 }
 function openCompare(r){ if (!r) return; $("#cmpBefore").src = r.before; $("#cmpAfter").src = r.src; $("#compare").hidden = false; $("#compare")._r = r; setCut(50); $("#cmpCut").value = 50; }
