@@ -163,5 +163,5 @@ function swatchUrl(key){
   const c = document.createElement("canvas"); c.width = 96; c.height = 40; c.getContext("2d").drawImage(texCanvas(key), 0, 0, 512, 213, 0, 0, 96, 40);
   return swCache[key] = c.toDataURL("image/png");
 }
-function swatchStyle(key){ const u = swatchUrl(key), m = matDef(key); return u ? `background-image:url(${u})` : `background:${m.color}`; }
+function swatchStyle(key){ const u = swatchUrl(key), m = matDef(key); return esc(u ? `background-image:url("${String(u).replace(/["\\\n]/g, "")}")` : `background:${/^#[0-9a-f]{3,8}$/i.test(m.color || "") ? m.color : "#ccc"}`); }
 function projMatKeys(){ return Object.keys(P.materials || {}); }

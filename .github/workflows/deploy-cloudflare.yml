@@ -119,7 +119,7 @@ jobs:
           set -euo pipefail
           url="https://${{ steps.ts.outputs.host }}"
           for i in $(seq 1 12); do c=$(curl -fsS "$url/api/config" || true); [ -n "$c" ] && break; sleep 5; done
-          echo "$c" | jq '{enabled, reason, provider, model, quota, turnstile: (.turnstile_site_key != null)}'
+          echo "$c" | jq '{enabled, reason, provider, model, quota, turnstile: (.turnstile_site_key != null), share}'
           [ "$(echo "$c" | jq -r .enabled)" = "true" ] || { echo "::error::Il servizio risponde ma non è attivo: $(echo "$c" | jq -r .reason)"; exit 1; }
           curl -fsS -o /dev/null "$url/" && echo "Editor: $url/"
           echo "### Pianta Libera pubblicata: $url/" >> "$GITHUB_STEP_SUMMARY"

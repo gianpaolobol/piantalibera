@@ -106,7 +106,7 @@ Per i test: **Cloudflare Workers AI, `@cf/black-forest-labs/flux-2-klein-4b`** (
 
 ## Aperto
 
-- Fedeltà geometrica da misurare sulle scene di prova; se insufficiente: klein 9B o ComfyUI con ControlNet depth/lineart.
-- Licenza d'uso commerciale di FLUX.2 klein 4B da confermare sui termini di Black Forest Labs.
+- Fedeltà geometrica da misurare sulle scene di prova; se insufficiente: ComfyUI con ControlNet depth/lineart (klein 9B solo per prove: licenza non commerciale).
+- FLUX.2 klein 4B è sotto licenza Apache 2.0 (uso commerciale consentito, verificato il 7/11/2026); la 9B è sotto FLUX Non-Commercial License e non va usata in produzione senza un accordo con Black Forest Labs.
 - Il backend PHP è sincrono (adatto all'hosting condiviso, limite pratico ~90 s). Per elaborazioni lunghe serve una coda vera (Worker + Queue, o servizio dedicato).
 - Account utente e metriche di consumo. Informativa: [privacy.md](privacy.md) (bozza, da far verificare).

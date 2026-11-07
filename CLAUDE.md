@@ -24,17 +24,13 @@ Obiettivi di progetto:
 4. Integrità del progetto: **non alterare arbitrariamente** muri, porte, finestre, coperture, dimensioni, quote e prospettiva nei render pubblicizzati come fedeli. I modelli generativi possono comunque alterare dettagli; la fedeltà va testata e il risultato non è un elaborato tecnico certificato.
 5. Piano gratuito sostenibile: limiti per utente e globali, protezione abusi e blocco spese impreviste.
 
-## Stato verificato su GitHub il 06/11/2026
+## Stato al 7/11/2026 (aggiornato da Claude)
 
-- Branch remoto rilevato: `main`; nessuna PR o issue preesistente al momento della verifica.
-- HEAD rilevato: `401323d07c55dae789c4847973eeddb0bca4f502`.
-- Codice iniziale: React 18 + Vite 6 + Three.js + React Three Fiber / Drei; `src/App.jsx`, `src/styles.css`, `src/main.jsx`, `index.html`, `package.json`.
-- Editor prototipale: viste interna/esterna, inserimento box schematici (volumi, pareti, arredi, piani), materiali di base, editing numerico, salvataggio JSON, esportazione screenshot PNG.
-- Il pulsante AI iniziale è **soltanto un placeholder**, non c'è backend AI operativo né test di generazione.
-- Workflow `.github/workflows/build.yml` presente, ma compilazione e test non ancora confermati.
-- La repo è risultata **PUBLIC**, nonostante fosse inizialmente prevista una repository privata. Valutare con il proprietario prima di diffondere codice, asset o segreti.
-
-Questa è una fotografia del remoto, **non una dichiarazione sul lavoro locale di Claude**, che potrebbe essere più avanzato.
+- Editor completo con le quattro fasi della roadmap d'interfaccia (docs/interfaccia-confronto.md, dettagli in docs/editor.md); PR #3–#13 unite su `main`.
+- Online: Worker Cloudflare con render AI attivo (FLUX.2 klein 4B, Apache 2.0) e condivisione `/api/share`; demo statica su GitHub Pages; pacchetto locale `locale-latest`.
+- Prove: 36 test unitari, 21 nel browser, eseguite in CI a ogni PR.
+- Aperti: misura della fedeltà geometrica e dei consumi reali (P4), informativa privacy da completare, licenza del repository da scegliere, verifica dal vivo sul dominio pubblicato.
+- La fotografia del 6/11 (prototipo React) è superata: il prototipo resta nel branch `archivio/prototipo-react`.
 
 ## Indicazioni tecniche e architettura raccomandata
 

@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
-    "web-ifc": "^0.0.66"
+    "web-ifc": "0.0.66"
   },
   "engines": {
     "node": ">=20"
