@@ -51,7 +51,7 @@ L'indirizzo è `https://pianta-libera.<tuo-account>.workers.dev/`; un dominio pe
 
 | Nome | Predefinito | Note |
 |---|---|---|
-| `MODEL` | `@cf/black-forest-labs/flux-2-klein-4b` | per confronti: `@cf/black-forest-labs/flux-2-klein-9b` (molto più costoso) |
+| `MODEL` | `@cf/black-forest-labs/flux-2-klein-4b` | per confronti: `@cf/black-forest-labs/flux-2-klein-9b` (molto più costoso e solo non commerciale) |
 | `PER_IP_DAILY` | 10 (test) | render al giorno per IP (IP salvati come hash con sale) |
 | `MAX_CONCURRENT_PER_IP` | 1 | lavori contemporanei per IP |
 | `GLOBAL_DAILY` | 50 | richieste accettate al giorno in totale |
@@ -92,5 +92,5 @@ Logica in `shared/share.js`, comune al Worker e al server locale. Progetti fino 
 - La stima dei Neurons usa le tariffe pubblicate; se Cloudflare conteggia diversamente, il tetto reale va tarato sui dati del pannello.
 - L'hash dell'IP limita gli abusi semplici, non chi cambia IP: Turnstile e il tetto globale restano la difesa principale.
 - Il Worker attende il modello nella stessa richiesta (klein a 4 passi è rapido). Per modelli lenti usare una coda (Queues) e lasciare `status: running`.
-- La licenza d'uso commerciale di FLUX.2 klein 4B va confermata sui termini di Black Forest Labs prima dell'apertura al pubblico.
+- FLUX.2 klein 4B è sotto licenza Apache 2.0 (uso commerciale consentito, verificato il 7/11/2026); la 9B è sotto FLUX Non-Commercial License e non va usata in produzione senza un accordo con Black Forest Labs.
 - La fedeltà geometrica non è garantita: le immagini di riferimento sono a 512 px e il modello non è un ControlNet. Va misurata sulle scene di prova (docs/editor.md).

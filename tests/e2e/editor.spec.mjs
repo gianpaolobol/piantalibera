@@ -405,6 +405,26 @@ test("fase 4: video, anteprima di stampa e pannello staccabile", async ({ page }
   expect(errors).toEqual([]);
 });
 
+test("sicurezza: un progetto preparato ad arte non inserisce codice nella pagina", async ({ page }) => {
+  const errors = await open(page);
+  const evil = '"><img src=x onerror="window.__xss=1">';
+  await page.evaluate(async evil => {
+    const p = JSON.parse(JSON.stringify(sampleProject()));
+    p.levels[0].id = evil; for (const w of p.walls) w.level = evil; for (const r of p.rooms) r.level = evil; for (const o of p.objects) o.level = evil;
+    p.objects[0].id = evil + "2"; p.cameras = [{id:evil + "3", name:"<b>x</b>", pos:[1, 2, 3], target:[0, 0, 0], fov:45}];
+    p.materials = {mm:{nome:"<img src=x onerror=window.__xss=2>", color:'red;"><img src=x onerror="window.__xss=3', map:"javascript:alert(1)"}};
+    p.sky = {kind:"ph", url:"https://attaccante.example/cielo.hdr", nome:"x"};
+    await openProjectData(p);
+  }, evil);
+  await page.click('[data-tab="list"]'); await page.click('[data-tab="props"]'); await page.evaluate(() => { setTool("wall"); setTool("select"); renderLevelTabs(); renderCamSel(); });
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => window.__xss)).toBeUndefined();
+  const p = await page.evaluate(() => ({lid:P.levels[0].id, wl:P.walls[0].level, mat:P.materials.mm, sky:P.sky}));
+  expect(p.lid).toMatch(/^[A-Za-z0-9_-]+$/); expect(p.wl).toBe(p.lid); expect(p.mat.map).toBeUndefined(); expect(p.mat.color).toBe("#cccccc"); expect(p.sky.kind).toBe("asset");
+  expect(await page.evaluate(() => P.walls.length)).toBe(5);
+  expect(errors).toEqual([]);
+});
+
 test("telefono: nessuno scorrimento orizzontale", async ({ page }) => {
   await page.setViewportSize({ width: 400, height: 860 });
   await open(page);

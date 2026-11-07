@@ -32,7 +32,50 @@ function sampleProject(){
     ],
   };
 }
+/* Ogni progetto che entra (file, raccolta, link condiviso, salvataggio del browser) viene ripulito:
+   identificativi solo alfanumerici (finiscono in attributi HTML), numeri finiti, testi limitati,
+   colori validi, immagini esterne solo da data: o da Poly Haven. Un progetto preparato ad arte
+   non può così inserire codice nella pagina. */
+const ID_OK = /^[A-Za-z0-9_-]{1,64}$/;
+function sanitizeProject(p){
+  if (!p || typeof p !== "object") throw new Error("progetto non valido");
+  const ids = new Map(), fix = v => { const k = String(v ?? ""); if (ID_OK.test(k)) return k; if (!ids.has(k)) ids.set(k, uid()); return ids.get(k); };
+  const N = (v, d = 0) => { const n = Number(v); return Number.isFinite(n) ? n : d; }, Nn = v => v == null || v === "" ? null : N(v, null);
+  const T = (v, max = 200) => v == null ? "" : String(v).slice(0, max), K = v => v == null ? v : T(v, 80).replace(/[^\w\-.:]/g, "_");
+  const pt = q => Array.isArray(q) ? [N(q[0]), N(q[1])] : [0, 0], v3 = q => Array.isArray(q) ? [N(q[0]), N(q[1]), N(q[2])] : [0, 0, 0];
+  const arr = k => { if (!Array.isArray(p[k])) p[k] = []; p[k] = p[k].filter(x => x && typeof x === "object" && !Array.isArray(x)); return p[k]; };
+  const okUrl = u => typeof u === "string" && (/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(u) || /^https:\/\/(dl|cdn)\.polyhaven\.(org|com)\/[\w\-./%]+$/.test(u));
+  p.name = T(p.name, 120) || "Progetto"; if (p.pid != null) p.pid = fix(p.pid);
+  for (const L of arr("levels")){ L.id = fix(L.id); L.name = T(L.name, 80) || "Piano"; L.elev = N(L.elev); L.height = N(L.height, 2.7) || 2.7; L.slab = N(L.slab, .25);
+    if (L.roof && typeof L.roof === "object"){ L.roof = {type:["none", "flat", "gable", "hip", "shed"].includes(L.roof.type) ? L.roof.type : "none", pitch:N(L.roof.pitch, 30), overhang:N(L.roof.overhang, .5), mat:K(L.roof.mat) || "tegole", ...(L.roof.ridge === "x" || L.roof.ridge === "y" ? {ridge:L.roof.ridge} : {}), ...(["s", "n", "e", "o"].includes(L.roof.dir) ? {dir:L.roof.dir} : {})}; } else L.roof = null;
+    if (L.underlay && typeof L.underlay === "object"){ const U = L.underlay; if (U.kind === "img" && !okUrl(U.src)) L.underlay = null; else for (const k of ["ox", "oy", "mpp", "k", "opacity"]) if (k in U) U[k] = N(U[k]); } }
+  if (!p.levels.length) p.levels.push({id:"L0", name:"Piano terra", elev:0, height:2.9, slab:.25, roof:null, underlay:null});
+  for (const w of arr("walls")){ w.id = fix(w.id); w.level = fix(w.level); w.a = pt(w.a); w.b = pt(w.b); w.thick = N(w.thick, .3) || .3; w.height = Nn(w.height); for (const k of ["mat", "matA", "matB"]) if (w[k] != null) w[k] = K(w[k]);
+    if (w.arc){ w.arc = {g:fix(w.arc.g), i:N(w.arc.i), h:N(w.arc.h), A:pt(w.arc.A), B:pt(w.arc.B)}; } }
+  for (const r of arr("rooms")){ r.id = fix(r.id); r.level = fix(r.level); r.pts = Array.isArray(r.pts) ? r.pts.map(pt) : []; r.name = T(r.name, 80); r.mat = K(r.mat); if (r.lab) r.lab = pt(r.lab);
+    if (r.ceilH != null) r.ceilH = Nn(r.ceilH); if (r.ceilMat != null) r.ceilMat = K(r.ceilMat); if (r.tile) r.tile = {scale:N(r.tile.scale, 1), rot:N(r.tile.rot), ox:N(r.tile.ox), oy:N(r.tile.oy)}; if (r.skirt) r.skirt = {h:N(r.skirt.h, .08), mat:K(r.skirt.mat) || "bianco"}; }
+  for (const o of arr("openings")){ o.id = fix(o.id); o.wall = fix(o.wall); for (const k of ["t", "w", "h", "sill"]) o[k] = N(o[k]); o.type = o.type === "door" ? "door" : "window"; o.flip = N(o.flip) | 0; if (o.style != null) o.style = K(o.style); if (o.shut != null) o.shut = K(o.shut); }
+  for (const o of arr("objects")){ o.id = fix(o.id); o.level = fix(o.level); o.kind = K(o.kind) || "lib"; o.ref = K(o.ref); o.name = T(o.name, 120); for (const k of ["x", "y", "z", "rot"]) o[k] = N(o[k]); o.scale = N(o.scale, 1) || 1;
+    if (o.p && typeof o.p === "object") for (const [k, v] of Object.entries(o.p)) o.p[k] = typeof v === "number" ? N(v) : typeof v === "boolean" ? v : K(v);
+    if (o.light && typeof o.light === "object") o.light = {on:o.light.on !== false, ...(o.light.lm != null ? {lm:N(o.light.lm, 800)} : {}), ...(o.light.k != null ? {k:N(o.light.k, 3000)} : {})}; }
+  for (const d of arr("dims")){ d.id = fix(d.id); d.level = fix(d.level); d.a = pt(d.a); d.b = pt(d.b); d.off = N(d.off); }
+  for (const c of arr("cameras")){ c.id = fix(c.id); c.name = T(c.name, 80) || "Vista"; c.pos = v3(c.pos); c.target = v3(c.target); c.fov = N(c.fov, 45); }
+  if (p.materials && typeof p.materials === "object"){ const m2 = {};
+    for (const [k, m] of Object.entries(p.materials)){ if (!m || typeof m !== "object") continue; const key = K(k), c = {...m};
+      c.nome = T(m.nome, 80); c.color = /^#[0-9a-f]{3,8}$/i.test(m.color || "") ? m.color : "#cccccc"; for (const u of ["map", "mapData", "normalMap", "roughMap"]) if (c[u] != null && !okUrl(c[u])) delete c[u];
+      for (const n of ["rough", "metal", "size", "opacity"]) if (c[n] != null) c[n] = N(c[n]); for (const n of ["tex", "img", "rimg", "bimg"]) delete c[n]; m2[key] = c; }
+    p.materials = m2; } else p.materials = {};
+  if (p.sky && typeof p.sky === "object"){ if (p.sky.kind === "ph" ? !okUrl(p.sky.url) : !/^[a-z]+$/.test(p.sky.id || "")) p.sky = {kind:"asset", id:"giorno"}; else p.sky = {kind:p.sky.kind === "ph" ? "ph" : "asset", id:K(p.sky.id), ...(p.sky.url ? {url:p.sky.url} : {}), nome:T(p.sky.nome, 80)}; }
+  if (p.sun) p.sun = {az:N(p.sun.az, 245), el:N(p.sun.el, 36)};
+  if (p.site && typeof p.site === "object"){ const s = p.site; p.site = {auto:!!s.auto, city:T(s.city, 40), lat:N(s.lat, 44.494), lon:N(s.lon, 11.343), tz:N(s.tz, 1), dst:s.dst !== false, north:N(s.north), date:/^\d{4}-\d{2}-\d{2}$/.test(s.date || "") ? s.date : "2026-06-21", hour:N(s.hour, 16)}; }
+  if (p.prices && typeof p.prices === "object"){ const q = {}; for (const [k, v] of Object.entries(p.prices)) if (Number.isFinite(Number(v))) q[T(k, 160)] = Number(v); p.prices = q; }
+  if (p.share && typeof p.share === "object") p.share = ID_OK.test(p.share.id || "") ? {id:p.share.id, expires_at:T(p.share.expires_at, 40)} : undefined;
+  if (p.tav && typeof p.tav === "object"){ const t = p.tav; p.tav = {paper:["A4", "A3", "A2", "A1"].includes(t.paper) ? t.paper : "A3", scale:[50, 100, 200].includes(+t.scale) ? +t.scale : 100, color:!!t.color, chains:t.chains !== false, furniture:t.furniture !== false, comp:t.comp !== false, sec:{axis:t.sec?.axis === "z" ? "z" : "x", pos:N(t.sec?.pos, 5), dir:N(t.sec?.dir, 1) < 0 ? -1 : 1}}; }
+  if (p.lightsMode != null && !["auto", "on", "off"].includes(p.lightsMode)) p.lightsMode = "auto";
+  return p;
+}
 function migrate(p){
+  sanitizeProject(p);
   p.materials = p.materials || {}; p.dims = p.dims || []; p.cameras = p.cameras || []; p.sky = p.sky || {kind:"asset", id:"giorno"}; p.sun = p.sun || {az:245, el:36};
   for (const L of p.levels){ L.roof = L.roof || {type:"none", pitch:30, overhang:.5, mat:"tegole"}; L.slab = L.slab ?? .25; }
   for (const o of p.objects || []) if (o.kind === "lib") o.ref = libRef(o.ref);

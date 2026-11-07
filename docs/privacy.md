@@ -51,4 +51,4 @@ Il render AI è un'immagine generata: anche in modalità «fedele» il modello p
 - Titolare del trattamento e contatti.
 - Base giuridica (consenso esplicito, raccolto dalla casella nel pannello).
 - Termini d'uso e trattamento dati del fornitore AI e di Turnstile (trasferimenti extra UE).
-- Licenza d'uso commerciale delle immagini prodotte con FLUX.2 klein 4B.
+- Modello: FLUX.2 klein 4B, licenza Apache 2.0 (uso commerciale consentito); restano da leggere i termini di Cloudflare Workers AI sull'uso dei contenuti inviati.

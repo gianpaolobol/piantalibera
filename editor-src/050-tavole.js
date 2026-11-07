@@ -251,12 +251,17 @@ function buildSheets(){
     }
     // prospetti
     const views = [new THREE.Vector3(0, 0, -1), new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 0, 1), new THREE.Vector3(1, 0, 0)].map(d => { const v = projectTris(tris, d); return {d, v, ex:orthoExtents(v), name:"Prospetto " + facadeName(d)}; }).filter(x => x.ex);
-    if (views.length){ const pgE = newPage(); pgE.title = "Prospetti"; pgE.draw = area => {
-      const cols = 2, rows = 2, cw = area.w / cols, ch = area.h / rows, wm = Math.max(...views.map(x => x.ex.u1 - x.ex.u0)) + 3, hm = Math.max(...views.map(x => x.ex.y1 - x.ex.y0)) + 3;
-      const sc = fitScale(wm, hm + 1.5, {w:cw - 14, h:ch - 10}, T.scale), k = 1000 / sc; if (sc !== T.scale) notes.push(`Prospetti: scala 1:${sc} per stare nel foglio`); pgE.scaleTxt = `1:${sc}`;
-      views.forEach((x, i) => { const cx = area.x + (i % cols) * cw, cy = area.y + Math.floor(i / cols) * ch, dw = (x.ex.u1 - x.ex.u0) * k, dh = (x.ex.y1 - x.ex.y0) * k;
-        const ox = cx + (cw - dw) / 2 + 4, oy = cy + (ch + dh) / 2 - 2; drawOrtho(pgE.g, x.v, ox, oy, k, T.color, x.ex); pgE.g.text(x.name[0].toUpperCase() + x.name.slice(1), cx + cw / 2, oy + 6, 3, {align:"center", bold:true}); });
-    }; }
+    // si tiene la scala scelta: 4, 2 o 1 prospetto per foglio; solo se non entra nemmeno da solo si riduce la scala
+    if (views.length){
+      const A = titleBlock(new VRec(), {w:W, h:H}, "", "", 1, 1), wm = Math.max(...views.map(x => x.ex.u1 - x.ex.u0)) + 3, hm = Math.max(...views.map(x => x.ex.y1 - x.ex.y0)) + 4.5;
+      const fits = ([c, r]) => wm * 1000 / T.scale <= A.w / c - 14 && hm * 1000 / T.scale <= A.h / r - 10;
+      const [cols, rows] = [[2, 2], [2, 1], [1, 2], [1, 1]].find(fits) || [2, 2], per = cols * rows;
+      for (let p0 = 0; p0 < views.length; p0 += per){ const part = views.slice(p0, p0 + per), pgE = newPage(); pgE.title = views.length > per ? `Prospetti (${p0 / per + 1}/${Math.ceil(views.length / per)})` : "Prospetti"; pgE.draw = area => {
+        const cw = area.w / cols, ch = area.h / rows, sc = fitScale(wm, hm, {w:cw - 14, h:ch - 10}, T.scale), k = 1000 / sc; if (sc !== T.scale && p0 === 0) notes.push(`Prospetti: scala 1:${sc} per stare nel foglio`); pgE.scaleTxt = `1:${sc}`;
+        part.forEach((x, i) => { const cx = area.x + (i % cols) * cw, cy = area.y + Math.floor(i / cols) * ch, dw = (x.ex.u1 - x.ex.u0) * k, dh = (x.ex.y1 - x.ex.y0) * k;
+          const ox = cx + (cw - dw) / 2 + 4, oy = cy + (ch + dh) / 2 - 2; drawOrtho(pgE.g, x.v, ox, oy, k, T.color, x.ex); pgE.g.text(x.name[0].toUpperCase() + x.name.slice(1), cx + cw / 2, oy + 6, 3, {align:"center", bold:true}); });
+      }; }
+    }
     // sezione A-A
     const s = T.sec, d = s.axis === "x" ? new THREE.Vector3(s.dir, 0, 0) : new THREE.Vector3(0, 0, s.dir), cut = s.pos * s.dir;
     const sv = projectTris(tris, d, cut), sex = orthoExtents(sv);
