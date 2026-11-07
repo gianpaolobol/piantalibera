@@ -144,7 +144,7 @@ function splitWallAt(w, p){
 }
 
 /* ---------- aiuto ---------- */
-const SHORTCUTS = [["Strumenti", [["V", "Seleziona"], ["W", "Muro"], ["R", "Stanza rettangolare"], ["P", "Pavimento a poligono"], ["D", "Porta"], ["F", "Finestra"], ["Q", "Quota"], ["A", "Arredi"], ["C / M", "Calibra / sposta la base"]]],
+const SHORTCUTS = [["Strumenti", [["V", "Seleziona"], ["W", "Muro"], ["R", "Stanza rettangolare"], ["P", "Pavimento a poligono"], ["D", "Porta"], ["F", "Finestra"], ["Q", "Quota"], ["A", "Arredi"], ["B", "Pennello dei materiali (Alt+clic preleva)"], ["C / M", "Calibra / sposta la base"]]],
   ["Selezione", [["Clic", "seleziona"], ["Maiusc + clic", "aggiunge o toglie"], ["Trascina nel vuoto", "selezione a riquadro"], ["Ctrl+A", "seleziona tutto"], ["Doppio clic", "proprietà · nel vuoto: crea il locale"], ["Tasto destro", "menu"], ["Esc", "annulla il comando"]]],
   ["Modifica", [["Ctrl+C / V / D", "copia, incolla, duplica"], ["Canc", "elimina"], ["[ e ]", "ruota di −90° / +90°"], ["Frecce", "sposta di 1 passo griglia (Maiusc: ×10)"], ["Ctrl+Z / Ctrl+Y", "annulla / ripristina"]]],
   ["Disegno", [["Cifre + Invio", "lunghezza del muro"], ["Tab", "passa all'angolo"], ["Maiusc", "angoli a 15° (con Ortogonale: liberi)"], ["Alt", "rotazione libera dell'oggetto"], ["Spazio + trascina, tasto centrale", "sposta la vista"], ["Rotella", "zoom"]]],

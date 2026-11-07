@@ -267,7 +267,7 @@ const LIB = [
   {cat:"Soggiorno", ref:"mobile_tv", nome:"Mobile TV con TV 65\"", dim:"190×42", build:()=>furn("mobile_tv")},
   {cat:"Soggiorno", ref:"libreria", nome:"Libreria", dim:"120×35", build:()=>furn("libreria")},
   {cat:"Soggiorno", ref:"tappeto", nome:"Tappeto", dim:"240×170", build:()=>furn("tappeto")},
-  {cat:"Soggiorno", ref:"lampada", nome:"Lampada da terra", dim:"h 175", build:()=>furn("lampada")},
+  {cat:"Soggiorno", ref:"lampada", nome:"Lampada da terra", dim:"h 175", build:()=>addLibLights(furn("lampada"), "lampada")},
   {cat:"Pranzo", ref:"tavolo6", nome:"Tavolo 6 posti", dim:"200×95", build:()=>furn("tavolo6")},
   {cat:"Pranzo", ref:"tavolo_tondo", nome:"Tavolo tondo", dim:"Ø 120", build:()=>furn("tavolo_tondo")},
   {cat:"Pranzo", ref:"sedia", nome:"Sedia in legno", dim:"45×45", build:()=>furn("sedia")},
@@ -280,7 +280,7 @@ const LIB = [
   {cat:"Cucina", ref:"sgabello", nome:"Sgabello alto", dim:"Ø 38", build:()=>furn("sgabello")},
   {cat:"Camera", ref:"letto2", nome:"Letto matrimoniale", dim:"174×212", build:()=>furn("letto2")},
   {cat:"Camera", ref:"letto1", nome:"Letto singolo", dim:"98×208", build:()=>furn("letto1")},
-  {cat:"Camera", ref:"comodino", nome:"Comodino con lampada", dim:"50×40", build:()=>furn("comodino")},
+  {cat:"Camera", ref:"comodino", nome:"Comodino con lampada", dim:"50×40", build:()=>addLibLights(furn("comodino"), "comodino")},
   {cat:"Camera", ref:"armadio2", nome:"Armadio 2 ante", dim:"120×62", build:()=>furn("armadio2")},
   {cat:"Camera", ref:"armadio4", nome:"Armadio 4 ante", dim:"240×62", build:()=>furn("armadio4")},
   {cat:"Camera", ref:"cassettiera", nome:"Cassettiera", dim:"100×50", build:()=>furn("cassettiera")},
@@ -330,6 +330,7 @@ function libRef(ref){ return LIBMAP[ref] ? ref : (LIB_ALIASES[ref] || ref); }
 function objTemplate(o){
   if (o.kind === "lib"){
     const ref = libRef(o.ref), it = LIBMAP[ref]; if (!it) return null;
+    if (it.param){ const key = ref + ":" + JSON.stringify(paramsOf(o, it)); if (!TPL[key]) TPL[key] = {status:"ok", obj:finishTpl(it.build(paramsOf(o, it)))}; return TPL[key].obj; }
     const t = TPL[ref];
     if (t?.status === "ok") return t.obj;
     if (it.build && !t){ TPL[ref] = {status:"ok", obj:finishTpl(it.build())}; return TPL[ref].obj; }
@@ -409,7 +410,7 @@ function queueThumb(img){
 function pumpThumbs(){
   const img = thumbQueue.shift(); if (!img){ thumbBusy = false; return; } thumbBusy = true;
   const ref = img.dataset.thumb, it = LIBMAP[ref];
-  const next = () => (window.requestIdleCallback || setTimeout)(pumpThumbs, 30);
+  const next = () => window.requestIdleCallback ? requestIdleCallback(pumpThumbs, {timeout:400}) : setTimeout(pumpThumbs, 30);
   if (thumbCache[ref]){ img.src = thumbCache[ref]; return next(); }
   if (!it){ return next(); }
   const t = TPL[ref];

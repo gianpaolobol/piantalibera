@@ -146,7 +146,7 @@ function getMat(key){
     if (src) loadTex(src, t => { mat.map = t; done(); });
     if (m.normalMap) loadTex(m.normalMap, t => { mat.normalMap = t; done(); }, false);
     if (m.roughMap) loadTex(m.roughMap, t => { mat.roughnessMap = t; mat.roughness = 1; done(); }, false);
-    if (m.emissive){ mat.emissive = new THREE.Color(m.emissive); mat.emissiveIntensity = .6; }
+    if (m.emissive){ mat.emissive = new THREE.Color(m.emissive); mat.emissiveIntensity = m.glow ?? .6; }
   }
   if (m.side === "double") mat.side = THREE.DoubleSide;
   mat.envMapIntensity = m.glass ? 1.2 : .55;

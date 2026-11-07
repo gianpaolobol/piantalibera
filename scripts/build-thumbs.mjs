@@ -1,6 +1,7 @@
 // Genera le anteprime della libreria interna in public/assets/anteprime/<ref>.webp
 // usando lo stesso motore dell'editor (renderThumb) in Chromium headless.
 // Uso: npm run build:anteprime   (in locale senza rete: PL_LOCAL_THREE=<cartella three@0.147.0>)
+// Con  -- --mancanti  genera solo le anteprime che non esistono ancora.
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
@@ -23,7 +24,8 @@ try {
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ body: "", contentType: "text/css" }));
   for (let i = 0; i < 40; i++){ try { await page.goto(`http://127.0.0.1:${PORT}/`); break; } catch { await new Promise(r => setTimeout(r, 250)); } }
   await page.waitForFunction(() => typeof renderThumb === "function" && typeof P !== "undefined" && P);
-  const refs = await page.evaluate(() => LIB.filter(x => !x.ref.startsWith("pers_")).map(x => x.ref));
+  const only = process.argv.includes("--mancanti");
+  const refs = (await page.evaluate(() => LIB.filter(x => !x.ref.startsWith("pers_")).map(x => x.ref))).filter(r => !only || !existsSync(join(out, r + ".webp")));
   let n = 0;
   for (const ref of refs){
     const url = await page.evaluate(async ref => {

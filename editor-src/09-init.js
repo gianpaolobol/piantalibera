@@ -36,6 +36,7 @@ function migrate(p){
   p.materials = p.materials || {}; p.dims = p.dims || []; p.cameras = p.cameras || []; p.sky = p.sky || {kind:"asset", id:"giorno"}; p.sun = p.sun || {az:245, el:36};
   for (const L of p.levels){ L.roof = L.roof || {type:"none", pitch:30, overhang:.5, mat:"tegole"}; L.slab = L.slab ?? .25; }
   for (const o of p.objects || []) if (o.kind === "lib") o.ref = libRef(o.ref);
+  if (!p.pid) p.pid = uid();
   p.version = 2; return p;
 }
 function readCanvasColors(){ readColors(); draw2D(); render3D(); }
@@ -49,6 +50,6 @@ function init(){
   new MutationObserver(() => { readCanvasColors(); applySky(); }).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
   if (document.fonts?.ready) document.fonts.ready.then(draw2D);
   capReady.then(() => { if (S.tab === "export") renderExport(); });
-  loadPersonalIndex();
+  loadPersonalIndex(); setTimeout(queueIdbSave, 2500);
 }
 init();

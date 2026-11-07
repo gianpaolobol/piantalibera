@@ -240,6 +240,90 @@ test("fase 2: selezione e trascinamento in 3D, camere, metro, elenco e trascina 
   expect(errors).toEqual([]);
 });
 
+const proj3 = (page, x, y, z) => page.evaluate(([x, y, z]) => { const v = new THREE.Vector3(x, y, z).project(camera); const r = c3d.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }, [x, y, z]);
+
+test("fase 3: pennello sul lato del muro, posa, battiscopa e controsoffitto", async ({ page }) => {
+  const errors = await open(page);
+  const box = await page.locator("#c2d").boundingBox();
+  await page.keyboard.press("b");
+  await expect(page.locator("#panel-props")).toContainText("Pennello dei materiali");
+  await page.locator('[data-brush="mattone"]').click();
+  await page.evaluate(() => camPreset("ext")); await page.waitForTimeout(500);
+  const [x, y] = await proj3(page, 10, 1.2, 8.16); await page.mouse.click(x, y);   // facciata sud, lato esterno
+  const w = await page.evaluate(() => P.walls.find(w => w.a[1] === 8 && w.b[1] === 8));
+  expect(w.mat).toBe("intonaco"); expect(w.matA || w.matB).toBe("mattone");
+  await page.locator('[data-brush="cotto"]').click();
+  const s = await page.evaluate(() => toS([3, 1])); await page.mouse.click(box.x + s[0], box.y + s[1]);
+  expect(await page.evaluate(() => P.rooms[0].mat)).toBe("cotto");
+  // posa diagonale, battiscopa, controsoffitto dall'ispettore
+  await page.keyboard.press("v"); await page.mouse.click(box.x + s[0], box.y + s[1]);
+  await page.locator("#panel-props details.exp summary", { hasText: "Posa" }).click();
+  await page.fill("#rTileR", "45"); await page.press("#rTileR", "Enter");
+  await page.check("#rSkirt"); await page.fill("#rCeilH", "2,6"); await page.press("#rCeilH", "Enter");
+  const r = await page.evaluate(() => P.rooms[0]);
+  expect(r.tile.rot).toBe(45); expect(r.skirt.h).toBeCloseTo(.08); expect(r.ceilH).toBeCloseTo(2.6);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => { let n = 0; modelGroup.traverse(o => { if (o.userData?.cat === "skirt") n++; }); return n; })).toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+});
+
+test("fase 3: porte e finestre, scala con foro nel solaio, tetti, luci e sole da data e ora", async ({ page }) => {
+  const errors = await open(page);
+  await page.evaluate(() => { const d = P.openings.find(o => o.type === "door"), w = P.openings.find(o => o.type === "window"); setSel([{type:"opening", id:d.id}]); renderInspector(); });
+  await page.selectOption("#oStyle", "portafinestra");
+  await page.evaluate(() => { setSel([{type:"opening", id:P.openings.find(o => o.type === "window").id}]); renderInspector(); });
+  await page.selectOption("#oShut", "persiane");
+  expect(await page.evaluate(() => [P.openings.find(o => o.type === "door").style, P.openings.find(o => o.type === "window").shut])).toEqual(["portafinestra", "persiane"]);
+  // tetti
+  for (const t of ["hip", "shed"]){ await page.evaluate(t => { setSel([]); P.levels[0].roof.type = t; commit(); }, t); await page.waitForTimeout(300);
+    expect(await page.evaluate(() => { let n = 0; modelGroup.traverse(o => { if (o.userData?.cat === "roof") n += o.geometry.attributes.position.count; }); return n; })).toBeGreaterThan(20); }
+  // scala dal catalogo con un piano sopra
+  await page.click("#addLevel");
+  await page.evaluate(() => { P.rooms.push({id:"rs", level:P.levels[1].id, name:"Sopra", mat:"parquet", pts:[[.15,.15],[10.85,.15],[10.85,7.85],[.15,7.85]]}); S.level = P.levels[0].id; commit(); renderLevels(); S.furnSrc = "lib"; S.furn = "scala_dritta"; placeFurniture([4, 4]); });
+  const st = await page.evaluate(() => { const o = P.objects.at(-1); return {H:o.p.H, n:o.p.n, holes:stairHoles(o.level).length}; });
+  expect(st.H).toBeCloseTo(3.15, 2); expect(st.n).toBe(18); expect(st.holes).toBe(1);
+  await expect(page.locator("#panel-props")).toContainText("2a + p");
+  await page.locator('[data-pp="n"]').fill("17"); await page.locator('[data-pp="n"]').press("Enter");
+  expect(await page.evaluate(() => P.objects.at(-1).p.n)).toBe(17);
+  // luci e sole: Bologna, 21 giugno, 13:15 → sole a sud alto ~69°; alle 21:30 è notte e le luci si accendono
+  await page.evaluate(() => { S.furn = "sospensione"; placeFurniture([3, 3]); setSel([]); renderInspector(); });
+  expect(await page.evaluate(() => P.objects.at(-1).z)).toBeCloseTo(2.9);
+  await page.locator('[data-sunmode="1"]').click();
+  await page.selectOption("#siteCity", "Bologna"); await page.fill("#siteDate", "2026-06-21");
+  await page.evaluate(() => { P.site.hour = 13.25; applySite(); commit(); });
+  const noon = await page.evaluate(() => P.sun); expect(noon.el).toBeGreaterThan(67); expect(Math.abs(noon.az - 180)).toBeLessThan(5);
+  await page.evaluate(() => { P.site.hour = 21.75; applySite(); commit(); placeSun(); }); await page.waitForTimeout(400);
+  expect(await page.evaluate(() => [P.sun.el < 0, lightsOn(), S.night])).toEqual([true, true, true]);
+  expect(await page.evaluate(() => { let n = 0; modelGroup.traverse(o => { if (o.isPointLight && o.visible) n++; }); return n; })).toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+});
+
+test("fase 3: immagine 4K, panorama 360°, coda di render e raccolta progetti", async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors = await open(page);
+  await page.click('[data-tab="export"]');
+  const dl = page.waitForEvent("download"); await page.click("#ex4k");
+  expect((await dl).suggestedFilename()).toMatch(/vista-4k\.png$/);
+  await page.evaluate(async () => { window.__pano = await renderPanorama(1024); });
+  expect(await page.evaluate(() => [__pano.width, __pano.height])).toEqual([1024, 512]);
+  expect(await page.evaluate(async () => new TextDecoder().decode((await panoJPEG(__pano)).slice(0, 600)).includes("equirectangular"))).toBe(true);
+  // coda: due viste contro il servizio di prova
+  await page.click('[data-tab="ai"]'); await page.check("#aiConsent");
+  await page.click("#aiqAdd"); await page.evaluate(() => camPreset("bird")); await page.click("#aiqAdd");
+  await page.click("#aiqRun");
+  await expect(page.locator("#aiStatus")).toContainText("2 di 2 render completati", { timeout: 60_000 });
+  // raccolta progetti
+  await page.evaluate(() => saveToIdb()); await page.click("#projBtn");
+  await expect(page.locator(".proj")).toHaveCount(1);
+  await page.click("#projNew");
+  await expect.poll(() => page.evaluate(() => P.walls.length)).toBe(0);
+  await page.evaluate(() => saveToIdb()); await page.click("#projBtn");
+  await expect(page.locator(".proj")).toHaveCount(2);
+  await page.locator("[data-popen]").first().click();
+  await expect.poll(() => page.evaluate(() => P.walls.length)).toBe(5);
+  expect(errors).toEqual([]);
+});
+
 test("telefono: nessuno scorrimento orizzontale", async ({ page }) => {
   await page.setViewportSize({ width: 400, height: 860 });
   await open(page);
