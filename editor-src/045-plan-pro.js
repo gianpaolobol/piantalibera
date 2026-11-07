@@ -148,6 +148,7 @@ const SHORTCUTS = [["Strumenti", [["V", "Seleziona"], ["W", "Muro"], ["R", "Stan
   ["Selezione", [["Clic", "seleziona"], ["Maiusc + clic", "aggiunge o toglie"], ["Trascina nel vuoto", "selezione a riquadro"], ["Ctrl+A", "seleziona tutto"], ["Doppio clic", "proprietà · nel vuoto: crea il locale"], ["Tasto destro", "menu"], ["Esc", "annulla il comando"]]],
   ["Modifica", [["Ctrl+C / V / D", "copia, incolla, duplica"], ["Canc", "elimina"], ["[ e ]", "ruota di −90° / +90°"], ["Frecce", "sposta di 1 passo griglia (Maiusc: ×10)"], ["Ctrl+Z / Ctrl+Y", "annulla / ripristina"]]],
   ["Disegno", [["Cifre + Invio", "lunghezza del muro"], ["Tab", "passa all'angolo"], ["Maiusc", "angoli a 15° (con Ortogonale: liberi)"], ["Alt", "rotazione libera dell'oggetto"], ["Spazio + trascina, tasto centrale", "sposta la vista"], ["Rotella", "zoom"]]],
+  ["Telefono e tablet", [["Un dito", "sposta la vista"], ["Tocco", "seleziona"], ["Trascina un elemento selezionato", "lo sposta"], ["Due dita", "zoom e spostamento"], ["Tocco lungo", "menu"], ["Maniglia del pannello", "lo apre a metà o quasi intero"]]],
   ["Vista 3D", [["Clic", "seleziona"], ["Trascina un oggetto", "lo sposta"], ["A piedi: W A S D, frecce", "cammina · Maiusc corre"], ["Trascina", "guarda intorno"], ["Esc", "esce dalla visita o cancella le misure"]]]];
 function openHelp(){
   closeHelp();
@@ -165,6 +166,7 @@ function openInfo(){
   d.innerHTML = `<div class="help-in"><header><h3>Pianta Libera</h3><button class="btn" id="helpClose" aria-label="Chiudi">✕</button></header>
     <p>Modellazione architettonica e render nel browser. Il progetto resta nel tuo browser; viene inviato a un server solo se chiedi un render AI o crei un link per il cliente, dopo il tuo consenso.</p>
     <div class="info-links">${INFO_LINKS}</div>
+    <div id="installBox">${installHTML()}</div>
     <p class="credits">Software libero con licenza <b>GNU AGPL-3.0</b>: puoi usarlo, studiarlo, modificarlo e ridistribuirlo; chi lo offre in rete in versione modificata deve rendere disponibile il proprio codice.</p>
     <ul class="credits"><li>Grafica 3D: three.js (MIT)</li><li>Render AI: FLUX.2 klein 4B di Black Forest Labs (Apache 2.0) su Cloudflare Workers AI</li><li>Modelli, materiali e cieli: Poly Haven (CC0) e libreria interna</li><li>Lettori: dxf-parser (MIT), libredwg-web (GPL-3.0), pdf.js (Apache 2.0), web-ifc (MPL-2.0)</li></ul>
     <p class="credits">Le immagini AI sono generate: anche in modalità fedele possono alterare dettagli e non sono elaborati tecnici.</p></div>`;

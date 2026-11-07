@@ -259,7 +259,10 @@ c2d.addEventListener("pointerdown", e => {
     const lab = !e.shiftKey && roomLabelHit(sp); if (lab){ setSel([{type:"room", id:lab.id}]); renderInspector(); drag = {type:"roomLabel", r:lab, start:raw, orig:(lab.lab || [0,0]).slice(), moved:false}; draw2D(); return; }
     const h = hitTest(raw);
     if (e.shiftKey && h){ toggleSel(h); renderInspector(); draw2D(); return; }
-    if (!h){ if (e.pointerType === "touch"){ drag = {type:"pan", sp, c:[V.cx,V.cy]}; } else drag = {type:"box", sp, cur:sp, add:e.shiftKey}; if (!e.shiftKey){ setSel([]); renderInspector(); } draw2D(); return; }
+    // a tocco: un dito sposta la vista; un tocco senza movimento seleziona (o deseleziona sul vuoto);
+    // si trascina solo un elemento già selezionato (i locali, grandi, non si spostano col dito: si usano i vertici)
+    if (e.pointerType === "touch" && (!h || !isSelected(h.id) || h.type === "room")){ drag = {type:"pan", sp, c:[V.cx,V.cy], tap:h || "none"}; return; }
+    if (!h){ drag = {type:"box", sp, cur:sp, add:e.shiftKey}; if (!e.shiftKey){ setSel([]); renderInspector(); } draw2D(); return; }
     if (selList().length > 1 && isSelected(h.id)){ drag = {type:"group", start:raw, snap:groupSnapshot(), moved:false}; return; }
     const grp = expandGroup(h); if (grp.length > 1){ setSel(grp); renderInspector(); drag = {type:"group", start:raw, snap:groupSnapshot(), moved:false}; draw2D(); return; }
     setSel([h]); renderInspector();
@@ -331,6 +334,7 @@ c2d.addEventListener("pointermove", e => {
 function endDrag(e){
   pointers.delete(e.pointerId);
   if (!drag) return;
+  if (drag.type === "pan" && drag.tap && !drag.panned){ const h = drag.tap; drag = null; setSel(h === "none" ? [] : expandGroup(h)); renderInspector(); draw2D(); return; }
   if (drag.type === "pan" && drag.right && !drag.panned){ const sp = drag.sp, raw = drag.raw; drag = null; if (S.tool === "wall" || S.tool === "dim"){ S.draw = null; draw2D(); return; } openCtxMenu(sp, raw); return; }
   if (drag.type === "box"){ const a = toW(...drag.sp), b = toW(...drag.cur), x0 = Math.min(a[0],b[0]), x1 = Math.max(a[0],b[0]), y0 = Math.min(a[1],b[1]), y1 = Math.max(a[1],b[1]);
     if (Math.abs(drag.cur[0]-drag.sp[0]) + Math.abs(drag.cur[1]-drag.sp[1]) > 6){

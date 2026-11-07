@@ -1,0 +1,18 @@
+{
+  "name": "Pianta Libera",
+  "short_name": "Pianta Libera",
+  "description": "Pianta, modello 3D, tavole e render nel browser.",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#e9ece8",
+  "theme_color": "#1f6f62",
+  "categories": ["productivity", "design"],
+  "icons": [
+    { "src": "assets/app/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/app/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/app/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

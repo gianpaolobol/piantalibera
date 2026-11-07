@@ -126,6 +126,10 @@ Il pacchetto parla con **ComfyUI** installato sullo stesso computer e usa il mod
 
 Dalla scheda **Esporta → Condividi con il cliente** il server locale crea link che valgono finché resta acceso (i progetti condivisi stanno in memoria, non su disco). Per farli aprire da un altro dispositivo della stessa rete avvia il server con `HOST=0.0.0.0` e manda il link con l'indirizzo del computer (es. `http://192.168.1.20:8787/?condividi=…`). Puoi scegliere se il cliente può solo guardare e commentare o anche modificare il progetto: in quel caso il link contiene `#modifica=…` e le sue modifiche ti arrivano come proposta da aprire o scartare.
 
+### Su telefono e tablet
+
+L'editor si adatta da solo a telefono e tablet (una vista per volta, pannello che sale dal basso, gesti a tocco: vedi `docs/app-mobile.md`). Con il server avviato con `HOST=0.0.0.0` lo apri dal telefono all'indirizzo del computer (es. `http://192.168.1.20:8787/`).
+
 ## 6. Aggiornare
 
 Scarica di nuovo lo zip dal link in cima ed estrailo in una cartella nuova. Copia nella nuova cartella il tuo `comfyui/workflow-api.json`. I progetti salvati nel browser restano (sono legati all'indirizzo http://127.0.0.1:8787, quindi usa la stessa porta); per sicurezza esporta i progetti importanti come `.json` dal menu Esporta.

@@ -15,6 +15,7 @@ export default defineConfig({
     viewport: { width: 1440, height: 860 },
     launchOptions: { args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] },
     screenshot: "only-on-failure",
+    serviceWorkers: "block",
   },
   webServer: { command: "node server/mock-render-server.mjs", url: "http://127.0.0.1:8787/", reuseExistingServer: !process.env.CI, timeout: 20_000, env: { PER_HOUR: "1000" } },
 });

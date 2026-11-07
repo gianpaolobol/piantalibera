@@ -56,6 +56,10 @@ Nessuna chiave nel client o nel repository. La pagina ha una Content Security Po
 
 Il prototipo React iniziale è archiviato nel branch `archivio/prototipo-react`.
 
+## Telefono, tablet e app
+
+Disposizione compatta per telefono e tablet, gesti a tocco, installabile come app (PWA) e progetto Capacitor per Android e iOS: [docs/app-mobile.md](docs/app-mobile.md).
+
 ## Uso in locale
 
 Pacchetto sempre aggiornato (funziona senza internet; usa la GPU del computer tramite il browser e, per il render AI, ComfyUI in locale):
