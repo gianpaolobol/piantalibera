@@ -55,17 +55,25 @@ jobs:
           EXPO_APPLE_TEAM_ID: BX9MDXAHKG
           EXPO_APPLE_TEAM_TYPE: ${{ steps.prep.outputs.team_type }}
           ASC_APP_ID: ${{ steps.prep.outputs.asc_app_id }}
+          IOS_LOCAL: ${{ steps.prep.outputs.ios_local }}
+          EAS_BUILD_NO_EXPO_GO_WARNING: "true"
           PLATFORM: ${{ inputs.platform }}
           SUBMIT: ${{ inputs.submit }}
         run: |
-          for p in $( [ "$PLATFORM" = all ] && echo "ios android" || echo "$PLATFORM" ); do
-            sub=""; if [ "$SUBMIT" = "true" ] && { [ "$p" = android ] || [ -n "$ASC_APP_ID" ]; }; then sub="--auto-submit"; fi
-            [ "$p" = android ] && sub=""   # Google vuole il primo AAB caricato a mano in Play Console: invio automatico dalla seconda build
-            echo "== $p $sub"
-            $EAS build --platform "$p" --profile production $sub --non-interactive --no-wait
+          fail=0
+          for p in $( [ "$PLATFORM" = all ] && echo "android ios" || echo "$PLATFORM" ); do
+            prof=production; sub=""
+            if [ "$p" = ios ]; then
+              [ "$IOS_LOCAL" = "true" ] && prof=production-ios-local
+              [ "$SUBMIT" = "true" ] && [ -n "$ASC_APP_ID" ] && sub="--auto-submit"
+            fi                                    # Android: Google vuole il primo AAB caricato a mano in Play Console
+            echo "== $p ($prof) $sub"
+            $EAS build --platform "$p" --profile "$prof" $sub --non-interactive --no-wait || fail=1
           done
+          rm -f credentials.json
+          [ "$fail" = 0 ]
           echo "### Build avviate su Expo ($PLATFORM)" >> "$GITHUB_STEP_SUMMARY"
           echo "Stato e log: https://expo.dev/accounts/gianpaolobol/projects/pianta-libera/builds" >> "$GITHUB_STEP_SUMMARY"
       - name: Rimuovi la chiave temporanea
         if: always()
-        run: rm -f "$RUNNER_TEMP/asc.p8"
+        run: rm -f "$RUNNER_TEMP/asc.p8" "$RUNNER_TEMP/dist.p12" "$RUNNER_TEMP/app.mobileprovision" credentials.json
