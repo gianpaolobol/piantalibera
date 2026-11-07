@@ -25,7 +25,9 @@ for (const n of accounts){
   const d = await graph("query($n:String!){account{byName(accountName:$n){appStoreConnectApiKeysPaginated(first:50){edges{node{id keyIdentifier appleTeam{appleTeamIdentifier appleTeamType}}}}}}}", { n });
   const all = d.account.byName.appStoreConnectApiKeysPaginated.edges.map(e => e.node);
   console.log(`account Expo ${n}: ${all.length} chiavi App Store Connect, team ${[...new Set(all.map(k => k.appleTeam?.appleTeamIdentifier || "?"))].join(", ") || "—"}`);
-  const mine = all.filter(k => k.appleTeam?.appleTeamIdentifier === TEAM); if (mine.length && !keys.length){ keys = mine; keyAccount = n; }
+  // come in Fungo Italia: la chiave del team, oppure l'unica chiave dell'account se non è legata a un team in Expo
+  const mine = all.filter(k => k.appleTeam?.appleTeamIdentifier === TEAM), pick = mine.length ? mine : all.length === 1 && !all[0].appleTeam ? all : [];
+  if (pick.length && !keys.length){ keys = pick; keyAccount = n; }
 }
 const sel = keys.find(k => k.keyIdentifier === "35MS8YN74G") || keys[0]; mask(sel?.keyIdentifier); if (!sel) throw Error("Nessuna chiave App Store Connect per il team " + TEAM + " negli account " + accounts.join(", "));
 console.log("chiave App Store Connect trovata nell'account Expo " + keyAccount);
