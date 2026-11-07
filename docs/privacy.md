@@ -1,54 +1,28 @@
-# Informativa sul render AI — bozza
+# Privacy e termini — note tecniche
 
-> Bozza tecnica preparata con il codice, **da far verificare** (GDPR) prima dell'apertura al pubblico. Descrive ciò che il software fa oggi; titolare, contatti e base giuridica vanno completati dal proprietario del sito.
+I testi per il pubblico sono in [`public/privacy.html`](../public/privacy.html) e [`public/termini.html`](../public/termini.html), pubblicati con l'editor e collegati da: pulsante «Info» nella barra in alto, finestra delle scorciatoie, casella di consenso del Render AI, casella di consenso del link per il cliente.
 
-## Cosa resta nel tuo browser
+**Da completare dal proprietario prima dell'apertura al pubblico:** partita IVA ed e-mail del titolare (segnaposto «[da completare]» nelle due pagine). I testi sono stati preparati con il codice e conviene farli rileggere da un consulente privacy.
 
-Il progetto (pianta, modello 3D, materiali) è salvato solo nel tuo browser (`localStorage` e IndexedDB) e nei file che scarichi. Non viene inviato a nessun server finché non chiedi un render AI o non crei un link per il cliente.
+## Corrispondenza tra testo e codice
 
-## Cosa viene inviato quando chiedi un render AI
+Quando cambia uno di questi comportamenti, va aggiornata l'informativa nello stesso PR.
 
-Solo dopo che hai spuntato la casella di consenso nel pannello «Render AI»:
+| Nel testo | Nel codice |
+|---|---|
+| Render: immagine fino a 512 px, profondità, contorni, prompt, camera, nome del progetto | `editor-src/08-ai.js` (`vars`), contratto `shared/contract.js` |
+| Consenso obbligatorio | `consent_required` in `worker/src/index.js`, casella `#aiConsent` |
+| Immagini cancellate dopo 1 ora | `RETENTION_SECONDS` (`worker/wrangler.toml`), TTL di KV |
+| IP solo come hash con sale | `IP_SALT` (segreto), `ipHash()` nel Worker; contatori nel Durable Object `QuotaGate` |
+| Link per il cliente: 30 giorni, senza prezzi né modelli importati | `SHARE.ttlDays` in `shared/share.js`, `sharePayload()` in `editor-src/051-condivisione.js` |
+| Nessun dato personale nei log | `console.log` del Worker: solo id, stato, durata, consumi |
+| Fornitori terzi | Cloudflare (Workers, KV, Durable Objects, Workers AI, Turnstile), jsDelivr, Google Fonts, Poly Haven, GitHub Pages |
 
-- l'immagine della vista 3D corrente (fino a 512 px di lato) e, se attive, le mappe di profondità e di contorni della stessa vista;
-- il prompt testuale e i parametri del render (dimensioni, seed, modalità fedele/creativa);
-- la posizione della camera e il nome del progetto;
-- un token anti-bot di Cloudflare Turnstile.
+## Fornitore AI
 
-Non vengono inviati il file del progetto, le misure o altri dati personali.
+Cloudflare dichiara che i contenuti elaborati da Workers AI non sono usati per addestrare modelli e non sono conservati oltre la richiesta, salvo la memorizzazione decisa dal cliente (per noi: le immagini in KV per 1 ora). Fonte: <https://developers.cloudflare.com/workers-ai/platform/privacy/>.
 
-## A chi
+## Miglioramenti possibili
 
-- **Backend del sito** (Worker Cloudflare, o backend PHP sull'hosting scelto), che applica quote e protezioni.
-- **Fornitore del modello**: nella configurazione di test Cloudflare Workers AI, modello `@cf/black-forest-labs/flux-2-klein-4b`. Il fornitore effettivo è indicato nel pannello prima dell'invio (`/api/config`).
-- **Cloudflare Turnstile** per la verifica anti-bot.
-
-## Quanto tempo
-
-- Immagini generate e stato del lavoro: cancellati automaticamente dopo **1 ora** (`RETENTION_SECONDS`); puoi cancellarli prima (`DELETE /api/render/:id`).
-- Contatori delle quote: l'indirizzo IP **non** è salvato in chiaro, ma come hash con un sale segreto, insieme al numero di render del giorno; i contatori sono cancellati dopo 1–2 giorni.
-- Il backend non conserva le immagini inviate oltre il tempo della richiesta (Worker) o oltre la retention (PHP).
-
-## Link per il cliente e commenti
-
-Solo se il progettista crea un link dalla scheda Esporta (con una casella di consenso):
-
-- il progetto (pianta, modello, materiali, camere salvate) viene salvato sul server (KV di Cloudflare nel Worker, memoria nel server locale); **non** vengono inviati i prezzi del computo né i file dei modelli importati;
-- chi ha il link vede il progetto in sola lettura e può lasciare commenti: un **nome** scelto da chi scrive, il **testo**, il punto in pianta e, se lo lascia spuntato, la vista 3D;
-- link e commenti si cancellano da soli dopo **30 giorni**, o subito con «Elimina il link»; il token per modificare il link resta solo nel browser di chi l'ha creato (sul server c'è solo il suo hash);
-- per limitare gli abusi, link e commenti contano in contatori giornalieri per IP salvato come hash, come per i render; creazione e commenti richiedono la verifica Turnstile quando è attiva.
-
-## Galleria dei render e raccolta dei progetti
-
-I render ottenuti e i progetti della raccolta «Progetti» restano nel browser (IndexedDB). Il ritocco con maschera invia al servizio di render l'immagine del render da ritoccare e il testo della richiesta, con le stesse regole del render AI.
-
-## Limiti del risultato
-
-Il render AI è un'immagine generata: anche in modalità «fedele» il modello può alterare dettagli di muri, aperture e coperture. Non è un elaborato tecnico.
-
-## Da completare prima della pubblicazione
-
-- Titolare del trattamento e contatti.
-- Base giuridica (consenso esplicito, raccolto dalla casella nel pannello).
-- Termini d'uso e trattamento dati del fornitore AI e di Turnstile (trasferimenti extra UE).
-- Modello: FLUX.2 klein 4B, licenza Apache 2.0 (uso commerciale consentito); restano da leggere i termini di Cloudflare Workers AI sull'uso dei contenuti inviati.
+- Caratteri tipografici serviti dal sito invece che da Google Fonts (l'IP del visitatore non arriverebbe a Google).
+- Librerie servite dal sito invece che da jsDelivr (come già fa il pacchetto locale).

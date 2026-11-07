@@ -152,10 +152,25 @@ const SHORTCUTS = [["Strumenti", [["V", "Seleziona"], ["W", "Muro"], ["R", "Stan
 function openHelp(){
   closeHelp();
   const d = document.createElement("div"); d.id = "helpBox"; d.className = "help"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Scorciatoie");
-  d.innerHTML = `<div class="help-in"><header><h3>Scorciatoie</h3><button class="btn" id="helpClose" aria-label="Chiudi">✕</button></header><div class="help-grid">${SHORTCUTS.map(([t, l]) => `<section><h4>${esc(t)}</h4><dl>${l.map(([k, v]) => `<dt><kbd>${esc(k)}</kbd></dt><dd>${esc(v)}</dd>`).join("")}</dl></section>`).join("")}</div></div>`;
+  d.innerHTML = `<div class="help-in"><header><h3>Scorciatoie</h3><button class="btn" id="helpClose" aria-label="Chiudi">✕</button></header><div class="help-grid">${SHORTCUTS.map(([t, l]) => `<section><h4>${esc(t)}</h4><dl>${l.map(([k, v]) => `<dt><kbd>${esc(k)}</kbd></dt><dd>${esc(v)}</dd>`).join("")}</dl></section>`).join("")}</div><div class="info-links">${INFO_LINKS}</div></div>`;
   document.body.appendChild(d); d.addEventListener("click", e => { if (e.target === d || e.target.closest("#helpClose")) closeHelp(); }); $("#helpClose").focus();
 }
 function closeHelp(){ document.getElementById("helpBox")?.remove(); }
+/* ---------- informazioni, privacy, termini, licenza (AGPL-3.0 §13: link al codice sorgente) ---------- */
+const SOURCE_URL = "https://github.com/gianpaolobol/piantalibera";
+const INFO_LINKS = `<a href="privacy.html" target="_blank" rel="noopener">Informativa privacy</a><a href="termini.html" target="_blank" rel="noopener">Termini d'uso</a><a href="${SOURCE_URL}" target="_blank" rel="noopener">Codice sorgente (AGPL-3.0)</a>`;
+function openInfo(){
+  closeHelp();
+  const d = document.createElement("div"); d.id = "helpBox"; d.className = "help"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Informazioni");
+  d.innerHTML = `<div class="help-in"><header><h3>Pianta Libera</h3><button class="btn" id="helpClose" aria-label="Chiudi">✕</button></header>
+    <p>Modellazione architettonica e render nel browser. Il progetto resta nel tuo browser; viene inviato a un server solo se chiedi un render AI o crei un link per il cliente, dopo il tuo consenso.</p>
+    <div class="info-links">${INFO_LINKS}</div>
+    <p class="credits">Software libero con licenza <b>GNU AGPL-3.0</b>: puoi usarlo, studiarlo, modificarlo e ridistribuirlo; chi lo offre in rete in versione modificata deve rendere disponibile il proprio codice.</p>
+    <ul class="credits"><li>Grafica 3D: three.js (MIT)</li><li>Render AI: FLUX.2 klein 4B di Black Forest Labs (Apache 2.0) su Cloudflare Workers AI</li><li>Modelli, materiali e cieli: Poly Haven (CC0) e libreria interna</li><li>Lettori: dxf-parser (MIT), libredwg-web (GPL-3.0), pdf.js (Apache 2.0), web-ifc (MPL-2.0)</li></ul>
+    <p class="credits">Le immagini AI sono generate: anche in modalità fedele possono alterare dettagli e non sono elaborati tecnici.</p></div>`;
+  document.body.appendChild(d); d.addEventListener("click", e => { if (e.target === d || e.target.closest("#helpClose")) closeHelp(); }); $("#helpClose").focus();
+}
+$("#infoBtn")?.addEventListener("click", openInfo);
 
 /* ---------- barra di stato ---------- */
 const SNAP_BTNS = [["snapGrid","Griglia"],["snapEnds","Estremi di muri e locali"],["snapMid","Punti medi"],["snapWall","Lungo i muri"],["guides","Linee guida di allineamento"]];

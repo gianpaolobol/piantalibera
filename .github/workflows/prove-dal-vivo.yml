@@ -1,0 +1,75 @@
+# Prove sul sito pubblicato: editor, /api/config, link per il cliente e (facoltativo) 15 render
+# reali per misurare fedeltà geometrica, tempi e consumi stimati (requisito P4 del CLAUDE.md).
+# Il token delle prove è un segreto del Worker creato qui e cancellato a fine prova: sostituisce
+# solo Turnstile; quota a parte (TEST_DAILY), tetto globale e budget restano in vigore.
+name: Prove dal vivo
+
+on:
+  workflow_dispatch:
+    inputs:
+      fedelta:
+        description: "Misura la fedeltà con render reali (5 scene × 3 render)"
+        type: boolean
+        default: true
+  schedule:
+    - cron: "17 6 * * 1"     # ogni lunedì, solo i controlli rapidi (nessun render)
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prove-dal-vivo
+  cancel-in-progress: false
+
+env:
+  BASE: https://pianta-libera.gianpaolo-franceschini.workers.dev
+  WRANGLER: npx -y wrangler@4.158.0
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Token temporaneo per le prove
+        run: |
+          t=$(openssl rand -hex 24); echo "::add-mask::$t"; printf '%s' "$t" > "$RUNNER_TEMP/tok"
+          printf '%s' "$t" | $WRANGLER secret put TEST_TOKEN --config worker/wrangler.toml
+          sleep 20
+      - name: Prove sul sito
+        env:
+          FEDELTA: ${{ (github.event_name == 'workflow_dispatch' && inputs.fedelta) && '1' || '0' }}
+          OUT: prove-dal-vivo
+        run: TEST_TOKEN=$(cat "$RUNNER_TEMP/tok") node scripts/prove-dal-vivo.mjs
+      - name: Cancella il token
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/tok"
+          yes | $WRANGLER secret delete TEST_TOKEN --config worker/wrangler.toml || true
+      - name: Consumo reale di Workers AI (oggi e ieri)
+        if: always()
+        run: |
+          d=$(date -u -d yesterday +%Y-%m-%d)
+          q='query($a:String!,$d:Date!){viewer{accounts(filter:{accountTag:$a}){aiInferenceAdaptiveGroups(limit:50,filter:{date_geq:$d}){count sum{totalNeurons} dimensions{date modelId}}}}}'
+          body=$(jq -nc --arg q "$q" --arg a "$CLOUDFLARE_ACCOUNT_ID" --arg d "$d" '{query:$q,variables:{a:$a,d:$d}}')
+          r=$(curl -sS -X POST https://api.cloudflare.com/client/v4/graphql -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" -d "$body" || true)
+          echo "$r" | jq . > prove-dal-vivo/consumi.json 2>/dev/null || echo "$r" > prove-dal-vivo/consumi.json
+          if echo "$r" | jq -e '.data.viewer.accounts[0].aiInferenceAdaptiveGroups' >/dev/null 2>&1; then
+            { echo; echo "### Consumo reale di Workers AI (dal $d)"; echo; echo "| Giorno | Modello | Richieste | Neurons |"; echo "|---|---|---|---|";
+              echo "$r" | jq -r '.data.viewer.accounts[0].aiInferenceAdaptiveGroups[] | "| \(.dimensions.date) | \(.dimensions.modelId) | \(.count) | \(.sum.totalNeurons) |"'; } >> "$GITHUB_STEP_SUMMARY"
+          else
+            { echo; echo "Consumo reale non leggibile con questo token (serve il permesso Account Analytics: Read). Risposta in consumi.json."; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prove-dal-vivo
+          path: prove-dal-vivo/
+          retention-days: 30

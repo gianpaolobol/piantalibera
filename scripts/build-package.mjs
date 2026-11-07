@@ -6,6 +6,7 @@ import { mkdirSync, rmSync, cpSync, readFileSync, writeFileSync, existsSync, rea
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
+import { createHash } from "node:crypto";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const NAME = "pianta-libera-locale", dist = join(root, "dist"), out = join(dist, NAME), app = join(out, "app");
@@ -30,10 +31,11 @@ const lazy = readdirSync(join(root, "editor-src")).flatMap(f => [...readFileSync
 npmFiles("three@0.147.0", [...new Set([...threeFiles, ...lazy])].map(f => [f]), join(J, "three@0.147.0"));
 npmFiles("dxf-parser@1.1.2", [["dist/dxf-parser.js"]], join(J, "dxf-parser@1.1.2"));
 npmFiles("@mlightcad/libredwg-web@0.8.2", [["dist/libredwg-web.js"], ["wasm/libredwg-web.js"], ["wasm/libredwg-web.wasm"]], join(J, "@mlightcad/libredwg-web@0.8.2"));
-npmFiles("pdfjs-dist@2.16.105", [["build/pdf.min.js", "pdf.min.js"], ["build/pdf.worker.min.js", "pdf.worker.min.js"]], join(app, "vendor/cdnjs/ajax/libs/pdf.js/2.16.105"));
+npmFiles("pdfjs-dist@2.16.105", [["build/pdf.min.js"], ["build/pdf.worker.min.js"]], join(J, "pdfjs-dist@2.16.105"));
 
 // 3. caratteri (se Google Fonts è raggiungibile; altrimenti quelli di sistema)
-let html = html0.replaceAll("https://cdn.jsdelivr.net/", "./vendor/jsdelivr/").replaceAll("https://cdnjs.cloudflare.com/", "./vendor/cdnjs/");
+// nella CSP del pacchetto i CDN non servono più: tutto arriva da 'self'
+let html = html0.replace(/ https:\/\/cdn\.jsdelivr\.net(?=[ ;"])/g, "").replaceAll("https://cdn.jsdelivr.net/", "./vendor/jsdelivr/").replaceAll("https://cdnjs.cloudflare.com/", "./vendor/cdnjs/");
 const fontLink = html.match(/<link[^>]+href="(https:\/\/fonts\.googleapis\.com\/css2[^"]+)"[^>]*>/);
 html = html.replace(/<link[^>]+fonts\.(googleapis|gstatic)\.com"[^>]*>\s*/g, "");
 if (fontLink){
@@ -46,6 +48,8 @@ if (fontLink){
 }
 const left = html.match(/https:\/\/(cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|unpkg\.com)[^"'`\s]*/g);
 if (left) throw new Error("indirizzi esterni rimasti: " + left.join(", "));
+// la CSP della pagina autorizza lo script incorporato con la sua impronta: gli indirizzi sono cambiati, la si ricalcola
+html = html.replace(/'sha256-[A-Za-z0-9+/=]+'/, () => `'sha256-${createHash("sha256").update(html.match(/<script>([\s\S]*?)<\/script>/)[1]).digest("base64")}'`);
 writeFileSync(join(app, "index.html"), html);
 
 // 4. server locale

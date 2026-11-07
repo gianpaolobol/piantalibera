@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: false
 env:
   WORKER: pianta-libera
-  WRANGLER: npx -y wrangler@4
+  WRANGLER: npx -y wrangler@4.158.0   # versione fissata: aggiornarla di proposito, non a ogni rilascio
 jobs:
   deploy:
     runs-on: ubuntu-latest

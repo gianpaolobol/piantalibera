@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ThYFcUFZSr3IDuCWc8QyK9SIBXUivQer/rvF/3mSajQ=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -38,6 +38,9 @@ button{cursor:pointer}
 .brand{display:flex;align-items:baseline;gap:8px;margin-right:4px}
 .brand b{font-weight:700;font-size:16px;letter-spacing:-.01em}
 .brand small{font-family:var(--f-data);font-size:11px;color:var(--muted)}
+.brand-info{border:1px solid var(--line);background:none;color:var(--muted);font:500 10.5px var(--f-data);padding:1px 6px;border-radius:3px;cursor:pointer}.brand-info:hover{color:var(--ink)}
+.info-links{display:flex;flex-wrap:wrap;gap:8px 16px;margin:10px 0 4px;font-size:13px}.info-links a{color:var(--accent)}
+.help-in .credits{font-size:12px;color:var(--muted);line-height:1.5}.help-in .credits li{margin:2px 0}
 .field{display:flex;align-items:center;gap:6px}
 .field label,.lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
 .inp,select.inp{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:5px 7px;min-width:0}
@@ -245,7 +248,7 @@ pre.raw{margin:0;max-height:160px;overflow:auto;font-family:var(--f-data);font-s
 
 <div id="app">
   <header class="bar">
-    <div class="brand"><b>Pianta Libera</b><small>pianta → 3D → D5 · AI · stampa</small></div>
+    <div class="brand"><b>Pianta Libera</b><small>pianta → 3D → D5 · AI · stampa</small><button class="brand-info" id="infoBtn" title="Informazioni, privacy, termini e codice sorgente">Info</button></div>
     <div class="field"><label for="projName">Progetto</label><input id="projName" class="inp" style="width:170px"></div>
     <div class="field"><label for="levelSel">Piano</label><select id="levelSel" class="inp"></select>
       <button id="addLevel" class="btn" title="Aggiungi un piano sopra l'ultimo">+ Piano</button></div>
@@ -309,23 +312,24 @@ pre.raw{margin:0;max-height:160px;overflow:auto;font-family:var(--f-data);font-s
   <input type="file" id="fProj" accept=".json" hidden>
   <input type="file" id="fTex" accept=".png,.jpg,.jpeg,.webp" hidden>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/libs/fflate.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/utils/BufferGeometryUtils.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/exporters/GLTFExporter.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/math/SimplexNoise.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/CopyShader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/SSAOShader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/GammaCorrectionShader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/EffectComposer.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/RenderPass.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/ShaderPass.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/SSAOPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js" integrity="sha384-vV17nr/rMaJqmeZkFUzXLpHdQ+ME5QHKdydaqqN+3Ga39RJlNrTatJxHwGV4ml2C" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/libs/fflate.min.js" integrity="sha384-z5TPRpmZ+60mv8LqyHeCA0HTTbGjLyhJPjpEb4c4mgqrdWC1zM5Sn5pSRmknOjK8" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js" integrity="sha384-I0DMsfimAPIqWT8lF+oA997gRgdUi3jhidoTq3fN0zmn35smXZukD01FLnsPRU9i" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/utils/BufferGeometryUtils.js" integrity="sha384-pbzJRmVHtSKsmXtn1S+SJW8hayfjfMEXhWq2f0To4wY9ZMxJUdax1AcGoD3gv3OV" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js" integrity="sha384-NG9Vjao8FDKsRPhzsQGvMRSCrkgzJlysZlYZ69P52mH1tEpkurCHq0M8jbSP7/gl" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/exporters/GLTFExporter.js" integrity="sha384-fz8UmA1wT7KrA88we2948dh8iOo318hFy6/Azeb0sQov7fG1qhPIdOpCOwin+Fd7" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js" integrity="sha384-FassWWYNEPQsuRQm+59KIMcDetEc30bNyE9yfx16Ok8lvoowyH81LtrPmLWltJMh" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/RoundedBoxGeometry.js" integrity="sha384-EaVrsT3xCq/z7jaO1D8J5q+KotYHdHYt5FzpSzPgqJ0bLYtQz1nbTXowXiA3Mleu" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/math/SimplexNoise.js" integrity="sha384-yv7vD42CjKDp6dpLdEtZWJlIgLA4sjIPVkTm7Ony+2XuXVI/NXSsGE6j1S5vR00Y" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/CopyShader.js" integrity="sha384-jEqYdJwVhbnk5LMD7OzkM7Zn+m7ziM3b+VsGVfa/5BJobkk7Y0Gv8UWSFMs6lww0" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/SSAOShader.js" integrity="sha384-I9gAKxbSi5qTMAHxNhHeUXbYdAqcAvt8e3NtSJ2tJS4HrDcqC2VlLAAXfHDXK409" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/GammaCorrectionShader.js" integrity="sha384-WgrXKKu9SL5vQ3zABmux1NpSv6hkxrBeQ0njCihwwmEdoQfRYJtVuQo0VKHhpV5v" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/EffectComposer.js" integrity="sha384-R0mna39OFXOi0vozEMV5F7tgsuOL4JYlJA1zMRSF/G36T6DdB9tLl4u4sGx195Te" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/RenderPass.js" integrity="sha384-MvqV+yMfQqfT4GMD7NmeHbAcLhOaki0I2139ZAxe6+VyME2ys9TLRrRTsFtBJK21" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/ShaderPass.js" integrity="sha384-ZiGZOW8SNIUe2yogdaaTRbEdiEpMlAIx9hL5bw50EwSpa4fbthhT67TiAHlC9x5U" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/SSAOPass.js" integrity="sha384-jooToOFD00MaUIq2LzyrkSBOVamJy8AusDv6AQ9fm6JoTYLEfumLCbD1YE9nwb+a" crossorigin="anonymous"></script>
 <script>
+const SRI = {"https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js":"sha384-bFhNbiyxHEo2RbidLz4oUgawuuHSALUTKp85+l9Vg+WFNX2gMnROUY6I/e8MWhuD","https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.min.js":"sha384-uLiAv4VcjM5H2Jsqzl8EajEaxPugj1CIzQaCjQ8c5//vC+elhxO5pZfXGxoLQi1W","https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.worker.min.js":"sha384-cdzss87ZwpiG252tPQexupMwS1W1lTzzgy/UlNUHXW6h8aaJpBizRQk9j8Vj3zw9","https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js":"sha384-vV17nr/rMaJqmeZkFUzXLpHdQ+ME5QHKdydaqqN+3Ga39RJlNrTatJxHwGV4ml2C","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js":"sha384-I0DMsfimAPIqWT8lF+oA997gRgdUi3jhidoTq3fN0zmn35smXZukD01FLnsPRU9i","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/curves/NURBSCurve.js":"sha384-qwpcL0dHibkdIWSPQrk58g7bYWK5ONJ2jnLEfDMLamtY95MYQkmwMnc7RuXMMehu","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/curves/NURBSUtils.js":"sha384-lmTQCap79WLuH0sZ6oZnU82voIZfGOEOwaNHjwU/7GnZFwMIzRftze6REy2pAt5a","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js":"sha384-NG9Vjao8FDKsRPhzsQGvMRSCrkgzJlysZlYZ69P52mH1tEpkurCHq0M8jbSP7/gl","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/exporters/GLTFExporter.js":"sha384-fz8UmA1wT7KrA88we2948dh8iOo318hFy6/Azeb0sQov7fG1qhPIdOpCOwin+Fd7","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/RoundedBoxGeometry.js":"sha384-EaVrsT3xCq/z7jaO1D8J5q+KotYHdHYt5FzpSzPgqJ0bLYtQz1nbTXowXiA3Mleu","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/libs/fflate.min.js":"sha384-z5TPRpmZ+60mv8LqyHeCA0HTTbGjLyhJPjpEb4c4mgqrdWC1zM5Sn5pSRmknOjK8","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/ColladaLoader.js":"sha384-aQ0WOyhTmLSJzCm2jPTsh3W71SsXMDUgFqfH9zyMbTWTce/Cb6KyMX+xMe3FFzvn","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/FBXLoader.js":"sha384-EozoM3loWIoL1O7kvWjrs4nSeqFuV6Dmx2DUZXX9PT2IabU3HxJEi9VbrSt3c2xr","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js":"sha384-FassWWYNEPQsuRQm+59KIMcDetEc30bNyE9yfx16Ok8lvoowyH81LtrPmLWltJMh","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/MTLLoader.js":"sha384-HS7V7446CPBnHEORh7B/YcAWyEsS1AACtzki5mTrwZqHyLZ/F1FE/cSnx+/L+ENk","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/OBJLoader.js":"sha384-zfBxZaiI8ZUg+I969NX47atW0LUUD1FLZxHlKLXLBAV8auKwVZCrF4i2BmMYdD89","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/RGBELoader.js":"sha384-+PLsQO4w3MDw9j/BIfI39FwkHgP529+6lUuQU4q5vUyzd5lGB+3wKmIGIME+XvCF","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/STLLoader.js":"sha384-z6Lbfx7Kh5dVdhEISsKE58gMRQj53xGx7jmDq6OgcXZ0UPVWLe1y46AZhp7DsiL1","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/TDSLoader.js":"sha384-snw6HywUiWko/zCBkQ0RilhNCTDBQUSuTuBoOsPnEYVU0+RDCQmDivJEyafHqctv","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/math/SimplexNoise.js":"sha384-yv7vD42CjKDp6dpLdEtZWJlIgLA4sjIPVkTm7Ony+2XuXVI/NXSsGE6j1S5vR00Y","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/EffectComposer.js":"sha384-R0mna39OFXOi0vozEMV5F7tgsuOL4JYlJA1zMRSF/G36T6DdB9tLl4u4sGx195Te","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/RenderPass.js":"sha384-MvqV+yMfQqfT4GMD7NmeHbAcLhOaki0I2139ZAxe6+VyME2ys9TLRrRTsFtBJK21","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/ShaderPass.js":"sha384-ZiGZOW8SNIUe2yogdaaTRbEdiEpMlAIx9hL5bw50EwSpa4fbthhT67TiAHlC9x5U","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/SSAOPass.js":"sha384-jooToOFD00MaUIq2LzyrkSBOVamJy8AusDv6AQ9fm6JoTYLEfumLCbD1YE9nwb+a","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/CopyShader.js":"sha384-jEqYdJwVhbnk5LMD7OzkM7Zn+m7ziM3b+VsGVfa/5BJobkk7Y0Gv8UWSFMs6lww0","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/GammaCorrectionShader.js":"sha384-WgrXKKu9SL5vQ3zABmux1NpSv6hkxrBeQ0njCihwwmEdoQfRYJtVuQo0VKHhpV5v","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/SSAOShader.js":"sha384-I9gAKxbSi5qTMAHxNhHeUXbYdAqcAvt8e3NtSJ2tJS4HrDcqC2VlLAAXfHDXK409","https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/utils/BufferGeometryUtils.js":"sha384-pbzJRmVHtSKsmXtn1S+SJW8hayfjfMEXhWq2f0To4wY9ZMxJUdax1AcGoD3gv3OV"};
 /* ---- 01-base.js ---- */
 "use strict";
 /* ============================================================
@@ -347,7 +351,7 @@ const slugify = s => String(s||"").toLowerCase().normalize("NFD").replace(/[̀-�
 const loaded = {};
 function loadScript(url){
   if (loaded[url]) return loaded[url];
-  return loaded[url] = new Promise((res, rej) => { const s = document.createElement("script"); s.src = url; s.onload = res; s.onerror = () => { delete loaded[url]; rej(new Error("libreria non caricata: " + url.split("/").pop())); }; document.head.appendChild(s); });
+  return loaded[url] = new Promise((res, rej) => { const s = document.createElement("script"); s.src = url; if (typeof SRI !== "undefined" && SRI[url]){ s.integrity = SRI[url]; s.crossOrigin = "anonymous"; } s.onload = res; s.onerror = () => { delete loaded[url]; rej(new Error("libreria non caricata: " + url.split("/").pop())); }; document.head.appendChild(s); });
 }
 function toast(msg, err=false){ const t = $("#toast"); t.textContent = msg; t.classList.toggle("err", err); t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove("on"), err ? 6000 : 2800); }
 function busy(msg){ const el = $("#loading3d"); if (!el) return; el.hidden = !msg; el.textContent = msg || ""; }
@@ -1829,10 +1833,25 @@ const SHORTCUTS = [["Strumenti", [["V", "Seleziona"], ["W", "Muro"], ["R", "Stan
 function openHelp(){
   closeHelp();
   const d = document.createElement("div"); d.id = "helpBox"; d.className = "help"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Scorciatoie");
-  d.innerHTML = `<div class="help-in"><header><h3>Scorciatoie</h3><button class="btn" id="helpClose" aria-label="Chiudi">✕</button></header><div class="help-grid">${SHORTCUTS.map(([t, l]) => `<section><h4>${esc(t)}</h4><dl>${l.map(([k, v]) => `<dt><kbd>${esc(k)}</kbd></dt><dd>${esc(v)}</dd>`).join("")}</dl></section>`).join("")}</div></div>`;
+  d.innerHTML = `<div class="help-in"><header><h3>Scorciatoie</h3><button class="btn" id="helpClose" aria-label="Chiudi">✕</button></header><div class="help-grid">${SHORTCUTS.map(([t, l]) => `<section><h4>${esc(t)}</h4><dl>${l.map(([k, v]) => `<dt><kbd>${esc(k)}</kbd></dt><dd>${esc(v)}</dd>`).join("")}</dl></section>`).join("")}</div><div class="info-links">${INFO_LINKS}</div></div>`;
   document.body.appendChild(d); d.addEventListener("click", e => { if (e.target === d || e.target.closest("#helpClose")) closeHelp(); }); $("#helpClose").focus();
 }
 function closeHelp(){ document.getElementById("helpBox")?.remove(); }
+/* ---------- informazioni, privacy, termini, licenza (AGPL-3.0 §13: link al codice sorgente) ---------- */
+const SOURCE_URL = "https://github.com/gianpaolobol/piantalibera";
+const INFO_LINKS = `<a href="privacy.html" target="_blank" rel="noopener">Informativa privacy</a><a href="termini.html" target="_blank" rel="noopener">Termini d'uso</a><a href="${SOURCE_URL}" target="_blank" rel="noopener">Codice sorgente (AGPL-3.0)</a>`;
+function openInfo(){
+  closeHelp();
+  const d = document.createElement("div"); d.id = "helpBox"; d.className = "help"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Informazioni");
+  d.innerHTML = `<div class="help-in"><header><h3>Pianta Libera</h3><button class="btn" id="helpClose" aria-label="Chiudi">✕</button></header>
+    <p>Modellazione architettonica e render nel browser. Il progetto resta nel tuo browser; viene inviato a un server solo se chiedi un render AI o crei un link per il cliente, dopo il tuo consenso.</p>
+    <div class="info-links">${INFO_LINKS}</div>
+    <p class="credits">Software libero con licenza <b>GNU AGPL-3.0</b>: puoi usarlo, studiarlo, modificarlo e ridistribuirlo; chi lo offre in rete in versione modificata deve rendere disponibile il proprio codice.</p>
+    <ul class="credits"><li>Grafica 3D: three.js (MIT)</li><li>Render AI: FLUX.2 klein 4B di Black Forest Labs (Apache 2.0) su Cloudflare Workers AI</li><li>Modelli, materiali e cieli: Poly Haven (CC0) e libreria interna</li><li>Lettori: dxf-parser (MIT), libredwg-web (GPL-3.0), pdf.js (Apache 2.0), web-ifc (MPL-2.0)</li></ul>
+    <p class="credits">Le immagini AI sono generate: anche in modalità fedele possono alterare dettagli e non sono elaborati tecnici.</p></div>`;
+  document.body.appendChild(d); d.addEventListener("click", e => { if (e.target === d || e.target.closest("#helpClose")) closeHelp(); }); $("#helpClose").focus();
+}
+$("#infoBtn")?.addEventListener("click", openInfo);
 
 /* ---------- barra di stato ---------- */
 const SNAP_BTNS = [["snapGrid","Griglia"],["snapEnds","Estremi di muri e locali"],["snapMid","Punti medi"],["snapWall","Lungo i muri"],["guides","Linee guida di allineamento"]];
@@ -3174,7 +3193,7 @@ function exportDXF(){
 function projectData(){
   const data = JSON.parse(JSON.stringify(P)); data.imports = {};
   for (const [id, it] of Object.entries(importStore)) if (P.objects.some(o => o.kind === "import" && o.ref === id)) data.imports[id] = {file:it.file, opts:it.opts, source:it.source};
-  data.app = "Pianta Libera"; data.version = 2; return data;
+  data.app = "Pianta Libera"; data.version = SCHEMA_VERSION; return data;
 }
 async function exportProject(){ await saveFile(slug() + ".json", JSON.stringify(projectData())); }
 /* apre un progetto (file .json o raccolta): keepPid tiene l'identità del progetto nella raccolta */
@@ -3257,8 +3276,8 @@ function setUnderlayImage(src, name, mppGuess){
 }
 async function loadPDF(f){
   toast("Apro il PDF…");
-  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js");
-  const lib = window.pdfjsLib, WS = new URL("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js", location.href).href; // assoluto anche nel pacchetto locale
+  await loadScript("https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.min.js");
+  const lib = window.pdfjsLib, WS = new URL("https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.worker.min.js", location.href).href; // assoluto anche nel pacchetto locale
   lib.GlobalWorkerOptions.workerSrc = WS;
   try { if (!lib.GlobalWorkerOptions.workerPort) lib.GlobalWorkerOptions.workerPort = new Worker(URL.createObjectURL(new Blob([`importScripts("${WS}");`], {type:"text/javascript"}))); } catch(_){}
   const doc = await lib.getDocument({data: new Uint8Array(await readAs(f, "readAsArrayBuffer"))}).promise;
@@ -3985,7 +4004,7 @@ function backendBlock(){
         ${d.retention_seconds ? ` Immagini cancellate dal server dopo ${Math.round(d.retention_seconds/60)} minuti.` : ""}</p>
         ${d.enabled === false ? `<p class="note warn">Render AI non attivo su questo sito${d.reason ? ` (${esc(d.reason)})` : ""}.</p>` : ""}` : "";
   return `${info}
-    <label class="chk"><input type="checkbox" id="aiConsent" ${aiConsent?"checked":""}><span>Acconsento all'invio della vista, delle mappe di profondità e contorni e del prompt ${d?.provider && !d.mock ? `a <b>${esc(d.provider)}</b>` : "al servizio di render"} per generare l'immagine.</span></label>
+    <label class="chk"><input type="checkbox" id="aiConsent" ${aiConsent?"checked":""}><span>Acconsento all'invio della vista, delle mappe di profondità e contorni e del prompt ${d?.provider && !d.mock ? `a <b>${esc(d.provider)}</b>` : "al servizio di render"} per generare l'immagine (<a href="privacy.html" target="_blank" rel="noopener">informativa</a>).</span></label>
     ${d?.privacy ? `<details><summary class="lbl">Informativa</summary><p class="note">${esc(d.privacy)}</p><p class="note"><a href="https://github.com/gianpaolobol/piantalibera/blob/main/docs/privacy.md" target="_blank" rel="noopener">Testo completo</a></p></details>` : ""}
     ${d?.turnstile_site_key ? `<div id="aiTurnstile" class="ts"></div>` : ""}`;
 }
@@ -4813,7 +4832,7 @@ function shareHTML(){
   if (!c){ shareConfig().then(() => { if (S.tab === "export") renderExport(); }); return `<div class="exp"><header><h4>Condividi con il cliente</h4></header><p class="note">Controllo il servizio…</p></div>`; }
   if (!sh) return `<div class="exp"><header><h4>Condividi con il cliente</h4><span class="tag">link · commenti</span></header>
     ${c.enabled ? `<p class="note">Crea un link da mandare al cliente: vede pianta e 3D in sola lettura, gira il modello, cammina negli interni e lascia commenti puntati sulla pianta. ${c.local ? "Il server locale tiene i link finché resta acceso (rete locale)." : `Il progetto viene salvato su Cloudflare per ${c.ttl_days} giorni, poi si cancella; i prezzi del computo e i modelli importati non vengono inviati.`}</p>
-      <label class="chk"><input type="checkbox" id="shConsent"> Acconsento a salvare il progetto sul server per la condivisione</label>${c.turnstile ? `<div id="shTs" class="ts"></div>` : ""}
+      <label class="chk"><input type="checkbox" id="shConsent"> Acconsento a salvare il progetto sul server per la condivisione (30 giorni · <a href="privacy.html" target="_blank" rel="noopener">informativa</a>)</label>${c.turnstile ? `<div id="shTs" class="ts"></div>` : ""}
       <div class="btns"><button class="btn primary" id="shCreate">Crea il link per il cliente</button></div>` : `<p class="note">${esc(c.reason || "Condivisione non disponibile su questo server.")}</p>`}<p class="status" id="shStatus"></p></div>`;
   const link = shareLink(sh.id), exp = sh.expires_at ? new Date(sh.expires_at).toLocaleDateString("it-IT") : "";
   return `<div class="exp"><header><h4>Condividi con il cliente</h4><span class="tag">${open ? `${open} commenti da leggere` : "link attivo"}</span></header>
@@ -5221,7 +5240,7 @@ function sampleProject(){
   const W1=w([0,0],[11,0]), W2=w([11,0],[11,8]), W3=w([11,8],[0,8]), W4=w([0,8],[0,0]), W5=w([6.5,0],[6.5,8],.12);
   const ob = (ref, x, y, rot=0, scale=1) => ({id:uid(), level:"L0", kind:"lib", ref, name:LIBMAP[ref].nome, x, y, rot, scale, z:0});
   return {
-    name:"Casa unifamiliare (esempio)", version:2, materials:{}, sky:{kind:"asset", id:"giorno"},
+    name:"Casa unifamiliare (esempio)", version:SCHEMA_VERSION, materials:{}, sky:{kind:"asset", id:"giorno"},
     sun:{az:245, el:36}, levels:[L0],
     walls:[W1,W2,W3,W4,W5],
     openings:[
@@ -5288,13 +5307,21 @@ function sanitizeProject(p){
   if (p.lightsMode != null && !["auto", "on", "off"].includes(p.lightsMode)) p.lightsMode = "auto";
   return p;
 }
+/* Versioni dello schema (docs/schema-progetto.md):
+   1 — prima versione (nomi di libreria brevi, senza piani multipli completi)
+   2 — piani, quote, camere, cielo e sole
+   3 — lati dei muri, posa e battiscopa, luci, oggetti parametrici, sito, tavole, prezzi, link per il cliente
+   Le versioni 2 e 3 hanno la stessa struttura di base: i campi della 3 sono facoltativi. */
+const SCHEMA_VERSION = 3;
 function migrate(p){
+  const from = Number(p?.version) || 1;
+  if (from > SCHEMA_VERSION) setTimeout(() => toast(`Questo progetto è stato salvato con una versione più recente di Pianta Libera (schema ${from}): alcuni dati potrebbero non essere letti.`, true), 300);
   sanitizeProject(p);
   p.materials = p.materials || {}; p.dims = p.dims || []; p.cameras = p.cameras || []; p.sky = p.sky || {kind:"asset", id:"giorno"}; p.sun = p.sun || {az:245, el:36};
   for (const L of p.levels){ L.roof = L.roof || {type:"none", pitch:30, overhang:.5, mat:"tegole"}; L.slab = L.slab ?? .25; }
   for (const o of p.objects || []) if (o.kind === "lib") o.ref = libRef(o.ref);
   if (!p.pid) p.pid = uid();
-  p.version = 2; return p;
+  p.version = SCHEMA_VERSION; return p;
 }
 function readCanvasColors(){ readColors(); draw2D(); render3D(); }
 function init(){

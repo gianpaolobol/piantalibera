@@ -95,7 +95,7 @@ function backendBlock(){
         ${d.retention_seconds ? ` Immagini cancellate dal server dopo ${Math.round(d.retention_seconds/60)} minuti.` : ""}</p>
         ${d.enabled === false ? `<p class="note warn">Render AI non attivo su questo sito${d.reason ? ` (${esc(d.reason)})` : ""}.</p>` : ""}` : "";
   return `${info}
-    <label class="chk"><input type="checkbox" id="aiConsent" ${aiConsent?"checked":""}><span>Acconsento all'invio della vista, delle mappe di profondità e contorni e del prompt ${d?.provider && !d.mock ? `a <b>${esc(d.provider)}</b>` : "al servizio di render"} per generare l'immagine.</span></label>
+    <label class="chk"><input type="checkbox" id="aiConsent" ${aiConsent?"checked":""}><span>Acconsento all'invio della vista, delle mappe di profondità e contorni e del prompt ${d?.provider && !d.mock ? `a <b>${esc(d.provider)}</b>` : "al servizio di render"} per generare l'immagine (<a href="privacy.html" target="_blank" rel="noopener">informativa</a>).</span></label>
     ${d?.privacy ? `<details><summary class="lbl">Informativa</summary><p class="note">${esc(d.privacy)}</p><p class="note"><a href="https://github.com/gianpaolobol/piantalibera/blob/main/docs/privacy.md" target="_blank" rel="noopener">Testo completo</a></p></details>` : ""}
     ${d?.turnstile_site_key ? `<div id="aiTurnstile" class="ts"></div>` : ""}`;
 }

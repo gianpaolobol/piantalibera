@@ -69,6 +69,7 @@ function config(env) {
     turnstileOn, turnstileSiteKey: turnstileOn ? env.TURNSTILE_SITE_KEY : null,
     shareReady: env.SHARE_ENABLED !== "0" && saltOk && !!env.RENDER_KV && !!env.QUOTA && (turnstileOn || env.ALLOW_NO_TURNSTILE === "1"),
     shareDaily: num(env.SHARE_DAILY_WRITES, SHARE.globalDaily),
+    testDaily: num(env.TEST_DAILY, 20),
     missing, ready: missing.length === 0,
   };
 }
@@ -79,6 +80,14 @@ async function quotaCall(env, path, body) {
   return r.json();
 }
 
+/* Token delle prove automatiche (workflow «Prove dal vivo»): creato come segreto all'inizio della prova e
+   cancellato alla fine. Sostituisce solo Turnstile; quote, tetto globale e budget restano in vigore. */
+function testTokenOk(env, request) {
+  const want = env.TEST_TOKEN, got = request.headers.get("x-test-token") || "";
+  if (typeof want !== "string" || want.length < 32 || got.length !== want.length) return false;
+  let d = 0; for (let i = 0; i < want.length; i++) d |= want.charCodeAt(i) ^ got.charCodeAt(i);
+  return d === 0;
+}
 async function turnstileOk(env, token, ip) {
   if (!token || typeof token !== "string" || token.length > 2048) return false;
   const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: new URLSearchParams({ secret: env.TURNSTILE_SECRET, response: token, remoteip: ip }) });
@@ -135,13 +144,14 @@ async function createJob(request, env, cfg) {
     if (info.w && (info.w > cfg.maxInputSide || info.h > cfg.maxInputSide)) return jsonError(400, "invalid_input", `${k}: il modello accetta immagini di riferimento fino a ${cfg.maxInputSide} px per lato`);
   }
   const ip = request.headers.get("cf-connecting-ip") || "0.0.0.0";
-  if (cfg.turnstileOn && !(await turnstileOk(env, v.turnstile, ip))) return jsonError(403, "bot_check_failed", "verifica anti-bot non superata");
+  const isTest = testTokenOk(env, request);
+  if (cfg.turnstileOn && !isTest && !(await turnstileOk(env, v.turnstile, ip))) return jsonError(403, "bot_check_failed", "verifica anti-bot non superata");
 
-  const ipHash = await sha256(ip + env.IP_SALT);
+  const ipHash = isTest ? "prove-automatiche" : await sha256(ip + env.IP_SALT);
   const inputs = 1 + (v.params.use_guides ? (v.depth ? 1 : 0) + (v.lines ? 1 : 0) : 0);
   const neurons = estimateNeurons({ width: v.params.width, height: v.params.height, variants: v.params.variants, inputs }, cfg.rates);
   const day = dayKey();
-  const q = await quotaCall(env, "/reserve", { ipHash, neurons, perIpDaily: cfg.perIpDaily, maxConcurrent: cfg.maxConcurrent, neuronBudget: cfg.neuronBudget, globalDaily: cfg.globalDaily });
+  const q = await quotaCall(env, "/reserve", { ipHash, neurons, perIpDaily: isTest ? cfg.testDaily : cfg.perIpDaily, maxConcurrent: cfg.maxConcurrent, neuronBudget: cfg.neuronBudget, globalDaily: cfg.globalDaily });
   if (!q.ok) {
     const msg = { quota_exceeded: `hai usato i ${cfg.perIpDaily} render disponibili oggi`, too_many_concurrent: "c'è già un render in corso: attendi che finisca", global_quota_exceeded: "limite giornaliero del servizio raggiunto", budget_exceeded: "budget giornaliero del servizio esaurito" }[q.reason] || "quota non disponibile";
     return jsonError(429, q.reason, msg, q.reason === "too_many_concurrent" ? { "Retry-After": "30" } : { "Retry-After": String(secondsToMidnightUTC()) });
@@ -165,7 +175,7 @@ async function createJob(request, env, cfg) {
   }
   job.duration_ms = Date.now() - now;
   await env.RENDER_KV.put(`job:${id}`, JSON.stringify(job), ttl);
-  console.log(JSON.stringify({ evt: "render", id, status: job.status, ms: job.duration_ms, neurons, day_neurons: q.neurons, day_renders: q.renders, mode: v.mode }));
+  console.log(JSON.stringify({ evt: "render", test: isTest || undefined, id, status: job.status, ms: job.duration_ms, neurons, day_neurons: q.neurons, day_renders: q.renders, mode: v.mode }));
   const remaining = Math.max(0, cfg.perIpDaily - (failed ? q.ip - 1 : q.ip));
   return json(job.status === "succeeded" ? 200 : 502, job, { Location: `/api/render/${id}`, "X-Quota-Remaining": String(remaining) });
 }
@@ -196,7 +206,7 @@ async function shareApi(request, env, cfg, url) {
   if (write && request.method !== "DELETE" && !(request.headers.get("content-type") || "").includes("application/json")) return jsonError(415, "unsupported_media_type", "serve application/json");
   const ip = request.headers.get("cf-connecting-ip") || "0.0.0.0";
   const r = await handleShare({ method: request.method, parts, token: request.headers.get("x-share-token") || "", length: num(request.headers.get("content-length"), 0), text: () => request.text() }, {
-    enabled: !write || cfg.shareReady, botRequired: cfg.turnstileOn, bot: t => turnstileOk(env, t, ip),
+    enabled: !write || cfg.shareReady, botRequired: cfg.turnstileOn && !testTokenOk(env, request), bot: t => turnstileOk(env, t, ip),
     hit: async kind => quotaCall(env, "/hit", { key: `${kind}:${await sha256(ip + env.IP_SALT)}`, limit: kind === "comment" ? SHARE.commentsPerIpDaily : SHARE.perIpDaily, globalKey: "share-writes", globalLimit: cfg.shareDaily }),
     store: { get: k => env.RENDER_KV.get(k), put: (k, v, ttl) => env.RENDER_KV.put(k, v, { expirationTtl: Math.max(60, ttl) }), del: k => env.RENDER_KV.delete(k) },
   });

@@ -37,7 +37,7 @@ function shareHTML(){
   if (!c){ shareConfig().then(() => { if (S.tab === "export") renderExport(); }); return `<div class="exp"><header><h4>Condividi con il cliente</h4></header><p class="note">Controllo il servizio…</p></div>`; }
   if (!sh) return `<div class="exp"><header><h4>Condividi con il cliente</h4><span class="tag">link · commenti</span></header>
     ${c.enabled ? `<p class="note">Crea un link da mandare al cliente: vede pianta e 3D in sola lettura, gira il modello, cammina negli interni e lascia commenti puntati sulla pianta. ${c.local ? "Il server locale tiene i link finché resta acceso (rete locale)." : `Il progetto viene salvato su Cloudflare per ${c.ttl_days} giorni, poi si cancella; i prezzi del computo e i modelli importati non vengono inviati.`}</p>
-      <label class="chk"><input type="checkbox" id="shConsent"> Acconsento a salvare il progetto sul server per la condivisione</label>${c.turnstile ? `<div id="shTs" class="ts"></div>` : ""}
+      <label class="chk"><input type="checkbox" id="shConsent"> Acconsento a salvare il progetto sul server per la condivisione (30 giorni · <a href="privacy.html" target="_blank" rel="noopener">informativa</a>)</label>${c.turnstile ? `<div id="shTs" class="ts"></div>` : ""}
       <div class="btns"><button class="btn primary" id="shCreate">Crea il link per il cliente</button></div>` : `<p class="note">${esc(c.reason || "Condivisione non disponibile su questo server.")}</p>`}<p class="status" id="shStatus"></p></div>`;
   const link = shareLink(sh.id), exp = sh.expires_at ? new Date(sh.expires_at).toLocaleDateString("it-IT") : "";
   return `<div class="exp"><header><h4>Condividi con il cliente</h4><span class="tag">${open ? `${open} commenti da leggere` : "link attivo"}</span></header>

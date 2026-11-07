@@ -20,6 +20,7 @@ try {
   const page = await browser.newPage();
   await page.route("**/*", r => { const u = new URL(r.request().url()); if (u.hostname === "127.0.0.1" || u.protocol === "data:" || u.protocol === "blob:") return r.continue(); external.push(u.href); return r.abort(); });
   page.on("pageerror", e => errors.push(e.message));
+  page.on("console", m => { if (/Content Security Policy|integrity/i.test(m.text())) errors.push(m.text()); });
   for (let i = 0; i < 40; i++){ try { await page.goto(`http://127.0.0.1:${PORT}/`); break; } catch { await new Promise(r => setTimeout(r, 250)); } }
   await page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function", null, { timeout: 30000 });
   // tavola DXF → 3D (dxf-parser dal pacchetto)
