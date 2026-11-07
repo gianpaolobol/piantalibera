@@ -17,9 +17,18 @@ async function graph(query, variables = {}) {
 }
 mask(process.env.EXPO_TOKEN);
 // 1. chiave App Store Connect salvata in Expo per il team (la stessa usata da Fungo Italia)
-const d = await graph("query($n:String!){account{byName(accountName:$n){id appStoreConnectApiKeysPaginated(first:50){edges{node{id keyIdentifier appleTeam{appleTeamIdentifier appleTeamType}}}}}}}", { n: ACCOUNT });
-const keys = d.account.byName.appStoreConnectApiKeysPaginated.edges.map(e => e.node).filter(k => k.appleTeam?.appleTeamIdentifier === TEAM);
-const sel = keys.find(k => k.keyIdentifier === "35MS8YN74G") || keys[0]; mask(sel?.keyIdentifier); if (!sel) throw Error("Nessuna chiave App Store Connect per il team");
+// la chiave può stare nell'account personale o nel team Expo: si cercano tutti gli account del token
+const me = await graph("query{meActor{accounts{name}}}");
+const accounts = me.meActor.accounts.map(a => a.name);
+let keys = [], keyAccount = "";
+for (const n of accounts){
+  const d = await graph("query($n:String!){account{byName(accountName:$n){appStoreConnectApiKeysPaginated(first:50){edges{node{id keyIdentifier appleTeam{appleTeamIdentifier appleTeamType}}}}}}}", { n });
+  const all = d.account.byName.appStoreConnectApiKeysPaginated.edges.map(e => e.node);
+  console.log(`account Expo ${n}: ${all.length} chiavi App Store Connect, team ${[...new Set(all.map(k => k.appleTeam?.appleTeamIdentifier || "?"))].join(", ") || "—"}`);
+  const mine = all.filter(k => k.appleTeam?.appleTeamIdentifier === TEAM); if (mine.length && !keys.length){ keys = mine; keyAccount = n; }
+}
+const sel = keys.find(k => k.keyIdentifier === "35MS8YN74G") || keys[0]; mask(sel?.keyIdentifier); if (!sel) throw Error("Nessuna chiave App Store Connect per il team " + TEAM + " negli account " + accounts.join(", "));
+console.log("chiave App Store Connect trovata nell'account Expo " + keyAccount);
 const key = (await graph("query($id:ID!){appStoreConnectApiKey{byId(id:$id){keyIdentifier issuerIdentifier keyP8}}}", { id: sel.id })).appStoreConnectApiKey.byId;
 mask(key.keyP8); mask(key.issuerIdentifier); mask(key.keyIdentifier);
 const p8 = process.env.RUNNER_TEMP + "/asc.p8"; await writeFile(p8, key.keyP8, { mode: 0o600 });
