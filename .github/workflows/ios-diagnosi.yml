@@ -32,6 +32,8 @@ jobs:
           sleep 3
           echo "== dipendenze dinamiche del binario"; bin="$app/$(defaults read "$PWD/$app/Info" CFBundleExecutable)"; otool -L "$bin" | head -40; ls "$app/Frameworks" 2>/dev/null
           echo "== avvio diretto (messaggi di dyld)"; ( xcrun simctl launch --console-pty "$udid" it.piantalibera.app 2>&1 & pid=$!; sleep 25; kill $pid 2>/dev/null ) | grep -v "^\s*$" | head -40 || true
+          xcrun simctl terminate "$udid" it.piantalibera.app 2>/dev/null || true
+          echo "== avvio normale"; xcrun simctl launch "$udid" it.piantalibera.app
           sleep 45
           echo "== processo ancora vivo?"; xcrun simctl spawn "$udid" launchctl list | grep -i piantalibera || echo "NON IN ESECUZIONE (crash?)"
           xcrun simctl io "$udid" screenshot "$RUNNER_TEMP/schermata.png" || true
