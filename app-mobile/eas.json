@@ -39,6 +39,9 @@
       "ios": {
         "appleTeamId": "BX9MDXAHKG"
       }
+    },
+    "production-ios-local": {
+      "extends": "production"
     }
   }
 }
