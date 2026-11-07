@@ -17,7 +17,7 @@ on:
         options: [build, invia, stato]
         default: build
       submit:
-        description: Con «build», invia a TestFlight appena pronta (se l'app esiste su App Store Connect)
+        description: "Con «build»: invia a TestFlight appena pronta. Con «invia»: togliendo la spunta prepara solo il gruppo di test, senza nuovo invio"
         type: boolean
         default: true
 
@@ -58,11 +58,18 @@ jobs:
           jq -r '.[] | "\(.platform)\t\(.status)\tversione \(.appVersion) (\(.appBuildVersion))\t\(.createdAt)\t\(if .platform=="ANDROID" then (.artifacts.buildUrl // "") else "" end)"' "$RUNNER_TEMP/b.json" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Invia a TestFlight l'ultima build iOS
         if: inputs.azione == 'invia'
-        env: { EXPO_PROJECT_ID: "${{ steps.prep.outputs.project_id }}", EAS_NO_VCS: "1", ASC_APP_ID: "${{ steps.prep.outputs.asc_app_id }}" }
+        env: { EXPO_PROJECT_ID: "${{ steps.prep.outputs.project_id }}", EAS_NO_VCS: "1", ASC_APP_ID: "${{ steps.prep.outputs.asc_app_id }}", SOLO_TESTER: "${{ !inputs.submit }}" }
         run: |
           [ -n "$ASC_APP_ID" ] || { echo "::error::L'app non c'è ancora su App Store Connect (bundle it.piantalibera.app): va creata dal sito, vedi docs/app.md"; exit 1; }
-          $EAS submit --platform ios --latest --profile production --non-interactive --wait
+          if [ "$SOLO_TESTER" != "true" ]; then $EAS submit --platform ios --latest --profile production --non-interactive --wait; fi
           echo "Inviata a TestFlight: https://appstoreconnect.apple.com/apps/$ASC_APP_ID/testflight/ios" >> "$GITHUB_STEP_SUMMARY"
+      - name: TestFlight per il titolare (gruppo interno)
+        if: inputs.azione == 'invia'
+        env:
+          ASC_APP_ID: ${{ steps.prep.outputs.asc_app_id }}
+          ASC_KEY_ID: ${{ steps.prep.outputs.key_id }}
+          ASC_ISSUER: ${{ steps.prep.outputs.issuer }}
+        run: node scripts/testflight.mjs
       - name: Build firmata${{ inputs.submit && ' e invio' || '' }}
         if: inputs.azione == 'build'
         env:
