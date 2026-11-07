@@ -43,7 +43,8 @@ jobs:
         with:
           name: desktop-${{ matrix.name }}
           path: |
-            app-desktop/dist/*.exe
+            app-desktop/dist/*-x64.exe
+            app-desktop/dist/*-arm64.exe
             app-desktop/dist/*.dmg
           if-no-files-found: error
           retention-days: 14
@@ -98,7 +99,8 @@ jobs:
       - name: Nomi stabili per la pagina di download
         run: |
           mkdir rel
-          for f in out/desktop-windows/*.exe; do case "$f" in *arm64*) cp "$f" rel/Pianta-Libera-Windows-arm64.exe;; *) cp "$f" rel/Pianta-Libera-Windows-x64.exe;; esac; done
+          cp out/desktop-windows/*-x64.exe rel/Pianta-Libera-Windows-x64.exe
+          cp out/desktop-windows/*-arm64.exe rel/Pianta-Libera-Windows-arm64.exe
           cp out/desktop-mac/*.dmg rel/Pianta-Libera-Mac.dmg
           cp out/android-apk/app-release.apk rel/Pianta-Libera-Android.apk
           (cd rel && sha256sum * > SHA256SUMS.txt && ls -la)
