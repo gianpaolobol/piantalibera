@@ -6,3 +6,4 @@ dist/
 *.ipa
 *.aab
 *.apk
+credentials.json

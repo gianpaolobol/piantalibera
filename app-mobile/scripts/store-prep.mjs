@@ -45,6 +45,32 @@ if (!bid) { const r = await asc("/v1/bundleIds", "POST", { data: { type: "bundle
 let app = (await asc(`/v1/apps?filter[bundleId]=${BUNDLE}`)).j.data?.[0];
 if (!app) { const r = await asc("/v1/apps", "POST", { data: { type: "apps", attributes: { name: NAME, primaryLocale: "it", sku: SKU, bundleId: BUNDLE } } }); console.log("creazione app App Store Connect:", r.status, JSON.stringify(r.j.errors?.map(e => e.detail) || "creata").slice(0, 400)); app = r.ok ? r.j.data : null; }
 const ascAppId = app?.id || "";
+// 2b. Firma iOS senza passaggi interattivi: certificato di distribuzione del team già salvato in Expo (lo stesso di
+// Fungo Italia) + profilo App Store per il nuovo bundle creato con l'API di Apple. File solo nella cartella temporanea.
+let iosLocal = false;
+try {
+  const cd = await graph("query($n:String!){account{byName(accountName:$n){appleDistributionCertificates{id serialNumber developerPortalIdentifier validityNotAfter certificateP12 certificatePassword appleTeam{appleTeamIdentifier}}}}}", { n: keyAccount || ACCOUNT });
+  const certs = cd.account.byName.appleDistributionCertificates.filter(c => !c.appleTeam || c.appleTeam.appleTeamIdentifier === TEAM).filter(c => !c.validityNotAfter || Date.parse(c.validityNotAfter) > Date.now() + 864e5);
+  const cert = certs.find(c => c.developerPortalIdentifier === "DXLA5NHSKQ") || certs[0];
+  if (!cert?.certificateP12) throw Error("nessun certificato di distribuzione valido in Expo");
+  mask(cert.certificateP12); mask(cert.certificatePassword);
+  const portalCerts = (await asc("/v1/certificates?limit=200")).j.data || [];
+  const pc = portalCerts.find(c => c.id === cert.developerPortalIdentifier) || portalCerts.find(c => c.attributes.serialNumber?.toLowerCase() === cert.serialNumber?.toLowerCase());
+  if (!pc) throw Error("certificato non trovato su Apple Developer");
+  const PNAME = "Pianta Libera App Store";
+  let prof = ((await asc(`/v1/profiles?filter[name]=${encodeURIComponent(PNAME)}&limit=20`)).j.data || []).find(p => p.attributes.profileState === "ACTIVE");
+  if (!prof) {
+    const r = await asc("/v1/profiles", "POST", { data: { type: "profiles", attributes: { name: PNAME, profileType: "IOS_APP_STORE" }, relationships: { bundleId: { data: { type: "bundleIds", id: bid.id } }, certificates: { data: [{ type: "certificates", id: pc.id }] } } } });
+    if (!r.ok) throw Error("profilo: " + JSON.stringify(r.j.errors?.map(e => e.detail)).slice(0, 300));
+    prof = r.j.data;
+  }
+  const T = process.env.RUNNER_TEMP;
+  await writeFile(T + "/dist.p12", Buffer.from(cert.certificateP12, "base64"), { mode: 0o600 });
+  await writeFile(T + "/app.mobileprovision", Buffer.from(prof.attributes.profileContent, "base64"), { mode: 0o600 });
+  await writeFile("credentials.json", JSON.stringify({ ios: { provisioningProfilePath: T + "/app.mobileprovision", distributionCertificate: { path: T + "/dist.p12", password: cert.certificatePassword } } }), { mode: 0o600 });
+  cert.certificateP12 = ""; cert.certificatePassword = "";
+  iosLocal = true; console.log("firma iOS pronta: certificato del team e profilo App Store per " + BUNDLE);
+} catch (e) { console.log("firma iOS locale non preparata: " + String(e.message || e).slice(0, 300)); }
 console.log("App Store Connect:", ascAppId ? `app ${ascAppId}` : "app non presente (va creata dal sito App Store Connect)");
 // 3. progetto Expo
 let projectId = "";
@@ -61,5 +87,5 @@ const eas = JSON.parse(await readFile("eas.json", "utf8"));
 Object.assign(eas.submit.production.ios, { ascApiKeyPath: p8, ascApiKeyId: key.keyIdentifier, ascApiKeyIssuerId: key.issuerIdentifier, ...(ascAppId ? { ascAppId } : {}) });
 await writeFile("eas.json", JSON.stringify(eas, null, 2) + "\n");
 key.keyP8 = "";
-await appendFile(OUT, `project_id=${projectId}\nasc_app_id=${ascAppId}\nteam_type=${teamType}\nkey_id=${key.keyIdentifier}\nissuer=${key.issuerIdentifier}\np8=${p8}\n`);
+await appendFile(OUT, `ios_local=${iosLocal}\nproject_id=${projectId}\nasc_app_id=${ascAppId}\nteam_type=${teamType}\nkey_id=${key.keyIdentifier}\nissuer=${key.issuerIdentifier}\np8=${p8}\n`);
 await summary(`### Pianta Libera — store\n\n- Progetto Expo: \`${projectId}\`\n- App Store Connect: ${ascAppId ? "app `" + ascAppId + "`" : "**app da creare** (bundle `" + BUNDLE + "`)"}\n- Bundle ID: ${bid ? "presente" : "non creato"}\n`);

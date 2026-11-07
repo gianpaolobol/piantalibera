@@ -1,26 +1,44 @@
 {
-  "cli": { "version": ">=16.0.0", "appVersionSource": "remote" },
+  "cli": {
+    "version": ">=16.0.0",
+    "appVersionSource": "remote"
+  },
   "build": {
     "preview": {
       "distribution": "internal",
-      "channel": "preview",
-      "android": { "buildType": "apk" },
-      "ios": { "simulator": true },
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": true
+      },
       "node": "24.3.0"
     },
     "production": {
       "distribution": "store",
       "autoIncrement": true,
-      "channel": "production",
-      "android": { "buildType": "app-bundle" },
-      "ios": { "image": "latest" },
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "image": "latest"
+      },
       "node": "24.3.0"
+    },
+    "production-ios-local": {
+      "extends": "production",
+      "credentialsSource": "local"
     }
   },
   "submit": {
     "production": {
-      "android": { "track": "internal", "releaseStatus": "draft" },
-      "ios": { "appleTeamId": "BX9MDXAHKG" }
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      },
+      "ios": {
+        "appleTeamId": "BX9MDXAHKG"
+      }
     }
   }
 }
