@@ -67,12 +67,30 @@ Expo SDK 58 (stesse versioni di Fungo Italia) con `react-native-webview` che apr
 - `eas.json`: profili `preview` (APK, simulatore) e `production` (store, numero di build automatico); invio iOS a TestFlight, Android al canale **internal** in bozza — come Fungo Italia.
 - Workflow **Store (TestFlight e Google Play)** (`.github/workflows/store.yml`, avvio manuale): `app-mobile/scripts/store-prep.mjs` legge da Expo la chiave App Store Connect del team (con `EXPO_TOKEN`, solo nella cartella temporanea, mascherata nei log), registra il bundle ID, cerca o prova a creare l'app su App Store Connect e il progetto Expo; poi build firmata su Expo e, se richiesto, invio a TestFlight.
 
-### Passi del titolare (una volta sola)
+### Stato (7/11/2026)
 
-1. **EXPO_TOKEN**: su expo.dev → Account settings → Access tokens → crea un token; poi GitHub → piantalibera → Settings → Secrets and variables → Actions → New repository secret `EXPO_TOKEN`. (È lo stesso tipo di segreto già usato in Fungo Italia; i segreti non si copiano tra repository.)
-2. Avviare **Store** con `ios`: la prima volta crea il progetto Expo e indica l'ID da salvare come variabile del repository `EXPO_PROJECT_ID`.
-3. **App Store Connect**: creare l'app «Pianta Libera» con bundle `it.piantalibera.app` (Apple non permette di crearla via API) e salvare il suo ID numerico come variabile `ASC_APP_ID`. La chiave App Store Connect e il certificato di distribuzione di Fungo Italia valgono per tutto il team: Expo crea da sé il profilo per la nuova app.
-4. **Google Play Console**: creare l'app con pacchetto `it.piantalibera.app`, caricare a mano il primo AAB (Google lo richiede; si scarica da Expo dopo la build `android`), collegare in Expo l'account di servizio per gli invii successivi.
-5. Da lì in poi: Actions → Store → piattaforma → Run workflow.
+- `EXPO_TOKEN` aggiunto dal titolare. Progetto Expo **@gianpaolobol/pianta-libera** (`ad42c901-150d-43ad-8506-270cbc620418`) creato dal workflow.
+- Bundle ID `it.piantalibera.app` registrato su Apple Developer (team `BX9MDXAHKG`) e profilo «Pianta Libera App Store» creato con la chiave App Store Connect già in Expo.
+- Prime build production 1.0.0 (2) avviate su Expo: iOS e Android (AAB). Keystore Android generato e custodito da Expo.
+- **App Store Connect**: l'API di Apple non permette di creare l'app (`apps` non consente CREATE): va creata dal sito, poi «Store → invia» la manda su TestFlight.
+- **Google Play**: creare l'app in Play Console e caricare a mano il primo AAB (Google lo richiede); dalle build successive l'invio può essere automatico con un account di servizio collegato in Expo.
+
+### Workflow «Store» (Actions → Store (TestFlight e Google Play) → Run workflow)
+
+| Azione | Cosa fa |
+|---|---|
+| `build` | build firmate (iOS e/o Android) su Expo; con l'app su App Store Connect, invio automatico a TestFlight |
+| `invia` | manda a TestFlight l'ultima build iOS pronta |
+| `stato` | elenca le build con stato, versione e (Android) link all'AAB |
+
+Firma iOS senza passaggi interattivi: `scripts/store-prep.mjs` prende da Expo il certificato di distribuzione del team (lo stesso di Fungo Italia) e crea con l'API Apple il profilo App Store del nuovo bundle; i file stanno solo nella cartella temporanea del runner (`credentialsSource: local`, profilo EAS `production-ios-local`).
+
+### Creare l'app su App Store Connect (una volta, dal sito)
+
+https://appstoreconnect.apple.com/apps → **+** → Nuova app: piattaforma iOS, nome «Pianta Libera», lingua principale Italiano, bundle ID `it.piantalibera.app` (già nell'elenco), SKU `pianta-libera-ios`, accesso completo. Poi: Actions → Store → azione `invia`.
+
+### Google Play (una volta, dal sito)
+
+https://play.google.com/console → Crea app: «Pianta Libera», italiano, app, gratuita → Test → Test interno → Crea release → carica l'AAB (link dall'azione `stato`).
 
 Note: Apple può rifiutare app che sono «solo un sito» (linea guida 4.2); a favore: editor 3D completo, uso senza rete, salvataggio e condivisione nativi dei file. Se servisse, l'editor si può includere nell'app invece di aprire il sito.
