@@ -31,7 +31,6 @@ jobs:
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       EXPO_PROJECT_ID: ${{ vars.EXPO_PROJECT_ID }}
-      ASC_APP_ID: ${{ vars.ASC_APP_ID }}
       EAS: npx -y eas-cli@24.8.0
     steps:
       - uses: actions/checkout@v4
@@ -43,27 +42,30 @@ jobs:
         run: |
           [ -n "$EXPO_TOKEN" ] || { echo "::error::Manca il segreto EXPO_TOKEN (Settings → Secrets and variables → Actions). Vedi docs/app.md"; exit 1; }
           $EAS whoami
-      - name: Progetto Expo (creato la prima volta)
-        id: proj
-        run: |
-          if [ -z "$EXPO_PROJECT_ID" ]; then
-            mv app.config.js "$RUNNER_TEMP/app.config.js"          # eas init scrive l'ID solo nella configurazione statica
-            $EAS init --non-interactive --force
-            id=$(node -p "require('./app.json').expo.extra?.eas?.projectId || ''")
-            mv "$RUNNER_TEMP/app.config.js" app.config.js
-            echo "::notice::Progetto Expo creato: impostare la variabile del repository EXPO_PROJECT_ID = $id"
-            echo "id=$id" >> "$GITHUB_OUTPUT"
-          else echo "id=$EXPO_PROJECT_ID" >> "$GITHUB_OUTPUT"; fi
-      - name: App Store Connect (ID dell'app, se già noto)
-        if: env.ASC_APP_ID != ''
-        run: node -e "const f='eas.json',c=JSON.parse(require('fs').readFileSync(f));c.submit.production.ios.ascAppId=process.env.ASC_APP_ID;require('fs').writeFileSync(f,JSON.stringify(c,null,2))"
+      - name: Chiave Apple da Expo, app su App Store Connect, progetto Expo
+        id: prep
+        run: node scripts/store-prep.mjs
       - name: Build firmata${{ inputs.submit && ' e invio' || '' }}
         env:
-          EXPO_PROJECT_ID: ${{ steps.proj.outputs.id }}
+          EAS_NO_VCS: "1"
+          EXPO_PROJECT_ID: ${{ steps.prep.outputs.project_id }}
+          EXPO_ASC_API_KEY_PATH: ${{ steps.prep.outputs.p8 }}
+          EXPO_ASC_KEY_ID: ${{ steps.prep.outputs.key_id }}
+          EXPO_ASC_ISSUER_ID: ${{ steps.prep.outputs.issuer }}
+          EXPO_APPLE_TEAM_ID: BX9MDXAHKG
+          EXPO_APPLE_TEAM_TYPE: ${{ steps.prep.outputs.team_type }}
+          ASC_APP_ID: ${{ steps.prep.outputs.asc_app_id }}
           PLATFORM: ${{ inputs.platform }}
-          SUBMIT: ${{ inputs.submit && '--auto-submit' || '' }}
+          SUBMIT: ${{ inputs.submit }}
         run: |
-          echo "Build $PLATFORM da $GITHUB_SHA"
-          $EAS build --platform "$PLATFORM" --profile production $SUBMIT --non-interactive --no-wait
-          echo "### Build avviata su Expo ($PLATFORM)" >> "$GITHUB_STEP_SUMMARY"
+          for p in $( [ "$PLATFORM" = all ] && echo "ios android" || echo "$PLATFORM" ); do
+            sub=""; if [ "$SUBMIT" = "true" ] && { [ "$p" = android ] || [ -n "$ASC_APP_ID" ]; }; then sub="--auto-submit"; fi
+            [ "$p" = android ] && sub=""   # Google vuole il primo AAB caricato a mano in Play Console: invio automatico dalla seconda build
+            echo "== $p $sub"
+            $EAS build --platform "$p" --profile production $sub --non-interactive --no-wait
+          done
+          echo "### Build avviate su Expo ($PLATFORM)" >> "$GITHUB_STEP_SUMMARY"
           echo "Stato e log: https://expo.dev/accounts/gianpaolobol/projects/pianta-libera/builds" >> "$GITHUB_STEP_SUMMARY"
+      - name: Rimuovi la chiave temporanea
+        if: always()
+        run: rm -f "$RUNNER_TEMP/asc.p8"
