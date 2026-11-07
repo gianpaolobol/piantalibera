@@ -64,6 +64,8 @@ L'indirizzo è `https://pianta-libera.<tuo-account>.workers.dev/`; un dominio pe
 | `MAX_VARIANTS` | 1 | varianti per richiesta (max 2) |
 | `ALLOWED_ORIGINS` | vuoto | origini ammesse oltre allo stesso dominio, separate da virgola |
 | `MAX_INPUT_SIDE` | 512 | lato massimo delle immagini di riferimento accettato da klein |
+| `SHARE_ENABLED` | 1 | link per il cliente e commenti (`/api/share`); `0` li disattiva (i link esistenti restano leggibili fino alla scadenza) |
+| `SHARE_DAILY_WRITES` | 300 | tetto globale di link, aggiornamenti e commenti al giorno: protegge le 1.000 scritture KV gratuite al giorno |
 
 Segreti: `IP_SALT`, `TURNSTILE_SECRET`. Ogni POST deve includere `consent: true` e il token Turnstile nel campo `turnstile`; l'editor mostra la casella di consenso e il widget quando legge `/api/config`.
 
@@ -80,6 +82,10 @@ Dalla pagina prezzi di Workers AI (novembre 2026): 10.000 Neurons gratuiti al gi
 | 1920×1440 | 12 | ~330 | ~30 |
 
 Con `NEURON_DAILY_BUDGET = 9000` la spesa stimata resta sotto i 10.000 Neurons gratuiti, qualunque sia la risoluzione richiesta. La stima è nostra: confrontarla con il consumo reale nel pannello Workers AI durante i test.
+
+## Condivisione con il cliente (`/api/share`)
+
+Logica in `shared/share.js`, comune al Worker e al server locale. Progetti fino a 1,5 MB in KV con scadenza di 30 giorni (`share:<id>`, commenti in `sc:<id>`), token di modifica conservato solo come hash, 10 link e 40 commenti al giorno per IP (contatori nel Durable Object), Turnstile obbligatorio quando è configurato, scrivere richiede `IP_SALT`. Endpoint e formati sono descritti in testa a `shared/share.js`.
 
 ## Limiti noti
 

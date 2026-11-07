@@ -10,6 +10,7 @@
 // sviluppo) il render è disattivato e /api/config lo dichiara.
 import { LIMITS, validateRenderRequest, decodeDataUrl, buildModelPrompt, jsonError } from "../../shared/contract.js";
 import { QuotaGate, estimateNeurons, dayKey } from "./quota.js";
+import { handleShare, SHARE } from "../../shared/share.js";
 export { QuotaGate };
 
 const JSON_HEADERS = { "Content-Type": "application/json", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
@@ -66,6 +67,8 @@ function config(env) {
     timeoutMs: num(env.PROVIDER_TIMEOUT_MS, 60000),
     allowedOrigins: (env.ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean),
     turnstileOn, turnstileSiteKey: turnstileOn ? env.TURNSTILE_SITE_KEY : null,
+    shareReady: env.SHARE_ENABLED !== "0" && saltOk && !!env.RENDER_KV && !!env.QUOTA && (turnstileOn || env.ALLOW_NO_TURNSTILE === "1"),
+    shareDaily: num(env.SHARE_DAILY_WRITES, SHARE.globalDaily),
     missing, ready: missing.length === 0,
   };
 }
@@ -179,8 +182,25 @@ async function getConfig(request, env, cfg) {
     quota: { per_ip_daily: cfg.perIpDaily, used_today: usedToday },
     limits: { max_input_side: cfg.maxInputSide, max_side: LIMITS.maxSide, max_variants: cfg.maxVariants },
     retention_seconds: cfg.retention,
+    share: { enabled: cfg.shareReady, ttl_days: SHARE.ttlDays, max_bytes: SHARE.maxBytes, turnstile: cfg.turnstileOn },
     privacy: "Vista, profondità, contorni, prompt e camera vengono inviati a Cloudflare Workers AI per generare l'immagine. Lavori e immagini sono cancellati dopo il periodo indicato; l'IP è conservato solo come hash per le quote giornaliere.",
   });
+}
+
+/* condivisione con il cliente: dati in KV con scadenza, limiti nel Durable Object */
+async function shareApi(request, env, cfg, url) {
+  const parts = url.pathname.replace(/^\/api\/share\/?/, "").split("/").filter(Boolean);
+  if (parts.length > 3) return jsonError(404, "not_found", "endpoint inesistente");
+  const write = request.method !== "GET";
+  if (!env.RENDER_KV) return jsonError(503, "share_disabled", "la condivisione non è attiva su questo server");
+  if (write && request.method !== "DELETE" && !(request.headers.get("content-type") || "").includes("application/json")) return jsonError(415, "unsupported_media_type", "serve application/json");
+  const ip = request.headers.get("cf-connecting-ip") || "0.0.0.0";
+  const r = await handleShare({ method: request.method, parts, token: request.headers.get("x-share-token") || "", length: num(request.headers.get("content-length"), 0), text: () => request.text() }, {
+    enabled: !write || cfg.shareReady, botRequired: cfg.turnstileOn, bot: t => turnstileOk(env, t, ip),
+    hit: async kind => quotaCall(env, "/hit", { key: `${kind}:${await sha256(ip + env.IP_SALT)}`, limit: kind === "comment" ? SHARE.commentsPerIpDaily : SHARE.perIpDaily, globalKey: "share-writes", globalLimit: cfg.shareDaily }),
+    store: { get: k => env.RENDER_KV.get(k), put: (k, v, ttl) => env.RENDER_KV.put(k, v, { expirationTtl: Math.max(60, ttl) }), del: k => env.RENDER_KV.delete(k) },
+  });
+  return r.status === 204 ? new Response(null, { status: 204 }) : json(r.status, r.body);
 }
 
 async function handleApi(request, env, url) {
@@ -188,6 +208,7 @@ async function handleApi(request, env, url) {
   const origin = request.headers.get("origin");
   if (origin && origin !== url.origin && !cfg.allowedOrigins.includes(origin)) return jsonError(403, "origin_not_allowed", "origine non consentita");
   if (url.pathname === "/api/config" && request.method === "GET") return getConfig(request, env, cfg);
+  if (url.pathname === "/api/share" || url.pathname.startsWith("/api/share/")) return shareApi(request, env, cfg, url);
   const m = url.pathname.match(/^\/api\/render(?:\/([^/]+)(?:\/image\/(\d+))?)?\/?$/);
   if (!m) return jsonError(404, "not_found", "endpoint inesistente");
   const [, id, img] = m;

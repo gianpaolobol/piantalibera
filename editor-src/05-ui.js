@@ -28,6 +28,7 @@ function libGridHTML(){
 }
 function renderInspector(){
   const el = $("#panel-props"); if (!P) return; const sel = findSel(), L = level(); let h = "";
+  if (S.viewer){ el.innerHTML = viewerPanelHTML(); if (S.viewer.draft && SH.cfg?.turnstile) mountShareTs($("#cmTs")); return; }
   if (S.tool === "calib"){
     const c = S.calib, d = c?.p2 ? Math.hypot(c.p2[0]-c.p1[0], c.p2[1]-c.p1[1]) : null;
     h += `<div class="sec"><h3>Calibra la base</h3><p class="note">Clicca due punti sulla pianta importata di cui conosci la distanza reale, ad esempio una quota o la lunghezza di un muro. Poi scrivi qui la misura.</p>

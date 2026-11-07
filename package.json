@@ -16,7 +16,8 @@
     "build:pacchetto": "node scripts/build-package.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "1.63.0"
+    "@playwright/test": "1.63.0",
+    "web-ifc": "^0.0.66"
   },
   "engines": {
     "node": ">=20"

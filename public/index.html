@@ -52,7 +52,7 @@ button{cursor:pointer}
 .seg button:last-child{border-right:0}
 .seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink);font-weight:600}
 .spacer{flex:1}
-.main{flex:1;min-height:0;display:grid;grid-template-columns:auto 1fr 320px;gap:8px}
+.main{flex:1;min-height:0;display:grid;grid-template-columns:auto 1fr var(--side-w,320px);gap:8px}
 .tools{display:flex;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px}
 .tool{width:44px;height:44px;border:1px solid transparent;border-radius:4px;background:transparent;display:grid;place-items:center;position:relative}
 .tool svg{width:22px;height:22px;stroke:var(--ink);fill:none;stroke-width:1.6}
@@ -115,7 +115,28 @@ button{cursor:pointer}
 .compare .divider{position:absolute;top:0;bottom:0;left:var(--cut,50%);width:2px;background:var(--accent);pointer-events:none}
 .compare .ctl{display:flex;gap:8px;align-items:center;padding:8px;border-top:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
 .compare input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
-.side{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.side{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden;position:relative}
+.side-grip{position:absolute;left:0;top:0;bottom:0;width:6px;cursor:ew-resize;z-index:3;touch-action:none}.side-grip:hover{background:var(--accent-soft)}
+.side-head{display:none;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px;border-bottom:1px solid var(--line);cursor:move;font-size:12px;color:var(--muted);touch-action:none}.side-head .btn{padding:2px 8px;font-size:12px}
+.tabs .tab-ic{flex:0 0 26px;font-size:13px}.tabs button{white-space:nowrap}
+body.side-float .main{grid-template-columns:auto 1fr}
+body.side-float .side{position:fixed;z-index:45;resize:both;box-shadow:0 12px 32px rgba(0,0,0,.22);min-width:260px;min-height:220px;max-width:90vw;max-height:90vh}
+body.side-float .side-head{display:flex}body.side-float .side-grip,body.side-float #sideFloat{display:none}
+body.side-hidden .main{grid-template-columns:auto 1fr}body.side-hidden .side{display:none}
+body.viewer #tools,body.viewer #addLevel,body.viewer #projBtn,body.viewer #undoBtn,body.viewer #redoBtn,body.viewer [data-tab="import"],body.viewer [data-tab="export"],body.viewer [data-tab="ai"],body.viewer #m3Btn+select option[value="__save"]{display:none}
+body.viewer .main{grid-template-columns:1fr var(--side-w,320px)}
+.viewtag{margin-left:8px;padding:1px 6px;border-radius:3px;background:#d0462c;color:#fff;font-size:10.5px}
+.cmts{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:12.5px}.cmts li{border:1px solid var(--line);border-radius:5px;padding:6px 8px}.cmts li.done{opacity:.6}.cmts p{margin:4px 0;white-space:pre-wrap}.cmts small{color:var(--muted)}.cmts .btns .btn{padding:2px 8px;font-size:12px}
+.comp tr.cat td{font-weight:600;background:var(--bg);font-size:11.5px}.comp .price{width:72px;padding:2px 4px;font-size:12px;text-align:right}
+.walkpad{display:none;position:absolute;right:10px;bottom:44px;z-index:4;grid-template-columns:repeat(3,48px);gap:6px}
+body.walking .walkpad{display:grid}@media (pointer:fine){body.walking .walkpad{display:none}}
+.walkpad button{width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 85%,transparent);font-size:18px;touch-action:none}
+.walkpad [data-wk="w"]{grid-column:2}.walkpad [data-wk="a"]{grid-column:1;grid-row:2}.walkpad [data-wk="s"]{grid-column:2;grid-row:2}.walkpad [data-wk="d"]{grid-column:3;grid-row:2}.walkpad [data-wk="ArrowLeft"]{grid-column:1;grid-row:1}.walkpad [data-wk="ArrowRight"]{grid-column:3;grid-row:1}
+.mask-stage{flex:1;min-height:0;position:relative;display:grid;place-items:center}.mask-stage canvas{grid-area:1/1;max-width:100%;max-height:100%;object-fit:contain}#mkMask{opacity:.5;cursor:crosshair;touch-action:none}
+.mask-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.mask-ctl #mkPrompt{flex:1;min-width:220px}
+.print-body{flex:1;min-height:0;display:grid;grid-template-columns:1fr 320px;gap:10px}#prCv{width:100%;height:100%;min-height:0;border-radius:4px}.print-info{overflow:auto;display:flex;flex-direction:column;gap:8px;font-size:12.5px}
+@media (max-width:760px){.print-body{grid-template-columns:1fr;grid-template-rows:1fr auto}}
+@media (pointer:coarse){.tool{width:52px;height:52px}.btn{min-height:38px}.inp{font-size:16px}.seg button{min-height:38px}.tabs button{padding:12px 2px}}
 .tabs{display:flex;border-bottom:1px solid var(--line)}
 .tabs button{flex:1;background:transparent;border:0;padding:9px 2px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;font-size:12.5px}
 .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
@@ -262,7 +283,7 @@ pre.raw{margin:0;max-height:160px;overflow:auto;font-family:var(--f-data);font-s
         <div class="hud" id="hud3d"></div>
         <div class="compare" id="compare" hidden>
           <div class="stage" id="cmpStage"><img id="cmpBefore" alt="Vista 3D di partenza"><img id="cmpAfter" class="after" alt="Render AI"><div class="divider"></div></div>
-          <div class="ctl"><span class="lbl">Prima</span><input type="range" id="cmpCut" min="0" max="100" value="50" aria-label="Confronto prima e dopo"><span class="lbl">Dopo</span><button class="btn" id="cmpSave">Salva render</button><button class="btn" id="cmpClose">Chiudi</button></div>
+          <div class="ctl"><span class="lbl">Prima</span><input type="range" id="cmpCut" min="0" max="100" value="50" aria-label="Confronto prima e dopo"><span class="lbl">Dopo</span><button class="btn" id="cmpSave">Salva render</button><button class="btn" id="cmpMask">Ritocca una zona</button><button class="btn" id="cmpClose">Chiudi</button></div>
         </div>
       </div>
     </section>
@@ -1232,13 +1253,13 @@ function materialsCanvas(scale, opts={}){
    Vista in pianta e interazione
    ============================================================ */
 let snap = null; const past = [], future = [];
-function commit(){ const s = JSON.stringify(P); if (s === snap) return; if (snap) past.push(snap); if (past.length > 80) past.shift(); future.length = 0; snap = s; save(); refresh(); }
+function commit(){ if (S.viewer){ if (snap) P = JSON.parse(snap); refresh(); return; } const s = JSON.stringify(P); if (s === snap) return; if (snap) past.push(snap); if (past.length > 80) past.shift(); future.length = 0; snap = s; save(); refresh(); }
 function undo(){ if (!past.length) return; future.push(snap); snap = past.pop(); P = JSON.parse(snap); afterLoad(); }
 function redo(){ if (!future.length) return; past.push(snap); snap = future.pop(); P = JSON.parse(snap); afterLoad(); }
 function afterLoad(){ for (const k of Object.keys(matCache)) if (!MATS[k]) invalidateMat(k); fixSel(); save(); refresh(); }
 function fixSel(){ if (!level(S.level)) S.level = P.levels[0].id; P.dims = P.dims || []; setSel(selList().filter(x => itemOf(x))); }
 let saveWarned = false;
-function save(){ try { localStorage.setItem("pianta-libera-v2", JSON.stringify(P)); savedAt = new Date(); updateStatusInfo(); } catch(e){ if (!saveWarned && e?.name === "QuotaExceededError"){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio nel browser: resta nella raccolta Progetti, ma conviene anche Esporta → Salva progetto", true); } } queueIdbSave(); }
+function save(){ if (S.viewer) return; try { localStorage.setItem("pianta-libera-v2", JSON.stringify(P)); savedAt = new Date(); updateStatusInfo(); } catch(e){ if (!saveWarned && e?.name === "QuotaExceededError"){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio nel browser: resta nella raccolta Progetti, ma conviene anche Esporta → Salva progetto", true); } } queueIdbSave(); }
 function findSel(){ if (!S.sel) return null; const k = {wall:"walls", opening:"openings", room:"rooms", object:"objects", dim:"dims"}[S.sel.type]; return P[k]?.find(x => x.id === S.sel.id) || null; }
 
 const c2d = $("#c2d"), ctx = c2d.getContext("2d");
@@ -1254,15 +1275,17 @@ function resize2D(){ const r = c2d.parentElement.getBoundingClientRect(); if (r.
 const underImgs = {};
 function underImg(src){ if (!underImgs[src]){ const im = new Image(); im.onload = draw2D; im.src = src; underImgs[src] = im; } return underImgs[src]; }
 
-function draw2D(){
-  if (!W2 || !P) return;
-  const g = ctx; g.setTransform(DPR,0,0,DPR,0,0); g.fillStyle = C.bg; g.fillRect(0,0,W2,H2);
-  const step = V.s > 60 ? .5 : V.s > 25 ? 1 : V.s > 8 ? 5 : 10; const [x0,y0] = toW(0,0), [x1,y1] = toW(W2,H2);
+/* pr = {g}: disegna su un contesto vettoriale per le tavole (niente griglia, selezioni, strumenti) */
+function draw2D(pr){
+  if (pr && !pr.g) pr = undefined; // chiamata come gestore di eventi
+  if ((!W2 && !pr) || !P) return;
+  const g = pr ? pr.g : ctx; if (!pr){ g.setTransform(DPR,0,0,DPR,0,0); g.fillStyle = C.bg; g.fillRect(0,0,W2,H2); }
+  if (!pr){ const step = V.s > 60 ? .5 : V.s > 25 ? 1 : V.s > 8 ? 5 : 10; const [x0,y0] = toW(0,0), [x1,y1] = toW(W2,H2);
   g.lineWidth = 1;
   for (let x = Math.floor(x0/step)*step; x <= x1; x += step){ const sx = Math.round(toS([x,0])[0])+.5; g.strokeStyle = Math.abs(x % (step*5)) < 1e-6 ? C.gridM : C.grid; g.beginPath(); g.moveTo(sx,0); g.lineTo(sx,H2); g.stroke(); }
-  for (let y = Math.floor(y0/step)*step; y <= y1; y += step){ const sy = Math.round(toS([0,y])[1])+.5; g.strokeStyle = Math.abs(y % (step*5)) < 1e-6 ? C.gridM : C.grid; g.beginPath(); g.moveTo(0,sy); g.lineTo(W2,sy); g.stroke(); }
+  for (let y = Math.floor(y0/step)*step; y <= y1; y += step){ const sy = Math.round(toS([0,y])[1])+.5; g.strokeStyle = Math.abs(y % (step*5)) < 1e-6 ? C.gridM : C.grid; g.beginPath(); g.moveTo(0,sy); g.lineTo(W2,sy); g.stroke(); } }
   const L = level();
-  const U = L?.underlay;
+  const U = pr ? null : L?.underlay;
   if (U){
     g.save(); g.globalAlpha = U.opacity ?? .5;
     if (U.kind === "img"){ const im = underImg(U.src); if (im.complete && im.naturalWidth){ const [sx,sy] = toS([U.ox, U.oy]); g.drawImage(im, sx, sy, im.naturalWidth*U.mpp*V.s, im.naturalHeight*U.mpp*V.s); } }
@@ -1270,7 +1293,7 @@ function draw2D(){
     g.restore();
   }
   const below = P.levels.filter(l => l.elev < L.elev).sort((a,b)=>b.elev-a.elev)[0];
-  if (below){ g.fillStyle = C.ghost; for (const w of wallsOf(below.id)) fillWall(g, w, [[-w.thick/2, wallFrame(w).len + w.thick/2]]); }
+  if (below && !pr){ g.fillStyle = C.ghost; for (const w of wallsOf(below.id)) fillWall(g, w, [[-w.thick/2, wallFrame(w).len + w.thick/2]]); }
   for (const r of P.rooms.filter(r=>r.level===L.id)){
     if (r.pts.length < 2) continue;
     g.beginPath(); r.pts.forEach((p,i)=>{ const s = toS(p); i ? g.lineTo(s[0],s[1]) : g.moveTo(s[0],s[1]); }); g.closePath();
@@ -1290,6 +1313,8 @@ function draw2D(){
   }
   for (const o of P.objects.filter(o=>o.level===L.id)) drawObject2D(g, o);
   drawDims(g);
+  if (pr){ pr.after?.(g); return; }
+  drawCommentPins(g);
   const sel = findSel(), multi = S.multi?.length > 1;
   if (multi) for (const x of selItems()) if (x.s.type === "wall"){ const a = toS(x.it.a), b = toS(x.it.b); g.strokeStyle = C.sel; g.lineWidth = 2; g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke(); }
   if (!multi && S.sel?.type === "object" && sel) drawObjHandles(g, sel);
@@ -1455,7 +1480,7 @@ function wallOffsetVec(a, b){ const ref = PREFS.wallRef; if (ref !== "sinistra" 
 function dimOffsetFrom(a, b, p){ const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1; return ((p[0]-a[0])*(-dy/L) + (p[1]-a[1])*(dx/L)); }
 function nearestWall(p, maxD=.6){ let best=null, bd=Infinity; for (const w of wallsOf(S.level)){ const r = projOnSeg(p, w.a, w.b); if (r.d < w.thick/2 + maxD && r.d < bd){ bd = r.d; best = {wall:w, s:r.t*wallFrame(w).len, d:r.d}; } } return best; }
 function hitTest(p){
-  const tol = 6/V.s; const dh = dimHit(p); if (dh) return dh;
+  const tol = (S.lastPtr === "touch" ? 14 : 6)/V.s; const dh = dimHit(p); if (dh) return dh;
   for (const o of P.openings){ const w = wallById(o.wall); if (!w || w.level !== S.level) continue; const r = projOnSeg(p, w.a, w.b), s = r.t*wallFrame(w).len; if (r.d < w.thick/2 + tol && Math.abs(s - o.t) < o.w/2) return {type:"opening", id:o.id}; }
   for (const o of [...P.objects].reverse()){ if (o.level !== S.level || o.locked || o.hidden) continue; const fp = objFootprint(o), a = THREE.MathUtils.degToRad(o.rot||0); const dx=p[0]-o.x, dy=p[1]-o.y; const lx = dx*Math.cos(a) + dy*Math.sin(a), ly = -dx*Math.sin(a) + dy*Math.cos(a);
     const it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null; const shrink = it?.plan === "tree" ? .5 : 1;
@@ -1465,6 +1490,7 @@ function hitTest(p){
   return null;
 }
 let drag = null; const pointers = new Map(); let spaceDown = false;
+const HR = () => S.lastPtr === "touch" ? 18 : 9; // raggio di presa delle maniglie
 function evP(e){ const r = c2d.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
 c2d.addEventListener("pointerdown", e => {
   c2d.setPointerCapture(e.pointerId); const sp = evP(e); pointers.set(e.pointerId, sp);
@@ -1477,9 +1503,9 @@ c2d.addEventListener("pointerdown", e => {
   if (t === "select"){
     const sel = findSel(), single = selList().length === 1;
     if (single && S.sel?.type === "object" && sel){ const hd = objHandles(sel), R = toS(hd.rot), Z = toS(hd.size);
-      if (Math.hypot(R[0]-sp[0], R[1]-sp[1]) < 9){ drag = {type:"objRot", o:sel, moved:false}; return; }
-      if (Math.hypot(Z[0]-sp[0], Z[1]-sp[1]) < 9){ drag = {type:"objScale", o:sel, c:hd.center, d0:Math.hypot(hd.size[0]-hd.center[0], hd.size[1]-hd.center[1]), s0:sel.scale || 1, moved:false}; return; } }
-    if (single && S.sel?.type === "wall" && sel){ for (const k of ["a","b"]){ const s = toS(sel[k]); if (Math.hypot(s[0]-sp[0], s[1]-sp[1]) < 9){ drag = {type:"wallEnd", w:sel, links: linkedEnds(sel[k]), moved:false}; return; } } }
+      if (Math.hypot(R[0]-sp[0], R[1]-sp[1]) < HR()){ drag = {type:"objRot", o:sel, moved:false}; return; }
+      if (Math.hypot(Z[0]-sp[0], Z[1]-sp[1]) < HR()){ drag = {type:"objScale", o:sel, c:hd.center, d0:Math.hypot(hd.size[0]-hd.center[0], hd.size[1]-hd.center[1]), s0:sel.scale || 1, moved:false}; return; } }
+    if (single && S.sel?.type === "wall" && sel){ for (const k of ["a","b"]){ const s = toS(sel[k]); if (Math.hypot(s[0]-sp[0], s[1]-sp[1]) < HR()){ drag = {type:"wallEnd", w:sel, links: linkedEnds(sel[k]), moved:false}; return; } } }
     if (single && S.sel?.type === "room" && sel){ for (let i=0;i<sel.pts.length;i++){ const s = toS(sel.pts[i]); if (Math.hypot(s[0]-sp[0], s[1]-sp[1]) < 8){ drag = {type:"roomPt", room:sel, i, moved:false}; return; } } }
     const lab = !e.shiftKey && roomLabelHit(sp); if (lab){ setSel([{type:"room", id:lab.id}]); renderInspector(); drag = {type:"roomLabel", r:lab, start:raw, orig:(lab.lab || [0,0]).slice(), moved:false}; draw2D(); return; }
     const h = hitTest(raw);
@@ -1962,7 +1988,7 @@ $("#pane3d").addEventListener("pointerdown", e => {
   if (e.target !== c3d || e.button !== 0) return;
   if (WALK.on){ d3 = {type:"look", x:e.clientX, y:e.clientY, yaw:WALK.yaw, pitch:WALK.pitch}; c3d.setPointerCapture(e.pointerId); return; }
   d3 = {type:"click", x:e.clientX, y:e.clientY, t:performance.now()};
-  if (M3.on || S.tool !== "select" || e.shiftKey) return;
+  if (M3.on || S.tool !== "select" || e.shiftKey || S.viewer) return;
   const hit = pick3D(e), ob = hit && objOf3D(hit.object); if (!ob) return;
   const o = P.objects.find(x => x.id === ob.userData.objId); if (!o || o.locked) return;
   const L = level(o.level); controls.enabled = false; c3d.setPointerCapture(e.pointerId);
@@ -2097,7 +2123,7 @@ function renderList(){
     <div class="sec"><h3>Locali (${rooms.length})</h3><div class="tblwrap"><table class="olist"><thead><tr><th>Nome</th><th>Piano</th><th>Netta m²</th><th>Lorda m²</th><th>Perimetro m</th></tr></thead><tbody>
     ${rooms.map(x => `<tr data-rid="${x.r.id}" class="${isSelected(x.r.id) ? "on" : ""}"><td>${esc(x.r.name || "Locale")}</td><td>${esc(x.lv)}</td><td class="num">${fmt(x.net)}</td><td class="num">${fmt(x.gross)}</td><td class="num">${fmt(x.per)}</td></tr>`).join("")}
     ${rooms.length ? `<tr class="tot"><td>Totale</td><td></td><td class="num">${fmt(rooms.reduce((s, x) => s + x.net, 0))}</td><td class="num">${fmt(rooms.reduce((s, x) => s + x.gross, 0))}</td><td></td></tr>` : ""}</tbody></table></div>
-    <div class="btns"><button class="btn" id="listCsv">Esporta elenco in CSV</button></div></div>`;
+    <div class="btns"><button class="btn" id="listCsv">Esporta elenco in CSV</button></div></div>${computoHTML()}`;
 }
 $("#panel-list")?.addEventListener("click", async e => {
   const b = e.target.closest("button");
@@ -2654,6 +2680,7 @@ function libGridHTML(){
 }
 function renderInspector(){
   const el = $("#panel-props"); if (!P) return; const sel = findSel(), L = level(); let h = "";
+  if (S.viewer){ el.innerHTML = viewerPanelHTML(); if (S.viewer.draft && SH.cfg?.turnstile) mountShareTs($("#cmTs")); return; }
   if (S.tool === "calib"){
     const c = S.calib, d = c?.p2 ? Math.hypot(c.p2[0]-c.p1[0], c.p2[1]-c.p1[1]) : null;
     h += `<div class="sec"><h3>Calibra la base</h3><p class="note">Clicca due punti sulla pianta importata di cui conosci la distanza reale, ad esempio una quota o la lunghezza di un muro. Poi scrivi qui la misura.</p>
@@ -3012,8 +3039,8 @@ function renderExport(){
     <p class="note">Piano corrente, in metri: layer MURI, APERTURE, LOCALI, ARREDI e TESTI.</p><button class="btn" id="exDxf">DXF del piano${zipNeeded("dxf")?" (.zip)":""}</button></div>
   <div class="exp"><header><h4>Progetto</h4><span class="tag">.json</span></header>
     <p class="note">Contiene tutto, compresi modelli e materiali importati. I modelli delle librerie online vengono riscaricati all'apertura. Tutti i progetti di questo browser sono nel pulsante <b>Progetti</b> in alto.</p><button class="btn" id="exJson">Salva progetto</button></div>
-  ${imagesExportHTML()}`;
-  $("#exRes").value = EX.res;
+  ${shareHTML()}${tavoleHTML()}${imagesExportHTML()}${moreExportHTML()}`;
+  $("#exRes").value = EX.res; afterRenderExportShare();
 }
 const PE = $("#panel-export");
 PE.addEventListener("change", e => { const t = e.target, v = num(t.value);
@@ -3154,7 +3181,7 @@ async function exportProject(){ await saveFile(slug() + ".json", JSON.stringify(
 async function openProjectData(data, opts = {}){
   if (!data?.levels || !data.walls) throw new Error("non è un progetto di Pianta Libera");
   const imports = data.imports || {}; delete data.imports; delete data.app; if (!opts.keepPid || !data.pid) data.pid = uid();
-  P = migrate(data); S.level = P.levels[0].id; setSel([]); $("#projName").value = P.name;
+  P = migrate(data); S.level = P.levels[0].id; setSel([]); $("#projName").value = P.name; S.comments = []; SH.loadedFor = null; loadGallery();
   for (const [id, it] of Object.entries(imports)){ try { if (it.file) await registerImport(id, it.file, it.opts || {unit:"auto", up:"auto"}); else if (it.source) await restoreRemote(id, it.source); } catch(err){ console.warn(err); } }
   past.length = 0; future.length = 0; snap = null; commit(); fitPlan(); applySky(); camPreset("ext");
 }
@@ -4018,7 +4045,7 @@ function renderAI(){
   <p class="status" id="aiStatus"></p>
   <p class="note">Le immagini della vista vengono inviate al servizio configurato. Nessuna chiave viene salvata nel progetto.</p>
   ${aiQueueHTML()}
-  ${aiResults.length ? `<div class="sec"><h3>Render ottenuti</h3><div class="gallery">${aiResults.map((r,i)=>`<figure><img src="${esc(r.src)}" data-cmp="${i}" alt="Render ${i+1}"><figcaption><span>${r.time} · ${r.mode}</span><span><button data-cmp="${i}">Confronta</button> · <button data-aisave="${i}">Salva</button></span></figcaption></figure>`).join("")}</div></div>` : ""}
+  ${aiResults.length ? `<div class="sec"><h3>Render ottenuti</h3><div class="gallery">${aiResults.map((r,i)=>`<figure><img src="${esc(r.src)}" data-cmp="${i}" alt="Render ${i+1}"><figcaption><span>${r.time} · ${r.mode}</span><span><button data-cmp="${i}">Confronta</button> · <button data-aisave="${i}">Salva</button> · <button data-aimask="${i}">Ritocca</button> · <button data-aidel="${i}">Elimina</button></span></figcaption></figure>`).join("")}</div></div>` : ""}
   ${aiLastRaw ? `<details class="exp"><summary>Ultima risposta del servizio</summary><pre class="raw">${esc(aiLastRaw)}</pre></details>` : ""}
   <details class="exp"><summary>Configurazioni</summary><div class="btns"><button class="btn" id="aiExport">Esporta configurazione</button><button class="btn" id="aiReset">Ripristina predefiniti</button></div><p class="note">L'esportazione non include le chiavi.</p></details>`;
   if (isBackendCfg(b)){ loadBackendConfig(); if (backendCfg.data?.turnstile_site_key) mountTurnstile(); }
@@ -4039,6 +4066,8 @@ PA.addEventListener("click", async e => {
   if (b.dataset.ins){ const ta = $("#a_template"); const s = ta.selectionStart; ta.setRangeText(b.dataset.ins, s, ta.selectionEnd, "end"); ta.focus(); AI.adv.template = ta.value; aiSave(); return; }
   if (b.dataset.cmp !== undefined){ openCompare(aiResults[+b.dataset.cmp]); return; }
   if (b.dataset.aisave !== undefined){ await saveResult(aiResults[+b.dataset.aisave]); return; }
+  if (b.dataset.aimask !== undefined){ openMaskEditor(aiResults[+b.dataset.aimask]); return; }
+  if (b.dataset.aidel !== undefined){ await deleteGalleryItem(+b.dataset.aidel); return; }
   if (b.id === "b_resetPrompt"){ AI.base.prompt = aiPrompt(); aiSave(); renderAI(); return; }
   if (b.id === "aiGo" && !AIQ.running) runAI(false);
   if (b.id === "aiTest") runAI(true);
@@ -4060,21 +4089,23 @@ function findImages(x, out=[]){
   return out;
 }
 function toImageList(v){ if (v == null) return []; if (Array.isArray(v)) return v.flatMap(toImageList); if (typeof v === "object") return findImages(v); const s = String(v); if (/^(data:|https?:|blob:)/.test(s)) return [s]; if (/^(\/|\.\.?\/)[^\s]*$/.test(s) || /^[\w.-]+\.php\?/.test(s)) return [new URL(s, aiBaseUrl()).href]; return ["data:image/png;base64," + s]; }
-async function buildVars(cfg, test){
+async function buildVars(cfg, test, ov){
   const size = renderer.getSize(new THREE.Vector2()), long = test ? 256 : (cfg.longSide || 1536);
   const opts = {longSide: long};
-  const beauty = renderAt(1, null, {...opts, hq:true});
-  const guides = cfg.guides !== false;
+  let beauty;
+  if (ov?.image){ const k = Math.min(1, long / Math.max(ov.image.width, ov.image.height)); beauty = document.createElement("canvas"); beauty.width = Math.round(ov.image.width * k); beauty.height = Math.round(ov.image.height * k); beauty.getContext("2d").drawImage(ov.image, 0, 0, beauty.width, beauty.height); }
+  else beauty = renderAt(1, null, {...opts, hq:true});
+  const guides = cfg.guides !== false && !ov;
   const need = k => guides && (cfg.template || "").includes(k);
-  const outL = clamp(+cfg.outLongSide || long, 256, 1920), ar = size.x / size.y;
+  const outL = clamp(+cfg.outLongSide || long, 256, 1920), ar = ov?.image ? ov.image.width / ov.image.height : size.x / size.y;
   const ow = Math.round((ar >= 1 ? outL : outL*ar)/16)*16, oh = Math.round((ar >= 1 ? outL/ar : outL)/16)*16;
   const depth = need("depth") ? depthCanvas(1, opts) : null, lines = need("lines") ? linesCanvas(1, opts) : null, mats = need("materials") ? materialsCanvas(1, opts) : null;
   const d64 = c => c ? c.toDataURL("image/png") : "";
   const vars = {image_dataurl:d64(beauty), depth_dataurl:d64(depth), lines_dataurl:d64(lines), materials_dataurl:d64(mats?.canvas), materials_legend:JSON.stringify(mats?.legend || {}),
-    prompt: cfg.prompt || aiPrompt(), negative: cfg.negative || "", model: cfg.model || "", strength: +cfg.strength || .4, steps: +cfg.steps || 30, guidance: +cfg.guidance || 6,
+    prompt: ov?.prompt || cfg.prompt || aiPrompt(), negative: cfg.negative || "", model: cfg.model || "", strength: +cfg.strength || .4, steps: +cfg.steps || 30, guidance: +cfg.guidance || 6,
     seed: (+cfg.seed >= 0 ? +cfg.seed : Math.floor(Math.random()*2**31)), variants: clamp(+cfg.variants || 1, 1, 8), width: clamp(ow, 256, 1920), height: clamp(oh, 256, 1920), use_guides: guides,
     w_depth: +cfg.w_depth || 0, w_lines: +cfg.w_lines || 0, w_seg: +cfg.w_seg || 0, project: P.name,
-    render_mode: cfg.renderMode === "creativo" ? "creativo" : "fedele", scene: S.show3d === "all" && camera.position.y > level().elev + 2.2 ? "esterni" : (camera.fov > 55 ? "interni" : "esterni"),
+    render_mode: ov || cfg.renderMode === "creativo" ? "creativo" : "fedele", scene: S.show3d === "all" && camera.position.y > level().elev + 2.2 ? "esterni" : (camera.fov > 55 ? "interni" : "esterni"),
     camera: {position:camera.position.toArray().map(v=>+v.toFixed(3)), target:controls.target.toArray().map(v=>+v.toFixed(3)), fov:camera.fov, aspect:+camera.aspect.toFixed(4), units:"m", up:"y"}};
   for (const k of ["image","depth","lines","materials"]) vars[k] = (vars[k + "_dataurl"] || "").replace(/^data:image\/png;base64,/, "");
   vars._canvases = {image:beauty, depth, lines, materials:mats?.canvas};
@@ -4103,7 +4134,7 @@ async function runAI(test, opts = {}){
   const token = tsToken;
   aiBusy = true; renderAI(); aiStatus(test ? "Provo la connessione con un'immagine piccola…" : "Preparo vista, profondità e contorni…");
   try {
-    const vars = await buildVars(cfg, test);
+    const vars = await buildVars(cfg, test, opts.override);
     vars.consent = viaBackend ? aiConsent : false; vars.turnstile = viaBackend ? token : "";
     const headers = {};
     if (cfg.authValue) headers[cfg.authHeader || "Authorization"] = cfg.authValue;
@@ -4139,11 +4170,13 @@ async function runAI(test, opts = {}){
         if (!r.ok) throw new Error(`lo stato del lavoro ha risposto ${r.status}`);
       }
     }
-    const imgs = data.image ? [data.image] : (cfg.resultPath ? toImageList(getPath(data, cfg.resultPath)) : findImages(data));
+    let imgs = data.image ? [data.image] : (cfg.resultPath ? toImageList(getPath(data, cfg.resultPath)) : findImages(data));
     if (!imgs.length) throw new Error("nella risposta non trovo immagini. Indica il «Percorso del risultato» (dettagli sotto).");
-    const before = vars.image_dataurl;
+    if (imgs.length && opts.override?.composite){ aiStatus("Applico il ritocco solo nella zona dipinta…"); imgs = await Promise.all(imgs.map(opts.override.composite)); }
+    const before = opts.override?.before || vars.image_dataurl;
     const now = new Date().toLocaleTimeString("it-IT", {hour:"2-digit", minute:"2-digit"});
-    imgs.forEach(src => aiResults.unshift({src, before, time:now, mode: (data.mock ? "prova · " : "") + (vars.render_mode === "creativo" ? "creativo" : "fedele"), prompt:vars.prompt}));
+    imgs.forEach(src => aiResults.unshift({src, before, time:now, mode: (data.mock ? "prova · " : "") + (opts.override ? "ritocco" : vars.render_mode === "creativo" ? "creativo" : "fedele"), prompt:vars.prompt}));
+    if (!test) aiResults.slice(0, imgs.length).forEach(saveGalleryItem);
     if (data.mock) toast("Risposta del servizio di prova: l'immagine è la vista inviata, non un render AI");
     aiBusy = false; renderAI(); aiStatus(test ? `Connessione riuscita: ${imgs.length} immagine ricevuta in ${Math.round((Date.now()-t0)/1000)} s.` : `${imgs.length} render ricevuti in ${Math.round((Date.now()-t0)/1000)} s.${data.mock ? " Servizio di prova: l'immagine è la vista inviata, non un render AI." : ""}`, "ok");
     if (!test && !opts.queued) openCompare(aiResults[0]);
@@ -4156,6 +4189,7 @@ function setCut(v){ $("#cmpStage").style.setProperty("--cut", v + "%"); $("#cmpS
 $("#cmpCut").addEventListener("input", e => setCut(+e.target.value));
 $("#cmpClose").addEventListener("click", () => { $("#compare").hidden = true; });
 $("#cmpSave").addEventListener("click", () => saveResult($("#compare")._r));
+$("#cmpMask").addEventListener("click", () => { const r = $("#compare")._r; $("#compare").hidden = true; openMaskEditor(r); });
 async function saveResult(r){
   if (!r) return;
   try { const blob = await (await fetch(r.src)).blob(); await saveFile(`${slug()}-render-ai-${Date.now().toString(36)}.png`, blob); }
@@ -4293,8 +4327,11 @@ $("#panel-ai").addEventListener("click", e => {
 
 /* ---------- raccolta dei progetti (IndexedDB del browser) ---------- */
 let idbP = null;
-function idb(){ return idbP || (idbP = new Promise((res, rej) => { const r = indexedDB.open("pianta-libera", 1); r.onupgradeneeded = () => r.result.createObjectStore("progetti", {keyPath:"id"}); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); })); }
-async function idbDo(mode, fn){ const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction("progetti", mode), rq = fn(tx.objectStore("progetti")); tx.oncomplete = () => res(rq?.result); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error); }); }
+function idb(){ return idbP || (idbP = new Promise((res, rej) => { const r = indexedDB.open("pianta-libera", 2);
+  r.onupgradeneeded = () => { const db = r.result; if (!db.objectStoreNames.contains("progetti")) db.createObjectStore("progetti", {keyPath:"id"}); if (!db.objectStoreNames.contains("immagini")) db.createObjectStore("immagini", {keyPath:"id"}).createIndex("pid", "pid"); };
+  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); })); }
+async function idbStore(name, mode, fn){ const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction(name, mode), rq = fn(tx.objectStore(name)); tx.oncomplete = () => res(rq?.result); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error); }); }
+const idbDo = (mode, fn) => idbStore("progetti", mode, fn);
 const projList = () => idbDo("readonly", s => s.getAll());
 const projGet = id => idbDo("readonly", s => s.get(id));
 const projPut = rec => idbDo("readwrite", s => s.put(rec));
@@ -4354,6 +4391,821 @@ function newBlankProject(){ const p = sampleProject(); p.name = "Nuovo progetto"
   document.addEventListener("keydown", e => { if (e.key === "Escape" && document.getElementById("projBox")) closeProjectsDlg(); });
 })();
 
+/* ---- 050-tavole.js ---- */
+/* ============================================================
+   Fase 4 — Tavole tecniche e computo
+   Un registratore vettoriale con l'interfaccia di Canvas 2D raccoglie
+   pianta (lo stesso disegno dell'editor), prospetti e sezioni (proiezione
+   ortogonale con rimozione delle parti nascoste per ordinamento di
+   profondità) e li scrive in PDF, SVG e DXF su fogli A4–A1 con cartiglio.
+   ============================================================ */
+
+/* ---------- registratore vettoriale (unità: millimetri del foglio) ---------- */
+const colorProbe = document.createElement("canvas").getContext("2d");
+function rgbOfCss(c, a = 1){
+  if (typeof c !== "string") return [128, 128, 128];
+  colorProbe.fillStyle = "#000"; colorProbe.fillStyle = c; const s = colorProbe.fillStyle; let r = 0, g = 0, b = 0, al = 1;
+  if (s[0] === "#"){ r = parseInt(s.slice(1, 3), 16); g = parseInt(s.slice(3, 5), 16); b = parseInt(s.slice(5, 7), 16); }
+  else { const m = s.match(/[\d.]+/g) || []; [r, g, b] = m.slice(0, 3).map(Number); if (m[3] != null) al = +m[3]; }
+  const k = clamp(a * al, 0, 1); return [r, g, b].map(v => Math.round(v * k + 255 * (1 - k)));
+}
+class VRec {
+  constructor(){ this.items = []; this.m = [1, 0, 0, 1, 0, 0]; this.stack = []; this.path = []; this.fillStyle = "#000"; this.strokeStyle = "#000"; this.lineWidth = 1; this.font = "10px sans-serif"; this.textAlign = "start"; this.textBaseline = "alphabetic"; this.globalAlpha = 1; this.dash = []; this.lineCap = "butt"; this.lineJoin = "miter"; }
+  save(){ this.stack.push({m:this.m.slice(), fillStyle:this.fillStyle, strokeStyle:this.strokeStyle, lineWidth:this.lineWidth, font:this.font, textAlign:this.textAlign, textBaseline:this.textBaseline, globalAlpha:this.globalAlpha, dash:this.dash.slice()}); }
+  restore(){ const s = this.stack.pop(); if (s) Object.assign(this, s); }
+  setTransform(a, b, c, d, e, f){ this.m = [a, b, c, d, e, f]; }
+  transform(a, b, c, d, e, f){ const m = this.m; this.m = [m[0]*a + m[2]*b, m[1]*a + m[3]*b, m[0]*c + m[2]*d, m[1]*c + m[3]*d, m[0]*e + m[2]*f + m[4], m[1]*e + m[3]*f + m[5]]; }
+  translate(x, y){ this.transform(1, 0, 0, 1, x, y); } scale(x, y){ this.transform(x, 0, 0, y, 0, 0); } rotate(a){ const c = Math.cos(a), s = Math.sin(a); this.transform(c, s, -s, c, 0, 0); }
+  get k(){ return Math.sqrt(Math.abs(this.m[0]*this.m[3] - this.m[1]*this.m[2])); }
+  P(x, y){ const m = this.m; return [m[0]*x + m[2]*y + m[4], m[1]*x + m[3]*y + m[5]]; }
+  beginPath(){ this.path = []; }
+  moveTo(x, y){ this.path.push({pts:[this.P(x, y)], closed:false}); }
+  lineTo(x, y){ if (!this.path.length) return this.moveTo(x, y); this.path.at(-1).pts.push(this.P(x, y)); }
+  closePath(){ const s = this.path.at(-1); if (s) s.closed = true; }
+  bezierCurveTo(a, b, c, d, x, y){ this.lineTo(x, y); } quadraticCurveTo(a, b, x, y){ this.lineTo(x, y); }
+  arc(x, y, r, a0, a1, ccw){ this.ellipse(x, y, r, r, 0, a0, a1, ccw); }
+  ellipse(x, y, rx, ry, rot, a0, a1, ccw){
+    let d = a1 - a0; const T = Math.PI*2;
+    if (!ccw){ if (d >= T) d = T; else while (d < 0) d += T; } else { if (d <= -T) d = -T; else while (d > 0) d -= T; }
+    const n = Math.max(6, Math.ceil(Math.abs(d) / (Math.PI / 24))), cr = Math.cos(rot), sr = Math.sin(rot);
+    for (let i = 0; i <= n; i++){ const t = a0 + d * i / n, lx = Math.cos(t)*rx, ly = Math.sin(t)*ry, px = x + lx*cr - ly*sr, py = y + lx*sr + ly*cr; i === 0 && !this.path.length ? this.moveTo(px, py) : this.lineTo(px, py); }
+  }
+  rect(x, y, w, h){ this.moveTo(x, y); this.lineTo(x + w, y); this.lineTo(x + w, y + h); this.lineTo(x, y + h); this.closePath(); }
+  copyPath(){ return this.path.map(s => ({pts:s.pts.map(p => p.slice()), closed:s.closed})); }
+  fill(){ if (this.path.length) this.items.push({t:"p", sub:this.copyPath(), fill:rgbOfCss(this.fillStyle, this.globalAlpha)}); }
+  stroke(){ if (this.path.length) this.items.push({t:"p", sub:this.copyPath(), stroke:rgbOfCss(this.strokeStyle, this.globalAlpha), lw:this.lineWidth * this.k, dash:this.dash.map(v => v * this.k)}); }
+  fillRect(x, y, w, h){ const p = this.path; this.beginPath(); this.rect(x, y, w, h); this.fill(); this.path = p; }
+  strokeRect(x, y, w, h){ const p = this.path; this.beginPath(); this.rect(x, y, w, h); this.stroke(); this.path = p; }
+  clearRect(){} drawImage(){} strokeText(){} clip(){}
+  createLinearGradient(){ return {addColorStop(){}}; }
+  setLineDash(a){ this.dash = (a || []).slice(); } getLineDash(){ return this.dash.slice(); }
+  fontSize(){ const m = this.font.match(/([\d.]+)px/); return m ? +m[1] : 10; }
+  measureText(t){ return {width:String(t).length * this.fontSize() * .55}; }
+  fillText(t, x, y){ const p = this.P(x, y); this.items.push({t:"t", x:p[0], y:p[1], text:String(t), size:this.fontSize() * this.k, bold:/600|700|bold/.test(this.font), align:this.textAlign, base:this.textBaseline, rot:Math.atan2(this.m[1], this.m[0]), color:rgbOfCss(this.fillStyle, this.globalAlpha)}); }
+  /* scorciatoie in mm del foglio */
+  line(a, b, lw = .25, col = "#111", dash){ this.beginPath(); this.moveTo(a[0], a[1]); this.lineTo(b[0], b[1]); this.lineWidth = lw; this.strokeStyle = col; this.setLineDash(dash || []); this.stroke(); this.setLineDash([]); }
+  poly(pts, {fill, stroke, lw = .25, close = true} = {}){ this.beginPath(); pts.forEach((p, i) => i ? this.lineTo(p[0], p[1]) : this.moveTo(p[0], p[1])); if (close) this.closePath(); if (fill){ this.fillStyle = fill; this.fill(); } if (stroke){ this.strokeStyle = stroke; this.lineWidth = lw; this.stroke(); } }
+  text(t, x, y, size = 3, {align = "left", base = "alphabetic", bold = false, col = "#111", rot = 0} = {}){ this.save(); this.translate(x, y); if (rot) this.rotate(rot); this.font = `${bold ? "600 " : ""}${size}px Helvetica`; this.textAlign = align; this.textBaseline = base; this.fillStyle = col; this.fillText(t, 0, 0); this.restore(); }
+}
+/* origine del testo sulla linea di base e larghezza stimata (Helvetica ≈ 0,52 em per carattere) */
+function textBox(it){ const w = it.text.length * it.size * .52, dx = it.align === "center" ? -w/2 : (it.align === "right" || it.align === "end") ? -w : 0;
+  const dy = it.base === "middle" ? it.size * .35 : it.base === "top" || it.base === "hanging" ? it.size * .78 : it.base === "bottom" ? -it.size * .22 : 0;
+  const c = Math.cos(it.rot), s = Math.sin(it.rot); return {x:it.x + dx*c - dy*s, y:it.y + dx*s + dy*c, w}; }
+
+/* ---------- scrittori: SVG, PDF, DXF ---------- */
+const hex3 = c => "#" + c.map(v => v.toString(16).padStart(2, "0")).join("");
+const f2 = v => (Math.round(v * 100) / 100).toString();
+function pageSVG(pg){
+  const out = [`<svg xmlns="http://www.w3.org/2000/svg" width="${pg.w}mm" height="${pg.h}mm" viewBox="0 0 ${pg.w} ${pg.h}" font-family="Helvetica, Arial, sans-serif"><rect width="${pg.w}" height="${pg.h}" fill="#fff"/>`];
+  for (const it of pg.items){
+    if (it.t === "p"){ const d = it.sub.map(s => "M" + s.pts.map(p => f2(p[0]) + " " + f2(p[1])).join("L") + (s.closed ? "Z" : "")).join("");
+      out.push(it.fill ? `<path d="${d}" fill="${hex3(it.fill)}" fill-rule="evenodd"/>` : `<path d="${d}" fill="none" stroke="${hex3(it.stroke)}" stroke-width="${f2(Math.max(.05, it.lw))}" stroke-linejoin="round"${it.dash?.length ? ` stroke-dasharray="${it.dash.map(f2).join(" ")}"` : ""}/>`); }
+    else { const b = textBox(it); out.push(`<text x="${f2(b.x)}" y="${f2(b.y)}" font-size="${f2(it.size)}"${it.bold ? ' font-weight="600"' : ""} fill="${hex3(it.color)}"${it.rot ? ` transform="rotate(${f2(it.rot * 180 / Math.PI)} ${f2(b.x)} ${f2(b.y)})"` : ""}>${esc(it.text)}</text>`); }
+  }
+  out.push("</svg>"); return out.join("\n");
+}
+const WIN = {"€":128, "‚":130, "„":132, "…":133, "–":150, "—":151, "‘":145, "’":146, "“":147, "”":148, "•":149, "™":153, "▲":94, "▼":118, "∠":60, "▏":124};
+function winAnsi(s){ let o = ""; for (const ch of s){ let c = ch.codePointAt(0); if (c > 255) c = WIN[ch] ?? 63; else if (c >= 128 && c < 160) c = 63; const x = String.fromCharCode(c); o += x === "(" || x === ")" || x === "\\" ? "\\" + x : c < 32 ? " " : x; } return o; }
+const latin1 = s => { const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i) & 255; return u; };
+function pagesPDF(pages, title){
+  const enc = new TextEncoder(), k = 72 / 25.4, objs = [];
+  const add = s => { objs.push(s); return objs.length; };
+  add(null); add(null); // 1 catalogo, 2 pagine
+  const F1 = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"), F2 = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
+  const kids = [];
+  for (const pg of pages){
+    const H = pg.h, X = x => (x * k).toFixed(2), Y = y => ((H - y) * k).toFixed(2), c = [];
+    for (const it of pg.items){
+      if (it.t === "p"){ const path = it.sub.map(s => s.pts.map((p, i) => `${X(p[0])} ${Y(p[1])} ${i ? "l" : "m"}`).join(" ") + (s.closed ? " h" : "")).join(" ");
+        if (it.fill) c.push(`${it.fill.map(v => (v / 255).toFixed(3)).join(" ")} rg ${path} f*`);
+        else c.push(`${it.stroke.map(v => (v / 255).toFixed(3)).join(" ")} RG ${(Math.max(.05, it.lw) * k).toFixed(2)} w [${(it.dash || []).map(v => (v * k).toFixed(2)).join(" ")}] 0 d 1 j ${path} S`); }
+      else { const b = textBox(it), cs = Math.cos(-it.rot), sn = Math.sin(-it.rot);
+        c.push(`BT /${it.bold ? "F2" : "F1"} ${(it.size * k).toFixed(2)} Tf ${it.color.map(v => (v / 255).toFixed(3)).join(" ")} rg ${cs.toFixed(4)} ${sn.toFixed(4)} ${(-sn).toFixed(4)} ${cs.toFixed(4)} ${X(b.x)} ${Y(b.y)} Tm (${winAnsi(it.text)}) Tj ET`); }
+    }
+    const data = fflate.zlibSync(latin1(c.join("\n")), {level:6});
+    const cid = add({stream:data}), pid = add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${(pg.w * k).toFixed(2)} ${(pg.h * k).toFixed(2)}] /Resources << /Font << /F1 ${F1} 0 R /F2 ${F2} 0 R >> >> /Contents ${cid} 0 R >>`); kids.push(pid);
+  }
+  objs[0] = "<< /Type /Catalog /Pages 2 0 R >>"; objs[1] = `<< /Type /Pages /Kids [${kids.map(i => i + " 0 R").join(" ")}] /Count ${kids.length} >>`;
+  const info = add(`<< /Title (${winAnsi(title)}) /Producer (Pianta Libera) /CreationDate (D:${new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14)}) >>`);
+  const chunks = [enc.encode("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n")], offs = []; let pos = chunks[0].length;
+  objs.forEach((o, i) => { offs.push(pos); let b;
+    if (o && o.stream){ const h = enc.encode(`${i + 1} 0 obj\n<< /Length ${o.stream.length} /Filter /FlateDecode >>\nstream\n`), t = enc.encode("\nendstream\nendobj\n"); b = new Uint8Array(h.length + o.stream.length + t.length); b.set(h); b.set(o.stream, h.length); b.set(t, h.length + o.stream.length); }
+    else b = latin1(`${i + 1} 0 obj\n${o}\nendobj\n`);
+    chunks.push(b); pos += b.length; });
+  const xref = `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n${offs.map(o => String(o).padStart(10, "0") + " 00000 n \n").join("")}trailer\n<< /Size ${objs.length + 1} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${pos}\n%%EOF\n`;
+  chunks.push(enc.encode(xref));
+  const out = new Uint8Array(chunks.reduce((s, c) => s + c.length, 0)); let o = 0; for (const c of chunks){ out.set(c, o); o += c.length; } return out;
+}
+function pageDXF(pg){
+  const out = ["0","SECTION","2","HEADER","9","$ACADVER","1","AC1009","9","$INSUNITS","70","4","0","ENDSEC","0","SECTION","2","ENTITIES"], Y = y => (pg.h - y).toFixed(3);
+  for (const it of pg.items){
+    if (it.t === "p"){ const lay = it.fill ? "CAMPITURE" : it.lw >= .4 ? "SPESSE" : "LINEE";
+      if (it.fill && hex3(it.fill) === "#ffffff") continue;
+      for (const s of it.sub){ if (s.pts.length < 2) continue; out.push("0","POLYLINE","8",lay,"66","1","70",s.closed ? "1" : "0"); for (const p of s.pts) out.push("0","VERTEX","8",lay,"10",p[0].toFixed(3),"20",Y(p[1]),"30","0"); out.push("0","SEQEND","8",lay); } }
+    else { const b = textBox(it); out.push("0","TEXT","8","TESTI","10",b.x.toFixed(3),"20",Y(b.y),"30","0","40",(it.size * .72).toFixed(3),"1",it.text.replace(/[\r\n]/g, " "),"50",(-it.rot * 180 / Math.PI).toFixed(2)); }
+  }
+  out.push("0","ENDSEC","0","EOF"); return out.join("\n");
+}
+
+/* ---------- impostazioni delle tavole ---------- */
+const PAPERS = {A4:[297, 210], A3:[420, 297], A2:[594, 420], A1:[841, 594]};
+const PRINT_COLORS = {bg:"#ffffff", grid:"#ffffff", gridM:"#ffffff", poche:"#1c1c1c", room:"#ffffff", text:"#151515", ghost:"#dddddd", sel:"#151515", under:"#999999", muted:"#555555", green:"#557a44"};
+function tavDefaults(){ const b = planBounds(); return {paper:"A3", scale:100, color:false, chains:true, furniture:true, comp:true, sec:{axis:"x", pos:+(b ? (b.x0 + b.x1) / 2 : 5).toFixed(2), dir:1}}; }
+function tav(){ P.tav = {...tavDefaults(), ...(P.tav || {})}; return P.tav; }
+function planBounds(lid){ const pts = []; for (const w of P.walls) if (!lid || w.level === lid) pts.push(w.a, w.b); for (const r of P.rooms) if (!lid || r.level === lid) pts.push(...r.pts); if (!pts.length) return null;
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); return {x0:Math.min(...xs), x1:Math.max(...xs), y0:Math.min(...ys), y1:Math.max(...ys)}; }
+
+/* ---------- catene di quote automatiche sui quattro lati ---------- */
+function autoChains(g, lid){
+  const ws = wallsOf(lid); if (!ws.length) return; let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const w of ws) for (const p of [w.a, w.b]){ x0 = Math.min(x0, p[0] - w.thick/2); x1 = Math.max(x1, p[0] + w.thick/2); y0 = Math.min(y0, p[1] - w.thick/2); y1 = Math.max(y1, p[1] + w.thick/2); }
+  const sides = [{k:"y", v:y1, a:0, out:1}, {k:"y", v:y0, a:0, out:-1}, {k:"x", v:x1, a:1, out:1}, {k:"x", v:x0, a:1, out:-1}];
+  for (const sd of sides){
+    const along = sd.a === 0 ? [x0, x1] : [y0, y1], ticks = new Set([along[0], along[1]].map(v => +v.toFixed(3)));
+    for (const w of ws){ const onSide = [w.a, w.b].every(p => Math.abs((sd.k === "y" ? p[1] : p[0]) - sd.v) < w.thick/2 + .02); if (!onSide) continue;
+      for (const o of P.openings.filter(o => o.wall === w.id)) for (const s of [o.t - o.w/2, o.t + o.w/2]){ const q = ptOnWall(w, s); ticks.add(+(sd.a === 0 ? q[0] : q[1]).toFixed(3)); } }
+    for (const w of ws){ const touches = [w.a, w.b].some(p => Math.abs((sd.k === "y" ? p[1] : p[0]) - sd.v) < w.thick/2 + .02), perp = sd.a === 0 ? Math.abs(w.a[0] - w.b[0]) < .01 : Math.abs(w.a[1] - w.b[1]) < .01;
+      if (touches && perp){ const c = sd.a === 0 ? w.a[0] : w.a[1]; if (c > along[0] + .05 && c < along[1] - .05){ ticks.add(+(c - w.thick/2).toFixed(3)); ticks.add(+(c + w.thick/2).toFixed(3)); } } }
+    const t = [...ticks].sort((a, b) => a - b), P2 = v => sd.a === 0 ? [v, sd.v] : [sd.v, v];
+    const off1 = .8 * sd.out, off2 = 1.4 * sd.out, sg = sd.a === 0 ? 1 : -1;   // dimLine: offset lungo la normale sinistra
+    for (let i = 0; i < t.length - 1; i++) if (t[i+1] - t[i] > .02) dimLine(g, P2(t[i]), P2(t[i+1]), sg * off1, fmt(t[i+1] - t[i]), C.text);
+    if (t.length > 2) dimLine(g, P2(t[0]), P2(t.at(-1)), sg * off2, fmt(t.at(-1) - t[0]), C.text);
+  }
+}
+
+/* ---------- prospetti e sezioni: triangoli del modello in proiezione ortogonale ---------- */
+function gatherTris(){
+  const {root} = buildModel({ground:false, objects:true, roof:true}); root.updateMatrixWorld(true);
+  const KEEP = ["wall", "frame", "glass", "door", "roof", "gable", "sill", "floor"], out = [], kf = v => Math.round(v * 1000);
+  const ekey = (a, b) => { const A = `${kf(a.x)},${kf(a.y)},${kf(a.z)}`, B = `${kf(b.x)},${kf(b.y)},${kf(b.z)}`; return A < B ? A + "|" + B : B + "|" + A; };
+  root.traverse(o => {
+    if (!o.isMesh || o.userData.leaves || o.material?.alphaTest > 0) return;
+    let cat = o.userData.cat;
+    if (o.userData.inObject){ let x = o; while (x && !x.userData?.objId) x = x.parent; const ob = x && P.objects.find(q => q.id === x.userData.objId), it = ob?.kind === "lib" ? LIBMAP[libRef(ob.ref)] : null; if (!it?.param) return; cat = "obj"; }
+    if (!KEEP.includes(cat) && cat !== "obj") return;
+    const g = o.geometry, pos = g.attributes.position, idx = g.index, n = idx ? idx.count : pos.count, M = o.matrixWorld, V = i => new THREE.Vector3().fromBufferAttribute(pos, idx ? idx.getX(i) : i).applyMatrix4(M);
+    const eg = new THREE.EdgesGeometry(g, 20), ep = eg.attributes.position, edges = new Set();
+    for (let i = 0; i < ep.count; i += 2) edges.add(ekey(new THREE.Vector3().fromBufferAttribute(ep, i).applyMatrix4(M), new THREE.Vector3().fromBufferAttribute(ep, i + 1).applyMatrix4(M)));
+    eg.dispose();
+    const mat = o.userData.mat || (Array.isArray(o.material) ? o.material[0] : o.material)?.userData?.key || "bianco";
+    for (let i = 0; i + 2 < n; i += 3){ const a = V(i), b = V(i + 1), c = V(i + 2); out.push({v:[a, b, c], e:[edges.has(ekey(a, b)), edges.has(ekey(b, c)), edges.has(ekey(c, a))], cat, mat}); }
+  });
+  return out;
+}
+const UPV = new THREE.Vector3(0, 1, 0);
+/* view: {d (direzione di vista), cut (offset lungo d del piano di sezione, opzionale)} → poligoni ordinati, tagli */
+function projectTris(tris, d, cut){
+  const right = new THREE.Vector3().crossVectors(d, UPV).normalize(), polys = [], cutSegs = [];
+  for (const t of tris){
+    const n = new THREE.Vector3().subVectors(t.v[1], t.v[0]).cross(new THREE.Vector3().subVectors(t.v[2], t.v[0])); if (n.lengthSq() < 1e-12) continue;
+    let pts = t.v.map((p, i) => ({p, e:t.e[i]}));
+    if (cut != null){
+      const s = pts.map(q => q.p.dot(d) - cut);
+      if (s.every(v => v < 0)) continue;
+      if (s.some(v => v < 0)){ // clip: tiene la parte oltre il piano; registra il segmento di taglio
+        const res = [], hits = [];
+        for (let i = 0; i < 3; i++){ const A = pts[i], B = pts[(i + 1) % 3], sa = s[i], sb = s[(i + 1) % 3];
+          if (sa >= 0) res.push(A);
+          if ((sa >= 0) !== (sb >= 0)){ const X = A.p.clone().lerp(B.p, sa / (sa - sb)); hits.push(X); res.push({p:X, e:sa >= 0 ? false : A.e, cutEdge:sa >= 0}); }
+        }
+        for (let i = 0; i < res.length; i++) if (res[i].cutEdge === undefined && i + 1 < res.length && res[i+1].cutEdge === true) {} // la marcatura è sul punto d'uscita
+        pts = res.map((q, i) => ({p:q.p, e:q.cutEdge === true ? false : q.e}));
+        // i lati che giacciono sul piano non si disegnano come spigoli
+        for (let i = 0; i < pts.length; i++){ const A = pts[i], B = pts[(i + 1) % pts.length]; if (Math.abs(A.p.dot(d) - cut) < 1e-5 && Math.abs(B.p.dot(d) - cut) < 1e-5) A.e = false; }
+        if (hits.length === 2 && !["glass"].includes(t.cat)) cutSegs.push({a:hits[0], b:hits[1], cat:t.cat});
+      }
+    }
+    if (n.dot(d) >= 0 && t.cat !== "glass") continue; // facce rivolte dall'altra parte
+    const depth = pts.reduce((s, q) => s + q.p.dot(d), 0) / pts.length;
+    polys.push({pts:pts.map(q => [q.p.dot(right), q.p.y]), e:pts.map(q => q.e), depth, cat:t.cat, mat:t.mat});
+  }
+  polys.sort((a, b) => b.depth - a.depth);
+  return {polys, cutSegs:cutSegs.map(c => ({a:[c.a.dot(right), c.a.y], b:[c.b.dot(right), c.b.y], cat:c.cat})), right};
+}
+/* concatena i segmenti di taglio in anelli chiusi da campire */
+function chainLoops(segs){
+  const kf = p => `${Math.round(p[0] * 2000)},${Math.round(p[1] * 2000)}`, adj = new Map(), used = new Set(), loops = [];
+  segs.forEach((s, i) => { for (const [p, q] of [[s.a, s.b], [s.b, s.a]]){ const k = kf(p); if (!adj.has(k)) adj.set(k, []); adj.get(k).push({i, q}); } });
+  segs.forEach((s, i) => { if (used.has(i)) return; used.add(i); const loop = [s.a, s.b]; let cur = s.b, guard = 0;
+    while (guard++ < 5000){ const nx = (adj.get(kf(cur)) || []).find(x => !used.has(x.i)); if (!nx) break; used.add(nx.i); cur = nx.q; if (kf(cur) === kf(loop[0])) { loops.push(loop); return; } loop.push(cur); }
+  });
+  return loops;
+}
+const FILL_BW = {wall:"#ffffff", gable:"#ffffff", roof:"#f1ece7", glass:"#e3eef2", frame:"#ffffff", door:"#ffffff", sill:"#ffffff", floor:"#ffffff", obj:"#ffffff"};
+function fillOf(p, colored){ if (!colored) return FILL_BW[p.cat] || "#fff"; const c = rgbOfCss(matDef(p.mat).color || "#ddd"); return hex3(c.map(v => Math.round(v * .55 + 255 * .45))); }
+/* disegna una vista ortogonale nel riquadro: origine (ox, oy) = angolo in basso a sinistra del disegno, k = mm per metro */
+function drawOrtho(g, view, ox, oy, k, colored, extents){
+  const X = u => ox + (u - extents.u0) * k, Y = y => oy - (y - extents.y0) * k;
+  for (const p of view.polys){ const pts = p.pts.map(q => [X(q[0]), Y(q[1])]); g.poly(pts, {fill:fillOf(p, colored)});
+    for (let i = 0; i < pts.length; i++) if (p.e[i]) g.line(pts[i], pts[(i + 1) % pts.length], p.cat === "glass" ? .13 : .25, "#222"); }
+  if (view.cutSegs.length){ for (const loop of chainLoops(view.cutSegs)) g.poly(loop.map(q => [X(q[0]), Y(q[1])]), {fill:"#3a3a3a"}); for (const s of view.cutSegs) g.line([X(s.a[0]), Y(s.a[1])], [X(s.b[0]), Y(s.b[1])], .5, "#111"); }
+  if (!view.cutSegs.length && extents.y0 < 0) g.poly([[X(extents.u0) - 6, Y(0)], [X(extents.u1) + 6, Y(0)], [X(extents.u1) + 6, Y(extents.y0) + .3], [X(extents.u0) - 6, Y(extents.y0) + .3]], {fill:"#ffffff"});   // niente fondazioni nei prospetti
+  g.line([X(extents.u0) - 6, Y(0)], [X(extents.u1) + 6, Y(0)], .6, "#111");
+  for (const L of [...P.levels].sort((a, b) => a.elev - b.elev)) for (const yv of [L.elev, L.elev + L.height]){ const y = Y(yv), x = X(extents.u0) - 8; g.line([x, y], [x + 5, y], .18, "#444"); g.poly([[x + 1, y], [x + 2.2, y - 1.6], [x - .2, y - 1.6]], {fill:"#444"}); g.text((yv >= 0 ? "+" : "") + fmt(yv), x - 1, y - .6, 2.2, {align:"right", col:"#333"}); }
+}
+function orthoExtents(view){ let u0 = Infinity, u1 = -Infinity, y0 = 0, y1 = -Infinity; for (const p of view.polys) for (const q of p.pts){ u0 = Math.min(u0, q[0]); u1 = Math.max(u1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); } return isFinite(u0) ? {u0, u1, y0, y1} : null; }
+/* nome del prospetto dal punto cardinale vero (tiene conto del nord della pianta) */
+function facadeName(d){ const az = (Math.atan2(-d.x, d.z) * 180 / Math.PI - (P.site?.north || 0) + 720) % 360; return ["nord", "nord-est", "est", "sud-est", "sud", "sud-ovest", "ovest", "nord-ovest"][Math.round(az / 45) % 8]; }
+
+/* ---------- composizione dei fogli ---------- */
+function titleBlock(g, pg, title, scaleTxt, n, N){
+  const [W, H] = [pg.w, pg.h], bw = Math.min(180, W - 20), bx = W - 10 - bw, by = H - 10 - 26;
+  g.poly([[10, 10], [W - 10, 10], [W - 10, H - 10], [10, H - 10]], {stroke:"#111", lw:.5});
+  g.poly([[bx, by], [bx + bw, by], [bx + bw, H - 10], [bx, H - 10]], {fill:"#fff", stroke:"#111", lw:.35});
+  g.line([bx, by + 13], [bx + bw, by + 13], .2); g.line([bx + bw * .62, by], [bx + bw * .62, H - 10], .2); g.line([bx + bw * .62, by + 6.5], [bx + bw, by + 6.5], .15); g.line([bx + bw * .81, by + 13], [bx + bw * .81, H - 10], .15);
+  g.text(P.name || "Progetto", bx + 3, by + 6, 4, {bold:true}); g.text(title, bx + 3, by + 11, 3); g.text("Pianta Libera · elaborato generato dal modello: verificare le misure, non è un documento tecnico certificato", bx + 3, by + 19.5, 1.9, {col:"#555"});
+  g.text("Scala", bx + bw * .62 + 2, by + 4, 1.8, {col:"#666"}); g.text(scaleTxt, bx + bw * .62 + 2, by + 6.2 + 4.6, 3.2, {bold:true});
+  g.text("Data", bx + bw * .62 + 2, by + 17, 1.8, {col:"#666"}); g.text(new Date().toLocaleDateString("it-IT"), bx + bw * .62 + 2, by + 22.5, 2.8);
+  g.text("Foglio", bx + bw * .81 + 2, by + 17, 1.8, {col:"#666"}); g.text(`${n}/${N}`, bx + bw * .81 + 2, by + 22.5, 2.8, {bold:true});
+  return {x:16, y:16, w:W - 32, h:by - 20};  // area utile per il disegno
+}
+function scaleBar(g, x, y, k){ const m = k >= 15 ? 5 : 10; for (let i = 0; i < m; i++) g.poly([[x + i*k, y], [x + (i+1)*k, y], [x + (i+1)*k, y + 1.2], [x + i*k, y + 1.2]], {fill:i % 2 ? "#fff" : "#111", stroke:"#111", lw:.15}); g.text("0", x, y - 1, 2, {align:"center"}); g.text(`${m} m`, x + m*k, y - 1, 2, {align:"center"}); }
+function northArrow(g, x, y){ g.save(); g.translate(x, y); g.rotate((P.site?.north || 0) * Math.PI / 180); g.beginPath(); g.arc(0, 0, 5, 0, Math.PI*2); g.strokeStyle = "#111"; g.lineWidth = .25; g.stroke(); g.poly([[0, -4.5], [2, 3], [0, 1.5], [-2, 3]], {fill:"#111"}); g.text("N", 0, -6.5, 2.6, {align:"center", bold:true}); g.restore(); }
+function fitScale(wm, hm, area, want){ const s = [20, 50, 100, 200, 500, 1000].filter(x => x >= want); for (const sc of s){ const k = 1000 / sc; if (wm * k <= area.w && hm * k <= area.h) return sc; } return s.at(-1) || want; }
+
+function buildSheets(){
+  const T = tav(), [W, H] = PAPERS[T.paper] || PAPERS.A3, pages = [], prevLevel = S.level, prevSel = selList(), prevC = C, prevV = {...V}, pW = W2, pH = H2, prevHover = S.hover, prevDraw = S.draw;
+  const notes = [];
+  const newPage = () => { const g = new VRec(), pg = {w:W, h:H, g}; pages.push(pg); return pg; };
+  try {
+    setSel([]); S.hover = null; S.draw = null; C = {...PRINT_COLORS};
+    const tris = gatherTris(), lvls = [...P.levels].sort((a, b) => a.elev - b.elev);
+    // piante
+    for (const L of lvls){
+      const b = planBounds(L.id); if (!b) continue;
+      const pg = newPage(); pg.title = `Pianta ${L.name} (quota ${fmt(L.elev)} m)`; pg.draw = area => {
+        const g = pg.g, wm = b.x1 - b.x0 + 4, hm = b.y1 - b.y0 + 4, sc = fitScale(wm, hm, area, T.scale), k = 1000 / sc; if (sc !== T.scale) notes.push(`${pg.title}: scala 1:${sc} per stare nel foglio`); pg.scaleTxt = `1:${sc}`;
+        S.level = L.id; V.s = k * 4; V.cx = (b.x0 + b.x1) / 2; V.cy = (b.y0 + b.y1) / 2; W2 = area.w * 4; H2 = area.h * 4;
+        const hidden = []; if (!T.furniture) for (const o of P.objects) if (o.level === L.id && !LIBMAP[libRef(o.ref)]?.param && !o.hidden){ o.hidden = true; hidden.push(o); }
+        g.save(); g.translate(area.x, area.y); g.scale(.25, .25);
+        draw2D({g, after:gg => { if (T.chains) autoChains(gg, L.id); secMark(gg); }});
+        g.restore(); hidden.forEach(o => delete o.hidden);
+        northArrow(g, area.x + area.w - 8, area.y + 8); scaleBar(g, area.x + 4, area.y + area.h - 4, k);
+      };
+    }
+    // prospetti
+    const views = [new THREE.Vector3(0, 0, -1), new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 0, 1), new THREE.Vector3(1, 0, 0)].map(d => { const v = projectTris(tris, d); return {d, v, ex:orthoExtents(v), name:"Prospetto " + facadeName(d)}; }).filter(x => x.ex);
+    if (views.length){ const pgE = newPage(); pgE.title = "Prospetti"; pgE.draw = area => {
+      const cols = 2, rows = 2, cw = area.w / cols, ch = area.h / rows, wm = Math.max(...views.map(x => x.ex.u1 - x.ex.u0)) + 3, hm = Math.max(...views.map(x => x.ex.y1 - x.ex.y0)) + 3;
+      const sc = fitScale(wm, hm + 1.5, {w:cw - 14, h:ch - 10}, T.scale), k = 1000 / sc; if (sc !== T.scale) notes.push(`Prospetti: scala 1:${sc} per stare nel foglio`); pgE.scaleTxt = `1:${sc}`;
+      views.forEach((x, i) => { const cx = area.x + (i % cols) * cw, cy = area.y + Math.floor(i / cols) * ch, dw = (x.ex.u1 - x.ex.u0) * k, dh = (x.ex.y1 - x.ex.y0) * k;
+        const ox = cx + (cw - dw) / 2 + 4, oy = cy + (ch + dh) / 2 - 2; drawOrtho(pgE.g, x.v, ox, oy, k, T.color, x.ex); pgE.g.text(x.name[0].toUpperCase() + x.name.slice(1), cx + cw / 2, oy + 6, 3, {align:"center", bold:true}); });
+    }; }
+    // sezione A-A
+    const s = T.sec, d = s.axis === "x" ? new THREE.Vector3(s.dir, 0, 0) : new THREE.Vector3(0, 0, s.dir), cut = s.pos * s.dir;
+    const sv = projectTris(tris, d, cut), sex = orthoExtents(sv);
+    if (sex){ const pgS = newPage(); pgS.title = "Sezione A-A"; pgS.draw = area => {
+      const wm = sex.u1 - sex.u0 + 4, hm = sex.y1 - sex.y0 + 3, sc = fitScale(wm, hm, area, T.scale), k = 1000 / sc; if (sc !== T.scale) notes.push(`Sezione: scala 1:${sc} per stare nel foglio`); pgS.scaleTxt = `1:${sc}`;
+      const ox = area.x + (area.w - (sex.u1 - sex.u0) * k) / 2 + 4, oy = area.y + (area.h + (sex.y1 - sex.y0) * k) / 2; drawOrtho(pgS.g, sv, ox, oy, k, T.color, sex);
+      pgS.g.text("Sezione A-A", ox + (sex.u1 - sex.u0) * k / 2, oy + 7, 3.4, {align:"center", bold:true});
+    }; }
+    // computo
+    if (T.comp){ const rows = computo(); if (rows.length){ const per = Math.floor((H - 70) / 5.2);
+      for (let i = 0; i < rows.length; i += per){ const pg = newPage(), part = rows.slice(i, i + per), last = i + per >= rows.length; pg.title = "Computo delle quantità"; pg.scaleTxt = "—"; pg.draw = area => drawComputo(pg.g, area, part, last ? rows : null); } } }
+    // l'area utile si calcola prima; il cartiglio si scrive dopo il disegno, quando la scala è nota
+    pages.forEach((pg, i) => pg.draw(titleBlock(new VRec(), pg, pg.title, "", i + 1, pages.length)));
+    pages.forEach((pg, i) => { const g2 = new VRec(); titleBlock(g2, pg, pg.title, pg.scaleTxt || "", i + 1, pages.length); pg.items = [...pg.g.items, ...g2.items]; });
+  } finally {
+    S.level = prevLevel; setSel(prevSel); C = prevC; Object.assign(V, prevV); W2 = pW; H2 = pH; S.hover = prevHover; S.draw = prevDraw; draw2D();
+  }
+  return {pages, notes};
+}
+/* linea di sezione in pianta con le frecce del verso di vista */
+function secMark(g){
+  const s = tav().sec, b = planBounds(S.level); if (!b) return; const pad = 2.4;
+  const a = s.axis === "x" ? [s.pos, b.y0 - pad] : [b.x0 - pad, s.pos], e = s.axis === "x" ? [s.pos, b.y1 + pad] : [b.x1 + pad, s.pos];
+  const A = toS(a), E = toS(e); g.save(); g.strokeStyle = "#111"; g.lineWidth = 1.2; g.setLineDash([14, 4, 3, 4]); g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(E[0], E[1]); g.stroke(); g.setLineDash([]);
+  const dv = s.axis === "x" ? [s.dir, 0] : [0, s.dir];
+  for (const P0 of [A, E]){ g.lineWidth = 2; g.beginPath(); g.moveTo(P0[0], P0[1]); g.lineTo(P0[0] + dv[0]*22, P0[1] + dv[1]*22); g.stroke(); g.beginPath(); g.moveTo(P0[0] + dv[0]*28, P0[1] + dv[1]*28); g.lineTo(P0[0] + dv[0]*20 + dv[1]*4, P0[1] + dv[1]*20 + dv[0]*4); g.lineTo(P0[0] + dv[0]*20 - dv[1]*4, P0[1] + dv[1]*20 - dv[0]*4); g.closePath(); g.fillStyle = "#111"; g.fill();
+    g.font = "600 13px Helvetica"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("A", P0[0] - dv[1]*0 - (s.axis === "x" ? 0 : 0) + (s.axis === "x" ? -12 : 0), P0[1] + (s.axis === "x" ? 0 : -12)); }
+  g.restore();
+}
+
+/* ---------- computo delle quantità ---------- */
+function openingArea(w){ return P.openings.filter(o => o.wall === w.id).reduce((s, o) => s + o.w * Math.min(o.h, (w.height || level(w.level).height) - (o.type === "door" ? 0 : o.sill)), 0); }
+const STYLE_NAME = Object.fromEntries([...DOOR_STYLES, ...WIN_STYLES.map(([k, n]) => ["w_" + k, n])]);
+function computo(){
+  const R = new Map(), add = (key, cat, voce, um, q) => { if (!(q > 1e-6)) return; const r = R.get(key) || {key, cat, voce, um, q:0}; r.q += q; R.set(key, r); };
+  for (const w of P.walls){ const L = level(w.level); if (!L) continue; const len = wallFrame(w).len, h = w.height || L.height, net = len * h - openingArea(w);
+    add(`muro:${w.thick}:${w.mat}`, "Murature", `Muro sp. ${Math.round(w.thick * 100)} cm (${matName(w.mat).toLowerCase()})`, "m²", net);
+    add(`muro_v:${w.thick}`, "Murature", `Volume muri sp. ${Math.round(w.thick * 100)} cm`, "m³", net * w.thick);
+    for (const [k, side] of [["matA", "A"], ["matB", "B"]]) add(`fin:${w[k] || w.mat}`, "Finiture pareti", `Finitura ${matName(w[k] || w.mat).toLowerCase()} (per lato)`, "m²", net); }
+  for (const r of P.rooms){ const L = level(r.level); if (!L) continue; const a = Math.abs(polyArea(r.pts));
+    add(`pav:${r.mat}`, "Pavimenti", `Pavimento ${matName(r.mat).toLowerCase()}`, "m²", a);
+    if (r.skirt){ let per = 0; for (let i = 0; i < r.pts.length; i++){ const p = r.pts[i], q = r.pts[(i + 1) % r.pts.length]; per += Math.hypot(q[0]-p[0], q[1]-p[1]); }
+      const doors = skirtGeos(r, L).reduce((s, g) => { g.computeBoundingBox(); const bb = g.boundingBox; return s + Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z); }, 0);
+      add(`bat:${r.skirt.mat || "bianco"}`, "Finiture", `Battiscopa ${matName(r.skirt.mat || "bianco").toLowerCase()} h ${Math.round((r.skirt.h || .08) * 100)} cm`, "m", doors || per); }
+    if (r.ceilH) add("controsoffitto", "Finiture", "Controsoffitto in cartongesso", "m²", a); else if (!r.noCeiling) add("soffitto", "Finiture", "Tinteggiatura soffitti", "m²", a); }
+  for (const o of P.openings){ const w = wallById(o.wall); if (!w) continue; const st = o.type === "door" ? (STYLE_NAME[o.style || "battente"] || "A battente") : (STYLE_NAME["w_" + (o.style || "battente")] || "A battente");
+    add(`ap:${o.type}:${o.style || ""}:${o.w}:${o.h}`, o.type === "door" ? "Porte" : "Finestre", `${o.type === "door" ? "Porta" : "Finestra"} ${st.toLowerCase()} ${Math.round(o.w * 100)}×${Math.round(o.h * 100)}`, "n.", 1);
+    if (o.shut) add(`osc:${o.shut}`, "Finestre", o.shut === "persiane" ? "Persiane (coppie)" : "Tapparelle", "n.", 1); }
+  for (const L of P.levels){ if (!L.roof || L.roof.type === "none") continue; const b = planBounds(L.id); if (!b) continue; const o = L.roof.overhang || 0, A = (b.x1 - b.x0 + 2*o) * (b.y1 - b.y0 + 2*o), p = THREE.MathUtils.degToRad(clamp(L.roof.pitch || 0, 0, 60));
+    add(`tetto:${L.roof.mat}`, "Copertura", `Copertura ${({flat:"piana", gable:"a due falde", hip:"a padiglione", shed:"a una falda"})[L.roof.type]} in ${matName(L.roof.mat).toLowerCase()}`, "m²", L.roof.type === "flat" ? A : A / Math.cos(p)); }
+  for (const o of P.objects){ const it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null; if (it?.cat === "Persone") continue;
+    if (it?.param?.kind === "rail") add("ringhiera", "Scale e parapetti", "Ringhiera / parapetto", "m", paramsOf(o, it).len * (o.scale || 1));
+    else if (it?.param) add(`scala:${o.ref}`, "Scale e parapetti", it.nome, "n.", 1);
+    else add(`ogg:${o.kind === "lib" ? o.ref : "imp:" + o.name}`, it?.cat === "Luci" ? "Impianto elettrico" : it?.cat === "Verde" ? "Sistemazioni esterne" : "Arredi", it?.nome || o.name || "Oggetto", "n.", 1); }
+  const order = ["Murature", "Finiture pareti", "Pavimenti", "Finiture", "Porte", "Finestre", "Copertura", "Scale e parapetti", "Impianto elettrico", "Arredi", "Sistemazioni esterne"];
+  return [...R.values()].sort((a, b) => order.indexOf(a.cat) - order.indexOf(b.cat) || a.voce.localeCompare(b.voce, "it"));
+}
+const prices = () => (P.prices = P.prices || {});
+const eur = v => v.toLocaleString("it-IT", {minimumFractionDigits:2, maximumFractionDigits:2});
+function computoHTML(){
+  const rows = computo(), pr = prices(); let tot = 0, cat = "";
+  const body = rows.map(r => { const p = pr[r.key], imp = p != null ? p * r.q : null; if (imp != null) tot += imp; const head = r.cat !== cat ? `<tr class="cat"><td colspan="5">${esc(cat = r.cat)}</td></tr>` : "";
+    return head + `<tr><td>${esc(r.voce)}</td><td>${esc(r.um)}</td><td class="num">${fmt(r.q, r.um === "n." ? 0 : 2)}</td><td><input class="inp price" data-price="${esc(r.key)}" value="${p != null ? fmt(p, 2) : ""}" inputmode="decimal" aria-label="Prezzo unitario ${esc(r.voce)}" placeholder="€"></td><td class="num">${imp != null ? eur(imp) : ""}</td></tr>`; }).join("");
+  return `<div class="sec"><h3>Computo delle quantità</h3><p class="note">Quantità ricavate dal modello: muri in asse al netto delle aperture, pavimenti netti, coperture in falda. Scrivi i prezzi unitari (€) del tuo listino per avere gli importi: restano nel progetto.</p>
+    <div class="tblwrap"><table class="olist comp"><thead><tr><th>Voce</th><th>u.m.</th><th>Quantità</th><th>€/u.m.</th><th>Importo €</th></tr></thead><tbody>${body}
+    <tr class="tot"><td>Totale</td><td></td><td></td><td></td><td class="num">${eur(tot)}</td></tr></tbody></table></div>
+    <div class="btns"><button class="btn" id="compCsv">Esporta computo in CSV</button></div></div>`;
+}
+function drawComputo(g, area, rows, all){
+  const pr = prices(), cx = [area.x, area.x + area.w * .55, area.x + area.w * .63, area.x + area.w * .76, area.x + area.w * .88], right = area.x + area.w; let y = area.y + 6, cat = "";
+  g.text("Computo delle quantità", area.x, y, 4, {bold:true}); y += 8;
+  ["Voce", "u.m.", "Quantità", "€/u.m.", "Importo €"].forEach((h, i) => g.text(h, i < 2 ? cx[i] : (i < 4 ? cx[i + 1] - 2 : right), y, 2.4, {bold:true, align:i < 2 ? "left" : "right"})); y += 1.5; g.line([area.x, y], [right, y], .3); y += 4.2;
+  for (const r of rows){ if (r.cat !== cat){ cat = r.cat; g.text(cat, area.x, y, 2.5, {bold:true, col:"#333"}); y += 5.2; }
+    const p = pr[r.key]; g.text(r.voce, cx[0] + 2, y, 2.4); g.text(r.um, cx[1], y, 2.4); g.text(fmt(r.q, r.um === "n." ? 0 : 2), cx[3] - 2, y, 2.4, {align:"right"}); if (p != null){ g.text(eur(p), cx[4] - 2, y, 2.4, {align:"right"}); g.text(eur(p * r.q), right, y, 2.4, {align:"right"}); } y += 5.2; }
+  if (all){ const tot = all.reduce((s, r) => s + (pr[r.key] != null ? pr[r.key] * r.q : 0), 0); g.line([area.x, y - 3.6], [right, y - 3.6], .3); g.text("Totale", area.x, y + 1, 2.8, {bold:true}); g.text("€ " + eur(tot), right, y + 1, 2.8, {bold:true, align:"right"}); }
+}
+
+/* ---------- interfaccia (scheda Esporta) ---------- */
+function tavoleHTML(){
+  const T = tav();
+  return `<div class="exp"><header><h4>Tavole tecniche</h4><span class="tag">PDF · SVG · DXF</span></header>
+    <p class="note">Piante con catene di quote, prospetti dei quattro lati, sezione A-A e computo, su fogli con cartiglio. Il DXF si apre in AutoCAD, Archicad e Revit (il formato DWG è chiuso: da AutoCAD si salva in DWG).</p>
+    <div class="row3"><div class="f"><span class="lbl">Foglio</span><select id="tvPaper" class="inp">${Object.keys(PAPERS).map(p => `<option ${T.paper === p ? "selected" : ""}>${p}</option>`).join("")}</select></div>
+      <div class="f"><span class="lbl">Scala</span><select id="tvScale" class="inp">${[50, 100, 200].map(s => `<option value="${s}" ${T.scale === s ? "selected" : ""}>1:${s}</option>`).join("")}</select></div>
+      <div class="f"><span class="lbl">Sezione A-A</span><select id="tvAxis" class="inp"><option value="x" ${T.sec.axis === "x" ? "selected" : ""}>Verticale in pianta</option><option value="z" ${T.sec.axis === "z" ? "selected" : ""}>Orizzontale in pianta</option></select></div></div>
+    <div class="row">${F("tvPos", T.sec.axis === "x" ? "Sezione a x = (m)" : "Sezione a y = (m)", fmt(T.sec.pos), 'inputmode="decimal"')}<div class="f"><span class="lbl">Guarda verso</span><select id="tvDir" class="inp"><option value="1" ${T.sec.dir > 0 ? "selected" : ""}>${T.sec.axis === "x" ? "Est" : "Sud"}</option><option value="-1" ${T.sec.dir < 0 ? "selected" : ""}>${T.sec.axis === "x" ? "Ovest" : "Nord"}</option></select></div></div>
+    <label class="chk"><input type="checkbox" id="tvChains" ${T.chains ? "checked" : ""}> Catene di quote esterne automatiche</label>
+    <label class="chk"><input type="checkbox" id="tvFurn" ${T.furniture ? "checked" : ""}> Arredi in pianta</label>
+    <label class="chk"><input type="checkbox" id="tvColor" ${T.color ? "checked" : ""}> Prospetti e sezioni a colori</label>
+    <label class="chk"><input type="checkbox" id="tvComp" ${T.comp ? "checked" : ""}> Aggiungi il computo delle quantità</label>
+    <div class="btns"><button class="btn primary" id="tvPdf">Tavole in PDF</button><button class="btn" id="tvSvg">SVG (.zip)</button><button class="btn" id="tvDxf">DXF (.zip)</button></div>
+    <p class="status" id="tvStatus"></p></div>`;
+}
+$("#panel-export").addEventListener("change", e => { const t = e.target, T = tav(), v = num(t.value);
+  const set = {tvPaper:() => T.paper = t.value, tvScale:() => T.scale = +t.value, tvAxis:() => { T.sec.axis = t.value; const b = planBounds(); if (b) T.sec.pos = +(t.value === "x" ? (b.x0 + b.x1) / 2 : (b.y0 + b.y1) / 2).toFixed(2); renderExport(); }, tvPos:() => { if (v !== null) T.sec.pos = v; }, tvDir:() => T.sec.dir = +t.value,
+    tvChains:() => T.chains = t.checked, tvFurn:() => T.furniture = t.checked, tvColor:() => T.color = t.checked, tvComp:() => T.comp = t.checked}[t.id];
+  if (set){ set(); save(); draw2D(); }
+});
+$("#panel-export").addEventListener("click", async e => {
+  const b = e.target.closest("#tvPdf, #tvSvg, #tvDxf"); if (!b) return; b.disabled = true; const st = $("#tvStatus");
+  try { busy("Preparo le tavole…"); await sleep(30);
+    const {pages, notes} = buildSheets(); if (!pages.length) throw new Error("il progetto è vuoto");
+    const base = `${slug()}-tavole`;
+    if (b.id === "tvPdf") await saveFile(base + ".pdf", new Blob([pagesPDF(pages, P.name || "Tavole")], {type:"application/pdf"}));
+    else { const files = {}; pages.forEach((pg, i) => { const nm = `${String(i + 1).padStart(2, "0")}-${slugify(pg.title)}`; files[nm + (b.id === "tvSvg" ? ".svg" : ".dxf")] = fflate.strToU8(b.id === "tvSvg" ? pageSVG(pg) : pageDXF(pg)); });
+      await saveFile(base + (b.id === "tvSvg" ? "-svg" : "-dxf") + ".zip", new Blob([fflate.zipSync(files)])); }
+    if (st) st.textContent = `${pages.length} fogli ${T_PAPER()}.${notes.length ? " " + notes.join("; ") + "." : ""}`;
+  } catch(err){ console.error(err); toast("Tavole non riuscite: " + (err.message || err), true); }
+  finally { busy(""); b.disabled = false; }
+});
+const T_PAPER = () => tav().paper;
+$("#panel-list").addEventListener("change", e => { const k = e.target.dataset.price; if (k === undefined) return; const v = num(e.target.value); if (v === null || e.target.value.trim() === "") delete prices()[k]; else prices()[k] = v; commit(); });
+$("#panel-list").addEventListener("click", async e => { if (!e.target.closest("#compCsv")) return; const q = v => `"${String(v).replace(/"/g, '""')}"`, pr = prices();
+  const lines = [["Categoria", "Voce", "u.m.", "Quantità", "Prezzo €", "Importo €"].map(q).join(";")];
+  for (const r of computo()){ const p = pr[r.key]; lines.push([r.cat, r.voce, r.um, fmt(r.q, r.um === "n." ? 0 : 2), p != null ? fmt(p, 2) : "", p != null ? fmt(p * r.q, 2) : ""].map(q).join(";")); }
+  await saveFile(slug() + "-computo.csv", "﻿" + lines.join("\r\n")); });
+
+/* ---- 051-condivisione.js ---- */
+/* ============================================================
+   Fase 4 — Condivisione con il cliente e commenti
+   Il progettista crea un link (progetto salvato sul server per 30 giorni,
+   senza prezzi né modelli importati); il cliente lo apre in sola lettura,
+   naviga pianta e 3D e lascia commenti puntati in pianta con la vista 3D.
+   ============================================================ */
+const SHARE_TOK_KEY = "pianta-libera-share-tokens";
+const shareTokens = () => { try { return JSON.parse(localStorage.getItem(SHARE_TOK_KEY)) || {}; } catch(e){ return {}; } };
+function setShareToken(id, tok){ const t = shareTokens(); if (tok) t[id] = tok; else delete t[id]; try { localStorage.setItem(SHARE_TOK_KEY, JSON.stringify(t)); } catch(e){} }
+const apiUrl = p => new URL("api/" + p, new URL(".", location.href)).href;
+const SH = {cfg:null, loading:false, ts:"", tsId:null, busy:false};
+S.comments = S.comments || [];
+async function shareConfig(force){
+  if (SH.cfg && !force) return SH.cfg;
+  try { const r = await fetch(apiUrl("config"), {cache:"no-store"}); const d = r.ok ? await r.json() : null; SH.cfg = d?.share ? {...d.share, site_key:d.turnstile_site_key || null} : {enabled:false, reason:"Su questo sito non c'è il servizio di condivisione (serve il Worker o il server locale)."}; }
+  catch(e){ SH.cfg = {enabled:false, reason:"Servizio di condivisione non raggiungibile."}; }
+  return SH.cfg;
+}
+async function shareFetch(path, init = {}){
+  const r = await fetch(apiUrl("share" + path), {...init, headers:{...(init.body ? {"Content-Type":"application/json"} : {}), ...(init.headers || {})}});
+  const d = r.status === 204 ? null : await r.json().catch(() => null);
+  if (!r.ok) throw new Error(d?.error?.message || `il server ha risposto ${r.status}`); return d;
+}
+/* progetto da condividere: senza prezzi, senza file dei modelli importati, senza dati di condivisione */
+function sharePayload(){ const d = projectData(); delete d.prices; delete d.share; delete d.imports; delete d.pid; d.objects = d.objects.filter(o => o.kind !== "import"); return d; }
+async function mountShareTs(box){
+  const key = SH.cfg?.site_key || backendCfg.data?.turnstile_site_key; if (!box) return;
+  if (!key){ box.textContent = "Verifica anti-bot richiesta ma chiave non disponibile: apri la scheda Render AI e riprova."; return; }
+  try { await loadTurnstile(); if (box.childElementCount) return; SH.ts = ""; SH.tsId = window.turnstile.render(box, {sitekey:key, size:"flexible", language:"it", callback:t => { SH.ts = t; }, "expired-callback":() => { SH.ts = ""; }}); } catch(e){ box.textContent = "Verifica anti-bot non disponibile: " + e.message; }
+}
+function resetShareTs(){ SH.ts = ""; try { if (SH.tsId != null) window.turnstile.reset(SH.tsId); } catch(e){} }
+const shareLink = id => { const u = new URL(location.href); u.search = ""; u.hash = ""; u.searchParams.set("condividi", id); return u.href; };
+
+/* ---------- lato progettista (scheda Esporta) ---------- */
+function shareHTML(){
+  const c = SH.cfg, sh = P.share, tok = sh && shareTokens()[sh.id], open = S.comments.filter(x => !x.resolved).length;
+  if (!c){ shareConfig().then(() => { if (S.tab === "export") renderExport(); }); return `<div class="exp"><header><h4>Condividi con il cliente</h4></header><p class="note">Controllo il servizio…</p></div>`; }
+  if (!sh) return `<div class="exp"><header><h4>Condividi con il cliente</h4><span class="tag">link · commenti</span></header>
+    ${c.enabled ? `<p class="note">Crea un link da mandare al cliente: vede pianta e 3D in sola lettura, gira il modello, cammina negli interni e lascia commenti puntati sulla pianta. ${c.local ? "Il server locale tiene i link finché resta acceso (rete locale)." : `Il progetto viene salvato su Cloudflare per ${c.ttl_days} giorni, poi si cancella; i prezzi del computo e i modelli importati non vengono inviati.`}</p>
+      <label class="chk"><input type="checkbox" id="shConsent"> Acconsento a salvare il progetto sul server per la condivisione</label>${c.turnstile ? `<div id="shTs" class="ts"></div>` : ""}
+      <div class="btns"><button class="btn primary" id="shCreate">Crea il link per il cliente</button></div>` : `<p class="note">${esc(c.reason || "Condivisione non disponibile su questo server.")}</p>`}<p class="status" id="shStatus"></p></div>`;
+  const link = shareLink(sh.id), exp = sh.expires_at ? new Date(sh.expires_at).toLocaleDateString("it-IT") : "";
+  return `<div class="exp"><header><h4>Condividi con il cliente</h4><span class="tag">${open ? `${open} commenti da leggere` : "link attivo"}</span></header>
+    <div class="f"><label class="lbl" for="shLink">Link (scade il ${esc(exp)})</label><input id="shLink" class="inp" readonly value="${esc(link)}"></div>
+    <div class="btns"><button class="btn" id="shCopy">Copia il link</button>${tok ? `<button class="btn" id="shUpdate">Aggiorna con le modifiche</button>` : ""}<button class="btn" id="shLoad">Leggi i commenti</button>${tok ? `<button class="btn danger" id="shDelete">Elimina il link</button>` : ""}</div>
+    ${tok ? "" : `<p class="note warn">Questo browser non ha il token del link: puoi leggere i commenti ma non aggiornare né eliminare.</p>`}
+    ${c.turnstile && tok ? `<div id="shTs" class="ts"></div>` : ""}
+    ${commentsListHTML(true)}<p class="status" id="shStatus"></p></div>`;
+}
+function commentsListHTML(owner){
+  if (!S.comments.length) return `<p class="note">${owner ? "Nessun commento per ora." : "Ancora nessun commento: aggiungi il primo."}</p>`;
+  return `<ol class="cmts">${S.comments.map((c, i) => `<li class="${c.resolved ? "done" : ""}"><b>${i + 1}. ${esc(c.author)}</b> <small>${new Date(c.created_at).toLocaleString("it-IT", {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"})}${c.resolved ? " · risolto" : ""}</small><p>${esc(c.text)}</p>
+    <span class="btns"><button class="btn" data-cgo="${esc(c.id)}">Mostra</button>${owner && shareTokens()[P.share?.id] ? `<button class="btn" data-cres="${esc(c.id)}">${c.resolved ? "Riapri" : "Risolto"}</button><button class="btn danger" data-cdel="${esc(c.id)}">Elimina</button>` : ""}</span></li>`).join("")}</ol>`;
+}
+async function loadComments(){ if (!P.share) return; try { const d = await shareFetch("/" + P.share.id + "/comments"); S.comments = d.comments || []; } catch(e){ if (/inesistente|scaduto/.test(e.message)){ S.comments = []; } throw e; } draw2D(); if (S.tab === "export") renderExport(); }
+function shareStatus(m, err){ const s = $("#shStatus"); if (s){ s.textContent = m; s.className = "status" + (err ? " err" : ""); } }
+$("#panel-export").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.cgo){ focusComment(b.dataset.cgo); return; }
+  if (!["shCreate", "shCopy", "shUpdate", "shLoad", "shDelete"].includes(b.id) && !b.dataset.cres && !b.dataset.cdel) return;
+  const tok = P.share && shareTokens()[P.share.id];
+  try {
+    if (b.id === "shCreate"){
+      if (!$("#shConsent")?.checked){ shareStatus("Serve il consenso a salvare il progetto sul server.", true); return; }
+      if (SH.cfg.turnstile && !SH.ts){ shareStatus("Completa la verifica anti-bot qui sopra.", true); return; }
+      b.disabled = true; shareStatus("Creo il link…");
+      const d = await shareFetch("", {method:"POST", body:JSON.stringify({name:P.name, project:sharePayload(), turnstile:SH.ts})}); resetShareTs();
+      setShareToken(d.id, d.token); P.share = {id:d.id, expires_at:d.expires_at}; S.comments = []; commit(); renderExport(); shareStatus("Link creato: copialo e mandalo al cliente.");
+      try { await navigator.clipboard.writeText(shareLink(d.id)); toast("Link copiato negli appunti"); } catch(_){}
+    }
+    if (b.id === "shCopy"){ const inp = $("#shLink"); try { await navigator.clipboard.writeText(inp.value); toast("Link copiato"); } catch(_){ inp.select(); toast("Seleziona e copia il link"); } }
+    if (b.id === "shUpdate"){ b.disabled = true; await shareFetch("/" + P.share.id, {method:"PUT", headers:{"X-Share-Token":tok}, body:JSON.stringify({name:P.name, project:sharePayload()})}); shareStatus("Il cliente vede ora l'ultima versione."); b.disabled = false; }
+    if (b.id === "shLoad"){ await loadComments(); shareStatus(`${S.comments.length} commenti.`); }
+    if (b.id === "shDelete"){ if (b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Conferma: elimina"; return; } await shareFetch("/" + P.share.id, {method:"DELETE", headers:{"X-Share-Token":tok}}); setShareToken(P.share.id, null); delete P.share; S.comments = []; commit(); renderExport(); toast("Link eliminato: il cliente non lo può più aprire"); }
+    if (b.dataset.cres){ const c = S.comments.find(x => x.id === b.dataset.cres); await shareFetch(`/${P.share.id}/comments/${c.id}`, {method:"PATCH", headers:{"X-Share-Token":tok}, body:JSON.stringify({resolved:!c.resolved})}); c.resolved = !c.resolved; draw2D(); renderExport(); }
+    if (b.dataset.cdel){ await shareFetch(`/${P.share.id}/comments/${b.dataset.cdel}`, {method:"DELETE", headers:{"X-Share-Token":tok}}); S.comments = S.comments.filter(x => x.id !== b.dataset.cdel); draw2D(); renderExport(); }
+  } catch(err){ shareStatus("Non riuscito: " + err.message, true); b.disabled = false; resetShareTs(); }
+});
+function afterRenderExportShare(){ if (SH.cfg?.turnstile) mountShareTs($("#shTs")); if (P.share && SH.loadedFor !== P.share.id){ SH.loadedFor = P.share.id; loadComments().catch(() => {}); } }
+
+/* ---------- segnaposto dei commenti in pianta ---------- */
+function drawCommentPins(g){
+  if (!S.comments?.length) return;
+  S.comments.forEach((c, i) => { if (!c.at || (c.level && c.level !== S.level && level(c.level))) return; const s = toS(c.at), on = S.viewer?.open === c.id;
+    g.save(); g.fillStyle = c.resolved ? C.muted : "#d0462c"; g.strokeStyle = C.bg; g.lineWidth = 2; g.beginPath(); g.arc(s[0], s[1] - 14, on ? 11 : 9, 0, Math.PI*2); g.moveTo(s[0] - 5, s[1] - 9); g.lineTo(s[0], s[1]); g.lineTo(s[0] + 5, s[1] - 9); g.fill(); g.stroke();
+    g.fillStyle = "#fff"; g.font = "600 10px Archivo, system-ui, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String(i + 1), s[0], s[1] - 14); g.restore(); });
+  const d = S.viewer?.draft; if (d?.at){ const s = toS(d.at); g.save(); g.strokeStyle = "#d0462c"; g.lineWidth = 2; g.setLineDash([3, 3]); g.beginPath(); g.arc(s[0], s[1] - 14, 10, 0, Math.PI*2); g.stroke(); g.restore(); }
+}
+function pinAt(sp){ for (let i = S.comments.length - 1; i >= 0; i--){ const c = S.comments[i]; if (!c.at || (c.level && c.level !== S.level)) continue; const s = toS(c.at); if (Math.hypot(s[0] - sp[0], s[1] - 14 - sp[1]) < 11) return c; } return null; }
+function focusComment(id){
+  const c = S.comments.find(x => x.id === id); if (!c) return;
+  if (c.level && level(c.level) && c.level !== S.level){ S.level = c.level; applyVisibility(); renderLevels(); }
+  if (c.at){ V.cx = c.at[0]; V.cy = c.at[1]; }
+  if (c.cam) applyCamState(c.cam);
+  if (S.viewer){ S.viewer.open = c.id; renderInspector(); }
+  draw2D(); render3D();
+}
+
+/* ---------- lato cliente: sola lettura ---------- */
+async function enterViewer(id){
+  S.viewer = {id, open:null, draft:null, adding:false}; document.body.classList.add("viewer");
+  busy("Apro il progetto condiviso…");
+  try {
+    const d = await shareFetch("/" + encodeURIComponent(id)); await shareConfig();
+    P = migrate(d.project); P.pid = "condiviso-" + id; S.viewer.name = d.name; S.viewer.expires = d.expires_at; S.viewer.updated = d.updated_at; S.comments = d.comments || [];
+    S.level = P.levels[0].id; setSel([]); snap = JSON.stringify(P); past.length = 0; future.length = 0;
+    $("#projName").value = d.name; $("#projName").readOnly = true; S.tab = "props"; renderTabs(); setTool("select");
+    refresh(); fitPlan(); applySky(); camPreset("ext"); $("#tag2d")?.insertAdjacentHTML("beforeend", `<span class="viewtag">sola lettura</span>`);
+  } catch(e){ S.viewer.error = e.message; renderInspector(); }
+  finally { busy(""); }
+}
+function viewerPanelHTML(){
+  const v = S.viewer;
+  if (v.error) return `<div class="sec"><h3>Progetto condiviso</h3><p class="note warn">Non riesco ad aprirlo: ${esc(v.error)}</p><p class="note">Il link potrebbe essere scaduto o eliminato: chiedi un link nuovo a chi te l'ha mandato.</p></div>`;
+  const d = v.draft, open = v.open && S.comments.find(c => c.id === v.open);
+  return `<div class="sec"><h3>Progetto condiviso</h3><p class="note"><b>${esc(v.name || "Progetto")}</b> · aggiornato il ${v.updated ? new Date(v.updated).toLocaleDateString("it-IT") : "—"} · il link scade il ${v.expires ? new Date(v.expires).toLocaleDateString("it-IT") : "—"}.</p>
+    <p class="note">Gira il modello nel 3D, prova «A piedi» per camminare dentro, cambia piano dalle schede sopra la pianta. Per lasciare un commento premi il pulsante qui sotto e poi clicca il punto della pianta.</p></div>
+    ${open ? `<div class="sec"><h3>Commento ${S.comments.indexOf(open) + 1}</h3><p><b>${esc(open.author)}</b>: ${esc(open.text)}</p>${open.cam ? `<button class="btn" data-cgo="${esc(open.id)}">Vista 3D del commento</button>` : ""}</div>` : ""}
+    <div class="sec"><h3>Nuovo commento</h3>
+      ${d?.at ? `${F("cmAuthor", "Il tuo nome", PREFS.cmAuthor || "", 'maxlength="60" autocomplete="name"')}<div class="f"><label class="lbl" for="cmText">Commento</label><textarea id="cmText" class="inp" maxlength="1000" placeholder="Es. qui vorremmo una finestra più grande"></textarea></div>
+        <label class="chk"><input type="checkbox" id="cmCam" checked> Allega la vista 3D che vedo ora</label>${SH.cfg?.turnstile ? `<div id="cmTs" class="ts"></div>` : ""}
+        <div class="btns"><button class="btn primary" id="cmSend">Invia il commento</button><button class="btn" id="cmCancel">Annulla</button></div>`
+        : `<div class="btns"><button class="btn primary" id="cmAdd" aria-pressed="${v.adding}">${v.adding ? "Clicca il punto in pianta…" : "Aggiungi un commento"}</button></div>`}
+      <p class="status" id="cmStatus"></p></div>
+    <div class="sec"><h3>Commenti (${S.comments.length})</h3>${commentsListHTML(false)}</div>
+    <p class="note">Il nome e il testo che scrivi sono visibili a chi ha il link. Niente altro viene raccolto.</p>`;
+}
+$("#panel-props").addEventListener("click", async e => {
+  if (!S.viewer) return; const b = e.target.closest("button"); if (!b) return; const v = S.viewer;
+  if (b.dataset.cgo){ focusComment(b.dataset.cgo); return; }
+  if (b.id === "cmAdd"){ v.adding = !v.adding; renderInspector(); return; }
+  if (b.id === "cmCancel"){ v.draft = null; v.adding = false; renderInspector(); draw2D(); return; }
+  if (b.id === "cmSend"){
+    const text = $("#cmText").value.trim(), author = $("#cmAuthor").value.trim(), st = $("#cmStatus");
+    if (!text){ st.textContent = "Scrivi il commento."; st.className = "status err"; return; }
+    if (SH.cfg?.turnstile && !SH.ts){ st.textContent = "Completa la verifica anti-bot."; st.className = "status err"; return; }
+    PREFS.cmAuthor = author; savePrefs(); b.disabled = true;
+    try { const c = await shareFetch(`/${v.id}/comments`, {method:"POST", body:JSON.stringify({author, text, level:v.draft.level, at:v.draft.at, cam:$("#cmCam").checked ? camState() : null, turnstile:SH.ts})});
+      S.comments.push(c); v.draft = null; v.adding = false; v.open = c.id; resetShareTs(); renderInspector(); draw2D(); toast("Commento inviato"); }
+    catch(err){ st.textContent = "Non inviato: " + err.message; st.className = "status err"; b.disabled = false; resetShareTs(); }
+  }
+});
+/* in sola lettura la pianta si sposta trascinando, i clic aprono i commenti o ne posano uno nuovo */
+c2d.addEventListener("pointerdown", e => {
+  if (!S.viewer || e.button !== 0) return; e.stopImmediatePropagation(); e.preventDefault();
+  const sp = evP(e), pin = pinAt(sp); c2d.setPointerCapture(e.pointerId); pointers.set(e.pointerId, sp);
+  if (S.viewer.adding){ S.viewer.draft = {at:toW(...sp).map(v => +v.toFixed(3)), level:S.level}; S.viewer.adding = false; renderInspector(); draw2D(); setTimeout(() => $("#cmText")?.focus(), 30); if (SH.cfg?.turnstile) mountShareTs($("#cmTs")); return; }
+  if (pin){ S.viewer.open = pin.id; renderInspector(); draw2D(); return; }
+  drag = {type:"pan", sp, c:[V.cx, V.cy]};
+}, {capture:true});
+c2d.addEventListener("dblclick", e => { if (S.viewer) e.stopImmediatePropagation(); }, {capture:true});
+document.addEventListener("keydown", e => { if (!S.viewer || e.target.closest("input,textarea,select")) return; if (!["Escape", "?", "Tab"].includes(e.key) && !WALK.on) e.stopImmediatePropagation(); }, {capture:true});
+
+/* ---- 052-avanguardia.js ---- */
+/* ============================================================
+   Fase 4 — Ritocco AI con maschera e galleria nel progetto, video,
+   esportazione IFC, anteprima di stampa 3D, pannello staccabile e
+   ridimensionabile, uso con tablet (tocco prolungato, tasti di cammino)
+   ============================================================ */
+
+/* ---------- galleria dei render salvata con il progetto (IndexedDB) ---------- */
+async function blobToDataURL(b){ return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); }); }
+async function toDataURL(src){ if (/^data:/.test(src)) return src; const r = await fetch(src); if (!r.ok) throw new Error("immagine non raggiungibile"); return blobToDataURL(await r.blob()); }
+async function saveGalleryItem(r){
+  if (!P?.pid || S.viewer || !window.indexedDB) return;
+  try { const src = await toDataURL(r.src); r.src = src; r.gid = r.gid || uid();
+    await idbStore("immagini", "readwrite", s => s.put({id:r.gid, pid:P.pid, src, before:r.before, time:r.time, mode:r.mode, prompt:r.prompt || "", created:Date.now()}));
+    const all = (await idbStore("immagini", "readonly", s => s.index("pid").getAll(P.pid))).sort((a, b) => b.created - a.created);
+    for (const x of all.slice(40)) await idbStore("immagini", "readwrite", s => s.delete(x.id));
+  } catch(e){ console.warn("galleria", e); }
+}
+async function loadGallery(){
+  if (!P?.pid || !window.indexedDB) return;
+  try { const all = (await idbStore("immagini", "readonly", s => s.index("pid").getAll(P.pid))).sort((a, b) => b.created - a.created);
+    aiResults.length = 0; for (const x of all) aiResults.push({src:x.src, before:x.before, time:x.time, mode:x.mode, prompt:x.prompt, gid:x.id}); if (S.tab === "ai") renderAI(); }
+  catch(e){ console.warn("galleria", e); }
+}
+async function deleteGalleryItem(i){ const r = aiResults[i]; if (!r) return; aiResults.splice(i, 1); if (r.gid) try { await idbStore("immagini", "readwrite", s => s.delete(r.gid)); } catch(e){} renderAI(); }
+
+/* ---------- ritocco con maschera ----------
+   Si dipinge la zona da cambiare sul render; il servizio rigenera l'immagine con la richiesta,
+   poi qui si incolla solo la zona dipinta (bordi sfumati): il resto resta identico all'originale. */
+const loadImg = src => new Promise((res, rej) => { const im = new Image(); if (!/^data:|^blob:/.test(src)) im.crossOrigin = "anonymous"; im.onload = () => res(im); im.onerror = () => rej(new Error("immagine non caricabile")); im.src = src; });
+async function compositeMask(orig, mask, genSrc){
+  const W = orig.naturalWidth, H = orig.naturalHeight, gen = await loadImg(genSrc), mk = (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
+  const out = mk(W, H), og = out.getContext("2d"); og.drawImage(orig, 0, 0);
+  const m = mk(W, H), mg = m.getContext("2d"); mg.filter = `blur(${Math.max(2, Math.round(W / 160))}px)`; mg.drawImage(mask, 0, 0, W, H);
+  const t = mk(W, H), tg = t.getContext("2d"); tg.drawImage(gen, 0, 0, W, H); tg.globalCompositeOperation = "destination-in"; tg.drawImage(m, 0, 0);
+  og.drawImage(t, 0, 0); return out.toDataURL("image/png");
+}
+async function openMaskEditor(r){
+  closeMaskEditor(); let orig;
+  try { orig = await loadImg(r.src); } catch(e){ toast("Non riesco a leggere questo render: " + e.message, true); return; }
+  const d = document.createElement("div"); d.id = "maskBox"; d.className = "help pano"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Ritocco con maschera");
+  d.innerHTML = `<div class="pano-in mask-in"><header><h3>Ritocca una zona</h3><span class="note">Dipingi la zona da cambiare, scrivi cosa vuoi: il resto dell'immagine resta identico.</span><button class="btn" id="mkClose" aria-label="Chiudi">✕</button></header>
+    <div class="mask-stage"><canvas id="mkImg"></canvas><canvas id="mkMask"></canvas></div>
+    <div class="mask-ctl"><label class="lbl" for="mkSize">Pennello</label><input type="range" id="mkSize" min="8" max="160" value="48"><button class="btn" id="mkErase" aria-pressed="false">Gomma</button><button class="btn" id="mkClear">Cancella</button>
+      <input id="mkPrompt" class="inp" placeholder="Es. divano in velluto verde, parquet a spina di pesce, pianta in vaso nell'angolo" maxlength="400"><button class="btn primary" id="mkGo">Genera il ritocco</button></div><p class="status" id="mkStatus"></p></div>`;
+  document.body.appendChild(d);
+  const ci = $("#mkImg"), cm = $("#mkMask"); for (const c of [ci, cm]){ c.width = orig.naturalWidth; c.height = orig.naturalHeight; } ci.getContext("2d").drawImage(orig, 0, 0);
+  const mg = cm.getContext("2d"); let down = false, erase = false;
+  const paint = e => { const rc = cm.getBoundingClientRect(), x = (e.clientX - rc.left) / rc.width * cm.width, y = (e.clientY - rc.top) / rc.height * cm.height, rad = +$("#mkSize").value / rc.width * cm.width / 2;
+    mg.globalCompositeOperation = erase ? "destination-out" : "source-over"; mg.fillStyle = "#e0482c"; mg.beginPath(); mg.arc(x, y, rad, 0, Math.PI*2); mg.fill(); };
+  cm.addEventListener("pointerdown", e => { down = true; cm.setPointerCapture(e.pointerId); paint(e); });
+  cm.addEventListener("pointermove", e => { if (down) paint(e); });
+  cm.addEventListener("pointerup", () => { down = false; });
+  d.addEventListener("click", async e => {
+    if (e.target === d || e.target.closest("#mkClose")){ closeMaskEditor(); return; }
+    if (e.target.closest("#mkErase")){ erase = !erase; e.target.closest("#mkErase").setAttribute("aria-pressed", erase); }
+    if (e.target.closest("#mkClear")) mg.clearRect(0, 0, cm.width, cm.height);
+    if (e.target.closest("#mkGo")){
+      const txt = $("#mkPrompt").value.trim(), st = $("#mkStatus"), px = mg.getImageData(0, 0, cm.width, cm.height).data; let any = false; for (let i = 3; i < px.length; i += 64) if (px[i]){ any = true; break; }
+      if (!any){ st.textContent = "Dipingi prima la zona da cambiare."; st.className = "status err"; return; }
+      if (!txt){ st.textContent = "Scrivi cosa vuoi nella zona dipinta."; st.className = "status err"; return; }
+      st.textContent = "Invio al servizio di render…"; st.className = "status"; e.target.disabled = true;
+      const base = document.createElement("canvas"); base.width = orig.naturalWidth; base.height = orig.naturalHeight; base.getContext("2d").drawImage(orig, 0, 0);
+      const ok = await runAI(false, {override:{image:base, prompt:`${txt}. Cambia solo questo; mantieni identici inquadratura, prospettiva, architettura, luce e tutto il resto dell'immagine.`, composite:src => compositeMask(orig, cm, src), before:r.src}});
+      if (ok) closeMaskEditor(); else { st.textContent = $("#aiStatus")?.textContent || "Non riuscito"; st.className = "status err"; e.target.disabled = false; }
+    }
+  });
+}
+function closeMaskEditor(){ document.getElementById("maskBox")?.remove(); }
+document.addEventListener("keydown", e => { if (e.key === "Escape" && document.getElementById("maskBox")) closeMaskEditor(); });
+
+/* ---------- video: percorso tra le camere salvate o giro attorno ---------- */
+const VID = {stop:false, on:false};
+function cameraPath(kind){
+  if (kind === "camere"){ const cs = (P.cameras || []).filter(c => c.pos && c.target); if (cs.length < 2) throw new Error("servono almeno due camere salvate");
+    const pc = new THREE.CatmullRomCurve3(cs.map(c => new THREE.Vector3(...c.pos)), false, "centripetal"), tc = new THREE.CatmullRomCurve3(cs.map(c => new THREE.Vector3(...c.target)), false, "centripetal");
+    return t => { const e = t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2, seg = e * (cs.length - 1), i = Math.min(cs.length - 2, Math.floor(seg)), f = seg - i; return {pos:pc.getPoint(e), target:tc.getPoint(e), fov:(cs[i].fov || 45) * (1 - f) + (cs[i + 1].fov || 45) * f}; }; }
+  const b = archBox(), c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3()), R = Math.max(Math.hypot(camera.position.x - c.x, camera.position.z - c.z), Math.max(sz.x, sz.z) * 1.1, 8), y = Math.max(camera.position.y, 2), a0 = Math.atan2(camera.position.z - c.z, camera.position.x - c.x), tgt = new THREE.Vector3(c.x, Math.min(c.y, 2), c.z);
+  return t => ({pos:new THREE.Vector3(c.x + Math.cos(a0 + t*Math.PI*2) * R, y, c.z + Math.sin(a0 + t*Math.PI*2) * R), target:tgt, fov:camera.fov});
+}
+async function recordVideo(kind, secs, hres){
+  if (!window.MediaRecorder || !c3d.captureStream) throw new Error("questo browser non sa registrare video dalla vista 3D");
+  const mime = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4;codecs=avc1", "video/mp4"].find(t => MediaRecorder.isTypeSupported(t)); if (!mime) throw new Error("nessun formato video disponibile");
+  const path = cameraPath(kind), W = hres >= 1080 ? 1920 : hres >= 720 ? 1280 : 640, H = Math.round(W * 9 / 16);
+  if (WALK.on) exitWalk(); const st = camState(), size = renderer.getSize(new THREE.Vector2()), pr = renderer.getPixelRatio(), asp = camera.aspect;
+  renderer.setPixelRatio(1); renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix(); controls.enabled = false;
+  const stream = c3d.captureStream(30), track = stream.getVideoTracks()[0], rec = new MediaRecorder(stream, {mimeType:mime, videoBitsPerSecond:W >= 1920 ? 16e6 : 8e6}), chunks = [];
+  rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); }; const stopped = new Promise(r => rec.onstop = r);
+  VID.on = true; VID.stop = false; rec.start(250); const fps = 30, N = Math.max(2, Math.round(secs * fps)), t0 = performance.now();
+  try {
+    for (let i = 0; i <= N && !VID.stop; i++){
+      const c = path(i / N); camera.position.copy(c.pos); camera.fov = c.fov; camera.updateProjectionMatrix(); camera.lookAt(c.target); camera.updateMatrixWorld(); drawFrame();
+      if (i % 10 === 0) busy(`Registro il video… ${Math.round(i / N * 100)}% · Esc per fermare`);
+      await sleep(Math.max(0, t0 + (i + 1) * 1000 / fps - performance.now()));
+    }
+  } finally {
+    rec.stop(); await stopped; track.stop(); VID.on = false; busy("");
+    renderer.setPixelRatio(pr); renderer.setSize(size.x, size.y, false); camera.aspect = asp; camera.updateProjectionMatrix(); controls.enabled = true; applyCamState(st); render3D();
+  }
+  const blob = new Blob(chunks, {type:mime.split(";")[0]});
+  if (!blob.size) throw new Error("il browser non ha registrato fotogrammi: riprova con la scheda in primo piano o con un altro browser");
+  return {blob, ext:mime.includes("mp4") ? "mp4" : "webm"};
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape" && VID.on) VID.stop = true; });
+
+/* ---------- esportazione IFC4 (BIM) ---------- */
+const IFC64 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$";
+function ifcGuid(){ const b = crypto.getRandomValues(new Uint8Array(16)); let n = 0n; for (const x of b) n = (n << 8n) | BigInt(x); let s = ""; for (let i = 21; i >= 0; i--) s += IFC64[Number((n >> BigInt(6 * i)) & 63n)]; return s; }
+function ifcStr(s){ let o = ""; for (const ch of String(s ?? "")){ const c = ch.codePointAt(0); if (ch === "'") o += "''"; else if (ch === "\\") o += "\\\\"; else if (c >= 32 && c < 127) o += ch; else o += `\\X2\\${c.toString(16).toUpperCase().padStart(4, "0")}\\X0\\`; } return `'${o}'`; }
+function exportIFC(){
+  const L = [], add = s => { L.push(s); return "#" + L.length; }, R = v => { const x = Math.round(v * 1e6) / 1e6; return Number.isInteger(x) ? x + "." : String(x); };
+  const pt3 = (x, y, z) => add(`IFCCARTESIANPOINT((${R(x)},${R(y)},${R(z)}))`), pt2 = (x, y) => add(`IFCCARTESIANPOINT((${R(x)},${R(y)}))`), dir = (x, y, z) => add(`IFCDIRECTION((${R(x)},${R(y)},${R(z)}))`);
+  const ax3 = (p, zd, xd) => add(`IFCAXIS2PLACEMENT3D(${p},${zd || "$"},${xd || "$"})`), lp = (rel, a) => add(`IFCLOCALPLACEMENT(${rel || "$"},${a})`);
+  const Z = dir(0, 0, 1), O = pt3(0, 0, 0), A0 = ax3(O, Z, dir(1, 0, 0));
+  const ctx = add(`IFCGEOMETRICREPRESENTATIONCONTEXT($,'Model',3,1.E-05,${A0},$)`), body = add(`IFCGEOMETRICREPRESENTATIONSUBCONTEXT('Body','Model',*,*,*,*,${ctx},$,.MODEL_VIEW.,$)`);
+  const units = add(`IFCUNITASSIGNMENT((${add("IFCSIUNIT(*,.LENGTHUNIT.,$,.METRE.)")},${add("IFCSIUNIT(*,.AREAUNIT.,$,.SQUARE_METRE.)")},${add("IFCSIUNIT(*,.VOLUMEUNIT.,$,.CUBIC_METRE.)")},${add("IFCSIUNIT(*,.PLANEANGLEUNIT.,$,.RADIAN.)")}))`);
+  const proj = add(`IFCPROJECT('${ifcGuid()}',$,${ifcStr(P.name || "Progetto")},'Pianta Libera',$,$,$,(${ctx}),${units})`);
+  const siteLP = lp(null, A0), site = add(`IFCSITE('${ifcGuid()}',$,'Sito',$,$,${siteLP},$,$,.ELEMENT.,$,$,$,$,$)`);
+  const bLP = lp(siteLP, A0), bld = add(`IFCBUILDING('${ifcGuid()}',$,${ifcStr(P.name || "Edificio")},$,$,${bLP},$,$,.ELEMENT.,$,$,$)`);
+  add(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${proj},(${site}))`); add(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${site},(${bld}))`);
+  const rep = items => add(`IFCPRODUCTDEFINITIONSHAPE($,$,(${add(`IFCSHAPEREPRESENTATION(${body},'Body','SweptSolid',(${items.join(",")}))`)}))`);
+  const repT = items => add(`IFCPRODUCTDEFINITIONSHAPE($,$,(${add(`IFCSHAPEREPRESENTATION(${body},'Body','Tessellation',(${items.join(",")}))`)}))`);
+  const box = (cx, cy, xd, yd, z0, h) => add(`IFCEXTRUDEDAREASOLID(${add(`IFCRECTANGLEPROFILEDEF(.AREA.,$,${add(`IFCAXIS2PLACEMENT2D(${pt2(cx, cy)},$)`)},${R(xd)},${R(yd)})`)},${ax3(pt3(0, 0, z0))},${Z},${R(h)})`);
+  const W2I = p => [p[0], -p[1]];   // pianta (y verso sud) → IFC (Y verso nord)
+  const storeys = [], counts = {walls:0, doors:0, windows:0, spaces:0, slabs:0, other:0};
+  const bySt = [...P.levels].sort((a, b) => a.elev - b.elev);
+  const {root} = buildModel({ground:false, objects:true, roof:true}); root.updateMatrixWorld(true);
+  const meshTess = (filter, elev) => { const pts = [], idx = []; root.traverse(o => { if (!o.isMesh || !filter(o)) return; const g = o.geometry, p = g.attributes.position, ix = g.index, n = ix ? ix.count : p.count, v = new THREE.Vector3();
+      if (pts.length / 3 + n > 60000) return; const base = pts.length / 3;
+      for (let i = 0; i < p.count; i++){ v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); pts.push(v.x, -v.z, v.y - elev); }
+      for (let i = 0; i + 2 < n; i += 3) idx.push([0, 1, 2].map(k => base + 1 + (ix ? ix.getX(i + k) : i + k))); });
+    if (!idx.length) return null;
+    const list = add(`IFCCARTESIANPOINTLIST3D((${Array.from({length:pts.length / 3}, (_, i) => `(${R(pts[i*3])},${R(pts[i*3+1])},${R(pts[i*3+2])})`).join(",")}))`);
+    return add(`IFCTRIANGULATEDFACESET(${list},$,$,(${idx.map(t => `(${t.join(",")})`).join(",")}),$)`); };
+  for (const Lv of bySt){
+    const sLP = lp(bLP, ax3(pt3(0, 0, Lv.elev))), st = add(`IFCBUILDINGSTOREY('${ifcGuid()}',$,${ifcStr(Lv.name)},$,$,${sLP},$,$,.ELEMENT.,${R(Lv.elev)})`); storeys.push(st);
+    const elems = [], spaces = [];
+    for (const w of wallsOf(Lv.id)){
+      const f = wallFrame(w); if (f.len < .01) continue; const a = W2I(w.a), h = w.height || Lv.height;
+      const wLP = lp(sLP, ax3(pt3(a[0], a[1], 0), Z, dir(f.ux, -f.uy, 0)));
+      const wall = add(`IFCWALL('${ifcGuid()}',$,${ifcStr(`Muro ${Math.round(w.thick * 100)} cm`)},${ifcStr(matName(w.mat))},$,${wLP},${rep([box(f.len / 2, 0, f.len + w.thick, w.thick, -Lv.slab, h + Lv.slab)])},$,.STANDARD.)`); elems.push(wall); counts.walls++;
+      for (const o of P.openings.filter(o => o.wall === w.id)){
+        const bot = o.type === "door" ? 0 : o.sill, oh = Math.min(o.h, h - bot), oLP = lp(wLP, ax3(pt3(o.t, 0, bot)));
+        const op = add(`IFCOPENINGELEMENT('${ifcGuid()}',$,'Vano',$,$,${oLP},${rep([box(0, 0, o.w, w.thick + .1, 0, oh)])},$,.OPENING.)`);
+        add(`IFCRELVOIDSELEMENT('${ifcGuid()}',$,$,$,${wall},${op})`);
+        const fLP = lp(oLP, A0), geo = rep([box(0, 0, o.w, .06, 0, oh)]);
+        const el = o.type === "door" ? add(`IFCDOOR('${ifcGuid()}',$,${ifcStr("Porta " + (o.style || "battente"))},$,$,${fLP},${geo},$,${R(oh)},${R(o.w)},.DOOR.,${o.style === "doppia" || o.style === "portafinestra" ? ".DOUBLE_DOOR_SINGLE_SWING." : o.style === "scorrevole" || o.style === "scomparsa" ? ".SLIDING_TO_LEFT." : ".SINGLE_SWING_LEFT."},$)`)
+          : add(`IFCWINDOW('${ifcGuid()}',$,${ifcStr("Finestra " + (o.style || "battente"))},$,$,${fLP},${geo},$,${R(oh)},${R(o.w)},.WINDOW.,${o.w > 1.3 && (o.style || "battente") === "battente" ? ".DOUBLE_PANEL_VERTICAL." : ".SINGLE_PANEL."},$)`);
+        add(`IFCRELFILLSELEMENT('${ifcGuid()}',$,$,$,${op},${el})`); elems.push(el); counts[o.type === "door" ? "doors" : "windows"]++;
+      }
+    }
+    for (const r of P.rooms.filter(r => r.level === Lv.id && r.pts.length > 2)){
+      const poly = r.pts.map(W2I), prof = () => add(`IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,${add(`IFCPOLYLINE((${[...poly, poly[0]].map(p => pt2(p[0], p[1])).join(",")}))`)})`);
+      const slab = add(`IFCSLAB('${ifcGuid()}',$,${ifcStr("Solaio " + (r.name || ""))},${ifcStr(matName(r.mat))},$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(pt3(0, 0, -Lv.slab))},${Z},${R(Lv.slab)})`)])},$,.FLOOR.)`); elems.push(slab); counts.slabs++;
+      const sp = add(`IFCSPACE('${ifcGuid()}',$,${ifcStr(r.name || "Locale")},$,$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(O)},${Z},${R(r.ceilH || Lv.height)})`)])},${ifcStr(r.name || "Locale")},.ELEMENT.,.INTERNAL.,$)`); spaces.push(sp); counts.spaces++;
+      const q = add(`IFCELEMENTQUANTITY('${ifcGuid()}',$,'Qto_SpaceBaseQuantities',$,$,(${add(`IFCQUANTITYAREA('NetFloorArea',$,$,${R(Math.abs(polyArea(r.pts)))},$)`)},${add(`IFCQUANTITYLENGTH('Height',$,$,${R(r.ceilH || Lv.height)},$)`)}))`);
+      add(`IFCRELDEFINESBYPROPERTIES('${ifcGuid()}',$,$,$,(${sp}),${q})`);
+    }
+    // copertura, scale, ringhiere, arredi: superfici triangolate
+    if (Lv.roof?.type && Lv.roof.type !== "none"){ const t = meshTess(o => (o.userData.cat === "roof" || o.userData.cat === "gable") && o.userData.level === Lv.id, Lv.elev);
+      if (t){ elems.push(add(`IFCROOF('${ifcGuid()}',$,'Copertura',${ifcStr(matName(Lv.roof.mat))},$,${lp(bLP, ax3(pt3(0, 0, Lv.elev)))},${repT([t])},$,${({flat:".FLAT_ROOF.", gable:".GABLE_ROOF.", hip:".HIP_ROOF.", shed:".SHED_ROOF."})[Lv.roof.type] || ".NOTDEFINED."})`)); counts.other++; } }
+    for (const ob of P.objects.filter(o => o.level === Lv.id && !o.hidden)){
+      const it = ob.kind === "lib" ? LIBMAP[libRef(ob.ref)] : null; if (it?.cat === "Verde" || it?.cat === "Persone") continue;
+      const t = meshTess(m => { let x = m; while (x && !x.userData?.objId) x = x.parent; return x?.userData.objId === ob.id && !m.userData.leaves; }, Lv.elev); if (!t) continue;
+      const kind = it?.param?.kind === "stair" ? `IFCSTAIR('${ifcGuid()}',$,${ifcStr(ob.name)},$,$,${lp(sLP, A0)},${repT([t])},$,${({dritta:".STRAIGHT_RUN_STAIR.", L:".QUARTER_TURN_STAIR.", U:".HALF_TURN_STAIR.", chiocciola:".SPIRAL_STAIR."})[paramsOf(ob, it).shape] || ".NOTDEFINED."})`
+        : it?.param?.kind === "rail" ? `IFCRAILING('${ifcGuid()}',$,${ifcStr(ob.name)},$,$,${lp(sLP, A0)},${repT([t])},$,.BALUSTRADE.)`
+        : it?.cat === "Luci" ? `IFCLIGHTFIXTURE('${ifcGuid()}',$,${ifcStr(ob.name)},$,$,${lp(sLP, A0)},${repT([t])},$,.NOTDEFINED.)`
+        : `IFCFURNITURE('${ifcGuid()}',$,${ifcStr(ob.name)},$,$,${lp(sLP, A0)},${repT([t])},$,.NOTDEFINED.)`;
+      elems.push(add(kind)); counts.other++; }
+    if (elems.length) add(`IFCRELCONTAINEDINSPATIALSTRUCTURE('${ifcGuid()}',$,$,$,(${elems.join(",")}),${st})`);
+    if (spaces.length) add(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${st},(${spaces.join(",")}))`);
+  }
+  if (storeys.length) add(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${bld},(${storeys.join(",")}))`);
+  const now = new Date().toISOString().slice(0, 19), name = slug() + ".ifc";
+  const text = `ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('ViewDefinition [ReferenceView_V1.2]'),'2;1');\nFILE_NAME(${ifcStr(name)},'${now}',('Pianta Libera'),('Pianta Libera'),'Pianta Libera','Pianta Libera','');\nFILE_SCHEMA(('IFC4'));\nENDSEC;\nDATA;\n${L.map((s, i) => `#${i + 1}=${s};`).join("\n")}\nENDSEC;\nEND-ISO-10303-21;\n`;
+  return {text, counts};
+}
+
+/* ---------- anteprima di stampa 3D ---------- */
+const PRINTERS = [["Bambu Lab A1 / P1 / X1", 256, 256, 256], ["Prusa MK4", 250, 210, 220], ["Prusa Core One", 250, 220, 270], ["Creality K1", 220, 220, 250], ["Creality Ender 3", 220, 220, 250], ["Elegoo Saturn 4 (resina)", 218, 123, 220], ["Personalizzata 300×300", 300, 300, 300]];
+function meshVolume(g){ const p = g.attributes.position, a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(); let v = 0; for (let i = 0; i + 2 < p.count; i += 3){ a.fromBufferAttribute(p, i); b.fromBufferAttribute(p, i + 1); c.fromBufferAttribute(p, i + 2); v += a.dot(b.clone().cross(c)) / 6; } return Math.abs(v); }
+function openPrintPreview(){
+  closePrintPreview();
+  const pieces = printGroups(); if (!pieces.length){ toast("Niente da stampare: il modello è vuoto", true); return; }
+  const pi = PREFS.printer ?? 0, [pname, bx, by, bz] = PRINTERS[pi] || PRINTERS[0];
+  const thin = P.walls.filter(w => w.thick * 1000 / EX.scale < EX.minMm).length;
+  const rows = pieces.map(pc => { const vol = meshVolume(pc.geo) / 1000, fits = pc.size.x <= bx && pc.size.y <= by && pc.size.z <= bz, fitsR = pc.size.y <= bx && pc.size.x <= by && pc.size.z <= bz; return {pc, vol, fits:fits || fitsR, rot:!fits && fitsR}; });
+  const d = document.createElement("div"); d.id = "printBox"; d.className = "help pano"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Anteprima di stampa 3D");
+  const totV = rows.reduce((s, r) => s + r.vol, 0);
+  d.innerHTML = `<div class="pano-in"><header><h3>Anteprima di stampa 3D · 1:${EX.scale}</h3><select id="prPrinter" class="inp" aria-label="Stampante">${PRINTERS.map((p, i) => `<option value="${i}" ${i === pi ? "selected" : ""}>${p[0]} · ${p[1]}×${p[2]}×${p[3]} mm</option>`).join("")}</select><button class="btn" id="prClose" aria-label="Chiudi">✕</button></header>
+    <div class="print-body"><canvas id="prCv"></canvas><div class="print-info">
+      <table class="olist"><thead><tr><th>Pezzo</th><th>mm</th><th>cm³</th><th></th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.pc.name)}</td><td class="num">${Math.round(r.pc.size.x)}×${Math.round(r.pc.size.y)}×${Math.round(r.pc.size.z)}</td><td class="num">${fmt(r.vol, 1)}</td><td>${r.fits ? (r.rot ? "ruota 90°" : "entra") : `<b class="warn">troppo grande</b>`}</td></tr>`).join("")}</tbody></table>
+      <dl class="kv"><dt>Volume</dt><dd>${fmt(totV, 1)} cm³ (pezzi pieni)</dd><dt>PLA pieno</dt><dd>≈ ${fmt(totV * 1.24, 0)} g · con riempimento 15% e 3 perimetri di solito 40–60%</dd><dt>Parete minima</dt><dd>${fmt(EX.minMm, 1)} mm${thin ? ` · ${thin} muri ispessiti per stamparli` : ""}</dd></dl>
+      ${rows.some(r => !r.fits) ? `<p class="note warn">Alcuni pezzi superano il piatto: scegli una scala più piccola o separa i piani (scheda Esporta).</p>` : `<p class="note">Tutti i pezzi entrano nel piatto.</p>`}
+      <p class="note">Il piatto in figura è a grandezza reale; i pezzi sono già appoggiati e distanziati come nel file 3MF.</p></div></div></div>`;
+  document.body.appendChild(d);
+  const cv = $("#prCv"), r = new THREE.WebGLRenderer({canvas:cv, antialias:true}); r.outputEncoding = THREE.sRGBEncoding; r.setClearColor(isDark() ? "#1b2124" : "#eef0ee");
+  const sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(40, 1, 1, 5000); sc.add(new THREE.HemisphereLight("#ffffff", "#8a8f8a", .9)); const dl = new THREE.DirectionalLight("#ffffff", .9); dl.position.set(200, 400, 300); sc.add(dl);
+  const grp = new THREE.Group(); sc.add(grp); let ox = 5, oz = 5, rowD = 0;   // pezzi disposti a file sul piatto
+  for (const row of rows){ const g = row.pc.geo.clone(); g.rotateX(-Math.PI / 2); if (row.rot) g.rotateY(Math.PI / 2); g.computeBoundingBox(); let bb = g.boundingBox; const w = bb.max.x - bb.min.x, dd = bb.max.z - bb.min.z;
+    if (ox > 5 && ox + w > bx - 5){ ox = 5; oz += rowD + 10; rowD = 0; } g.translate(-bb.min.x + ox, -bb.min.y, -bb.min.z + oz); rowD = Math.max(rowD, dd); g.computeVertexNormals(); bb = {max:{x:ox + w}, min:{x:ox}};
+    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({color:row.fits ? "#d9d6cf" : "#d0462c", roughness:.7, flatShading:true})); grp.add(m);
+    const e = new THREE.LineSegments(new THREE.EdgesGeometry(g, 30), new THREE.LineBasicMaterial({color:"#555"})); grp.add(e); ox += (bb.max.x - bb.min.x) + 10; }
+  const bed = new THREE.Group(); const plate = new THREE.Mesh(new THREE.BoxGeometry(bx, 2, by), new THREE.MeshStandardMaterial({color:"#3b4045", roughness:.9})); plate.position.set(bx / 2, -1, by / 2); bed.add(plate);
+  const grid = new THREE.GridHelper(Math.max(bx, by), Math.round(Math.max(bx, by) / 10), "#6b7177", "#555b60"); grid.position.set(Math.max(bx, by) / 2, .05, Math.max(bx, by) / 2); grid.scale.set(bx / Math.max(bx, by), 1, by / Math.max(bx, by)); bed.add(grid);
+  const vol = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(bx, bz, by)), new THREE.LineBasicMaterial({color:"#8aa", transparent:true, opacity:.5})); vol.position.set(bx / 2, bz / 2, by / 2); bed.add(vol); sc.add(bed);
+  const box = new THREE.Box3().setFromObject(grp).union(new THREE.Box3().setFromObject(bed)), c = box.getCenter(new THREE.Vector3()), R0 = box.getSize(new THREE.Vector3()).length();
+  cam.position.set(c.x + R0 * .55, c.y + R0 * .6, c.z + R0 * .9); const oc = new THREE.OrbitControls(cam, cv); oc.target.copy(c); oc.update();
+  const draw = () => { const w = cv.clientWidth, h = cv.clientHeight; if (!w) return; r.setPixelRatio(Math.min(2, devicePixelRatio)); r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); r.render(sc, cam); };
+  oc.addEventListener("change", draw); d._ro = new ResizeObserver(draw); d._ro.observe(cv); d._r = r; d._oc = oc; draw();
+  d.addEventListener("click", e => { if (e.target === d || e.target.closest("#prClose")) closePrintPreview(); });
+  $("#prPrinter").addEventListener("change", e => { PREFS.printer = +e.target.value; savePrefs(); openPrintPreview(); });
+}
+function closePrintPreview(){ const d = document.getElementById("printBox"); if (!d) return; d._ro?.disconnect(); d._oc?.dispose(); d._r?.dispose(); d.remove(); }
+document.addEventListener("keydown", e => { if (e.key === "Escape" && document.getElementById("printBox")) closePrintPreview(); });
+
+/* ---------- scheda Esporta: video, IFC, anteprima di stampa ---------- */
+function moreExportHTML(){
+  const n = (P.cameras || []).length;
+  return `<div class="exp"><header><h4>Video</h4><span class="tag">MP4 · WebM</span></header>
+    <p class="note">Un volo tra le camere salvate (nell'ordine in cui le hai salvate) oppure un giro completo attorno all'edificio. Registra la vista in tempo reale: tieni la scheda in primo piano.</p>
+    <div class="row3"><div class="f"><span class="lbl">Percorso</span><select id="vdKind" class="inp"><option value="giro">Giro attorno</option><option value="camere" ${n >= 2 ? "" : "disabled"}>Tra le camere (${n})</option></select></div>${F("vdSecs", "Durata (s)", PREFS.vdSecs || 12, 'inputmode="numeric"')}<div class="f"><span class="lbl">Risoluzione</span><select id="vdRes" class="inp"><option value="720">720p</option><option value="1080">1080p</option><option value="360">360p (prova)</option></select></div></div>
+    <div class="btns"><button class="btn primary" id="vdGo">Registra il video</button></div></div>
+  <div class="exp"><header><h4>BIM</h4><span class="tag">IFC4</span></header>
+    <p class="note">Muri con vani, porte e finestre, solai, locali con superficie, piani, copertura, scale, ringhiere e arredi: si apre in Archicad, Revit, BlenderBIM, Edificius e nei visualizzatori IFC.</p>
+    <div class="btns"><button class="btn" id="exIfc">Esporta IFC</button></div><p class="status" id="ifcStatus"></p></div>
+  <div class="exp"><header><h4>Anteprima di stampa 3D</h4><span class="tag">1:${EX.scale}</span></header>
+    <p class="note">I pezzi sul piatto della tua stampante, con misure, volume e peso stimato: controlla prima di esportare il 3MF.</p>
+    <div class="btns"><button class="btn" id="exPrev">Apri l'anteprima</button></div></div>`;
+}
+$("#panel-export").addEventListener("click", async e => {
+  const b = e.target.closest("#vdGo, #exIfc, #exPrev"); if (!b) return;
+  if (b.id === "exPrev"){ openPrintPreview(); return; }
+  b.disabled = true;
+  try {
+    if (b.id === "vdGo"){ const secs = clamp(num($("#vdSecs").value) || 12, 2, 120); PREFS.vdSecs = secs; savePrefs();
+      const {blob, ext} = await recordVideo($("#vdKind").value, secs, +$("#vdRes").value); await saveFile(`${slug()}-video.${ext}`, blob); }
+    if (b.id === "exIfc"){ busy("Preparo il file IFC…"); await sleep(20); const {text, counts} = exportIFC(); await saveFile(slug() + ".ifc", new Blob([text], {type:"application/x-step"}));
+      const st = $("#ifcStatus"); if (st) st.textContent = `${counts.walls} muri, ${counts.doors} porte, ${counts.windows} finestre, ${counts.spaces} locali, ${counts.other} altri elementi.`; }
+  } catch(err){ console.error(err); toast("Non riuscito: " + (err.message || err), true); }
+  finally { busy(""); b.disabled = false; }
+});
+
+/* ---------- pannello laterale: larghezza, staccato, nascosto ---------- */
+(() => {
+  const side = $(".side"), root = document.documentElement; if (!side) return;
+  side.insertAdjacentHTML("afterbegin", `<div class="side-grip" title="Trascina per allargare o stringere il pannello" aria-hidden="true"></div><div class="side-head"><span>Pannello</span><button class="btn" id="sideDock" title="Riaggancia il pannello a destra">Riaggancia</button></div>`);
+  $(".tabs", side)?.insertAdjacentHTML("beforeend", `<button class="tab-ic" id="sideFloat" title="Stacca il pannello e spostalo dove vuoi" aria-label="Stacca il pannello">⧉</button>`);
+  $(".bar .seg:last-child")?.insertAdjacentHTML("beforebegin", `<button class="btn" id="sideToggle" title="Mostra o nascondi il pannello laterale" aria-pressed="true">Pannello</button>`);
+  const apply = () => { const p = PREFS.side || {}; root.style.setProperty("--side-w", (p.w || 320) + "px"); document.body.classList.toggle("side-float", !!p.float); document.body.classList.toggle("side-hidden", !!p.hidden);
+    $("#sideToggle")?.setAttribute("aria-pressed", !p.hidden);
+    if (p.float){ Object.assign(side.style, {left:(p.x ?? innerWidth - (p.fw || 360) - 24) + "px", top:(p.y ?? 80) + "px", width:(p.fw || 360) + "px", height:(p.fh || Math.min(640, innerHeight - 120)) + "px"}); } else side.removeAttribute("style");
+    requestAnimationFrame(() => { resize2D(); resize3D(); }); };
+  const setP = patch => { PREFS.side = {...(PREFS.side || {}), ...patch}; savePrefs(); apply(); };
+  let drag = null;
+  side.addEventListener("pointerdown", e => {
+    const grip = e.target.closest(".side-grip"), head = e.target.closest(".side-head") && !e.target.closest("button"); if (!grip && !head) return;
+    e.preventDefault(); side.setPointerCapture(e.pointerId); const r = side.getBoundingClientRect(); drag = {grip:!!grip && !PREFS.side?.float, x:e.clientX, y:e.clientY, w:r.width, l:r.left, t:r.top};
+  });
+  side.addEventListener("pointermove", e => { if (!drag) return;
+    if (drag.grip){ root.style.setProperty("--side-w", clamp(drag.w - (e.clientX - drag.x), 260, Math.min(760, innerWidth * .6)) + "px"); requestAnimationFrame(() => { resize2D(); resize3D(); }); }
+    else { side.style.left = clamp(drag.l + e.clientX - drag.x, 0, innerWidth - 120) + "px"; side.style.top = clamp(drag.t + e.clientY - drag.y, 0, innerHeight - 60) + "px"; } });
+  side.addEventListener("pointerup", () => { if (!drag) return; const r = side.getBoundingClientRect(); if (drag.grip) setP({w:Math.round(r.width)}); else setP({x:Math.round(r.left), y:Math.round(r.top)}); drag = null; });
+  new ResizeObserver(() => { if (PREFS.side?.float && !drag){ const r = side.getBoundingClientRect(); if (Math.abs(r.width - (PREFS.side.fw || 0)) > 2 || Math.abs(r.height - (PREFS.side.fh || 0)) > 2){ PREFS.side.fw = Math.round(r.width); PREFS.side.fh = Math.round(r.height); savePrefs(); } } }).observe(side);
+  $("#sideFloat")?.addEventListener("click", () => setP({float:true, hidden:false}));
+  $("#sideDock")?.addEventListener("click", () => setP({float:false}));
+  $("#sideToggle")?.addEventListener("click", () => setP({hidden:!PREFS.side?.hidden}));
+  apply();
+})();
+
+/* ---------- tablet: tocco prolungato = menu, tasti per camminare ---------- */
+(() => {
+  let lp = null;
+  c2d.addEventListener("pointerdown", e => { S.lastPtr = e.pointerType; if (e.pointerType !== "touch" || S.viewer) return; const sp = evP(e), raw = toW(...sp);
+    clearTimeout(lp?.t); lp = {sp, t:setTimeout(() => { if (pointers.size > 1) return; drag = null; S.draw = null; openCtxMenu(sp, raw); navigator.vibrate?.(15); }, 550)}; }, {capture:true});
+  c2d.addEventListener("pointermove", e => { if (lp && Math.hypot(evP(e)[0] - lp.sp[0], evP(e)[1] - lp.sp[1]) > 8){ clearTimeout(lp.t); lp = null; } });
+  for (const ev of ["pointerup", "pointercancel"]) c2d.addEventListener(ev, () => { if (lp){ clearTimeout(lp.t); lp = null; } });
+  $("#pane3d").insertAdjacentHTML("beforeend", `<div class="walkpad" aria-label="Comandi per camminare">${[["w", "▲", "Avanti"], ["a", "◀", "Sinistra"], ["s", "▼", "Indietro"], ["d", "▶", "Destra"], ["ArrowLeft", "↺", "Gira a sinistra"], ["ArrowRight", "↻", "Gira a destra"]].map(([k, s, n]) => `<button data-wk="${k}" aria-label="${n}">${s}</button>`).join("")}</div>`);
+  const pad = $(".walkpad");
+  pad.addEventListener("pointerdown", e => { const b = e.target.closest("[data-wk]"); if (!b) return; e.preventDefault(); e.stopPropagation(); b.setPointerCapture(e.pointerId); WALK.keys.add(b.dataset.wk); });
+  for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) pad.addEventListener(ev, e => { const b = e.target.closest?.("[data-wk]"); if (b) WALK.keys.delete(b.dataset.wk); });
+  setInterval(() => document.body.classList.toggle("walking", WALK.on), 300);
+})();
+
 /* ---- 09-init.js ---- */
 /* ============================================================
    Progetto di esempio, migrazione, avvio
@@ -4401,13 +5253,16 @@ function init(){
   let saved = null; try { saved = JSON.parse(localStorage.getItem("pianta-libera-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v1")); } catch(e){}
   P = migrate(saved?.levels?.length ? saved : sampleProject()); S.level = P.levels[0].id; snap = JSON.stringify(P);
   $("#projName").value = P.name; readColors(); setTool("select"); renderStatus();
+  if (!saved?.levels?.length && !new URLSearchParams(location.search).get("condividi")) save();   // l'identità del progetto (pid) resta tra un'apertura e l'altra
   new ResizeObserver(() => { resize2D(); resize3D(); }).observe($("#views"));
   resize2D(); resize3D(); fitPlan(); rebuild3D(); applySky(); setTimeout(() => camPreset("ext"), 80); renderLevels();
   matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { readCanvasColors(); applySky(); });
   new MutationObserver(() => { readCanvasColors(); applySky(); }).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
   if (document.fonts?.ready) document.fonts.ready.then(draw2D);
   capReady.then(() => { if (S.tab === "export") renderExport(); });
-  loadPersonalIndex(); setTimeout(queueIdbSave, 2500);
+  loadPersonalIndex();
+  const shareId = new URLSearchParams(location.search).get("condividi");
+  if (shareId) enterViewer(shareId); else { setTimeout(queueIdbSave, 2500); loadGallery(); }
 }
 init();
 

@@ -2,13 +2,13 @@
    Vista in pianta e interazione
    ============================================================ */
 let snap = null; const past = [], future = [];
-function commit(){ const s = JSON.stringify(P); if (s === snap) return; if (snap) past.push(snap); if (past.length > 80) past.shift(); future.length = 0; snap = s; save(); refresh(); }
+function commit(){ if (S.viewer){ if (snap) P = JSON.parse(snap); refresh(); return; } const s = JSON.stringify(P); if (s === snap) return; if (snap) past.push(snap); if (past.length > 80) past.shift(); future.length = 0; snap = s; save(); refresh(); }
 function undo(){ if (!past.length) return; future.push(snap); snap = past.pop(); P = JSON.parse(snap); afterLoad(); }
 function redo(){ if (!future.length) return; past.push(snap); snap = future.pop(); P = JSON.parse(snap); afterLoad(); }
 function afterLoad(){ for (const k of Object.keys(matCache)) if (!MATS[k]) invalidateMat(k); fixSel(); save(); refresh(); }
 function fixSel(){ if (!level(S.level)) S.level = P.levels[0].id; P.dims = P.dims || []; setSel(selList().filter(x => itemOf(x))); }
 let saveWarned = false;
-function save(){ try { localStorage.setItem("pianta-libera-v2", JSON.stringify(P)); savedAt = new Date(); updateStatusInfo(); } catch(e){ if (!saveWarned && e?.name === "QuotaExceededError"){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio nel browser: resta nella raccolta Progetti, ma conviene anche Esporta → Salva progetto", true); } } queueIdbSave(); }
+function save(){ if (S.viewer) return; try { localStorage.setItem("pianta-libera-v2", JSON.stringify(P)); savedAt = new Date(); updateStatusInfo(); } catch(e){ if (!saveWarned && e?.name === "QuotaExceededError"){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio nel browser: resta nella raccolta Progetti, ma conviene anche Esporta → Salva progetto", true); } } queueIdbSave(); }
 function findSel(){ if (!S.sel) return null; const k = {wall:"walls", opening:"openings", room:"rooms", object:"objects", dim:"dims"}[S.sel.type]; return P[k]?.find(x => x.id === S.sel.id) || null; }
 
 const c2d = $("#c2d"), ctx = c2d.getContext("2d");
@@ -24,15 +24,17 @@ function resize2D(){ const r = c2d.parentElement.getBoundingClientRect(); if (r.
 const underImgs = {};
 function underImg(src){ if (!underImgs[src]){ const im = new Image(); im.onload = draw2D; im.src = src; underImgs[src] = im; } return underImgs[src]; }
 
-function draw2D(){
-  if (!W2 || !P) return;
-  const g = ctx; g.setTransform(DPR,0,0,DPR,0,0); g.fillStyle = C.bg; g.fillRect(0,0,W2,H2);
-  const step = V.s > 60 ? .5 : V.s > 25 ? 1 : V.s > 8 ? 5 : 10; const [x0,y0] = toW(0,0), [x1,y1] = toW(W2,H2);
+/* pr = {g}: disegna su un contesto vettoriale per le tavole (niente griglia, selezioni, strumenti) */
+function draw2D(pr){
+  if (pr && !pr.g) pr = undefined; // chiamata come gestore di eventi
+  if ((!W2 && !pr) || !P) return;
+  const g = pr ? pr.g : ctx; if (!pr){ g.setTransform(DPR,0,0,DPR,0,0); g.fillStyle = C.bg; g.fillRect(0,0,W2,H2); }
+  if (!pr){ const step = V.s > 60 ? .5 : V.s > 25 ? 1 : V.s > 8 ? 5 : 10; const [x0,y0] = toW(0,0), [x1,y1] = toW(W2,H2);
   g.lineWidth = 1;
   for (let x = Math.floor(x0/step)*step; x <= x1; x += step){ const sx = Math.round(toS([x,0])[0])+.5; g.strokeStyle = Math.abs(x % (step*5)) < 1e-6 ? C.gridM : C.grid; g.beginPath(); g.moveTo(sx,0); g.lineTo(sx,H2); g.stroke(); }
-  for (let y = Math.floor(y0/step)*step; y <= y1; y += step){ const sy = Math.round(toS([0,y])[1])+.5; g.strokeStyle = Math.abs(y % (step*5)) < 1e-6 ? C.gridM : C.grid; g.beginPath(); g.moveTo(0,sy); g.lineTo(W2,sy); g.stroke(); }
+  for (let y = Math.floor(y0/step)*step; y <= y1; y += step){ const sy = Math.round(toS([0,y])[1])+.5; g.strokeStyle = Math.abs(y % (step*5)) < 1e-6 ? C.gridM : C.grid; g.beginPath(); g.moveTo(0,sy); g.lineTo(W2,sy); g.stroke(); } }
   const L = level();
-  const U = L?.underlay;
+  const U = pr ? null : L?.underlay;
   if (U){
     g.save(); g.globalAlpha = U.opacity ?? .5;
     if (U.kind === "img"){ const im = underImg(U.src); if (im.complete && im.naturalWidth){ const [sx,sy] = toS([U.ox, U.oy]); g.drawImage(im, sx, sy, im.naturalWidth*U.mpp*V.s, im.naturalHeight*U.mpp*V.s); } }
@@ -40,7 +42,7 @@ function draw2D(){
     g.restore();
   }
   const below = P.levels.filter(l => l.elev < L.elev).sort((a,b)=>b.elev-a.elev)[0];
-  if (below){ g.fillStyle = C.ghost; for (const w of wallsOf(below.id)) fillWall(g, w, [[-w.thick/2, wallFrame(w).len + w.thick/2]]); }
+  if (below && !pr){ g.fillStyle = C.ghost; for (const w of wallsOf(below.id)) fillWall(g, w, [[-w.thick/2, wallFrame(w).len + w.thick/2]]); }
   for (const r of P.rooms.filter(r=>r.level===L.id)){
     if (r.pts.length < 2) continue;
     g.beginPath(); r.pts.forEach((p,i)=>{ const s = toS(p); i ? g.lineTo(s[0],s[1]) : g.moveTo(s[0],s[1]); }); g.closePath();
@@ -60,6 +62,8 @@ function draw2D(){
   }
   for (const o of P.objects.filter(o=>o.level===L.id)) drawObject2D(g, o);
   drawDims(g);
+  if (pr){ pr.after?.(g); return; }
+  drawCommentPins(g);
   const sel = findSel(), multi = S.multi?.length > 1;
   if (multi) for (const x of selItems()) if (x.s.type === "wall"){ const a = toS(x.it.a), b = toS(x.it.b); g.strokeStyle = C.sel; g.lineWidth = 2; g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke(); }
   if (!multi && S.sel?.type === "object" && sel) drawObjHandles(g, sel);
@@ -225,7 +229,7 @@ function wallOffsetVec(a, b){ const ref = PREFS.wallRef; if (ref !== "sinistra" 
 function dimOffsetFrom(a, b, p){ const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1; return ((p[0]-a[0])*(-dy/L) + (p[1]-a[1])*(dx/L)); }
 function nearestWall(p, maxD=.6){ let best=null, bd=Infinity; for (const w of wallsOf(S.level)){ const r = projOnSeg(p, w.a, w.b); if (r.d < w.thick/2 + maxD && r.d < bd){ bd = r.d; best = {wall:w, s:r.t*wallFrame(w).len, d:r.d}; } } return best; }
 function hitTest(p){
-  const tol = 6/V.s; const dh = dimHit(p); if (dh) return dh;
+  const tol = (S.lastPtr === "touch" ? 14 : 6)/V.s; const dh = dimHit(p); if (dh) return dh;
   for (const o of P.openings){ const w = wallById(o.wall); if (!w || w.level !== S.level) continue; const r = projOnSeg(p, w.a, w.b), s = r.t*wallFrame(w).len; if (r.d < w.thick/2 + tol && Math.abs(s - o.t) < o.w/2) return {type:"opening", id:o.id}; }
   for (const o of [...P.objects].reverse()){ if (o.level !== S.level || o.locked || o.hidden) continue; const fp = objFootprint(o), a = THREE.MathUtils.degToRad(o.rot||0); const dx=p[0]-o.x, dy=p[1]-o.y; const lx = dx*Math.cos(a) + dy*Math.sin(a), ly = -dx*Math.sin(a) + dy*Math.cos(a);
     const it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null; const shrink = it?.plan === "tree" ? .5 : 1;
@@ -235,6 +239,7 @@ function hitTest(p){
   return null;
 }
 let drag = null; const pointers = new Map(); let spaceDown = false;
+const HR = () => S.lastPtr === "touch" ? 18 : 9; // raggio di presa delle maniglie
 function evP(e){ const r = c2d.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
 c2d.addEventListener("pointerdown", e => {
   c2d.setPointerCapture(e.pointerId); const sp = evP(e); pointers.set(e.pointerId, sp);
@@ -247,9 +252,9 @@ c2d.addEventListener("pointerdown", e => {
   if (t === "select"){
     const sel = findSel(), single = selList().length === 1;
     if (single && S.sel?.type === "object" && sel){ const hd = objHandles(sel), R = toS(hd.rot), Z = toS(hd.size);
-      if (Math.hypot(R[0]-sp[0], R[1]-sp[1]) < 9){ drag = {type:"objRot", o:sel, moved:false}; return; }
-      if (Math.hypot(Z[0]-sp[0], Z[1]-sp[1]) < 9){ drag = {type:"objScale", o:sel, c:hd.center, d0:Math.hypot(hd.size[0]-hd.center[0], hd.size[1]-hd.center[1]), s0:sel.scale || 1, moved:false}; return; } }
-    if (single && S.sel?.type === "wall" && sel){ for (const k of ["a","b"]){ const s = toS(sel[k]); if (Math.hypot(s[0]-sp[0], s[1]-sp[1]) < 9){ drag = {type:"wallEnd", w:sel, links: linkedEnds(sel[k]), moved:false}; return; } } }
+      if (Math.hypot(R[0]-sp[0], R[1]-sp[1]) < HR()){ drag = {type:"objRot", o:sel, moved:false}; return; }
+      if (Math.hypot(Z[0]-sp[0], Z[1]-sp[1]) < HR()){ drag = {type:"objScale", o:sel, c:hd.center, d0:Math.hypot(hd.size[0]-hd.center[0], hd.size[1]-hd.center[1]), s0:sel.scale || 1, moved:false}; return; } }
+    if (single && S.sel?.type === "wall" && sel){ for (const k of ["a","b"]){ const s = toS(sel[k]); if (Math.hypot(s[0]-sp[0], s[1]-sp[1]) < HR()){ drag = {type:"wallEnd", w:sel, links: linkedEnds(sel[k]), moved:false}; return; } } }
     if (single && S.sel?.type === "room" && sel){ for (let i=0;i<sel.pts.length;i++){ const s = toS(sel.pts[i]); if (Math.hypot(s[0]-sp[0], s[1]-sp[1]) < 8){ drag = {type:"roomPt", room:sel, i, moved:false}; return; } } }
     const lab = !e.shiftKey && roomLabelHit(sp); if (lab){ setSel([{type:"room", id:lab.id}]); renderInspector(); drag = {type:"roomLabel", r:lab, start:raw, orig:(lab.lab || [0,0]).slice(), moved:false}; draw2D(); return; }
     const h = hitTest(raw);

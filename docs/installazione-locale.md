@@ -122,6 +122,10 @@ Il pacchetto parla con **ComfyUI** installato sullo stesso computer e usa il mod
 - Nel pannello **Render AI** dell'editor compare «ComfyUI su questo computer (GPU locale)». Le immagini non lasciano il computer; non ci sono quote.
 - Un render alla volta (la GPU è una sola); tempo massimo 5 minuti (`COMFYUI_TIMEOUT_MS`).
 
+### Link per il cliente in rete locale
+
+Dalla scheda **Esporta → Condividi con il cliente** il server locale crea link che valgono finché resta acceso (i progetti condivisi stanno in memoria, non su disco). Per farli aprire da un altro dispositivo della stessa rete avvia il server con `HOST=0.0.0.0` e manda il link con l'indirizzo del computer (es. `http://192.168.1.20:8787/?condividi=…`).
+
 ## 6. Aggiornare
 
 Scarica di nuovo lo zip dal link in cima ed estrailo in una cartella nuova. Copia nella nuova cartella il tuo `comfyui/workflow-api.json`. I progetti salvati nel browser restano (sono legati all'indirizzo http://127.0.0.1:8787, quindi usa la stessa porta); per sicurezza esporta i progetti importanti come `.json` dal menu Esporta.

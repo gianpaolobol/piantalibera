@@ -44,12 +44,15 @@ function init(){
   let saved = null; try { saved = JSON.parse(localStorage.getItem("pianta-libera-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v1")); } catch(e){}
   P = migrate(saved?.levels?.length ? saved : sampleProject()); S.level = P.levels[0].id; snap = JSON.stringify(P);
   $("#projName").value = P.name; readColors(); setTool("select"); renderStatus();
+  if (!saved?.levels?.length && !new URLSearchParams(location.search).get("condividi")) save();   // l'identità del progetto (pid) resta tra un'apertura e l'altra
   new ResizeObserver(() => { resize2D(); resize3D(); }).observe($("#views"));
   resize2D(); resize3D(); fitPlan(); rebuild3D(); applySky(); setTimeout(() => camPreset("ext"), 80); renderLevels();
   matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { readCanvasColors(); applySky(); });
   new MutationObserver(() => { readCanvasColors(); applySky(); }).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
   if (document.fonts?.ready) document.fonts.ready.then(draw2D);
   capReady.then(() => { if (S.tab === "export") renderExport(); });
-  loadPersonalIndex(); setTimeout(queueIdbSave, 2500);
+  loadPersonalIndex();
+  const shareId = new URLSearchParams(location.search).get("condividi");
+  if (shareId) enterViewer(shareId); else { setTimeout(queueIdbSave, 2500); loadGallery(); }
 }
 init();

@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { LIMITS as CONTRACT, validateRenderRequest, buildModelPrompt, decodeDataUrl } from "../shared/contract.js";
 import { fillWorkflow, isApiWorkflow } from "./comfy-workflow.mjs";
+import { handleShare, SHARE } from "../shared/share.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || process.env.MOCK_PORT || 8787);
@@ -47,6 +48,10 @@ if (COMFY){
 }
 
 const jobs = new Map(), hits = new Map();
+/* condivisione in memoria: i link valgono finché il server resta acceso (utile in rete locale) */
+const shareStore = new Map(), shareHits = new Map();
+const store = {get: async k => { const e = shareStore.get(k); if (!e) return null; if (Date.now() > e.exp){ shareStore.delete(k); return null; } return e.v; }, put: async (k, v, ttl) => { shareStore.set(k, {v, exp: Date.now() + ttl * 1000}); }, del: async k => { shareStore.delete(k); }};
+function shareHit(ip, kind){ const day = new Date().toISOString().slice(0, 10), key = `${day}:${kind}:${ip}`, n = shareHits.get(key) || 0, lim = kind === "comment" ? SHARE.commentsPerIpDaily * 5 : SHARE.perIpDaily * 5; if (n >= lim) return {ok: false, reason: "quota_exceeded"}; shareHits.set(key, n + 1); return {ok: true}; }
 const send = (res, status, body, headers = {}) => { res.writeHead(status, {"Content-Type": "application/json", "Cache-Control": "no-store", ...headers}); res.end(JSON.stringify(body)); };
 const fail = (res, status, code, message, headers) => send(res, status, {error: {code, message}}, headers);
 const view = j => ({id: j.id, status: j.status, mode: j.mode, created_at: j.created_at, expires_at: j.expires_at, provider: j.provider, model: j.model, generated: engine === "comfyui", mock: engine !== "comfyui",
@@ -113,7 +118,15 @@ createServer(async (req, res) => {
         provider: local ? "ComfyUI su questo computer (GPU locale)" : "Servizio di prova locale", model: local ? `workflow ${basename(WF_PATH)}` : null, turnstile_site_key: null,
         quota: {per_ip_daily: local ? 9999 : LIMITS.perHour, used_today: local ? 0 : used, window: local ? "nessun limite" : "1h"}, limits: {max_side: CONTRACT.maxSide, max_variants: CONTRACT.maxVariants},
         retention_seconds: Math.round(LIMITS.retentionMs / 1000), note: engineNote || undefined,
+        share: {enabled: true, ttl_days: SHARE.ttlDays, max_bytes: SHARE.maxBytes, turnstile: false, local: true},
         privacy: local ? "Le immagini restano su questo computer: le elabora ComfyUI in locale." : "Servizio di prova in locale: le immagini restano su questo computer e non vengono inviate a terzi."});
+    }
+    if (url.pathname === "/api/share" || url.pathname.startsWith("/api/share/")){
+      const parts = url.pathname.replace(/^\/api\/share\/?/, "").split("/").filter(Boolean);
+      const r = await handleShare({method: req.method, parts, token: req.headers["x-share-token"] || "", length: Number(req.headers["content-length"] || 0), text: async () => { const chunks = []; let n = 0; for await (const c of req){ n += c.length; if (n > SHARE.maxBytes + 4096) throw {status: 413, body: {error: {code: "too_large", message: "progetto troppo grande per la condivisione"}}}; chunks.push(c); } return Buffer.concat(chunks).toString("utf8"); }},
+        {store, hit: async kind => shareHit(ip, kind), bot: async () => true, botRequired: false});
+      if (r.status === 204){ res.writeHead(204); return res.end(); }
+      return send(res, r.status, r.body);
     }
     if (m){
       const id = m[1];

@@ -50,8 +50,8 @@ function renderExport(){
     <p class="note">Piano corrente, in metri: layer MURI, APERTURE, LOCALI, ARREDI e TESTI.</p><button class="btn" id="exDxf">DXF del piano${zipNeeded("dxf")?" (.zip)":""}</button></div>
   <div class="exp"><header><h4>Progetto</h4><span class="tag">.json</span></header>
     <p class="note">Contiene tutto, compresi modelli e materiali importati. I modelli delle librerie online vengono riscaricati all'apertura. Tutti i progetti di questo browser sono nel pulsante <b>Progetti</b> in alto.</p><button class="btn" id="exJson">Salva progetto</button></div>
-  ${imagesExportHTML()}`;
-  $("#exRes").value = EX.res;
+  ${shareHTML()}${tavoleHTML()}${imagesExportHTML()}${moreExportHTML()}`;
+  $("#exRes").value = EX.res; afterRenderExportShare();
 }
 const PE = $("#panel-export");
 PE.addEventListener("change", e => { const t = e.target, v = num(t.value);
@@ -192,7 +192,7 @@ async function exportProject(){ await saveFile(slug() + ".json", JSON.stringify(
 async function openProjectData(data, opts = {}){
   if (!data?.levels || !data.walls) throw new Error("non è un progetto di Pianta Libera");
   const imports = data.imports || {}; delete data.imports; delete data.app; if (!opts.keepPid || !data.pid) data.pid = uid();
-  P = migrate(data); S.level = P.levels[0].id; setSel([]); $("#projName").value = P.name;
+  P = migrate(data); S.level = P.levels[0].id; setSel([]); $("#projName").value = P.name; S.comments = []; SH.loadedFor = null; loadGallery();
   for (const [id, it] of Object.entries(imports)){ try { if (it.file) await registerImport(id, it.file, it.opts || {unit:"auto", up:"auto"}); else if (it.source) await restoreRemote(id, it.source); } catch(err){ console.warn(err); } }
   past.length = 0; future.length = 0; snap = null; commit(); fitPlan(); applySky(); camPreset("ext");
 }

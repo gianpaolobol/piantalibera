@@ -40,6 +40,8 @@ MAX_INPUT_SIDE = "512"
 PROVIDER_TIMEOUT_MS = "60000"
 ALLOWED_ORIGINS = ""             # vuoto = solo lo stesso dominio
 TURNSTILE_SITE_KEY = ""          # chiave pubblica del widget Turnstile (non è un segreto)
+SHARE_ENABLED = "1"              # link per il cliente e commenti (progetti in KV per 30 giorni); "0" li disattiva
+SHARE_DAILY_WRITES = "300"       # tetto globale di link, aggiornamenti e commenti al giorno (KV gratuito: 1.000 scritture/giorno)
 
 # Segreti obbligatori (mai nel file; senza di essi il render resta disattivato):
 #   npx wrangler secret put IP_SALT           --config worker/wrangler.toml   (stringa casuale ≥ 16 caratteri)

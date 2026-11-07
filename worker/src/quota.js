@@ -42,6 +42,16 @@ export class QuotaGate {
       await s.put(upd);
       return Response.json({ ok: true });
     }
+    if (url.pathname === "/hit") {
+      // contatori generici (condivisione, commenti): limite per IP e tetto globale di scritture al giorno
+      const { key, limit, globalKey, globalLimit } = body;
+      const [a, g] = await Promise.all([s.get(k(`hit:${key}`)), s.get(k(`hit:${globalKey}`))]);
+      if ((a || 0) >= limit) return Response.json({ ok: false, reason: "quota_exceeded" });
+      if ((g || 0) >= globalLimit) return Response.json({ ok: false, reason: "global_quota_exceeded" });
+      await s.put({ [k(`hit:${key}`)]: (a || 0) + 1, [k(`hit:${globalKey}`)]: (g || 0) + 1 });
+      if (s.setAlarm && !(await s.getAlarm?.())) await s.setAlarm(Date.now() + 26 * 3600e3);
+      return Response.json({ ok: true });
+    }
     if (url.pathname === "/status") {
       const { ipHash } = body;
       const [ip, used, renders] = await Promise.all([s.get(k(`ip:${ipHash}`)), s.get(k("neurons")), s.get(k("renders"))]);

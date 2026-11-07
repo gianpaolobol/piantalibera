@@ -120,7 +120,7 @@ $("#pane3d").addEventListener("pointerdown", e => {
   if (e.target !== c3d || e.button !== 0) return;
   if (WALK.on){ d3 = {type:"look", x:e.clientX, y:e.clientY, yaw:WALK.yaw, pitch:WALK.pitch}; c3d.setPointerCapture(e.pointerId); return; }
   d3 = {type:"click", x:e.clientX, y:e.clientY, t:performance.now()};
-  if (M3.on || S.tool !== "select" || e.shiftKey) return;
+  if (M3.on || S.tool !== "select" || e.shiftKey || S.viewer) return;
   const hit = pick3D(e), ob = hit && objOf3D(hit.object); if (!ob) return;
   const o = P.objects.find(x => x.id === ob.userData.objId); if (!o || o.locked) return;
   const L = level(o.level); controls.enabled = false; c3d.setPointerCapture(e.pointerId);
@@ -255,7 +255,7 @@ function renderList(){
     <div class="sec"><h3>Locali (${rooms.length})</h3><div class="tblwrap"><table class="olist"><thead><tr><th>Nome</th><th>Piano</th><th>Netta m²</th><th>Lorda m²</th><th>Perimetro m</th></tr></thead><tbody>
     ${rooms.map(x => `<tr data-rid="${x.r.id}" class="${isSelected(x.r.id) ? "on" : ""}"><td>${esc(x.r.name || "Locale")}</td><td>${esc(x.lv)}</td><td class="num">${fmt(x.net)}</td><td class="num">${fmt(x.gross)}</td><td class="num">${fmt(x.per)}</td></tr>`).join("")}
     ${rooms.length ? `<tr class="tot"><td>Totale</td><td></td><td class="num">${fmt(rooms.reduce((s, x) => s + x.net, 0))}</td><td class="num">${fmt(rooms.reduce((s, x) => s + x.gross, 0))}</td><td></td></tr>` : ""}</tbody></table></div>
-    <div class="btns"><button class="btn" id="listCsv">Esporta elenco in CSV</button></div></div>`;
+    <div class="btns"><button class="btn" id="listCsv">Esporta elenco in CSV</button></div></div>${computoHTML()}`;
 }
 $("#panel-list")?.addEventListener("click", async e => {
   const b = e.target.closest("button");
