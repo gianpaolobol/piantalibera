@@ -65,7 +65,7 @@ Expo SDK 58 (stesse versioni di Fungo Italia) con `react-native-webview` che apr
 
 - ID: `it.piantalibera.app` (iOS e Android). Account Expo `gianpaolobol`, team Apple `BX9MDXAHKG`.
 - `eas.json`: profili `preview` (APK, simulatore) e `production` (store, numero di build automatico); invio iOS a TestFlight, Android al canale **internal** in bozza — come Fungo Italia.
-- Workflow **Store (TestFlight e Google Play)** (`.github/workflows/store.yml`, avvio manuale): build firmata su Expo e, se richiesto, invio.
+- Workflow **Store (TestFlight e Google Play)** (`.github/workflows/store.yml`, avvio manuale): `app-mobile/scripts/store-prep.mjs` legge da Expo la chiave App Store Connect del team (con `EXPO_TOKEN`, solo nella cartella temporanea, mascherata nei log), registra il bundle ID, cerca o prova a creare l'app su App Store Connect e il progetto Expo; poi build firmata su Expo e, se richiesto, invio a TestFlight.
 
 ### Passi del titolare (una volta sola)
 
