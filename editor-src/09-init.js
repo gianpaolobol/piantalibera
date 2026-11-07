@@ -7,7 +7,7 @@ function sampleProject(){
   const W1=w([0,0],[11,0]), W2=w([11,0],[11,8]), W3=w([11,8],[0,8]), W4=w([0,8],[0,0]), W5=w([6.5,0],[6.5,8],.12);
   const ob = (ref, x, y, rot=0, scale=1) => ({id:uid(), level:"L0", kind:"lib", ref, name:LIBMAP[ref].nome, x, y, rot, scale, z:0});
   return {
-    name:"Casa unifamiliare (esempio)", version:2, materials:{}, sky:{kind:"asset", id:"giorno"},
+    name:"Casa unifamiliare (esempio)", version:SCHEMA_VERSION, materials:{}, sky:{kind:"asset", id:"giorno"},
     sun:{az:245, el:36}, levels:[L0],
     walls:[W1,W2,W3,W4,W5],
     openings:[
@@ -74,13 +74,21 @@ function sanitizeProject(p){
   if (p.lightsMode != null && !["auto", "on", "off"].includes(p.lightsMode)) p.lightsMode = "auto";
   return p;
 }
+/* Versioni dello schema (docs/schema-progetto.md):
+   1 — prima versione (nomi di libreria brevi, senza piani multipli completi)
+   2 — piani, quote, camere, cielo e sole
+   3 — lati dei muri, posa e battiscopa, luci, oggetti parametrici, sito, tavole, prezzi, link per il cliente
+   Le versioni 2 e 3 hanno la stessa struttura di base: i campi della 3 sono facoltativi. */
+const SCHEMA_VERSION = 3;
 function migrate(p){
+  const from = Number(p?.version) || 1;
+  if (from > SCHEMA_VERSION) setTimeout(() => toast(`Questo progetto è stato salvato con una versione più recente di Pianta Libera (schema ${from}): alcuni dati potrebbero non essere letti.`, true), 300);
   sanitizeProject(p);
   p.materials = p.materials || {}; p.dims = p.dims || []; p.cameras = p.cameras || []; p.sky = p.sky || {kind:"asset", id:"giorno"}; p.sun = p.sun || {az:245, el:36};
   for (const L of p.levels){ L.roof = L.roof || {type:"none", pitch:30, overhang:.5, mat:"tegole"}; L.slab = L.slab ?? .25; }
   for (const o of p.objects || []) if (o.kind === "lib") o.ref = libRef(o.ref);
   if (!p.pid) p.pid = uid();
-  p.version = 2; return p;
+  p.version = SCHEMA_VERSION; return p;
 }
 function readCanvasColors(){ readColors(); draw2D(); render3D(); }
 function init(){

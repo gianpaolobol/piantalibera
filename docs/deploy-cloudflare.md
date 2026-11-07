@@ -53,6 +53,7 @@ L'indirizzo è `https://pianta-libera.<tuo-account>.workers.dev/`; un dominio pe
 |---|---|---|
 | `MODEL` | `@cf/black-forest-labs/flux-2-klein-4b` | per confronti: `@cf/black-forest-labs/flux-2-klein-9b` (molto più costoso e solo non commerciale) |
 | `PER_IP_DAILY` | 10 (test) | render al giorno per IP (IP salvati come hash con sale) |
+| `TEST_DAILY` | 20 | render al giorno riservati alle prove automatiche (solo con il segreto `TEST_TOKEN`) |
 | `MAX_CONCURRENT_PER_IP` | 1 | lavori contemporanei per IP |
 | `GLOBAL_DAILY` | 50 | richieste accettate al giorno in totale |
 | `NEURON_DAILY_BUDGET` | 9000 | **tetto di spesa**: Neurons stimati impegnati al giorno; oltre → `429 budget_exceeded` prima di chiamare il modello |
@@ -86,6 +87,14 @@ Con `NEURON_DAILY_BUDGET = 9000` la spesa stimata resta sotto i 10.000 Neurons g
 ## Condivisione con il cliente (`/api/share`)
 
 Logica in `shared/share.js`, comune al Worker e al server locale. Progetti fino a 1,5 MB in KV con scadenza di 30 giorni (`share:<id>`, commenti in `sc:<id>`), token di modifica conservato solo come hash, 10 link e 40 commenti al giorno per IP (contatori nel Durable Object), Turnstile obbligatorio quando è configurato, scrivere richiede `IP_SALT`. Endpoint e formati sono descritti in testa a `shared/share.js`.
+
+## Prove sul sito pubblicato (workflow «Prove dal vivo»)
+
+`.github/workflows/prove-dal-vivo.yml`, avviabile da **Actions → Prove dal vivo → Run workflow** (e ogni lunedì, senza render). Apre il sito vero con un browser e controlla: caricamento dell'editor senza errori né violazioni della Content Security Policy, `/api/config`, creazione, lettura, commento e cancellazione di un link per il cliente. Con l'opzione «fedeltà» fa anche **5 scene × 3 render** reali e misura quanto i contorni del render coincidono con quelli del modello (`scripts/prove-dal-vivo.mjs`, risultati nel riepilogo e nell'artefatto `prove-dal-vivo`).
+
+Per non dover risolvere Turnstile, il workflow crea un segreto temporaneo `TEST_TOKEN` (48 caratteri casuali, mascherato nei log), lo passa nell'intestazione `X-Test-Token` e lo cancella alla fine. Il token sostituisce solo la verifica anti-bot: le richieste usano un contatore a parte (`TEST_DAILY`) e restano soggette a tetto globale, budget di Neurons e kill switch. Senza il segreto (cioè sempre, fuori dalle prove) l'intestazione è ignorata.
+
+Il passo «Consumo reale» legge dalle Analytics di Cloudflare i Neurons effettivamente consumati per modello: serve che il token `CLOUDFLARE_API_TOKEN` abbia anche il permesso **Account Analytics: Read**; altrimenti il passo lo segnala e prosegue.
 
 ## Limiti noti
 

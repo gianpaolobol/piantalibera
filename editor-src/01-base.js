@@ -18,7 +18,7 @@ const slugify = s => String(s||"").toLowerCase().normalize("NFD").replace(/[Ì€-Í
 const loaded = {};
 function loadScript(url){
   if (loaded[url]) return loaded[url];
-  return loaded[url] = new Promise((res, rej) => { const s = document.createElement("script"); s.src = url; s.onload = res; s.onerror = () => { delete loaded[url]; rej(new Error("libreria non caricata: " + url.split("/").pop())); }; document.head.appendChild(s); });
+  return loaded[url] = new Promise((res, rej) => { const s = document.createElement("script"); s.src = url; if (typeof SRI !== "undefined" && SRI[url]){ s.integrity = SRI[url]; s.crossOrigin = "anonymous"; } s.onload = res; s.onerror = () => { delete loaded[url]; rej(new Error("libreria non caricata: " + url.split("/").pop())); }; document.head.appendChild(s); });
 }
 function toast(msg, err=false){ const t = $("#toast"); t.textContent = msg; t.classList.toggle("err", err); t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove("on"), err ? 6000 : 2800); }
 function busy(msg){ const el = $("#loading3d"); if (!el) return; el.hidden = !msg; el.textContent = msg || ""; }

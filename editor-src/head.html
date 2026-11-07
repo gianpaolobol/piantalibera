@@ -35,6 +35,9 @@ button{cursor:pointer}
 .brand{display:flex;align-items:baseline;gap:8px;margin-right:4px}
 .brand b{font-weight:700;font-size:16px;letter-spacing:-.01em}
 .brand small{font-family:var(--f-data);font-size:11px;color:var(--muted)}
+.brand-info{border:1px solid var(--line);background:none;color:var(--muted);font:500 10.5px var(--f-data);padding:1px 6px;border-radius:3px;cursor:pointer}.brand-info:hover{color:var(--ink)}
+.info-links{display:flex;flex-wrap:wrap;gap:8px 16px;margin:10px 0 4px;font-size:13px}.info-links a{color:var(--accent)}
+.help-in .credits{font-size:12px;color:var(--muted);line-height:1.5}.help-in .credits li{margin:2px 0}
 .field{display:flex;align-items:center;gap:6px}
 .field label,.lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
 .inp,select.inp{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:5px 7px;min-width:0}
@@ -242,7 +245,7 @@ pre.raw{margin:0;max-height:160px;overflow:auto;font-family:var(--f-data);font-s
 
 <div id="app">
   <header class="bar">
-    <div class="brand"><b>Pianta Libera</b><small>pianta → 3D → D5 · AI · stampa</small></div>
+    <div class="brand"><b>Pianta Libera</b><small>pianta → 3D → D5 · AI · stampa</small><button class="brand-info" id="infoBtn" title="Informazioni, privacy, termini e codice sorgente">Info</button></div>
     <div class="field"><label for="projName">Progetto</label><input id="projName" class="inp" style="width:170px"></div>
     <div class="field"><label for="levelSel">Piano</label><select id="levelSel" class="inp"></select>
       <button id="addLevel" class="btn" title="Aggiungi un piano sopra l'ultimo">+ Piano</button></div>

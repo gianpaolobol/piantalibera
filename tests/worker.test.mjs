@@ -241,3 +241,15 @@ test("condivisione: senza IP_SALT si possono leggere i link ma non crearne", asy
   const r = await worker.fetch(shareReq("", "POST", { project: proj(), turnstile: "ok" }), e); assert.equal(r.status, 503);
   const cfg = await (await worker.fetch(new Request("https://pianta.test/api/config"), e)).json(); assert.equal(cfg.share.enabled, false);
 });
+
+test("token delle prove: sostituisce solo Turnstile, con una quota a parte; token sbagliati o corti rifiutati", async () => {
+  const tok = "t".repeat(48), e = env({ TEST_TOKEN: tok, TEST_DAILY: "3" });
+  let r = await worker.fetch(post(body({ turnstile: "no" }), { "X-Test-Token": "x".repeat(48) }), e); assert.equal(r.status, 403);
+  r = await worker.fetch(post(body({ turnstile: "no" }), { "X-Test-Token": tok }), e); assert.equal(r.status, 200);
+  for (let i = 0; i < 2; i++) assert.equal((await worker.fetch(post(body({ turnstile: "no" }), { "X-Test-Token": tok }), e)).status, 200);
+  r = await worker.fetch(post(body({ turnstile: "no" }), { "X-Test-Token": tok }), e); assert.equal(r.status, 429);       // quota delle prove: 3
+  r = await worker.fetch(post(body()), e); assert.equal(r.status, 200);                                                  // i visitatori non ne risentono
+  const short = env({ TEST_TOKEN: "corto" });
+  r = await worker.fetch(post(body({ turnstile: "no" }), { "X-Test-Token": "corto" }), short); assert.equal(r.status, 403);
+  r = await worker.fetch(shareReq("", "POST", { project: proj() }, { "X-Test-Token": tok }), e); assert.equal(r.status, 201);
+});

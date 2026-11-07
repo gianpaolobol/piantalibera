@@ -47,10 +47,12 @@ Documenti: [editor](docs/editor.md) · [confronto interfaccia e roadmap](docs/in
 | `npm run build` | controlla che `public/index.html` sia aggiornato |
 | `npm test` | test del Worker, del server locale e test nel browser |
 | `npm run deploy:cloudflare` | pubblica su Cloudflare (vedi docs) |
+| `npm run sri` | ricalcola le impronte SRI delle librerie (quando cambia una versione) |
+| `npm run lint:globali` | controlla che i moduli dell'editor non ridefiniscano gli stessi nomi globali |
 
 ## Sicurezza
 
-Nessuna chiave nel client o nel repository. Il render passa solo dal backend, con quote per IP, tetto giornaliero, kill switch, limiti di formato e dimensione e cancellazione dei file. I progetti aperti da file, link o browser vengono ripuliti prima dell'uso (identificativi, numeri, indirizzi esterni). I render generativi possono alterare dettagli: non sono elaborati tecnici.
+Nessuna chiave nel client o nel repository. La pagina ha una Content Security Policy (solo lo script dell'editor, riconosciuto per impronta, e le librerie dai CDN previsti, ciascuna con impronta SRI). Il render passa solo dal backend, con quote per IP, tetto giornaliero, kill switch, limiti di formato e dimensione e cancellazione dei file. I progetti aperti da file, link o browser vengono ripuliti prima dell'uso (identificativi, numeri, indirizzi esterni). I render generativi possono alterare dettagli: non sono elaborati tecnici.
 
 Il prototipo React iniziale è archiviato nel branch `archivio/prototipo-react`.
 
@@ -58,3 +60,11 @@ Il prototipo React iniziale è archiviato nel branch `archivio/prototipo-react`.
 
 Pacchetto sempre aggiornato (funziona senza internet; usa la GPU del computer tramite il browser e, per il render AI, ComfyUI in locale):
 https://github.com/gianpaolobol/piantalibera/releases/download/locale-latest/pianta-libera-locale.zip — guida: [docs/installazione-locale.md](docs/installazione-locale.md).
+
+## Privacy e termini
+
+[Informativa privacy](public/privacy.html) e [termini d'uso](public/termini.html), raggiungibili dall'editor (pulsante «Info», pannelli Render AI e Condividi). Note tecniche in [docs/privacy.md](docs/privacy.md).
+
+## Licenza
+
+Pianta Libera è software libero: [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only). Puoi usarlo, studiarlo, modificarlo e ridistribuirlo; chi lo offre in rete in versione modificata deve mettere a disposizione degli utenti il proprio codice sorgente (l'editor lo indica nel pulsante «Info»). Le librerie incluse mantengono le proprie licenze (three.js MIT, dxf-parser MIT, pdf.js Apache-2.0, web-ifc MPL-2.0, libredwg-web GPL-3.0); il modello di render FLUX.2 klein 4B è Apache-2.0.

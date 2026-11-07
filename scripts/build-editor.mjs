@@ -2,6 +2,7 @@
 // L'editor è una pagina statica: le librerie arrivano da CDN in versione fissata,
 // gli asset da public/assets/. Uso: npm run build:editor  (oppure  --check  in CI)
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -20,16 +21,36 @@ const scripts = [
 ];
 const parts = ["01-base.js", "02-lib.js", "03-model.js", "04-plan.js", "045-plan-pro.js", "047-fase2.js", "048-fase3.js", "05-ui.js", "06-online.js", "07-io.js", "075-auto3d.js", "076-auto3d-ui.js", "08-ai.js", "049-progetti.js", "050-tavole.js", "051-condivisione.js", "052-avanguardia.js", "09-init.js"];
 
-const js = parts.map(f => `/* ---- ${f} ---- */\n` + readFileSync(join(src, f), "utf8")).join("\n");
+// impronte di integrità delle librerie (scripts/sri.mjs): usate dai tag statici e da loadScript()
+const SRI = existsSync(join(root, "scripts/sri.json")) ? JSON.parse(readFileSync(join(root, "scripts/sri.json"), "utf8")) : {};
+const js = `const SRI = ${JSON.stringify(SRI)};\n` + parts.map(f => `/* ---- ${f} ---- */\n` + readFileSync(join(src, f), "utf8")).join("\n");
 // controllo sintattico prima di scrivere
 new Function(js);
 
+// Content Security Policy: solo questo script incorporato (per impronta) e le librerie dai CDN previsti.
+// Una seconda barriera: anche se un dato non filtrato finisse nella pagina, non potrebbe eseguire codice.
+const inline = "\n" + js + "\n", hash = createHash("sha256").update(inline).digest("base64");
+const CSP = [
+  "default-src 'self'",
+  `script-src 'self' 'sha256-${hash}' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'`,
+  // 'unsafe-eval': il lettore DWG (libredwg-web, Emscripten/embind) genera funzioni con new Function.
+  // Resta escluso ciò che conta contro l'iniezione: script incorporati non autorizzati e gestori on*= nel markup.
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https:",
+  "connect-src 'self' data: blob: https:",
+  "worker-src 'self' blob: https://cdn.jsdelivr.net",
+  "frame-src https://challenges.cloudflare.com",
+  "media-src 'self' data: blob:",
+  "object-src 'none'", "base-uri 'self'", "form-action 'self'",
+].join("; ");
+const tag = s => { const u = `${THREE}/${s}`; return SRI[u] ? `<script src="${u}" integrity="${SRI[u]}" crossorigin="anonymous"></script>` : `<script src="${u}"></script>`; };
 const html = [
   "<!doctype html>",
-  '<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">',
+  `<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="${CSP}">`,
   "</head><body>",
   readFileSync(join(src, "head.html"), "utf8").trimEnd(),
-  ...scripts.map(s => `<script src="${THREE}/${s}"></script>`),
+  ...scripts.map(tag),
   "<script>", js, "</script>",
   "</body></html>", "",
 ].join("\n");

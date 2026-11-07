@@ -185,7 +185,7 @@ function exportDXF(){
 function projectData(){
   const data = JSON.parse(JSON.stringify(P)); data.imports = {};
   for (const [id, it] of Object.entries(importStore)) if (P.objects.some(o => o.kind === "import" && o.ref === id)) data.imports[id] = {file:it.file, opts:it.opts, source:it.source};
-  data.app = "Pianta Libera"; data.version = 2; return data;
+  data.app = "Pianta Libera"; data.version = SCHEMA_VERSION; return data;
 }
 async function exportProject(){ await saveFile(slug() + ".json", JSON.stringify(projectData())); }
 /* apre un progetto (file .json o raccolta): keepPid tiene l'identità del progetto nella raccolta */
@@ -268,8 +268,8 @@ function setUnderlayImage(src, name, mppGuess){
 }
 async function loadPDF(f){
   toast("Apro il PDF…");
-  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js");
-  const lib = window.pdfjsLib, WS = new URL("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js", location.href).href; // assoluto anche nel pacchetto locale
+  await loadScript("https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.min.js");
+  const lib = window.pdfjsLib, WS = new URL("https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.worker.min.js", location.href).href; // assoluto anche nel pacchetto locale
   lib.GlobalWorkerOptions.workerSrc = WS;
   try { if (!lib.GlobalWorkerOptions.workerPort) lib.GlobalWorkerOptions.workerPort = new Worker(URL.createObjectURL(new Blob([`importScripts("${WS}");`], {type:"text/javascript"}))); } catch(_){}
   const doc = await lib.getDocument({data: new Uint8Array(await readAs(f, "readAsArrayBuffer"))}).promise;

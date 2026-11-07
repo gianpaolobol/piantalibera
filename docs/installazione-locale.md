@@ -137,7 +137,9 @@ git clone https://github.com/gianpaolobol/piantalibera
 cd piantalibera
 npm ci
 npm run dev                  # editor + server di prova su http://127.0.0.1:8787/
-npm run build:editor         # ricostruisce public/index.html da editor-src/
+npm run build:editor         # ricostruisce public/index.html da editor-src/ (con CSP e impronte SRI)
+npm run build                # controllo: nomi globali ripetuti tra i moduli e public/index.html aggiornato
+npm run sri                  # ricalcola scripts/sri.json quando cambia la versione di una libreria
 npm test                     # test (serve: npx playwright install chromium)
 npm run build:pacchetto      # crea dist/pianta-libera-locale.zip
 node scripts/smoke-package.mjs   # prova il pacchetto senza internet
@@ -155,7 +157,8 @@ node scripts/smoke-package.mjs   # prova il pacchetto senza internet
 | «ComfyUI non risponde» | avvia ComfyUI prima del render; se usa un'altra porta, imposta `COMFYUI_URL` |
 | ComfyUI rifiuta il workflow | riesportalo con **Export (API)** (non il normale «Save») dopo averlo provato in ComfyUI |
 | Poly Haven non carica | serve internet: è l'unica libreria online |
+| Pagina bianca dopo aver modificato a mano `app/index.html` | la pagina accetta solo lo script originale (Content Security Policy): ricostruiscila con `npm run build:editor` e `npm run build:pacchetto` |
 
 ## 9. Licenze dei componenti inclusi
 
-three.js r147 (MIT), dxf-parser (MIT), pdf.js (Apache-2.0), libredwg-web 0.8.2 (GPL-3.0, solo per aprire i DWG), caratteri Archivo e IBM Plex Mono (SIL OFL, se inclusi), HDRI e texture CC0, modelli Khronos/Wayfair CC0/CC-BY 4.0 (dettagli in `docs/editor-crediti-asset.md`). FLUX.2 [klein] 4B: Apache 2.0 (non incluso: lo scarica ComfyUI).
+Pianta Libera è distribuito con licenza **GNU AGPL-3.0** (file `LICENSE` nel codice sorgente; pulsante «Info» nell'editor). Componenti: three.js r147 (MIT), dxf-parser (MIT), pdf.js (Apache-2.0), libredwg-web 0.8.2 (GPL-3.0, solo per aprire i DWG), caratteri Archivo e IBM Plex Mono (SIL OFL, se inclusi), HDRI e texture CC0, modelli Khronos/Wayfair CC0/CC-BY 4.0 (dettagli in `docs/editor-crediti-asset.md`). FLUX.2 [klein] 4B: Apache 2.0 (non incluso: lo scarica ComfyUI).

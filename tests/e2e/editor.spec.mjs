@@ -19,6 +19,8 @@ async function routeLocal(page){
 async function open(page){
   const errors = [];
   page.on("pageerror", e => errors.push(e.message));
+  // violazioni della Content Security Policy o impronte SRI non corrispondenti: vanno trattate come errori
+  page.on("console", m => { const t = m.text(); if (/Content Security Policy|integrity/i.test(t)) errors.push(t); });
   await page.goto("/");
   await page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function");
   await page.waitForTimeout(1500);
@@ -422,6 +424,29 @@ test("sicurezza: un progetto preparato ad arte non inserisce codice nella pagina
   const p = await page.evaluate(() => ({lid:P.levels[0].id, wl:P.walls[0].level, mat:P.materials.mm, sky:P.sky}));
   expect(p.lid).toMatch(/^[A-Za-z0-9_-]+$/); expect(p.wl).toBe(p.lid); expect(p.mat.map).toBeUndefined(); expect(p.mat.color).toBe("#cccccc"); expect(p.sky.kind).toBe("asset");
   expect(await page.evaluate(() => P.walls.length)).toBe(5);
+  expect(errors).toEqual([]);
+});
+
+test("informazioni, privacy, termini, licenza e versione dello schema", async ({ page, context }) => {
+  const errors = await open(page);
+  // la CSP blocca davvero uno script incorporato non previsto
+  await page.evaluate(() => { const s = document.createElement("script"); s.textContent = "window.__inj = 1"; document.body.appendChild(s); });
+  expect(await page.evaluate(() => window.__inj)).toBeUndefined();
+  await page.waitForTimeout(300); expect(errors.some(e => /Content Security Policy/.test(e))).toBe(true); errors.length = 0;
+  await page.click("#infoBtn");
+  const links = await page.locator("#helpBox .info-links a").evaluateAll(a => a.map(x => x.getAttribute("href")));
+  expect(links).toEqual(["privacy.html", "termini.html", "https://github.com/gianpaolobol/piantalibera"]);
+  for (const [f, h] of [["privacy.html", "Informativa sul trattamento dei dati"], ["termini.html", "Termini d'uso"]]){
+    const v = await context.newPage(); await v.goto("/" + f); await expect(v.locator("h1")).toHaveText(h); await expect(v.locator("body")).toContainText("GianPaolo Franceschini Architettura"); await v.close();
+  }
+  await page.click("#helpClose");
+  // il consenso del render rimanda all'informativa
+  await page.click('[data-tab="ai"]'); await expect(page.locator('label:has(#aiConsent) a[href="privacy.html"]')).toHaveCount(1);
+  // schema: i file esportati sono alla versione 3; un progetto più recente si apre con un avviso
+  expect(await page.evaluate(() => projectData().version)).toBe(3);
+  await page.evaluate(async () => { const p = sampleProject(); p.version = 99; await openProjectData(p); });
+  await expect(page.locator("#toast")).toContainText("versione più recente");
+  expect(await page.evaluate(() => P.version)).toBe(3);
   expect(errors).toEqual([]);
 });
 
