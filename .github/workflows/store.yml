@@ -11,8 +11,13 @@ on:
         type: choice
         options: [ios, android, all]
         default: ios
+      azione:
+        description: "build = nuova build firmata · invia = manda a TestFlight l'ultima build iOS già pronta · stato = elenco delle build"
+        type: choice
+        options: [build, invia, stato]
+        default: build
       submit:
-        description: Invia allo store dopo la build (TestFlight interno / Play «internal» in bozza)
+        description: Con «build», invia a TestFlight appena pronta (se l'app esiste su App Store Connect)
         type: boolean
         default: true
 
@@ -45,7 +50,21 @@ jobs:
       - name: Chiave Apple da Expo, app su App Store Connect, progetto Expo
         id: prep
         run: node scripts/store-prep.mjs
+      - name: Stato delle build
+        if: inputs.azione == 'stato'
+        env: { EXPO_PROJECT_ID: "${{ steps.prep.outputs.project_id }}", EAS_NO_VCS: "1" }
+        run: |
+          $EAS build:list --limit 8 --non-interactive --json > "$RUNNER_TEMP/b.json"
+          jq -r '.[] | "\(.platform)\t\(.status)\tversione \(.appVersion) (\(.appBuildVersion))\t\(.createdAt)\t\(if .platform=="ANDROID" then (.artifacts.buildUrl // "") else "" end)"' "$RUNNER_TEMP/b.json" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Invia a TestFlight l'ultima build iOS
+        if: inputs.azione == 'invia'
+        env: { EXPO_PROJECT_ID: "${{ steps.prep.outputs.project_id }}", EAS_NO_VCS: "1", ASC_APP_ID: "${{ steps.prep.outputs.asc_app_id }}" }
+        run: |
+          [ -n "$ASC_APP_ID" ] || { echo "::error::L'app non c'è ancora su App Store Connect (bundle it.piantalibera.app): va creata dal sito, vedi docs/app.md"; exit 1; }
+          $EAS submit --platform ios --latest --profile production --non-interactive --wait
+          echo "Inviata a TestFlight: https://appstoreconnect.apple.com/apps/$ASC_APP_ID/testflight/ios" >> "$GITHUB_STEP_SUMMARY"
       - name: Build firmata${{ inputs.submit && ' e invio' || '' }}
+        if: inputs.azione == 'build'
         env:
           EAS_NO_VCS: "1"
           EXPO_PROJECT_ID: ${{ steps.prep.outputs.project_id }}
