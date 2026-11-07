@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Informativa privacy · Pianta Libera</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<style>
+:root{--bg:#f6f5f2;--ink:#1d1d1b;--muted:#5d5b55;--line:#dcd9d2;--accent:#2f6f5e;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root{--bg:#161614;--ink:#ecebe7;--muted:#a3a198;--line:#33322e;--accent:#7cc3ad}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:760px;margin:0 auto;padding:32px 16px 64px}h1{font-size:28px;line-height:1.2;margin:0 0 4px}h2{font-size:19px;margin:32px 0 8px}
+.meta{color:var(--muted);font-size:14px;margin:0 0 24px}a{color:var(--accent)}ul{padding-left:20px}li{margin:4px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0}th,td{border-bottom:1px solid var(--line);text-align:left;padding:6px 8px 6px 0;vertical-align:top}
+.note{border-left:3px solid var(--accent);padding:4px 12px;color:var(--muted);font-size:14px}nav{font-size:14px;margin-bottom:24px}
+</style></head><body><main>
+<nav><a href="./">← Torna all'editor</a> · <a href="termini.html">Termini d'uso</a></nav>
+<h1>Informativa sul trattamento dei dati</h1>
+<p class="meta">Pianta Libera · ai sensi degli artt. 13 e 14 del Regolamento (UE) 2016/679 (GDPR) · versione del 7 novembre 2026</p>
+
+<h2>1. Titolare del trattamento</h2>
+<p><b>GianPaolo Franceschini Architettura</b>, P.IVA [da completare], e-mail [da completare].</p>
+
+<h2>2. In breve</h2>
+<ul>
+<li>Per usare l'editor non serve un account: il progetto resta <b>nel tuo browser</b> (memoria locale e IndexedDB) e nei file che scarichi.</li>
+<li>I dati lasciano il tuo dispositivo solo se <b>chiedi un render AI</b> o <b>crei un link per il cliente</b>, e solo dopo che hai spuntato la casella di consenso.</li>
+<li>Non usiamo cookie di profilazione, pubblicità o strumenti di statistica.</li>
+</ul>
+
+<h2>3. Quali dati, perché e su quale base</h2>
+<table>
+<tr><th>Attività</th><th>Dati</th><th>Finalità e base giuridica</th><th>Conservazione</th></tr>
+<tr><td>Uso dell'editor</td><td>Progetto, preferenze, galleria dei render, raccolta dei progetti</td><td>Restano nel tuo browser: il titolare non li riceve</td><td>Finché non li cancelli dal browser</td></tr>
+<tr><td>Render AI (anche ritocco con maschera)</td><td>Immagine della vista 3D (fino a 512 px), mappe di profondità e contorni, testo del prompt, parametri e posizione della camera, nome del progetto</td><td>Generare l'immagine richiesta · consenso (art. 6.1.a)</td><td>Immagini e stato del lavoro cancellati automaticamente dopo <b>1 ora</b>, o prima con «Elimina»</td></tr>
+<tr><td>Link per il cliente</td><td>Progetto condiviso (senza prezzi del computo né file dei modelli importati); commenti: nome scelto da chi scrive, testo, punto in pianta e, se spuntata, la vista 3D; con un link «con modifica», lo storico delle versioni: quelle pubblicate dal progettista e quelle inviate dal cliente, con nome, messaggi, approvazioni e risposte</td><td>Condividere il progetto con chi riceve il link · consenso (art. 6.1.a)</td><td>Cancellati dopo <b>30 giorni</b> (<b>90</b> per i link con modifica), o subito con «Elimina il link»</td></tr>
+<tr><td>Quote e protezione dagli abusi</td><td>Indirizzo IP trasformato in un'impronta non reversibile (hash con un sale segreto), conteggio giornaliero; esito della verifica anti-bot</td><td>Sicurezza del servizio e contenimento dei costi del piano gratuito · legittimo interesse (art. 6.1.f)</td><td>1–2 giorni</td></tr>
+<tr><td>Funzionamento tecnico del sito</td><td>Indirizzo IP, data e ora, pagina richiesta, browser (dati trattati dai fornitori di rete per consegnare le pagine)</td><td>Erogazione e sicurezza del sito · legittimo interesse (art. 6.1.f)</td><td>Secondo le politiche dei fornitori indicati sotto</td></tr>
+</table>
+<p>Non trattiamo categorie particolari di dati. Ti chiediamo di non inserire dati personali di terzi nei nomi dei progetti, nei prompt o nei commenti.</p>
+
+<h2>4. A chi sono comunicati i dati</h2>
+<ul>
+<li><b>Cloudflare, Inc.</b> (USA) — ospita il sito e il servizio (Workers, KV, Durable Objects), esegue il modello di render (Workers AI, modello FLUX.2 klein 4B di Black Forest Labs) e la verifica anti-bot (Turnstile). Agisce come responsabile del trattamento. Secondo la documentazione di Cloudflare, i contenuti inviati a Workers AI <b>non sono usati per addestrare modelli</b> e non sono conservati oltre il tempo della richiesta, salvo la memorizzazione che chiediamo noi (le immagini del render, per 1 ora).</li>
+<li><b>jsDelivr</b> (rete di distribuzione) — fornisce le librerie software dell'editor; riceve l'indirizzo IP del browser che le scarica.</li>
+<li><b>Google Fonts</b> — fornisce i caratteri tipografici; riceve l'indirizzo IP del browser.</li>
+<li><b>Poly Haven</b> — fornisce modelli, materiali e cieli solo quando li scegli dalla libreria; riceve l'indirizzo IP.</li>
+<li><b>GitHub, Inc.</b> — ospita il codice sorgente e la versione dimostrativa statica (GitHub Pages).</li>
+</ul>
+<p>Alcuni fornitori hanno sede negli Stati Uniti: i trasferimenti avvengono sulla base del Data Privacy Framework UE-USA o delle clausole contrattuali standard della Commissione europea, secondo quanto previsto dai rispettivi accordi sul trattamento dei dati.</p>
+<p>I dati non sono venduti né usati per pubblicità.</p>
+
+<h2>5. Memoria del browser e cookie</h2>
+<p>L'editor salva il progetto e le preferenze nella memoria locale del browser: è necessario al funzionamento richiesto e non richiede consenso. La verifica anti-bot Turnstile può usare dati tecnici del browser per distinguere le persone dai programmi automatici. Non ci sono cookie di profilazione o di statistica.</p>
+
+<h2>6. I tuoi diritti</h2>
+<p>Puoi chiedere accesso, rettifica, cancellazione, limitazione, portabilità e opporti al trattamento basato sul legittimo interesse (artt. 15–22 GDPR); puoi revocare il consenso in ogni momento, senza effetto sui trattamenti già svolti. Per cancellare subito un link o un render usa i comandi nell'editor; per le altre richieste scrivi all'indirizzo del punto 1. Hai diritto di proporre reclamo al <a href="https://www.garanteprivacy.it" rel="noopener">Garante per la protezione dei dati personali</a>.</p>
+<p class="note">Poiché l'indirizzo IP è conservato solo come impronta non reversibile e i progetti non sono associati a un account, per alcune richieste potremmo non essere in grado di identificare i dati che ti riguardano (art. 11 GDPR).</p>
+
+<h2>7. Minori</h2>
+<p>Il servizio non è rivolto ai minori di 14 anni.</p>
+
+<h2>8. Modifiche</h2>
+<p>Le modifiche a questa informativa sono pubblicate su questa pagina con la data di aggiornamento. Lo storico delle versioni è nel <a href="https://github.com/gianpaolobol/piantalibera/commits/main/public/privacy.html" rel="noopener">codice sorgente</a>.</p>
+</main></body></html>
