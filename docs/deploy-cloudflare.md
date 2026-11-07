@@ -68,7 +68,7 @@ L'indirizzo è `https://pianta-libera.<tuo-account>.workers.dev/`; un dominio pe
 | `ALLOWED_ORIGINS` | vuoto | origini ammesse oltre allo stesso dominio, separate da virgola |
 | `MAX_INPUT_SIDE` | 512 | lato massimo delle immagini di riferimento accettato da klein |
 | `SHARE_ENABLED` | 1 | link per il cliente e commenti (`/api/share`); `0` li disattiva (i link esistenti restano leggibili fino alla scadenza) |
-| `SHARE_DAILY_WRITES` | 300 | tetto globale di link, aggiornamenti e commenti al giorno: protegge le 1.000 scritture KV gratuite al giorno |
+| `SHARE_DAILY_WRITES` | 200 | tetto globale di link, aggiornamenti e commenti al giorno: protegge le 1.000 scritture KV gratuite al giorno |
 
 Segreti: `IP_SALT`, `TURNSTILE_SECRET`, facoltativo `OWNER_TOKEN`. Ogni POST deve includere `consent: true` e il token Turnstile nel campo `turnstile`; l'editor mostra la casella di consenso e il widget quando legge `/api/config`.
 
@@ -88,9 +88,9 @@ Con `NEURON_DAILY_BUDGET = 9000` la spesa stimata resta sotto i 10.000 Neurons g
 
 ## Condivisione con il cliente (`/api/share`)
 
-Logica in `shared/share.js`, comune al Worker e al server locale. Progetti fino a 1,5 MB in KV con scadenza di 30 giorni (`share:<id>`, commenti in `sc:<id>`, proposta del cliente in `sp:<id>`), token del progettista conservato solo come hash, 10 link, 40 commenti e 20 invii di modifiche al giorno per IP (contatori nel Durable Object), Turnstile obbligatorio quando è configurato (non per il proprietario), scrivere richiede `IP_SALT`. Endpoint e formati sono descritti in testa a `shared/share.js`.
+Logica in `shared/share.js`, comune al Worker e al server locale. Progetti fino a 1,5 MB in KV con scadenza di 30 giorni (`share:<id>`, commenti in `sc:<id>`, storico delle versioni in `sv:<id>` e `sv:<id>:<n>`, ultime 30), token del progettista conservato solo come hash, 10 link, 40 commenti e 20 invii di modifiche al giorno per IP (contatori nel Durable Object), Turnstile obbligatorio quando è configurato (non per il proprietario), scrivere richiede `IP_SALT`. Endpoint e formati sono descritti in testa a `shared/share.js`.
 
-Due modalità, scelte alla creazione e cambiabili dopo: **sola lettura** (il cliente guarda e commenta) e **con modifica** (il cliente usa l'editor completo e invia le modifiche). La chiave di modifica è nel frammento del link (`#modifica=…`), che il browser non manda al server; le modifiche restano nel browser del cliente finché non le invia e al progettista arrivano come proposta da aprire (con Annulla per tornare indietro) o scartare. Tornando in sola lettura la chiave viene invalidata; riattivando le modifiche se ne crea una nuova.
+Due modalità, scelte alla creazione e cambiabili dopo: **sola lettura** (il cliente guarda e commenta) e **con modifica** (il cliente usa l'editor completo e invia le modifiche). La chiave di modifica è nel frammento del link (`#modifica=…`), che il browser non manda al server; le modifiche restano nel browser del cliente finché non le invia e al progettista arrivano come proposta: la può guardare, **approvare** (diventa la versione del link), rimandare con «Chiedi modifiche» e una risposta, o scartare. Ogni pubblicazione e ogni invio restano nello **storico**, visibile a entrambi, e il progettista può riaprire qualsiasi versione. I link con modifica durano 90 giorni. Tornando in sola lettura la chiave viene invalidata; riattivando le modifiche se ne crea una nuova.
 
 ## Modalità proprietario (`OWNER_TOKEN`)
 
