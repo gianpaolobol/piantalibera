@@ -51,7 +51,7 @@ const jobs = new Map(), hits = new Map();
 /* condivisione in memoria: i link valgono finché il server resta acceso (utile in rete locale) */
 const shareStore = new Map(), shareHits = new Map();
 const store = {get: async k => { const e = shareStore.get(k); if (!e) return null; if (Date.now() > e.exp){ shareStore.delete(k); return null; } return e.v; }, put: async (k, v, ttl) => { shareStore.set(k, {v, exp: Date.now() + ttl * 1000}); }, del: async k => { shareStore.delete(k); }};
-function shareHit(ip, kind){ const day = new Date().toISOString().slice(0, 10), key = `${day}:${kind}:${ip}`, n = shareHits.get(key) || 0, lim = kind === "comment" ? SHARE.commentsPerIpDaily * 5 : SHARE.perIpDaily * 5; if (n >= lim) return {ok: false, reason: "quota_exceeded"}; shareHits.set(key, n + 1); return {ok: true}; }
+function shareHit(ip, kind){ const day = new Date().toISOString().slice(0, 10), key = `${day}:${kind}:${ip}`, n = shareHits.get(key) || 0, lim = (SHARE.limits[kind] ?? SHARE.perIpDaily) * 5; if (n >= lim) return {ok: false, reason: "quota_exceeded"}; shareHits.set(key, n + 1); return {ok: true}; }
 const send = (res, status, body, headers = {}) => { res.writeHead(status, {"Content-Type": "application/json", "Cache-Control": "no-store", ...headers}); res.end(JSON.stringify(body)); };
 const fail = (res, status, code, message, headers) => send(res, status, {error: {code, message}}, headers);
 const view = j => ({id: j.id, status: j.status, mode: j.mode, created_at: j.created_at, expires_at: j.expires_at, provider: j.provider, model: j.model, generated: engine === "comfyui", mock: engine !== "comfyui",
@@ -123,7 +123,7 @@ createServer(async (req, res) => {
     }
     if (url.pathname === "/api/share" || url.pathname.startsWith("/api/share/")){
       const parts = url.pathname.replace(/^\/api\/share\/?/, "").split("/").filter(Boolean);
-      const r = await handleShare({method: req.method, parts, token: req.headers["x-share-token"] || "", length: Number(req.headers["content-length"] || 0), text: async () => { const chunks = []; let n = 0; for await (const c of req){ n += c.length; if (n > SHARE.maxBytes + 4096) throw {status: 413, body: {error: {code: "too_large", message: "progetto troppo grande per la condivisione"}}}; chunks.push(c); } return Buffer.concat(chunks).toString("utf8"); }},
+      const r = await handleShare({method: req.method, parts, token: req.headers["x-share-token"] || "", editKey: req.headers["x-edit-key"] || "", length: Number(req.headers["content-length"] || 0), text: async () => { const chunks = []; let n = 0; for await (const c of req){ n += c.length; if (n > SHARE.maxBytes + 4096) throw {status: 413, body: {error: {code: "too_large", message: "progetto troppo grande per la condivisione"}}}; chunks.push(c); } return Buffer.concat(chunks).toString("utf8"); }},
         {store, hit: async kind => shareHit(ip, kind), bot: async () => true, botRequired: false});
       if (r.status === 204){ res.writeHead(204); return res.end(); }
       return send(res, r.status, r.body);

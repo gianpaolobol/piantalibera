@@ -65,6 +65,12 @@ const CONSENT_KEY = "pianta-libera-ai-consenso-v1";
 let aiConsent = (() => { try { return localStorage.getItem(CONSENT_KEY) === "1"; } catch(e){ return false; } })();
 const backendCfg = {url:"", data:null, error:"", loading:false};
 let tsToken = "", tsWidget = null, tsLoading = null, aiQuotaLeft = null;
+/* Modalità proprietario: il codice (segreto OWNER_TOKEN del Worker) resta solo in questo browser e viaggia
+   nell'intestazione X-Owner-Token verso /api/render, /api/config e /api/share dello stesso sito. */
+const OWNER_KEY = "pianta-libera-proprietario";
+const ownerToken = () => { try { return localStorage.getItem(OWNER_KEY) || ""; } catch(e){ return ""; } };
+const ownerHeaders = () => { const t = ownerToken(); return t ? {"X-Owner-Token":t} : {}; };
+const isOwner = () => !!backendCfg.data?.quota?.owner;
 function isBackendCfg(c){ return AI.mode === "base" && !!AI_PRESETS[c.preset]?.backend; }
 // /api/render → /api/config · …/render.php → …/render.php?config=1
 function configUrlFor(u){ if (!u) return ""; if (/render\.php$/.test(u)) return u + "?config=1"; if (/\/render\/?$/.test(u)) return u.replace(/\/render\/?$/, "/config"); return ""; }
@@ -72,10 +78,11 @@ async function loadBackendConfig(force){
   const u = configUrlFor(AI.base.url);
   if (!u || (!force && backendCfg.url === u && (backendCfg.data || backendCfg.loading || backendCfg.error))) return;
   Object.assign(backendCfg, {url:u, data:null, error:"", loading:true});
-  try { const r = await fetch(u, {headers:{Accept:"application/json"}}); const d = await r.json(); if (!r.ok || typeof d !== "object") throw new Error("HTTP " + r.status); backendCfg.data = d; }
+  try { const r = await fetch(u, {headers:{Accept:"application/json", ...(sameOrigin(u) ? ownerHeaders() : {})}}); const d = await r.json(); if (!r.ok || typeof d !== "object") throw new Error("HTTP " + r.status); backendCfg.data = d; }
   catch(e){ backendCfg.error = "Configurazione del servizio non disponibile (" + (e.message || e) + ")."; }
   backendCfg.loading = false; if (S.tab === "ai" && !aiBusy) renderAI();
 }
+function sameOrigin(u){ try { return new URL(u, location.href).origin === location.origin; } catch(e){ return false; } }
 function loadTurnstile(){
   if (window.turnstile) return Promise.resolve();
   return tsLoading ||= new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"; sc.async = true; sc.onload = ok; sc.onerror = () => { tsLoading = null; ko(new Error("verifica anti-bot non caricata")); }; document.head.appendChild(sc); });
@@ -91,13 +98,17 @@ function backendBlock(){
   const info = backendCfg.loading ? `<p class="note">Leggo la configurazione del servizio…</p>`
     : backendCfg.error ? `<p class="note warn">${esc(backendCfg.error)}</p>`
     : d ? `<p class="note">${d.mock ? "<b>Servizio di prova</b>: restituisce la vista inviata, non genera immagini." : `Fornitore: <b>${esc(d.provider || "?")}</b>${d.model ? ` · modello <code>${esc(d.model)}</code>` : ""}.`}
-        ${d.quota ? ` Render disponibili oggi: <b>${Math.max(0, (aiQuotaLeft ?? (d.quota.per_ip_daily - (d.quota.used_today || 0))))}</b> su ${d.quota.per_ip_daily}.` : ""}
+        ${d.quota?.owner ? ` <b>Modalità proprietario</b>: nessun limite per visitatore; nella quota gratuita di oggi restano circa <b>${aiQuotaLeft ?? d.quota.renders_left_estimate ?? "?"}</b> render.` : d.quota ? ` Render disponibili oggi: <b>${Math.max(0, (aiQuotaLeft ?? (d.quota.per_ip_daily - (d.quota.used_today || 0))))}</b> su ${d.quota.per_ip_daily}.` : ""}
         ${d.retention_seconds ? ` Immagini cancellate dal server dopo ${Math.round(d.retention_seconds/60)} minuti.` : ""}</p>
         ${d.enabled === false ? `<p class="note warn">Render AI non attivo su questo sito${d.reason ? ` (${esc(d.reason)})` : ""}.</p>` : ""}` : "";
   return `${info}
     <label class="chk"><input type="checkbox" id="aiConsent" ${aiConsent?"checked":""}><span>Acconsento all'invio della vista, delle mappe di profondità e contorni e del prompt ${d?.provider && !d.mock ? `a <b>${esc(d.provider)}</b>` : "al servizio di render"} per generare l'immagine (<a href="privacy.html" target="_blank" rel="noopener">informativa</a>).</span></label>
     ${d?.privacy ? `<details><summary class="lbl">Informativa</summary><p class="note">${esc(d.privacy)}</p><p class="note"><a href="https://github.com/gianpaolobol/piantalibera/blob/main/docs/privacy.md" target="_blank" rel="noopener">Testo completo</a></p></details>` : ""}
-    ${d?.turnstile_site_key ? `<div id="aiTurnstile" class="ts"></div>` : ""}`;
+    ${d?.turnstile_site_key && !d.quota?.owner ? `<div id="aiTurnstile" class="ts"></div>` : ""}
+    ${d && !d.mock && sameOrigin(backendCfg.url) ? `<details${ownerToken() && !d.quota?.owner ? " open" : ""}><summary class="lbl">Sei il proprietario del sito?</summary>
+      ${d.quota?.owner ? `<p class="note">Codice riconosciuto in questo browser.</p><div class="btns"><button class="btn" id="ownOff">Esci dalla modalità proprietario</button></div>`
+        : `${ownerToken() ? `<p class="note warn">Codice non riconosciuto: controlla che sia uguale al segreto OWNER_TOKEN.</p>` : `<p class="note">Con il tuo codice i render non hanno il limite dei visitatori. Il codice resta solo in questo browser.</p>`}
+        <div class="f"><label class="lbl" for="ownCode">Codice del proprietario</label><input id="ownCode" class="inp" type="password" autocomplete="off" minlength="16"></div><div class="btns"><button class="btn" id="ownSave">Attiva</button>${ownerToken() ? `<button class="btn" id="ownOff">Dimentica il codice</button>` : ""}</div>`}</details>` : ""}`;
 }
 function aiSave(){ try { localStorage.setItem(AI_KEY, JSON.stringify(AI)); } catch(e){} }
 const AF = (id, label, val, extra="") => `<div class="f"><label class="lbl" for="${id}">${label}</label><input id="${id}" class="inp" value="${esc(val)}" ${extra}></div>`;
@@ -173,6 +184,8 @@ PA.addEventListener("change", e => { const t = e.target;
 PA.addEventListener("click", async e => {
   const b = e.target.closest("button, code[data-ins], img[data-cmp]"); if (!b) return;
   if (b.dataset.aim){ AI.mode = b.dataset.aim; aiSave(); renderAI(); return; }
+  if (b.id === "ownSave"){ const v = $("#ownCode").value.trim(); if (v.length < 16){ aiStatus("Il codice ha almeno 16 caratteri.", "err"); return; } try { localStorage.setItem(OWNER_KEY, v); } catch(_){} aiQuotaLeft = null; SH.cfg = null; await loadBackendConfig(true); if (isOwner()) toast("Modalità proprietario attiva"); return; }
+  if (b.id === "ownOff"){ try { localStorage.removeItem(OWNER_KEY); } catch(_){} aiQuotaLeft = null; SH.cfg = null; await loadBackendConfig(true); toast("Modalità proprietario disattivata in questo browser"); return; }
   if (b.dataset.ins){ const ta = $("#a_template"); const s = ta.selectionStart; ta.setRangeText(b.dataset.ins, s, ta.selectionEnd, "end"); ta.focus(); AI.adv.template = ta.value; aiSave(); return; }
   if (b.dataset.cmp !== undefined){ openCompare(aiResults[+b.dataset.cmp]); return; }
   if (b.dataset.aisave !== undefined){ await saveResult(aiResults[+b.dataset.aisave]); return; }
@@ -239,7 +252,7 @@ async function runAI(test, opts = {}){
   if (viaBackend){
     if (!aiConsent){ aiStatus("Per generare il render serve il consenso all'invio delle immagini al servizio (casella sopra).", "err"); return; }
     if (backendCfg.data?.enabled === false){ aiStatus("Render AI non attivo su questo sito" + (backendCfg.data.reason ? ` (${backendCfg.data.reason})` : "") + ".", "err"); return; }
-    if (backendCfg.data?.turnstile_site_key && !tsToken){ aiStatus("Completa la verifica anti-bot sopra, poi riprova.", "err"); return; }
+    if (backendCfg.data?.turnstile_site_key && !isOwner() && !tsToken){ aiStatus("Completa la verifica anti-bot sopra, poi riprova.", "err"); return; }
   }
   const token = tsToken;
   aiBusy = true; renderAI(); aiStatus(test ? "Provo la connessione con un'immagine piccola…" : "Preparo vista, profondità e contorni…");
@@ -248,6 +261,7 @@ async function runAI(test, opts = {}){
     vars.consent = viaBackend ? aiConsent : false; vars.turnstile = viaBackend ? token : "";
     const headers = {};
     if (cfg.authValue) headers[cfg.authHeader || "Authorization"] = cfg.authValue;
+    if (viaBackend && sameOrigin(endpoint)) Object.assign(headers, ownerHeaders());
     for (const line of (cfg.extraHeaders || "").split(/\n|;/)){ const m = line.match(/^\s*([^:]+):\s*(.+)$/); if (m) headers[m[1].trim()] = m[2].trim(); }
     let body;
     if (cfg.contentType === "multipart"){

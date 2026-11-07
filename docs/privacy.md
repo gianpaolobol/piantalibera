@@ -15,6 +15,7 @@ Quando cambia uno di questi comportamenti, va aggiornata l'informativa nello ste
 | Immagini cancellate dopo 1 ora | `RETENTION_SECONDS` (`worker/wrangler.toml`), TTL di KV |
 | IP solo come hash con sale | `IP_SALT` (segreto), `ipHash()` nel Worker; contatori nel Durable Object `QuotaGate` |
 | Link per il cliente: 30 giorni, senza prezzi né modelli importati | `SHARE.ttlDays` in `shared/share.js`, `sharePayload()` in `editor-src/051-condivisione.js` |
+| Modifiche del cliente (link con modifica): nome, messaggio, progetto modificato; solo dopo il consenso; stessa scadenza del link | `sp:<id>` in `shared/share.js`, `guestHTML()` in `editor-src/051-condivisione.js` |
 | Nessun dato personale nei log | `console.log` del Worker: solo id, stato, durata, consumi |
 | Fornitori terzi | Cloudflare (Workers, KV, Durable Objects, Workers AI, Turnstile), jsDelivr, Google Fonts, Poly Haven, GitHub Pages |
 

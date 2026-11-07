@@ -69,7 +69,7 @@ function sanitizeProject(p){
   if (p.sun) p.sun = {az:N(p.sun.az, 245), el:N(p.sun.el, 36)};
   if (p.site && typeof p.site === "object"){ const s = p.site; p.site = {auto:!!s.auto, city:T(s.city, 40), lat:N(s.lat, 44.494), lon:N(s.lon, 11.343), tz:N(s.tz, 1), dst:s.dst !== false, north:N(s.north), date:/^\d{4}-\d{2}-\d{2}$/.test(s.date || "") ? s.date : "2026-06-21", hour:N(s.hour, 16)}; }
   if (p.prices && typeof p.prices === "object"){ const q = {}; for (const [k, v] of Object.entries(p.prices)) if (Number.isFinite(Number(v))) q[T(k, 160)] = Number(v); p.prices = q; }
-  if (p.share && typeof p.share === "object") p.share = ID_OK.test(p.share.id || "") ? {id:p.share.id, expires_at:T(p.share.expires_at, 40)} : undefined;
+  if (p.share && typeof p.share === "object") p.share = ID_OK.test(p.share.id || "") ? {id:p.share.id, expires_at:T(p.share.expires_at, 40), mode:p.share.mode === "edit" ? "edit" : "view"} : undefined;
   if (p.tav && typeof p.tav === "object"){ const t = p.tav; p.tav = {paper:["A4", "A3", "A2", "A1"].includes(t.paper) ? t.paper : "A3", scale:[50, 100, 200].includes(+t.scale) ? +t.scale : 100, color:!!t.color, chains:t.chains !== false, furniture:t.furniture !== false, comp:t.comp !== false, sec:{axis:t.sec?.axis === "z" ? "z" : "x", pos:N(t.sec?.pos, 5), dir:N(t.sec?.dir, 1) < 0 ? -1 : 1}}; }
   if (p.lightsMode != null && !["auto", "on", "off"].includes(p.lightsMode)) p.lightsMode = "auto";
   return p;
@@ -104,6 +104,7 @@ function init(){
   capReady.then(() => { if (S.tab === "export") renderExport(); });
   loadPersonalIndex();
   const shareId = new URLSearchParams(location.search).get("condividi");
-  if (shareId) enterViewer(shareId); else { setTimeout(queueIdbSave, 2500); loadGallery(); }
+  const editKey = (location.hash.match(/(?:^#|&)modifica=([a-f0-9]{48})/) || [])[1];
+  if (shareId && editKey) enterGuest(shareId, editKey); else if (shareId) enterViewer(shareId); else { setTimeout(queueIdbSave, 2500); loadGallery(); }
 }
 init();

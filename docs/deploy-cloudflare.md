@@ -52,11 +52,13 @@ L'indirizzo è `https://pianta-libera.<tuo-account>.workers.dev/`; un dominio pe
 | Nome | Predefinito | Note |
 |---|---|---|
 | `MODEL` | `@cf/black-forest-labs/flux-2-klein-4b` | per confronti: `@cf/black-forest-labs/flux-2-klein-9b` (molto più costoso e solo non commerciale) |
-| `PER_IP_DAILY` | 10 (test) | render al giorno per IP (IP salvati come hash con sale) |
+| `PER_IP_DAILY` | 2 | render al giorno per visitatore (IP salvati come hash con sale) |
 | `TEST_DAILY` | 20 | render al giorno riservati alle prove automatiche (solo con il segreto `TEST_TOKEN`) |
 | `MAX_CONCURRENT_PER_IP` | 1 | lavori contemporanei per IP |
-| `GLOBAL_DAILY` | 50 | richieste accettate al giorno in totale |
-| `NEURON_DAILY_BUDGET` | 9000 | **tetto di spesa**: Neurons stimati impegnati al giorno; oltre → `429 budget_exceeded` prima di chiamare il modello |
+| `GLOBAL_DAILY` | 50 | render al giorno di tutti i visitatori insieme (il proprietario non conta) |
+| `NEURON_DAILY_BUDGET` | 9500 | **tetto di spesa totale** (visitatori + proprietario): Neurons stimati al giorno, sotto i 10.000 gratuiti; oltre → `429 budget_exceeded` prima di chiamare il modello |
+| `VISITOR_NEURON_BUDGET` | 6100 | parte del tetto usabile dai visitatori (≈50 render a 1024×768): il resto (≈28 render) resta sempre al proprietario |
+| `OWNER_MAX_CONCURRENT` | 2 | render contemporanei del proprietario |
 | `NEURONS_PER_OUTPUT_TILE` / `NEURONS_PER_INPUT_TILE` | 26.05 / 5.37 | tariffe klein 4B usate per la stima; aggiornarle se cambiano |
 | `PROVIDER_TIMEOUT_MS` | 60000 | oltre, il lavoro è `failed` |
 | `TURNSTILE_SITE_KEY` | vuoto | chiave pubblica del widget, letta dall'editor via `/api/config` |
@@ -68,7 +70,7 @@ L'indirizzo è `https://pianta-libera.<tuo-account>.workers.dev/`; un dominio pe
 | `SHARE_ENABLED` | 1 | link per il cliente e commenti (`/api/share`); `0` li disattiva (i link esistenti restano leggibili fino alla scadenza) |
 | `SHARE_DAILY_WRITES` | 300 | tetto globale di link, aggiornamenti e commenti al giorno: protegge le 1.000 scritture KV gratuite al giorno |
 
-Segreti: `IP_SALT`, `TURNSTILE_SECRET`. Ogni POST deve includere `consent: true` e il token Turnstile nel campo `turnstile`; l'editor mostra la casella di consenso e il widget quando legge `/api/config`.
+Segreti: `IP_SALT`, `TURNSTILE_SECRET`, facoltativo `OWNER_TOKEN`. Ogni POST deve includere `consent: true` e il token Turnstile nel campo `turnstile`; l'editor mostra la casella di consenso e il widget quando legge `/api/config`.
 
 Contabilità (Durable Object, per giorno UTC): la prenotazione controlla in un'unica operazione quota IP, concorrenza, tetto di richieste e tetto di Neurons. Se il modello fallisce, il render torna all'utente ma i Neurons stimati restano conteggiati (una chiamata fallita può essere fatturata).
 
@@ -86,7 +88,21 @@ Con `NEURON_DAILY_BUDGET = 9000` la spesa stimata resta sotto i 10.000 Neurons g
 
 ## Condivisione con il cliente (`/api/share`)
 
-Logica in `shared/share.js`, comune al Worker e al server locale. Progetti fino a 1,5 MB in KV con scadenza di 30 giorni (`share:<id>`, commenti in `sc:<id>`), token di modifica conservato solo come hash, 10 link e 40 commenti al giorno per IP (contatori nel Durable Object), Turnstile obbligatorio quando è configurato, scrivere richiede `IP_SALT`. Endpoint e formati sono descritti in testa a `shared/share.js`.
+Logica in `shared/share.js`, comune al Worker e al server locale. Progetti fino a 1,5 MB in KV con scadenza di 30 giorni (`share:<id>`, commenti in `sc:<id>`, proposta del cliente in `sp:<id>`), token del progettista conservato solo come hash, 10 link, 40 commenti e 20 invii di modifiche al giorno per IP (contatori nel Durable Object), Turnstile obbligatorio quando è configurato (non per il proprietario), scrivere richiede `IP_SALT`. Endpoint e formati sono descritti in testa a `shared/share.js`.
+
+Due modalità, scelte alla creazione e cambiabili dopo: **sola lettura** (il cliente guarda e commenta) e **con modifica** (il cliente usa l'editor completo e invia le modifiche). La chiave di modifica è nel frammento del link (`#modifica=…`), che il browser non manda al server; le modifiche restano nel browser del cliente finché non le invia e al progettista arrivano come proposta da aprire (con Annulla per tornare indietro) o scartare. Tornando in sola lettura la chiave viene invalidata; riattivando le modifiche se ne crea una nuova.
+
+## Modalità proprietario (`OWNER_TOKEN`)
+
+Il proprietario del sito non ha il limite per visitatore né il tetto dei visitatori e non deve risolvere Turnstile; resta soltanto il tetto totale `NEURON_DAILY_BUDGET`, così tutto rimane nella quota gratuita di Workers AI. Con i valori predefiniti ha sempre almeno ~28 render al giorno a 1024×768 e fino a ~78 nei giorni in cui i visitatori non ne usano.
+
+Attivazione, una volta sola:
+
+1. GitHub → repository → **Settings → Secrets and variables → Actions → New repository secret**: nome `OWNER_TOKEN`, valore una frase inventata di almeno 16 caratteri (non usarla altrove).
+2. **Actions → Deploy su Cloudflare → Run workflow** (oppure aspetta il prossimo aggiornamento): il workflow copia il segreto nel Worker.
+3. Nell'editor: scheda **Render AI → Sei il proprietario del sito?** → incolla la stessa frase → Attiva. Resta solo in quel browser; va ripetuto su ogni dispositivo.
+
+Per cambiarlo basta aggiornare il segreto su GitHub e ripubblicare. Il codice viaggia solo verso lo stesso sito (`X-Owner-Token`).
 
 ## Prove sul sito pubblicato (workflow «Prove dal vivo»)
 

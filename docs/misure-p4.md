@@ -35,7 +35,11 @@ Lettura: negli esterni il modello conserva circa l'80% delle linee del progetto;
 
 La stima del Worker (121 Neurons) è più alta del reale del 7%: il tetto `NEURON_DAILY_BUDGET = 9000` è prudente. Con i 10.000 Neurons gratuiti al giorno si stanno ~88 render a 1024×768.
 
-## Indicazioni per le quote (da decidere)
+## Quote decise il 7/11/2026
+
+Tutto resta nella quota gratuita: visitatori 2 render al giorno ciascuno e 50 in totale (`VISITOR_NEURON_BUDGET = 6100`), proprietario senza limite per visitatore entro il tetto totale `NEURON_DAILY_BUDGET = 9500` (almeno ~28 render al giorno, fino a ~78). Le prove dal vivo contano come visitatori.
+
+## Indicazioni di partenza
 
 - `GLOBAL_DAILY = 50` resta sotto la soglia gratuita anche alla risoluzione massima (~30 render/giorno a 1920×1440 sono già fermati dal budget di Neurons).
 - Per l'apertura al pubblico: `PER_IP_DAILY` da 10 a 2–3, così 50 render coprono 15–25 visitatori al giorno; `GLOBAL_DAILY` fino a 70 se si vuole restare nel gratuito a 1024×768.
