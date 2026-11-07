@@ -253,3 +253,40 @@ test("token delle prove: sostituisce solo Turnstile, con una quota a parte; toke
   r = await worker.fetch(post(body({ turnstile: "no" }), { "X-Test-Token": "corto" }), short); assert.equal(r.status, 403);
   r = await worker.fetch(shareReq("", "POST", { project: proj() }, { "X-Test-Token": tok }), e); assert.equal(r.status, 201);
 });
+test("proprietario: niente quota per IP né tetto dei visitatori né Turnstile; resta il tetto totale", async () => {
+  const own = "codice-del-proprietario-lungo", e = env({ OWNER_TOKEN: own, PER_IP_DAILY: "1", GLOBAL_DAILY: "1", NEURON_DAILY_BUDGET: "500", VISITOR_NEURON_BUDGET: "130" });
+  assert.equal((await worker.fetch(post(body()), e)).status, 200);                                                        // visitatore: 121
+  assert.equal((await (await worker.fetch(post(body(), { "cf-connecting-ip": "5.5.5.5" }), e)).json()).error.code, "global_quota_exceeded");
+  let r = await worker.fetch(post(body({ turnstile: "no" }), { "X-Owner-Token": "sbagliato-ma-lungo-uguale" }), e); assert.equal(r.status, 403);
+  for (let i = 0; i < 3; i++){ r = await worker.fetch(post(body({ turnstile: "no" }), { "X-Owner-Token": own }), e); assert.equal(r.status, 200); }   // 121 + 3×121 = 484
+  r = await worker.fetch(post(body({ turnstile: "no" }), { "X-Owner-Token": own }), e); assert.equal((await r.json()).error.code, "budget_exceeded");
+  const c = await (await worker.fetch(new Request("https://pianta.test/api/config", { headers: { "X-Owner-Token": own } }), e)).json();
+  assert.equal(c.quota.owner, true); assert.equal(c.quota.neurons_left, 500 - 484);
+  const v = await (await worker.fetch(new Request("https://pianta.test/api/config"), e)).json(); assert.equal(v.quota.owner, undefined); assert.equal(v.quota.per_ip_daily, 1);
+});
+test("visitatori: sotto-tetto di Neurons che lascia spazio al proprietario", async () => {
+  const e = env({ PER_IP_DAILY: "10", VISITOR_NEURON_BUDGET: "250", OWNER_TOKEN: "codice-del-proprietario-lungo" });
+  for (let i = 0; i < 2; i++) assert.equal((await worker.fetch(post(body(), { "cf-connecting-ip": "7.7.7." + i }), e)).status, 200);
+  assert.equal((await (await worker.fetch(post(body(), { "cf-connecting-ip": "7.7.7.9" }), e)).json()).error.code, "global_quota_exceeded");
+  assert.equal((await worker.fetch(post(body({ turnstile: "no" }), { "X-Owner-Token": "codice-del-proprietario-lungo" }), e)).status, 200);
+});
+test("condivisione con modifica: il cliente invia una proposta, il progettista la legge o la scarta", async () => {
+  const e = env();
+  let r = await worker.fetch(shareReq("", "POST", { name: "Casa", project: proj(), edit: true, turnstile: "ok" }), e); assert.equal(r.status, 201);
+  const { id, token, edit_key, mode } = await r.json(); assert.equal(mode, "edit"); assert.match(edit_key, /^[a-f0-9]{48}$/);
+  const send = (key, extra = {}) => worker.fetch(shareReq(`/${id}/proposta`, "POST", { author: "Anna", note: "più grande la cucina", project: proj({ name: "Casa di Anna" }), turnstile: "ok", ...extra }, key ? { "X-Edit-Key": key } : {}), e);
+  assert.equal((await send("f".repeat(48))).status, 403);
+  assert.equal((await send(edit_key, { turnstile: "no" })).status, 403);
+  r = await send(edit_key); assert.equal(r.status, 201); assert.equal((await r.json()).author, "Anna");
+  const pub = await (await worker.fetch(shareReq(`/${id}`), e)).json();
+  assert.equal(pub.mode, "edit"); assert.equal(pub.proposal.author, "Anna"); assert.equal(pub.proposal.project, undefined); assert.equal(pub.editHash, undefined);
+  assert.equal((await worker.fetch(shareReq(`/${id}/proposta`), e)).status, 403);                                      // solo il progettista
+  r = await worker.fetch(shareReq(`/${id}/proposta`, "GET", null, { "X-Share-Token": token }), e); assert.equal((await r.json()).project.name, "Casa di Anna");
+  r = await worker.fetch(shareReq(`/${id}/accesso`, "POST", { edit: false }, { "X-Share-Token": token }), e); assert.equal((await r.json()).mode, "view");
+  assert.equal((await send(edit_key)).status, 403);                                                                     // in sola lettura la chiave non vale più
+  r = await worker.fetch(shareReq(`/${id}/accesso`, "POST", { edit: true }, { "X-Share-Token": token }), e); const k2 = (await r.json()).edit_key; assert.notEqual(k2, edit_key);
+  assert.equal((await send(edit_key)).status, 403); assert.equal((await send(k2)).status, 201);
+  assert.equal((await worker.fetch(shareReq(`/${id}/proposta`, "DELETE", null, { "X-Share-Token": token }), e)).status, 204);
+  assert.equal((await (await worker.fetch(shareReq(`/${id}`), e)).json()).proposal, null);
+  r = await worker.fetch(shareReq("", "POST", { project: proj(), turnstile: "ok" }), e); const v = await r.json(); assert.equal(v.mode, "view"); assert.equal(v.edit_key, undefined);
+});

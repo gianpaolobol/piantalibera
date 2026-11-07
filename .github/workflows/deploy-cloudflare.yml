@@ -113,6 +113,15 @@ jobs:
             salt=$(openssl rand -hex 32); echo "::add-mask::$salt"
             printf '%s' "$salt" | $WRANGLER secret put IP_SALT --config worker/wrangler.toml
           fi
+      - name: Codice del proprietario (dal segreto OWNER_TOKEN di GitHub, se impostato)
+        if: steps.pre.outputs.ok == '1'
+        env:
+          OWNER_TOKEN: ${{ secrets.OWNER_TOKEN }}
+        run: |
+          set -euo pipefail
+          [ -n "$OWNER_TOKEN" ] || { echo "Nessun OWNER_TOKEN: modalità proprietario non attiva"; exit 0; }
+          [ ${#OWNER_TOKEN} -ge 16 ] || { echo "::warning::OWNER_TOKEN è più corto di 16 caratteri: non lo uso"; exit 0; }
+          printf '%s' "$OWNER_TOKEN" | $WRANGLER secret put OWNER_TOKEN --config worker/wrangler.toml
       - name: Controllo dal vivo
         if: steps.pre.outputs.ok == '1'
         run: |

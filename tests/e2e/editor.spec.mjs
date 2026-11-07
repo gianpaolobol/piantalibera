@@ -377,6 +377,50 @@ test("fase 4: link per il cliente in sola lettura con commenti in pianta", async
   expect(errors).toEqual([]);
 });
 
+test("link con modifica: il cliente invia una proposta, il progettista la apre e può tornare indietro", async ({ page, context }) => {
+  test.setTimeout(180_000);
+  const errors = await open(page);
+  await page.click('[data-tab="export"]');
+  await page.check('input[name="shMode"][value="edit"]'); await page.check("#shConsent"); await page.click("#shCreate");
+  await expect(page.locator("#shLink")).toHaveValue(/condividi=[a-z0-9]{12}#modifica=[a-f0-9]{48}$/);
+  const link = await page.locator("#shLink").inputValue(), mine = await page.evaluate(() => localStorage.getItem("pianta-libera-v2"));
+  const g = await context.newPage(); await routeLocal(g); const gerr = []; g.on("pageerror", e => gerr.push(e.message));
+  await g.goto(link); await g.waitForFunction(() => S.guest && P?.walls.length === 5, null, { timeout: 20_000 });
+  await expect(g.locator("#tools")).toBeVisible();
+  await g.evaluate(() => { P.walls = P.walls.filter(w => w.thick > .2); P.name = "ignorato"; commit(); });          // il cliente toglie il tramezzo
+  expect(await g.evaluate(() => P.walls.length)).toBe(4);
+  expect(await g.evaluate(() => localStorage.getItem("pianta-libera-v2"))).toBe(mine);                         // il progetto del browser non cambia
+  await g.reload(); await g.waitForFunction(() => S.guest && P?.walls.length === 4, null, { timeout: 20_000 }); // il lavoro riprende
+  await g.click("#guestTag"); await g.click("#gSend"); await expect(g.locator("#shStatus")).toContainText("consenso");
+  await g.fill("#gAuthor", "Marco"); await g.fill("#gNote", "Via il tramezzo, open space"); await g.check("#gConsent"); await g.click("#gSend");
+  await expect(g.locator(".exp .ok")).toContainText("Modifiche inviate");
+  expect(gerr).toEqual([]);
+  await page.bringToFront(); await page.click("#shLoad");
+  await expect(page.locator(".proposal")).toContainText("Marco"); await expect(page.locator(".proposal")).toContainText("open space");
+  await page.click("#shPropOpen"); await expect(page.locator(".proposal")).toHaveCount(0);
+  expect(await page.evaluate(() => [P.walls.length, !!P.share, P.share.mode, P.name])).toEqual([4, true, "edit", "Casa unifamiliare (esempio)"]);
+  await page.evaluate(() => undo()); expect(await page.evaluate(() => P.walls.length)).toBe(5);
+  // torna in sola lettura: il vecchio link non permette più di modificare
+  await page.click("#shMode"); await expect(page.locator("#shStatus")).toContainText("sola lettura");
+  await g.evaluate(() => localStorage.removeItem("pianta-libera-ospite-" + S.guest.id)); await g.reload();
+  await g.waitForFunction(() => S.viewer && P?.walls.length === 5, null, { timeout: 20_000 });
+  expect(errors).toEqual([]);
+});
+
+test("modalità proprietario: niente Turnstile e quota del proprietario nel pannello", async ({ page }) => {
+  await page.route("**/api/config", async r => { const res = await r.fetch(); const d = await res.json(); const own = r.request().headers()["x-owner-token"] === "codice-proprietario-di-prova";
+    await r.fulfill({ json: { ...d, mock: false, provider: "Cloudflare Workers AI", turnstile_site_key: "0x4AAA", quota: own ? { owner: true, renders_left_estimate: 42 } : { per_ip_daily: 2, used_today: 0 } } }); });
+  const errors = await open(page);
+  await page.click('[data-tab="ai"]');
+  await expect(page.locator("#panel-ai")).toContainText("su 2");
+  await page.locator("#panel-ai summary", { hasText: "proprietario" }).click();
+  await page.fill("#ownCode", "codice-proprietario-di-prova"); await page.click("#ownSave");
+  await expect(page.locator("#panel-ai")).toContainText("Modalità proprietario"); await expect(page.locator("#panel-ai")).toContainText("42");
+  await expect(page.locator("#aiTurnstile")).toHaveCount(0);
+  await page.locator("#panel-ai summary", { hasText: "proprietario" }).click(); await page.click("#ownOff"); await expect(page.locator("#panel-ai")).toContainText("su 2");
+  expect(errors.filter(e => !/turnstile|challenges/i.test(e))).toEqual([]);
+});
+
 test("fase 4: ritocco con maschera e galleria salvata nel progetto", async ({ page }) => {
   test.setTimeout(180_000);
   const errors = await open(page);

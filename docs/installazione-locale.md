@@ -124,7 +124,7 @@ Il pacchetto parla con **ComfyUI** installato sullo stesso computer e usa il mod
 
 ### Link per il cliente in rete locale
 
-Dalla scheda **Esporta → Condividi con il cliente** il server locale crea link che valgono finché resta acceso (i progetti condivisi stanno in memoria, non su disco). Per farli aprire da un altro dispositivo della stessa rete avvia il server con `HOST=0.0.0.0` e manda il link con l'indirizzo del computer (es. `http://192.168.1.20:8787/?condividi=…`).
+Dalla scheda **Esporta → Condividi con il cliente** il server locale crea link che valgono finché resta acceso (i progetti condivisi stanno in memoria, non su disco). Per farli aprire da un altro dispositivo della stessa rete avvia il server con `HOST=0.0.0.0` e manda il link con l'indirizzo del computer (es. `http://192.168.1.20:8787/?condividi=…`). Puoi scegliere se il cliente può solo guardare e commentare o anche modificare il progetto: in quel caso il link contiene `#modifica=…` e le sue modifiche ti arrivano come proposta da aprire o scartare.
 
 ## 6. Aggiornare
 

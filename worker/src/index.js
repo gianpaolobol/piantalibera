@@ -58,7 +58,9 @@ function config(env) {
     model: env.MODEL || "@cf/black-forest-labs/flux-2-klein-4b",
     perIpDaily: num(env.PER_IP_DAILY, 2),
     globalDaily: num(env.GLOBAL_DAILY, 50),
-    neuronBudget: num(env.NEURON_DAILY_BUDGET, 9000),        // sotto i 10.000 gratuiti
+    neuronBudget: num(env.NEURON_DAILY_BUDGET, 9000),        // tetto totale, sotto i 10.000 gratuiti
+    visitorBudget: num(env.VISITOR_NEURON_BUDGET, 6100),     // parte dei visitatori: il resto resta al proprietario
+    ownerConcurrent: num(env.OWNER_MAX_CONCURRENT, 2),
     rates: { outTile: num(env.NEURONS_PER_OUTPUT_TILE, 26.05), inTile: num(env.NEURONS_PER_INPUT_TILE, 5.37) },
     maxConcurrent: num(env.MAX_CONCURRENT_PER_IP, 1),
     retention: Math.max(60, num(env.RETENTION_SECONDS, 3600)),
@@ -80,14 +82,17 @@ async function quotaCall(env, path, body) {
   return r.json();
 }
 
-/* Token delle prove automatiche (workflow «Prove dal vivo»): creato come segreto all'inizio della prova e
-   cancellato alla fine. Sostituisce solo Turnstile; quote, tetto globale e budget restano in vigore. */
-function testTokenOk(env, request) {
-  const want = env.TEST_TOKEN, got = request.headers.get("x-test-token") || "";
-  if (typeof want !== "string" || want.length < 32 || got.length !== want.length) return false;
+function secretEq(want, got, min) {
+  if (typeof want !== "string" || want.length < min || typeof got !== "string" || got.length !== want.length) return false;
   let d = 0; for (let i = 0; i < want.length; i++) d |= want.charCodeAt(i) ^ got.charCodeAt(i);
   return d === 0;
 }
+/* Token delle prove automatiche (workflow «Prove dal vivo»): creato come segreto all'inizio della prova e
+   cancellato alla fine. Sostituisce solo Turnstile; quote, tetto globale e budget restano in vigore. */
+const testTokenOk = (env, request) => secretEq(env.TEST_TOKEN, request.headers.get("x-test-token") || "", 32);
+/* Codice del proprietario del sito (segreto OWNER_TOKEN): niente limite per IP né tetto dei visitatori,
+   niente Turnstile; resta il tetto totale di Neurons, così tutto rimane nella quota gratuita. */
+export const ownerOk = (env, request) => secretEq(env.OWNER_TOKEN, request.headers.get("x-owner-token") || "", 16);
 async function turnstileOk(env, token, ip) {
   if (!token || typeof token !== "string" || token.length > 2048) return false;
   const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: new URLSearchParams({ secret: env.TURNSTILE_SECRET, response: token, remoteip: ip }) });
@@ -144,16 +149,16 @@ async function createJob(request, env, cfg) {
     if (info.w && (info.w > cfg.maxInputSide || info.h > cfg.maxInputSide)) return jsonError(400, "invalid_input", `${k}: il modello accetta immagini di riferimento fino a ${cfg.maxInputSide} px per lato`);
   }
   const ip = request.headers.get("cf-connecting-ip") || "0.0.0.0";
-  const isTest = testTokenOk(env, request);
-  if (cfg.turnstileOn && !isTest && !(await turnstileOk(env, v.turnstile, ip))) return jsonError(403, "bot_check_failed", "verifica anti-bot non superata");
+  const isOwner = ownerOk(env, request), isTest = !isOwner && testTokenOk(env, request);
+  if (cfg.turnstileOn && !isTest && !isOwner && !(await turnstileOk(env, v.turnstile, ip))) return jsonError(403, "bot_check_failed", "verifica anti-bot non superata");
 
-  const ipHash = isTest ? "prove-automatiche" : await sha256(ip + env.IP_SALT);
+  const ipHash = isOwner ? "proprietario" : isTest ? "prove-automatiche" : await sha256(ip + env.IP_SALT);
   const inputs = 1 + (v.params.use_guides ? (v.depth ? 1 : 0) + (v.lines ? 1 : 0) : 0);
   const neurons = estimateNeurons({ width: v.params.width, height: v.params.height, variants: v.params.variants, inputs }, cfg.rates);
   const day = dayKey();
-  const q = await quotaCall(env, "/reserve", { ipHash, neurons, perIpDaily: isTest ? cfg.testDaily : cfg.perIpDaily, maxConcurrent: cfg.maxConcurrent, neuronBudget: cfg.neuronBudget, globalDaily: cfg.globalDaily });
+  const q = await quotaCall(env, "/reserve", { ipHash, neurons, visitor: !isOwner, perIpDaily: isTest ? cfg.testDaily : cfg.perIpDaily, maxConcurrent: isOwner ? cfg.ownerConcurrent : cfg.maxConcurrent, neuronBudget: cfg.neuronBudget, globalDaily: cfg.globalDaily, visitorBudget: cfg.visitorBudget });
   if (!q.ok) {
-    const msg = { quota_exceeded: `hai usato i ${cfg.perIpDaily} render disponibili oggi`, too_many_concurrent: "c'è già un render in corso: attendi che finisca", global_quota_exceeded: "limite giornaliero del servizio raggiunto", budget_exceeded: "budget giornaliero del servizio esaurito" }[q.reason] || "quota non disponibile";
+    const msg = { quota_exceeded: `hai usato i ${cfg.perIpDaily} render disponibili oggi`, too_many_concurrent: "c'è già un render in corso: attendi che finisca", global_quota_exceeded: "limite giornaliero del servizio raggiunto", budget_exceeded: isOwner ? "quota gratuita di oggi esaurita (si rinnova all'1:00 ora italiana)" : "budget giornaliero del servizio esaurito" }[q.reason] || "quota non disponibile";
     return jsonError(429, q.reason, msg, q.reason === "too_many_concurrent" ? { "Retry-After": "30" } : { "Retry-After": String(secondsToMidnightUTC()) });
   }
 
@@ -171,25 +176,27 @@ async function createJob(request, env, cfg) {
   } catch (e) {
     failed = true; job.status = "failed"; job.error = { code: e?.code || "provider_error", message: String(e?.message || e).slice(0, 300) };
   } finally {
-    await quotaCall(env, "/release", { ipHash, neurons, failed, reservedDay: day }).catch(() => {});
+    await quotaCall(env, "/release", { ipHash, neurons, failed, reservedDay: day, visitor: !isOwner }).catch(() => {});
   }
   job.duration_ms = Date.now() - now;
   await env.RENDER_KV.put(`job:${id}`, JSON.stringify(job), ttl);
-  console.log(JSON.stringify({ evt: "render", test: isTest || undefined, id, status: job.status, ms: job.duration_ms, neurons, day_neurons: q.neurons, day_renders: q.renders, mode: v.mode }));
-  const remaining = Math.max(0, cfg.perIpDaily - (failed ? q.ip - 1 : q.ip));
+  console.log(JSON.stringify({ evt: "render", test: isTest || undefined, owner: isOwner || undefined, id, status: job.status, ms: job.duration_ms, neurons, day_neurons: q.neurons, day_renders: q.renders, mode: v.mode }));
+  const remaining = isOwner ? Math.max(0, Math.floor((cfg.neuronBudget - q.neurons) / Math.max(1, neurons))) : Math.max(0, cfg.perIpDaily - (failed ? q.ip - 1 : q.ip));
   return json(job.status === "succeeded" ? 200 : 502, job, { Location: `/api/render/${id}`, "X-Quota-Remaining": String(remaining) });
 }
 
 async function getConfig(request, env, cfg) {
-  const ip = request.headers.get("cf-connecting-ip") || "0.0.0.0";
-  let usedToday = null;
-  if (cfg.ready) { try { usedToday = (await quotaCall(env, "/status", { ipHash: await sha256(ip + env.IP_SALT) })).ip; } catch {} }
+  const ip = request.headers.get("cf-connecting-ip") || "0.0.0.0", isOwner = ownerOk(env, request);
+  let usedToday = null, st = null;
+  if (cfg.ready) { try { st = await quotaCall(env, "/status", { ipHash: isOwner ? "proprietario" : await sha256(ip + env.IP_SALT) }); usedToday = st.ip; } catch {} }
   const enabled = cfg.ready && !(await killed(env));
   return json(200, {
     enabled, reason: !cfg.ready ? "config_incomplete" : enabled ? null : "disabled",
     provider: "Cloudflare Workers AI", model: cfg.model, generated: true,
     turnstile_site_key: cfg.turnstileSiteKey,
-    quota: { per_ip_daily: cfg.perIpDaily, used_today: usedToday },
+    quota: isOwner
+      ? { owner: true, per_ip_daily: null, used_today: usedToday, neurons_left: st ? Math.max(0, cfg.neuronBudget - st.neurons) : null, renders_left_estimate: st ? Math.max(0, Math.floor((cfg.neuronBudget - st.neurons) / estimateNeurons({ width: 1024, height: 768, variants: 1, inputs: 3 }, cfg.rates))) : null }
+      : { per_ip_daily: cfg.perIpDaily, used_today: usedToday },
     limits: { max_input_side: cfg.maxInputSide, max_side: LIMITS.maxSide, max_variants: cfg.maxVariants },
     retention_seconds: cfg.retention,
     share: { enabled: cfg.shareReady, ttl_days: SHARE.ttlDays, max_bytes: SHARE.maxBytes, turnstile: cfg.turnstileOn },
@@ -205,9 +212,9 @@ async function shareApi(request, env, cfg, url) {
   if (!env.RENDER_KV) return jsonError(503, "share_disabled", "la condivisione non è attiva su questo server");
   if (write && request.method !== "DELETE" && !(request.headers.get("content-type") || "").includes("application/json")) return jsonError(415, "unsupported_media_type", "serve application/json");
   const ip = request.headers.get("cf-connecting-ip") || "0.0.0.0";
-  const r = await handleShare({ method: request.method, parts, token: request.headers.get("x-share-token") || "", length: num(request.headers.get("content-length"), 0), text: () => request.text() }, {
-    enabled: !write || cfg.shareReady, botRequired: cfg.turnstileOn && !testTokenOk(env, request), bot: t => turnstileOk(env, t, ip),
-    hit: async kind => quotaCall(env, "/hit", { key: `${kind}:${await sha256(ip + env.IP_SALT)}`, limit: kind === "comment" ? SHARE.commentsPerIpDaily : SHARE.perIpDaily, globalKey: "share-writes", globalLimit: cfg.shareDaily }),
+  const r = await handleShare({ method: request.method, parts, token: request.headers.get("x-share-token") || "", editKey: request.headers.get("x-edit-key") || "", length: num(request.headers.get("content-length"), 0), text: () => request.text() }, {
+    enabled: !write || cfg.shareReady, botRequired: cfg.turnstileOn && !testTokenOk(env, request) && !ownerOk(env, request), bot: t => turnstileOk(env, t, ip),
+    hit: async kind => quotaCall(env, "/hit", { key: `${kind}:${await sha256(ip + env.IP_SALT)}`, limit: ownerOk(env, request) ? null : (SHARE.limits[kind] ?? SHARE.perIpDaily), globalKey: "share-writes", globalLimit: cfg.shareDaily }),
     store: { get: k => env.RENDER_KV.get(k), put: (k, v, ttl) => env.RENDER_KV.put(k, v, { expirationTtl: Math.max(60, ttl) }), del: k => env.RENDER_KV.delete(k) },
   });
   return r.status === 204 ? new Response(null, { status: 204 }) : json(r.status, r.body);
