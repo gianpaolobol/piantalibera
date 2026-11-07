@@ -290,3 +290,26 @@ test("condivisione con modifica: il cliente invia una proposta, il progettista l
   assert.equal((await (await worker.fetch(shareReq(`/${id}`), e)).json()).proposal, null);
   r = await worker.fetch(shareReq("", "POST", { project: proj(), turnstile: "ok" }), e); const v = await r.json(); assert.equal(v.mode, "view"); assert.equal(v.edit_key, undefined);
 });
+test("area clienti: storico delle versioni, approvazione e richiesta di modifiche", async () => {
+  const e = env();
+  let r = await worker.fetch(shareReq("", "POST", { name: "Casa", project: proj(), edit: true, note: "prima proposta", turnstile: "ok" }), e);
+  const { id, token, edit_key, expires_at } = await r.json();
+  assert.ok(Date.parse(expires_at) - Date.now() > 80 * 86400e3);                                                     // link con modifica: 90 giorni
+  const send = name => worker.fetch(shareReq(`/${id}/proposta`, "POST", { author: "Anna", note: "così?", project: proj({ name }), turnstile: "ok" }, { "X-Edit-Key": edit_key }), e);
+  assert.equal((await send("A")).status, 201);
+  r = await send("B"); const v3 = await r.json(); assert.equal(v3.n, 3);
+  let list = (await (await worker.fetch(shareReq(`/${id}/versioni`), e)).json()).versions;
+  assert.deepEqual(list.map(v => [v.n, v.by, v.state]), [[1, "progettista", "pubblicata"], [2, "cliente", "sostituita"], [3, "cliente", "in attesa"]]);
+  assert.equal(list[0].note, "prima proposta");
+  assert.equal((await worker.fetch(shareReq(`/${id}/versioni/3`, "POST", { state: "approvata" }), e)).status, 403);  // solo il progettista
+  assert.equal((await worker.fetch(shareReq(`/${id}/versioni/1`, "POST", { state: "approvata" }, { "X-Share-Token": token }), e)).status, 409);
+  r = await worker.fetch(shareReq(`/${id}/versioni/3`, "POST", { state: "da rivedere", reply: "la scala non ci sta" }, { "X-Share-Token": token }), e);
+  assert.equal((await r.json()).reply, "la scala non ci sta");
+  assert.equal((await (await worker.fetch(shareReq(`/${id}`), e)).json()).proposal, null);
+  await send("C"); r = await worker.fetch(shareReq(`/${id}/versioni/4`, "POST", { state: "approvata", reply: "perfetto" }, { "X-Share-Token": token }), e); assert.equal(r.status, 200);
+  const cur = await (await worker.fetch(shareReq(`/${id}`), e)).json(); assert.equal(cur.project.name, "C"); assert.equal(cur.versions.at(-1).state, "approvata");
+  r = await worker.fetch(shareReq(`/${id}/versioni/2`), e); assert.equal((await r.json()).project.name, "A");
+  r = await worker.fetch(shareReq(`/${id}`, "PUT", { project: proj({ name: "D" }), note: "aggiornata" }, { "X-Share-Token": token }), e); assert.equal((await r.json()).version.n, 5);
+  assert.equal((await worker.fetch(shareReq(`/${id}`, "DELETE", null, { "X-Share-Token": token }), e)).status, 204);
+  assert.equal([...e.RENDER_KV.m.keys()].filter(k => k.includes(id)).length, 0);
+});

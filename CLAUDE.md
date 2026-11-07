@@ -31,8 +31,8 @@ Obiettivi di progetto:
 - Prove: 40 test unitari, 24 nel browser (in parallelo), pacchetto locale senza internet; workflow «Prove dal vivo» sul sito pubblicato (ogni lunedì e su richiesta).
 - Licenza **AGPL-3.0**; pagina con CSP e SRI; informativa privacy e termini in `public/` (P.IVA ed e-mail del titolare da completare); schema del progetto v3 (`docs/schema-progetto.md`).
 - P4 misurato il 7/11 (`docs/misure-p4.md`): 15 render reali, recall dei contorni 0,71 (F1 0,42), ~113 Neurons reali per render a 1024×768.
-- Quote decise dal proprietario (7/11): tutto nella quota gratuita; visitatori 2/giorno e 50 in totale; proprietario senza limiti per visitatore tramite `OWNER_TOKEN` (solo il tetto totale). Link per il cliente in sola lettura o con modifica (proposta da aprire o scartare).
-- Aperti: P.IVA/e-mail nelle pagine legali (il proprietario le darà più avanti), fedeltà degli interni.
+- Quote decise dal proprietario (7/11): tutto nella quota gratuita; visitatori 2/giorno e 50 in totale; proprietario senza limiti per visitatore tramite `OWNER_TOKEN` (solo il tetto totale). Link per il cliente in sola lettura o con modifica: area clienti con storico delle versioni, approvazione e «chiedi modifiche» (link con modifica: 90 giorni).
+- Aperti: P.IVA/e-mail nelle pagine legali (il proprietario le darà più avanti), fedeltà degli interni, avvisi e-mail tra progettista e cliente, pulsante «Area clienti» sul sito Cargo del proprietario (gianpaolofranceschiniarchitettura.cargo.site, da fare via browser).
 - La fotografia del 6/11 (prototipo React) è superata: il prototipo resta nel branch `archivio/prototipo-react`.
 
 ## Indicazioni tecniche e architettura raccomandata

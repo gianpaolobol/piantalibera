@@ -397,13 +397,20 @@ test("link con modifica: il cliente invia una proposta, il progettista la apre e
   expect(gerr).toEqual([]);
   await page.bringToFront(); await page.click("#shLoad");
   await expect(page.locator(".proposal")).toContainText("Marco"); await expect(page.locator(".proposal")).toContainText("open space");
-  await page.click("#shPropOpen"); await expect(page.locator(".proposal")).toHaveCount(0);
+  await page.click("#shPropRev"); await expect(page.locator("#shStatus")).toContainText("cosa cambiare");   // serve una risposta
+  await page.fill("#shReply", "Va bene, approvato"); await page.click("#shPropOk"); await expect(page.locator(".proposal")).toHaveCount(0);
   expect(await page.evaluate(() => [P.walls.length, !!P.share, P.share.mode, P.name])).toEqual([4, true, "edit", "Casa unifamiliare (esempio)"]);
-  await page.evaluate(() => undo()); expect(await page.evaluate(() => P.walls.length)).toBe(5);
+  await expect(page.locator(".vlist li").first()).toContainText("approvata"); await expect(page.locator(".vlist li")).toHaveCount(2);
+  // il cliente rivede lo storico con la risposta; la versione approvata è quella del link
+  await g.reload(); await g.waitForFunction(() => S.guest && P?.walls.length === 4, null, { timeout: 20_000 });
+  await g.click("#guestTag"); await expect(g.locator(".vlist li").first()).toContainText("Va bene, approvato");
+  // il progettista può riaprire una versione dello storico e tornare indietro
+  await page.locator("details.vers summary").click(); await page.locator('[data-vopen="1"]').click(); await page.waitForFunction(() => P.walls.length === 5);
+  await page.evaluate(() => undo()); expect(await page.evaluate(() => P.walls.length)).toBe(4);
   // torna in sola lettura: il vecchio link non permette più di modificare
   await page.click("#shMode"); await expect(page.locator("#shStatus")).toContainText("sola lettura");
   await g.evaluate(() => localStorage.removeItem("pianta-libera-ospite-" + S.guest.id)); await g.reload();
-  await g.waitForFunction(() => S.viewer && P?.walls.length === 5, null, { timeout: 20_000 });
+  await g.waitForFunction(() => S.viewer && P?.walls.length === 4, null, { timeout: 20_000 });   // la versione approvata
   expect(errors).toEqual([]);
 });
 

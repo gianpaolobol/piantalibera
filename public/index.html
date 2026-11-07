@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ONUjVaGoemAEw+G8UB1VXf47yyhZCVVCVoYJSztPiLc=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-69+CTy+CJOcZPa57ZjAnxS+/Z04JidbP8ua/GL3PHII=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -40,6 +40,9 @@ button{cursor:pointer}
 .brand small{font-family:var(--f-data);font-size:11px;color:var(--muted)}
 .brand-info{border:1px solid var(--line);background:none;color:var(--muted);font:500 10.5px var(--f-data);padding:1px 6px;border-radius:3px;cursor:pointer}.brand-info:hover{color:var(--ink)}
 .proposal{border:1px solid color-mix(in srgb, var(--accent) 45%, transparent);background:var(--accent-soft);border-radius:6px;padding:8px 10px;margin:6px 0 8px}.proposal p{margin:0 0 6px}
+.vlist{list-style:none;padding:0;margin:6px 0;display:grid;gap:6px;font-size:12.5px}.vlist li{border-left:3px solid var(--line);padding:2px 0 2px 8px}.vlist p{margin:2px 0}
+.vlist .vstate{font:500 10.5px var(--f-data);padding:0 5px;border-radius:3px;background:var(--line)}.vlist .v-approvata{border-color:#3a8f5c}.vlist .v-approvata .vstate{background:#3a8f5c;color:#fff}
+.vlist .v-in-attesa{border-color:#d0462c}.vlist .v-in-attesa .vstate{background:#d0462c;color:#fff}.vlist .v-da-rivedere .vstate{background:#e0a030;color:#111}.vreply{color:var(--muted)}
 .shmode{border:0;padding:0;margin:6px 0}.shmode legend{padding:0;margin-bottom:4px}
 body.guest #projBtn{display:none}
 button.viewtag{cursor:pointer;font:inherit;pointer-events:auto;border:0}
@@ -4864,11 +4867,15 @@ function shareHTML(){
   const edit = sh.mode === "edit", ekey = edit && shareEditKeys()[sh.id], link = shareLink(sh.id, ekey), exp = sh.expires_at ? new Date(sh.expires_at).toLocaleDateString("it-IT") : "", pr = SH.proposal;
   return `<div class="exp"><header><h4>Condividi con il cliente</h4><span class="tag">${pr ? "modifiche da vedere" : open ? `${open} commenti da leggere` : edit ? "link con modifica" : "link in sola lettura"}</span></header>
     ${pr && tok ? `<div class="proposal"><p><b>${esc(pr.author)}</b> ti ha inviato delle modifiche il ${new Date(pr.created_at).toLocaleString("it-IT", {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"})}.</p>${pr.note ? `<p class="note">«${esc(pr.note)}»</p>` : ""}
-      <div class="btns"><button class="btn primary" id="shPropOpen">Apri le modifiche</button><button class="btn" id="shPropDrop">Scarta</button></div><p class="note">Aprendole sostituiscono il progetto qui; con Annulla (Ctrl+Z) torni alla tua versione.</p></div>` : ""}
+      <div class="f"><label class="lbl" for="shReply">Risposta al cliente</label><textarea id="shReply" class="inp" maxlength="2000" placeholder="Es. va bene, ma la scala resta dov'era"></textarea></div>
+      <div class="btns"><button class="btn" id="shPropOpen">Guarda</button><button class="btn primary" id="shPropOk">Approva</button><button class="btn" id="shPropRev">Chiedi modifiche</button><button class="btn" id="shPropDrop">Scarta</button></div>
+      <p class="note">«Guarda» la apre qui (con Annulla torni alla tua versione). «Approva» la apre e la rende la versione del link; «Chiedi modifiche» la rimanda al cliente con la tua risposta.</p></div>` : ""}
     <p class="note">${edit ? (ekey ? "Il cliente può modificare il progetto e inviarti le modifiche come proposta." : "Link con modifica, ma la chiave è in un altro browser: crea una chiave nuova con «Permetti le modifiche».") : "Il cliente vede il progetto in sola lettura e lascia commenti."}</p>
     <div class="f"><label class="lbl" for="shLink">Link (scade il ${esc(exp)})</label><input id="shLink" class="inp" readonly value="${esc(link)}"></div>
-    <div class="btns"><button class="btn" id="shCopy">Copia il link</button>${tok ? `<button class="btn" id="shUpdate">Aggiorna con le modifiche</button>` : ""}<button class="btn" id="shLoad">Leggi i commenti</button>${tok ? `<button class="btn" id="shMode">${edit && ekey ? "Rendi in sola lettura" : "Permetti le modifiche"}</button>` : ""}${tok ? `<button class="btn danger" id="shDelete">Elimina il link</button>` : ""}</div>
+    ${tok ? `<div class="f"><label class="lbl" for="shNote">Messaggio con il prossimo aggiornamento</label><textarea id="shNote" class="inp" maxlength="2000" placeholder="Es. ecco la variante con la cucina aperta"></textarea></div>` : ""}
+    <div class="btns"><button class="btn" id="shCopy">Copia il link</button>${tok ? `<button class="btn" id="shUpdate">Pubblica questa versione</button>` : ""}<button class="btn" id="shLoad">Leggi i commenti</button>${tok ? `<button class="btn" id="shMode">${edit && ekey ? "Rendi in sola lettura" : "Permetti le modifiche"}</button>` : ""}${tok ? `<button class="btn danger" id="shDelete">Elimina il link</button>` : ""}</div>
     ${tok ? "" : `<p class="note warn">Questo browser non ha il token del link: puoi leggere i commenti ma non aggiornare né eliminare.</p>`}
+    ${SH.versions?.length ? `<details class="vers"${pr ? " open" : ""}><summary class="lbl">Storico (${SH.versions.length} versioni)</summary>${versionsHTML(SH.versions, "progettista")}</details>` : ""}
     ${c.turnstile && tok ? `<div id="shTs" class="ts"></div>` : ""}
     ${commentsListHTML(true)}<p class="status" id="shStatus"></p></div>`;
 }
@@ -4877,13 +4884,13 @@ function commentsListHTML(owner){
   return `<ol class="cmts">${S.comments.map((c, i) => `<li class="${c.resolved ? "done" : ""}"><b>${i + 1}. ${esc(c.author)}</b> <small>${new Date(c.created_at).toLocaleString("it-IT", {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"})}${c.resolved ? " · risolto" : ""}</small><p>${esc(c.text)}</p>
     <span class="btns"><button class="btn" data-cgo="${esc(c.id)}">Mostra</button>${owner && shareTokens()[P.share?.id] ? `<button class="btn" data-cres="${esc(c.id)}">${c.resolved ? "Riapri" : "Risolto"}</button><button class="btn danger" data-cdel="${esc(c.id)}">Elimina</button>` : ""}</span></li>`).join("")}</ol>`;
 }
-async function loadComments(){ if (!P.share) return; try { const d = await shareFetch("/" + P.share.id); S.comments = d.comments || []; SH.proposal = d.proposal || null; if (d.mode && d.mode !== P.share.mode){ P.share.mode = d.mode; save(); } } catch(e){ if (/inesistente|scaduto/.test(e.message)){ S.comments = []; SH.proposal = null; } throw e; } draw2D(); if (S.tab === "export") renderExport(); }
+async function loadComments(){ if (!P.share) return; try { const d = await shareFetch("/" + P.share.id); S.comments = d.comments || []; SH.proposal = d.proposal || null; SH.versions = d.versions || []; if (d.mode && d.mode !== P.share.mode){ P.share.mode = d.mode; save(); } } catch(e){ if (/inesistente|scaduto/.test(e.message)){ S.comments = []; SH.proposal = null; } throw e; } draw2D(); if (S.tab === "export") renderExport(); }
 function shareStatus(m, err){ const s = $("#shStatus"); if (s){ s.textContent = m; s.className = "status" + (err ? " err" : ""); } }
 $("#panel-export").addEventListener("click", async e => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.cgo){ focusComment(b.dataset.cgo); return; }
   if (S.guest){ if (["gSend", "gReset"].includes(b.id)) guestClick(b); return; }
-  if (!["shCreate", "shCopy", "shUpdate", "shLoad", "shDelete", "shMode", "shPropOpen", "shPropDrop"].includes(b.id) && !b.dataset.cres && !b.dataset.cdel) return;
+  if (!["shCreate", "shCopy", "shUpdate", "shLoad", "shDelete", "shMode", "shPropOpen", "shPropOk", "shPropRev", "shPropDrop"].includes(b.id) && !b.dataset.vopen && !b.dataset.cres && !b.dataset.cdel) return;
   const tok = P.share && shareTokens()[P.share.id];
   try {
     if (b.id === "shCreate"){
@@ -4896,13 +4903,19 @@ $("#panel-export").addEventListener("click", async e => {
       try { await navigator.clipboard.writeText(myShareLink()); toast("Link copiato negli appunti"); } catch(_){}
     }
     if (b.id === "shCopy"){ const inp = $("#shLink"); try { await navigator.clipboard.writeText(inp.value); toast("Link copiato"); } catch(_){ inp.select(); toast("Seleziona e copia il link"); } }
-    if (b.id === "shUpdate"){ b.disabled = true; await shareFetch("/" + P.share.id, {method:"PUT", headers:{"X-Share-Token":tok}, body:JSON.stringify({name:P.name, project:sharePayload()})}); shareStatus("Il cliente vede ora l'ultima versione."); b.disabled = false; }
+    if (b.id === "shUpdate"){ b.disabled = true; await shareFetch("/" + P.share.id, {method:"PUT", headers:{"X-Share-Token":tok}, body:JSON.stringify({name:P.name, note:$("#shNote")?.value || "", project:sharePayload()})}); await loadComments(); shareStatus("Pubblicata: il cliente vede ora questa versione."); }
+    if (b.dataset.vopen){ const v = await shareFetch(`/${P.share.id}/versioni/${+b.dataset.vopen}`); applyProposal(v, `Versione ${v.n} aperta`); }
     if (b.id === "shLoad"){ await loadComments(); shareStatus(`${S.comments.length} commenti.`); }
     if (b.id === "shMode"){ const edit = !(P.share.mode === "edit" && shareEditKeys()[P.share.id]); b.disabled = true;
       const d = await shareFetch(`/${P.share.id}/accesso`, {method:"POST", headers:{"X-Share-Token":tok}, body:JSON.stringify({edit})});
       setShareEditKey(P.share.id, d.edit_key || null); P.share.mode = d.mode; commit(); renderExport();
       shareStatus(edit ? "Ora il cliente può modificare: il link è cambiato, mandagli quello nuovo." : "Il link è tornato in sola lettura: il vecchio link con modifica non permette più di inviare modifiche."); }
-    if (b.id === "shPropOpen"){ b.disabled = true; const pr = await shareFetch(`/${P.share.id}/proposta`, {headers:{"X-Share-Token":tok}}); applyProposal(pr); await shareFetch(`/${P.share.id}/proposta`, {method:"DELETE", headers:{"X-Share-Token":tok}}); SH.proposal = null; renderExport(); }
+    if (b.id === "shPropOpen"){ const pr = await shareFetch(`/${P.share.id}/proposta`, {headers:{"X-Share-Token":tok}}); applyProposal(pr); }
+    if (b.id === "shPropOk" || b.id === "shPropRev"){ const reply = $("#shReply")?.value.trim() || "", n = SH.proposal.n;
+      if (b.id === "shPropRev" && !reply){ shareStatus("Scrivi al cliente cosa cambiare.", true); return; }
+      b.disabled = true; if (b.id === "shPropOk"){ const pr = await shareFetch(`/${P.share.id}/proposta`, {headers:{"X-Share-Token":tok}}); applyProposal(pr, "Proposta approvata"); }
+      await shareFetch(`/${P.share.id}/versioni/${n}`, {method:"POST", headers:{"X-Share-Token":tok}, body:JSON.stringify({state:b.id === "shPropOk" ? "approvata" : "da rivedere", reply})});
+      await loadComments(); shareStatus(b.id === "shPropOk" ? "Approvata: è la versione che il cliente vede ora." : "Rimandata al cliente con la tua risposta."); }
     if (b.id === "shPropDrop"){ if (b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Conferma: scarta"; return; } await shareFetch(`/${P.share.id}/proposta`, {method:"DELETE", headers:{"X-Share-Token":tok}}); SH.proposal = null; renderExport(); toast("Proposta scartata"); }
     if (b.id === "shDelete"){ if (b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Conferma: elimina"; return; } await shareFetch("/" + P.share.id, {method:"DELETE", headers:{"X-Share-Token":tok}}); setShareToken(P.share.id, null); setShareEditKey(P.share.id, null); SH.proposal = null; delete P.share; S.comments = []; commit(); renderExport(); toast("Link eliminato: il cliente non lo può più aprire"); }
     if (b.dataset.cres){ const c = S.comments.find(x => x.id === b.dataset.cres); await shareFetch(`/${P.share.id}/comments/${c.id}`, {method:"PATCH", headers:{"X-Share-Token":tok}, body:JSON.stringify({resolved:!c.resolved})}); c.resolved = !c.resolved; draw2D(); renderExport(); }
@@ -4985,12 +4998,20 @@ c2d.addEventListener("dblclick", e => { if (S.viewer) e.stopImmediatePropagation
 document.addEventListener("keydown", e => { if (!S.viewer || e.target.closest("input,textarea,select")) return; if (!["Escape", "?", "Tab"].includes(e.key) && !WALK.on) e.stopImmediatePropagation(); }, {capture:true});
 
 /* ---------- proposta del cliente: il progettista la apre nel proprio progetto ---------- */
-function applyProposal(pr){
+function applyProposal(pr, what){
   const keep = {pid:P.pid, name:P.name, share:P.share, ...(P.prices ? {prices:P.prices} : {})}, imports = P.objects.filter(o => o.kind === "import");
   const np = migrate(JSON.parse(JSON.stringify(pr.project))); Object.assign(np, keep);
   for (const o of imports) if (!np.objects.some(x => x.id === o.id)) np.objects.push(o);   // i modelli importati non viaggiano con il link
   P = np; if (!level(S.level)) S.level = P.levels[0].id; setSel([]); $("#projName").value = P.name; commit(); renderLevels();
-  toast(`Modifiche di ${pr.author || "cliente"} aperte. Con Annulla (Ctrl+Z) torni alla tua versione; con «Aggiorna con le modifiche» le mostri al cliente.`);
+  toast(`${what || `Modifiche di ${pr.author || "cliente"} aperte`}. Con Annulla (Ctrl+Z) torni alla versione precedente.`);
+}
+
+/* ---------- storico delle versioni ---------- */
+const V_STATE = {"pubblicata":"pubblicata", "in attesa":"in attesa", "approvata":"approvata", "da rivedere":"da rivedere", "sostituita":"sostituita", "scartata":"scartata"};
+function versionsHTML(list, role){
+  const when = d => d ? new Date(d).toLocaleString("it-IT", {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"}) : "";
+  return `<ol class="vlist">${[...list].reverse().map(v => `<li class="v-${esc((v.state || "").replace(/\s/g, "-"))}"><b>v${v.n}</b> · ${v.by === "cliente" ? esc(v.author || "Cliente") : "Progettista"} · <small>${when(v.created_at)}</small> <span class="vstate">${esc(V_STATE[v.state] || v.state || "")}</span>
+    ${v.note ? `<p>${esc(v.note)}</p>` : ""}${v.reply ? `<p class="vreply"><b>Risposta:</b> ${esc(v.reply)}</p>` : ""}${role === "progettista" ? `<span class="btns"><button class="btn" data-vopen="${+v.n}">Apri</button></span>` : ""}</li>`).join("")}</ol>`;
 }
 
 /* ---------- lato cliente: link con modifica ---------- */
@@ -5001,7 +5022,7 @@ async function enterGuest(id, key){
   try {
     const d = await shareFetch("/" + encodeURIComponent(id)); await shareConfig();
     if (d.mode !== "edit"){ busy(""); toast("Questo link ora è in sola lettura: puoi guardare e commentare.", true); return enterViewer(id); }
-    S.guest = {id, key, name:d.name, updated:d.updated_at, expires:d.expires_at, sent:null}; document.body.classList.add("guest");
+    S.guest = {id, key, name:d.name, updated:d.updated_at, expires:d.expires_at, sent:null, versions:d.versions || []}; document.body.classList.add("guest");
     let local = null; try { local = JSON.parse(localStorage.getItem(guestKey(id))); } catch(e){}
     const resume = local?.project && local.base === d.updated_at;
     if (resume) S.guest.sent = local.sent || null;
@@ -5024,7 +5045,8 @@ function guestHTML(){
     <div class="f"><label class="lbl" for="gNote">Messaggio per il progettista</label><textarea id="gNote" class="inp" maxlength="2000" placeholder="Es. abbiamo spostato la cucina e allargato la finestra del soggiorno"></textarea></div>
     <label class="chk"><input type="checkbox" id="gConsent"> Acconsento a salvare le mie modifiche sul server per il progettista (<a href="privacy.html" target="_blank" rel="noopener">informativa</a>)</label>
     ${c.turnstile ? `<div id="shTs" class="ts"></div>` : ""}
-    <div class="btns"><button class="btn primary" id="gSend">Invia le modifiche al progettista</button><button class="btn" id="gReset">Ricomincia dalla sua versione</button></div><p class="status" id="shStatus"></p></div>`;
+    <div class="btns"><button class="btn primary" id="gSend">Invia le modifiche al progettista</button><button class="btn" id="gReset">Ricomincia dalla versione attuale</button></div><p class="status" id="shStatus"></p>
+    ${g.versions?.length ? `<details class="vers" open><summary class="lbl">Storico (${g.versions.length} versioni)</summary>${versionsHTML(g.versions, "cliente")}</details>` : ""}</div>`;
 }
 async function guestClick(b){
   const g = S.guest;
@@ -5034,7 +5056,7 @@ async function guestClick(b){
       if (SH.cfg?.turnstile && !SH.ts){ shareStatus("Completa la verifica anti-bot qui sopra.", true); return; }
       const author = $("#gAuthor").value.trim(); PREFS.cmAuthor = author; savePrefs(); b.disabled = true; shareStatus("Invio le modifiche…");
       await shareFetch(`/${g.id}/proposta`, {method:"POST", headers:{"X-Edit-Key":g.key}, body:JSON.stringify({author, note:$("#gNote").value, project:sharePayload(), turnstile:SH.ts})}); resetShareTs();
-      g.sent = new Date().toISOString(); guestSave(); renderExport(); toast("Modifiche inviate al progettista");
+      g.sent = new Date().toISOString(); guestSave(); try { g.versions = (await shareFetch(`/${g.id}/versioni`)).versions || g.versions; } catch(_){} renderExport(); toast("Modifiche inviate al progettista");
     }
     if (b.id === "gReset"){ if (b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Conferma: perdi le tue modifiche"; return; }
       try { localStorage.removeItem(guestKey(g.id)); } catch(e){} location.reload(); }
