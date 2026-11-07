@@ -6,7 +6,8 @@ import { tavolaDXF } from "../fixtures/casa.mjs";
 
 // Senza rete (sandbox) le librerie three.js possono arrivare da una copia locale: PL_LOCAL_THREE=<cartella del pacchetto three@0.147.0>
 const LOCAL = process.env.PL_LOCAL_THREE;
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page }) => routeLocal(page));
+async function routeLocal(page){
   if (LOCAL) await page.route(/cdn\.jsdelivr\.net\/npm\/three@0\.147\.0\/(.*)$/, r => {
     const p = join(LOCAL, r.request().url().split("three@0.147.0/")[1]);
     return existsSync(p) ? r.fulfill({ body: readFileSync(p), contentType: "application/javascript" }) : r.abort();
@@ -14,7 +15,7 @@ test.beforeEach(async ({ page }) => {
   // anche il lettore DXF, in sandbox: PL_LOCAL_DXF=<file dxf-parser.js>
   if (process.env.PL_LOCAL_DXF) await page.route(/dxf-parser@1\.1\.2\/dist\/dxf-parser\.js/, r => r.fulfill({ body: readFileSync(process.env.PL_LOCAL_DXF), contentType: "application/javascript" }));
   if (LOCAL) await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ body: "", contentType: "text/css" }));
-});
+}
 async function open(page){
   const errors = [];
   page.on("pageerror", e => errors.push(e.message));
@@ -321,6 +322,83 @@ test("fase 3: immagine 4K, panorama 360°, coda di render e raccolta progetti", 
   await expect(page.locator(".proj")).toHaveCount(2);
   await page.locator("[data-popen]").first().click();
   await expect.poll(() => page.evaluate(() => P.walls.length)).toBe(5);
+  expect(errors).toEqual([]);
+});
+
+test("fase 4: tavole in PDF, SVG e DXF, computo con prezzi, IFC leggibile", async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors = await open(page);
+  await page.click('[data-tab="export"]');
+  const sheets = await page.evaluate(() => buildSheets().pages.map(p => p.title));
+  expect(sheets).toEqual(["Pianta Piano terra (quota 0,00 m)", "Prospetti", "Sezione A-A", "Computo delle quantità"]);
+  let dl = page.waitForEvent("download"); await page.click("#tvPdf"); const pdf = await (await dl).path();
+  const bytes = readFileSync(pdf); expect(bytes.subarray(0, 5).toString()).toBe("%PDF-"); expect(bytes.toString("latin1")).toMatch(/\/Count 4/);
+  dl = page.waitForEvent("download"); await page.click("#tvSvg"); expect((await dl).suggestedFilename()).toMatch(/tavole-svg\.zip$/);
+  const svg = await page.evaluate(() => pageSVG(buildSheets().pages[1])); expect(svg).toContain("Prospetto sud"); expect(svg.startsWith("<svg")).toBe(true);
+  // computo: quantità e importo con un prezzo
+  await page.click('[data-tab="list"]');
+  const muro = page.locator("tr", { hasText: "Muro sp. 30 cm" }).locator("[data-price]");
+  await muro.fill("85"); await muro.press("Enter");
+  await expect(page.locator("tr", { hasText: "Muro sp. 30 cm" })).toContainText(/7\.?922,00/);
+  // IFC letto da web-ifc
+  const ifc = await page.evaluate(() => exportIFC().text);
+  const W = await import("web-ifc"); const api = new W.IfcAPI(); await api.Init();
+  const id = api.OpenModel(new TextEncoder().encode(ifc)), n = t => api.GetLineIDsWithType(id, t).size();
+  expect([n(W.IFCWALL), n(W.IFCDOOR), n(W.IFCWINDOW), n(W.IFCSPACE), n(W.IFCBUILDINGSTOREY)]).toEqual([5, 2, 6, 2, 1]);
+  let meshes = 0; api.StreamAllMeshes(id, () => { meshes++; }); expect(meshes).toBeGreaterThan(10); api.CloseModel(id);
+  expect(errors).toEqual([]);
+});
+
+test("fase 4: link per il cliente in sola lettura con commenti in pianta", async ({ page, context }) => {
+  const errors = await open(page);
+  await page.click('[data-tab="export"]');
+  await page.click("#shCreate"); await expect(page.locator("#shStatus")).toContainText("consenso");
+  await page.check("#shConsent"); await page.click("#shCreate");
+  await expect(page.locator("#shLink")).toHaveValue(/condividi=[a-z0-9]{12}/);
+  const link = await page.locator("#shLink").inputValue();
+  expect(await page.evaluate(() => JSON.stringify(sharePayload()).includes("prices"))).toBe(false);
+  const v = await context.newPage(); await routeLocal(v); const verr = []; v.on("pageerror", e => verr.push(e.message));
+  await v.goto(link); await v.waitForFunction(() => S.viewer && P?.walls.length === 5, null, { timeout: 20_000 });
+  await expect(v.locator("#tools")).toBeHidden(); await expect(v.locator("#panel-props")).toContainText("Progetto condiviso");
+  const vb = await v.locator("#c2d").boundingBox(), wall = await v.evaluate(() => toS([0, 4])), before = await v.evaluate(() => JSON.stringify(P.walls));
+  await v.mouse.move(vb.x + wall[0], vb.y + wall[1]); await v.mouse.down(); await v.mouse.move(vb.x + wall[0] + 60, vb.y + wall[1], { steps: 4 }); await v.mouse.up();
+  await v.keyboard.press("Delete");
+  expect(await v.evaluate(() => JSON.stringify(P.walls))).toBe(before);
+  await v.click("#cmAdd"); const sp = await v.evaluate(() => toS([3, 3])); await v.mouse.click(vb.x + sp[0], vb.y + sp[1]);
+  await v.fill("#cmAuthor", "Laura"); await v.fill("#cmText", "Finestra più grande qui"); await v.click("#cmSend");
+  await expect(v.locator(".cmts")).toContainText("Finestra più grande qui");
+  expect(verr).toEqual([]);
+  await page.bringToFront(); await page.click("#shLoad");
+  await expect(page.locator(".cmts")).toContainText("Laura");
+  await page.locator(".cmts [data-cres]").first().click();
+  await expect(page.locator(".cmts li.done")).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
+test("fase 4: ritocco con maschera e galleria salvata nel progetto", async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors = await open(page);
+  await page.click('[data-tab="ai"]'); await page.check("#aiConsent"); await page.click("#aiGo");
+  await expect(page.locator("#aiStatus")).toContainText("render ricevuti", { timeout: 30_000 }); await page.click("#cmpMask");
+  const mb = await page.locator("#mkMask").boundingBox();
+  await page.click("#mkGo"); await expect(page.locator("#mkStatus")).toContainText("Dipingi");
+  await page.mouse.move(mb.x + mb.width * .3, mb.y + mb.height * .5); await page.mouse.down(); await page.mouse.move(mb.x + mb.width * .5, mb.y + mb.height * .6, { steps: 5 }); await page.mouse.up();
+  await page.fill("#mkPrompt", "divano verde"); await page.click("#mkGo");
+  await expect.poll(() => page.evaluate(() => aiResults[0]?.mode || ""), { timeout: 30_000 }).toContain("ritocco");
+  await page.waitForTimeout(800); await page.reload(); await page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function");
+  await expect.poll(() => page.evaluate(() => aiResults.length), { timeout: 10_000 }).toBe(2);
+  expect(errors).toEqual([]);
+});
+
+test("fase 4: video, anteprima di stampa e pannello staccabile", async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors = await open(page);
+  const vid = await page.evaluate(async () => { const r = await recordVideo("giro", .5, 360); return [r.ext, r.blob.size]; });
+  expect(["mp4", "webm"]).toContain(vid[0]); expect(vid[1]).toBeGreaterThan(5_000);
+  await page.click('[data-tab="export"]'); await page.click("#exPrev");
+  await expect(page.locator("#printBox")).toContainText("Tutti i pezzi entrano nel piatto"); await page.keyboard.press("Escape");
+  await page.click("#sideFloat"); expect(await page.evaluate(() => getComputedStyle(document.querySelector(".side")).position)).toBe("fixed");
+  await page.click("#sideDock"); expect(await page.evaluate(() => getComputedStyle(document.querySelector(".side")).position)).toBe("relative");
   expect(errors).toEqual([]);
 });
 

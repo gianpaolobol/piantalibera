@@ -36,6 +36,9 @@ Avvio: `npm install` → `npm run dev` → apri `http://localhost:8787/`.
 | `076-auto3d-ui.js` | pannello «Da pianta e prospetti al 3D» nella scheda Importa |
 | `08-ai.js` | client render: modalità base e avanzata, adattatore configurabile, polling, confronto prima/dopo |
 | `049-progetti.js` | panorama 360° con visore, immagini 4K e serie dalle camere, coda di render AI, raccolta dei progetti nel browser (IndexedDB) |
+| `050-tavole.js` | tavole tecniche (registratore vettoriale, piante con quote, prospetti, sezione, cartiglio; PDF, SVG, DXF) e computo delle quantità |
+| `051-condivisione.js` | link per il cliente, modalità di sola lettura, commenti in pianta |
+| `052-avanguardia.js` | ritocco AI con maschera e galleria nel progetto, video, IFC4, anteprima di stampa 3D, pannello staccabile, tablet |
 | `09-init.js` | progetto di esempio, migrazione dello schema, avvio |
 
 Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, versioni fissate), fflate, dxf-parser e pdf.js caricati su richiesta.
@@ -93,6 +96,18 @@ Fase 1 completata.
 - **Progetti**: pulsante in alto con tutti i progetti di questo browser (IndexedDB, salvataggio automatico con anteprima): nuovo, apri, duplica, rinomina, scarica .json, elimina con conferma.
 - Anteprime del catalogo: `npm run build:anteprime -- --mancanti` genera solo quelle nuove.
 
+## Avanguardia (fase 4)
+
+- **Tavole tecniche** (Esporta → Tavole tecniche): una pianta per piano con catene di quote esterne automatiche, linea di sezione e nord; i quattro prospetti nominati con il nord vero; la sezione A-A (verticale o orizzontale, posizione e verso) con le parti tagliate campite; il computo. Fogli A4–A1 con cartiglio, scala 1:50/1:100/1:200 (ridotta da sola se il disegno non entra). PDF unico, SVG e DXF per foglio. La pianta è lo stesso disegno dell'editor scritto su un registratore vettoriale; prospetti e sezioni sono proiezioni ortogonali dei triangoli del modello con rimozione delle parti nascoste per profondità. Il DWG è un formato chiuso: si apre il DXF in AutoCAD e si salva in DWG.
+- **Computo** (scheda Elenco): murature per spessore (m² netti di aperture, m³), finiture per lato, pavimenti, battiscopa, controsoffitti e tinteggiature, porte e finestre per modello e misura, oscuranti, copertura in falda, scale, ringhiere, luci, arredi. Prezzi unitari scritti dall'utente (`P.prices`, mai condivisi), importi, totale, CSV, pagina nel PDF.
+- **Link per il cliente** (Esporta → Condividi con il cliente): link di 30 giorni, sola lettura (`?condividi=<id>`), commenti puntati in pianta con la vista 3D allegata, lettura e «risolto» lato progettista, aggiornamento del link con le modifiche. API in `shared/share.js`, privacy in `docs/privacy.md`.
+- **AI nel progetto**: i render restano nella galleria del progetto (IndexedDB); **Ritocca una zona**: si dipinge una maschera sul render e si scrive la modifica; il risultato del servizio si incolla solo nella zona dipinta, con bordi sfumati, così il resto resta identico.
+- **Video**: giro attorno all'edificio o volo tra le camere salvate (curva morbida), 360p/720p/1080p, MP4 o WebM secondo il browser; registra in tempo reale.
+- **IFC4**: muri con vani, porte e finestre, solai, locali con superficie netta, piani, copertura, scale, ringhiere, luci e arredi (superfici triangolate). Verificato con web-ifc nelle prove.
+- **Anteprima di stampa 3D**: piatto della stampante scelta a grandezza reale, pezzi disposti, misure, volume, PLA stimato, pezzi troppo grandi in rosso.
+- **Pannello laterale**: si allarga trascinando il bordo, si stacca e si sposta (ridimensionabile), si nasconde dal pulsante «Pannello»; preferenze salvate nel browser.
+- **Tablet**: tocco prolungato in pianta = menu contestuale, prese più larghe per maniglie e muri, tasti a schermo per camminare nella visita a piedi, controlli più grandi con il dito.
+
 ## Da pianta e prospetti al 3D
 
 Scheda Importa → «Da pianta e prospetti al 3D». Si caricano uno o più file DWG/DXF; i disegni della tavola vengono separati per vicinanza e riconosciuti dalle etichette («PIANTA…», «PROSPETTO SUD…»), dal nome del file o dal contenuto. Ogni disegno ha un'anteprima e un ruolo modificabile.
@@ -118,6 +133,6 @@ Scelte tecniche che restano diverse dalla bozza iniziale: editor in JavaScript s
 ## Collaudo eseguito
 
 - `npm run build` (controllo che `public/index.html` corrisponda ai sorgenti).
-- `npm run test:unit`: 13 test del Worker e del contratto con AI, KV e asset finti (multipart verso klein, guide facoltative, quote per IP e globali, kill switch, origini, lato massimo 512 px senza consumo di quota, errore del modello, Turnstile, cancellazione).
-- `npm run test:e2e`: 16 test Playwright (apertura senza errori, stanza + undo/redo, persistenza, esportazioni, render di prova ed errori, Turnstile, libreria, DXF → 3D, pianta di precisione, fase 1 completa, fase 2 nel 3D, fase 3 in tre prove: pennello e finiture; aperture, scale, tetti, luci e sole; 4K, 360°, coda di render e progetti; telefono 400 px). Gli stessi test girano in CI. La visita a piedi è provata solo come entrata/uscita (il browser senza GPU di CI va a pochi fotogrammi al secondo).
+- `npm run test:unit`: 36 test (Worker e contratto con AI, KV e asset finti: multipart verso klein, guide facoltative, quote per IP e globali, kill switch, origini, lato massimo 512 px, errore del modello, Turnstile, cancellazione; condivisione: token, scadenza, commenti, limiti per IP, progetti non validi; server locale; motore pianta + prospetti).
+- `npm run test:e2e`: 20 test Playwright (apertura senza errori, stanza + undo/redo, persistenza, esportazioni, render di prova ed errori, Turnstile, libreria, DXF → 3D, pianta di precisione, fase 1 completa, fase 2 nel 3D, fase 3 in tre prove: pennello e finiture; aperture, scale, tetti, luci e sole; 4K, 360°, coda di render e progetti; fase 4 in quattro prove: tavole, computo e IFC letto da web-ifc; link per il cliente con commenti; ritocco con maschera e galleria; video, anteprima di stampa e pannello; telefono 400 px). Gli stessi test girano in CI. La visita a piedi è provata solo come entrata/uscita (il browser senza GPU di CI va a pochi fotogrammi al secondo).
 - **Non provati**: Workers AI reale (serve l'account Cloudflare), Poly Haven dal vivo, file SketchUp reale, D5 Render e slicer.

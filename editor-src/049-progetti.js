@@ -128,8 +128,11 @@ $("#panel-ai").addEventListener("click", e => {
 
 /* ---------- raccolta dei progetti (IndexedDB del browser) ---------- */
 let idbP = null;
-function idb(){ return idbP || (idbP = new Promise((res, rej) => { const r = indexedDB.open("pianta-libera", 1); r.onupgradeneeded = () => r.result.createObjectStore("progetti", {keyPath:"id"}); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); })); }
-async function idbDo(mode, fn){ const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction("progetti", mode), rq = fn(tx.objectStore("progetti")); tx.oncomplete = () => res(rq?.result); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error); }); }
+function idb(){ return idbP || (idbP = new Promise((res, rej) => { const r = indexedDB.open("pianta-libera", 2);
+  r.onupgradeneeded = () => { const db = r.result; if (!db.objectStoreNames.contains("progetti")) db.createObjectStore("progetti", {keyPath:"id"}); if (!db.objectStoreNames.contains("immagini")) db.createObjectStore("immagini", {keyPath:"id"}).createIndex("pid", "pid"); };
+  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); })); }
+async function idbStore(name, mode, fn){ const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction(name, mode), rq = fn(tx.objectStore(name)); tx.oncomplete = () => res(rq?.result); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error); }); }
+const idbDo = (mode, fn) => idbStore("progetti", mode, fn);
 const projList = () => idbDo("readonly", s => s.getAll());
 const projGet = id => idbDo("readonly", s => s.get(id));
 const projPut = rec => idbDo("readwrite", s => s.put(rec));

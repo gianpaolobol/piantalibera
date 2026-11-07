@@ -155,7 +155,7 @@ function renderAI(){
   <p class="status" id="aiStatus"></p>
   <p class="note">Le immagini della vista vengono inviate al servizio configurato. Nessuna chiave viene salvata nel progetto.</p>
   ${aiQueueHTML()}
-  ${aiResults.length ? `<div class="sec"><h3>Render ottenuti</h3><div class="gallery">${aiResults.map((r,i)=>`<figure><img src="${esc(r.src)}" data-cmp="${i}" alt="Render ${i+1}"><figcaption><span>${r.time} · ${r.mode}</span><span><button data-cmp="${i}">Confronta</button> · <button data-aisave="${i}">Salva</button></span></figcaption></figure>`).join("")}</div></div>` : ""}
+  ${aiResults.length ? `<div class="sec"><h3>Render ottenuti</h3><div class="gallery">${aiResults.map((r,i)=>`<figure><img src="${esc(r.src)}" data-cmp="${i}" alt="Render ${i+1}"><figcaption><span>${r.time} · ${r.mode}</span><span><button data-cmp="${i}">Confronta</button> · <button data-aisave="${i}">Salva</button> · <button data-aimask="${i}">Ritocca</button> · <button data-aidel="${i}">Elimina</button></span></figcaption></figure>`).join("")}</div></div>` : ""}
   ${aiLastRaw ? `<details class="exp"><summary>Ultima risposta del servizio</summary><pre class="raw">${esc(aiLastRaw)}</pre></details>` : ""}
   <details class="exp"><summary>Configurazioni</summary><div class="btns"><button class="btn" id="aiExport">Esporta configurazione</button><button class="btn" id="aiReset">Ripristina predefiniti</button></div><p class="note">L'esportazione non include le chiavi.</p></details>`;
   if (isBackendCfg(b)){ loadBackendConfig(); if (backendCfg.data?.turnstile_site_key) mountTurnstile(); }
@@ -176,6 +176,8 @@ PA.addEventListener("click", async e => {
   if (b.dataset.ins){ const ta = $("#a_template"); const s = ta.selectionStart; ta.setRangeText(b.dataset.ins, s, ta.selectionEnd, "end"); ta.focus(); AI.adv.template = ta.value; aiSave(); return; }
   if (b.dataset.cmp !== undefined){ openCompare(aiResults[+b.dataset.cmp]); return; }
   if (b.dataset.aisave !== undefined){ await saveResult(aiResults[+b.dataset.aisave]); return; }
+  if (b.dataset.aimask !== undefined){ openMaskEditor(aiResults[+b.dataset.aimask]); return; }
+  if (b.dataset.aidel !== undefined){ await deleteGalleryItem(+b.dataset.aidel); return; }
   if (b.id === "b_resetPrompt"){ AI.base.prompt = aiPrompt(); aiSave(); renderAI(); return; }
   if (b.id === "aiGo" && !AIQ.running) runAI(false);
   if (b.id === "aiTest") runAI(true);
@@ -197,21 +199,23 @@ function findImages(x, out=[]){
   return out;
 }
 function toImageList(v){ if (v == null) return []; if (Array.isArray(v)) return v.flatMap(toImageList); if (typeof v === "object") return findImages(v); const s = String(v); if (/^(data:|https?:|blob:)/.test(s)) return [s]; if (/^(\/|\.\.?\/)[^\s]*$/.test(s) || /^[\w.-]+\.php\?/.test(s)) return [new URL(s, aiBaseUrl()).href]; return ["data:image/png;base64," + s]; }
-async function buildVars(cfg, test){
+async function buildVars(cfg, test, ov){
   const size = renderer.getSize(new THREE.Vector2()), long = test ? 256 : (cfg.longSide || 1536);
   const opts = {longSide: long};
-  const beauty = renderAt(1, null, {...opts, hq:true});
-  const guides = cfg.guides !== false;
+  let beauty;
+  if (ov?.image){ const k = Math.min(1, long / Math.max(ov.image.width, ov.image.height)); beauty = document.createElement("canvas"); beauty.width = Math.round(ov.image.width * k); beauty.height = Math.round(ov.image.height * k); beauty.getContext("2d").drawImage(ov.image, 0, 0, beauty.width, beauty.height); }
+  else beauty = renderAt(1, null, {...opts, hq:true});
+  const guides = cfg.guides !== false && !ov;
   const need = k => guides && (cfg.template || "").includes(k);
-  const outL = clamp(+cfg.outLongSide || long, 256, 1920), ar = size.x / size.y;
+  const outL = clamp(+cfg.outLongSide || long, 256, 1920), ar = ov?.image ? ov.image.width / ov.image.height : size.x / size.y;
   const ow = Math.round((ar >= 1 ? outL : outL*ar)/16)*16, oh = Math.round((ar >= 1 ? outL/ar : outL)/16)*16;
   const depth = need("depth") ? depthCanvas(1, opts) : null, lines = need("lines") ? linesCanvas(1, opts) : null, mats = need("materials") ? materialsCanvas(1, opts) : null;
   const d64 = c => c ? c.toDataURL("image/png") : "";
   const vars = {image_dataurl:d64(beauty), depth_dataurl:d64(depth), lines_dataurl:d64(lines), materials_dataurl:d64(mats?.canvas), materials_legend:JSON.stringify(mats?.legend || {}),
-    prompt: cfg.prompt || aiPrompt(), negative: cfg.negative || "", model: cfg.model || "", strength: +cfg.strength || .4, steps: +cfg.steps || 30, guidance: +cfg.guidance || 6,
+    prompt: ov?.prompt || cfg.prompt || aiPrompt(), negative: cfg.negative || "", model: cfg.model || "", strength: +cfg.strength || .4, steps: +cfg.steps || 30, guidance: +cfg.guidance || 6,
     seed: (+cfg.seed >= 0 ? +cfg.seed : Math.floor(Math.random()*2**31)), variants: clamp(+cfg.variants || 1, 1, 8), width: clamp(ow, 256, 1920), height: clamp(oh, 256, 1920), use_guides: guides,
     w_depth: +cfg.w_depth || 0, w_lines: +cfg.w_lines || 0, w_seg: +cfg.w_seg || 0, project: P.name,
-    render_mode: cfg.renderMode === "creativo" ? "creativo" : "fedele", scene: S.show3d === "all" && camera.position.y > level().elev + 2.2 ? "esterni" : (camera.fov > 55 ? "interni" : "esterni"),
+    render_mode: ov || cfg.renderMode === "creativo" ? "creativo" : "fedele", scene: S.show3d === "all" && camera.position.y > level().elev + 2.2 ? "esterni" : (camera.fov > 55 ? "interni" : "esterni"),
     camera: {position:camera.position.toArray().map(v=>+v.toFixed(3)), target:controls.target.toArray().map(v=>+v.toFixed(3)), fov:camera.fov, aspect:+camera.aspect.toFixed(4), units:"m", up:"y"}};
   for (const k of ["image","depth","lines","materials"]) vars[k] = (vars[k + "_dataurl"] || "").replace(/^data:image\/png;base64,/, "");
   vars._canvases = {image:beauty, depth, lines, materials:mats?.canvas};
@@ -240,7 +244,7 @@ async function runAI(test, opts = {}){
   const token = tsToken;
   aiBusy = true; renderAI(); aiStatus(test ? "Provo la connessione con un'immagine piccola…" : "Preparo vista, profondità e contorni…");
   try {
-    const vars = await buildVars(cfg, test);
+    const vars = await buildVars(cfg, test, opts.override);
     vars.consent = viaBackend ? aiConsent : false; vars.turnstile = viaBackend ? token : "";
     const headers = {};
     if (cfg.authValue) headers[cfg.authHeader || "Authorization"] = cfg.authValue;
@@ -276,11 +280,13 @@ async function runAI(test, opts = {}){
         if (!r.ok) throw new Error(`lo stato del lavoro ha risposto ${r.status}`);
       }
     }
-    const imgs = data.image ? [data.image] : (cfg.resultPath ? toImageList(getPath(data, cfg.resultPath)) : findImages(data));
+    let imgs = data.image ? [data.image] : (cfg.resultPath ? toImageList(getPath(data, cfg.resultPath)) : findImages(data));
     if (!imgs.length) throw new Error("nella risposta non trovo immagini. Indica il «Percorso del risultato» (dettagli sotto).");
-    const before = vars.image_dataurl;
+    if (imgs.length && opts.override?.composite){ aiStatus("Applico il ritocco solo nella zona dipinta…"); imgs = await Promise.all(imgs.map(opts.override.composite)); }
+    const before = opts.override?.before || vars.image_dataurl;
     const now = new Date().toLocaleTimeString("it-IT", {hour:"2-digit", minute:"2-digit"});
-    imgs.forEach(src => aiResults.unshift({src, before, time:now, mode: (data.mock ? "prova · " : "") + (vars.render_mode === "creativo" ? "creativo" : "fedele"), prompt:vars.prompt}));
+    imgs.forEach(src => aiResults.unshift({src, before, time:now, mode: (data.mock ? "prova · " : "") + (opts.override ? "ritocco" : vars.render_mode === "creativo" ? "creativo" : "fedele"), prompt:vars.prompt}));
+    if (!test) aiResults.slice(0, imgs.length).forEach(saveGalleryItem);
     if (data.mock) toast("Risposta del servizio di prova: l'immagine è la vista inviata, non un render AI");
     aiBusy = false; renderAI(); aiStatus(test ? `Connessione riuscita: ${imgs.length} immagine ricevuta in ${Math.round((Date.now()-t0)/1000)} s.` : `${imgs.length} render ricevuti in ${Math.round((Date.now()-t0)/1000)} s.${data.mock ? " Servizio di prova: l'immagine è la vista inviata, non un render AI." : ""}`, "ok");
     if (!test && !opts.queued) openCompare(aiResults[0]);
@@ -293,6 +299,7 @@ function setCut(v){ $("#cmpStage").style.setProperty("--cut", v + "%"); $("#cmpS
 $("#cmpCut").addEventListener("input", e => setCut(+e.target.value));
 $("#cmpClose").addEventListener("click", () => { $("#compare").hidden = true; });
 $("#cmpSave").addEventListener("click", () => saveResult($("#compare")._r));
+$("#cmpMask").addEventListener("click", () => { const r = $("#compare")._r; $("#compare").hidden = true; openMaskEditor(r); });
 async function saveResult(r){
   if (!r) return;
   try { const blob = await (await fetch(r.src)).blob(); await saveFile(`${slug()}-render-ai-${Date.now().toString(36)}.png`, blob); }

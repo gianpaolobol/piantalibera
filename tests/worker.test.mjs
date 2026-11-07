@@ -203,3 +203,41 @@ test("inspectImage riconosce PNG e JPEG con dimensioni", () => {
   const jpg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 4, 0, 0, 0xff, 0xc0, 0, 17, 8, 0x01, 0xe0, 0x02, 0x80, 3, 0, 0, 0, 0, 0, 0, 0, 0]);
   assert.deepEqual(inspectImage(jpg), { type: "image/jpeg", w: 640, h: 480 });
 });
+
+/* ---------- condivisione con il cliente ---------- */
+const proj = (over = {}) => ({ name: "Casa", levels: [{ id: "L0" }], walls: [], rooms: [], openings: [], objects: [], ...over });
+const shareReq = (path, method = "GET", b, headers = {}) => new Request("https://pianta.test/api/share" + path, { method, headers: { "cf-connecting-ip": "1.2.3.4", ...(b ? { "Content-Type": "application/json" } : {}), ...headers }, body: b ? JSON.stringify(b) : undefined });
+
+test("condivisione: crea, legge, commenta, risolve ed elimina con il token", async () => {
+  const e = env();
+  let r = await worker.fetch(shareReq("", "POST", { name: "Casa", project: proj(), turnstile: "no" }), e);
+  assert.equal(r.status, 403);                                                       // Turnstile obbligatorio
+  r = await worker.fetch(shareReq("", "POST", { name: "Casa", project: proj(), turnstile: "ok" }), e);
+  assert.equal(r.status, 201); const { id, token } = await r.json();
+  assert.match(id, /^[a-z0-9]{12}$/); assert.match(token, /^[a-f0-9]{48}$/);
+  const kv = e.RENDER_KV.m.get(`share:${id}`); assert.equal(kv.ttl, 30 * 86400); assert.ok(!kv.v.includes(token));   // solo l'hash del token
+  r = await worker.fetch(shareReq("/" + id), e); const got = await r.json();
+  assert.equal(got.name, "Casa"); assert.equal(got.tokenHash, undefined); assert.deepEqual(got.comments, []);
+  r = await worker.fetch(shareReq(`/${id}/comments`, "POST", { author: "Laura", text: "  finestra più grande  ", at: [3, 4], level: "L0", turnstile: "ok" }), e);
+  assert.equal(r.status, 201); const c = await r.json(); assert.equal(c.text, "finestra più grande");
+  r = await worker.fetch(shareReq(`/${id}/comments/${c.id}`, "PATCH", { resolved: true }), e); assert.equal(r.status, 403);
+  r = await worker.fetch(shareReq(`/${id}/comments/${c.id}`, "PATCH", { resolved: true }, { "X-Share-Token": token }), e); assert.equal((await r.json()).resolved, true);
+  r = await worker.fetch(shareReq("/" + id, "PUT", { project: proj({ name: "v2" }) }, { "X-Share-Token": token }), e); assert.equal(r.status, 200);
+  r = await worker.fetch(shareReq("/" + id, "DELETE", null, { "X-Share-Token": "f".repeat(48) }), e); assert.equal(r.status, 403);
+  r = await worker.fetch(shareReq("/" + id, "DELETE", null, { "X-Share-Token": token }), e); assert.equal(r.status, 204);
+  r = await worker.fetch(shareReq("/" + id), e); assert.equal(r.status, 404);
+});
+test("condivisione: rifiuta progetti non validi o troppo grandi e limita i link per IP", async () => {
+  const e = env();
+  let r = await worker.fetch(shareReq("", "POST", { project: { walls: [] }, turnstile: "ok" }), e); assert.equal(r.status, 400);
+  r = await worker.fetch(shareReq("", "POST", { project: proj({ note: "x".repeat(1_600_000) }), turnstile: "ok" }), e); assert.equal(r.status, 413);
+  for (let i = 0; i < 10; i++) assert.equal((await worker.fetch(shareReq("", "POST", { project: proj(), turnstile: "ok" }), e)).status, 201);
+  r = await worker.fetch(shareReq("", "POST", { project: proj(), turnstile: "ok" }), e); assert.equal(r.status, 429);
+  r = await worker.fetch(shareReq("/a/b/c/d"), e); assert.equal(r.status, 404);
+  r = await worker.fetch(shareReq("/NON-VALIDO"), e); assert.equal(r.status, 404);
+});
+test("condivisione: senza IP_SALT si possono leggere i link ma non crearne", async () => {
+  const e = env({ IP_SALT: "" });
+  const r = await worker.fetch(shareReq("", "POST", { project: proj(), turnstile: "ok" }), e); assert.equal(r.status, 503);
+  const cfg = await (await worker.fetch(new Request("https://pianta.test/api/config"), e)).json(); assert.equal(cfg.share.enabled, false);
+});
