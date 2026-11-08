@@ -89,6 +89,10 @@ Firma iOS senza passaggi interattivi: `scripts/store-prep.mjs` prende da Expo il
 
 https://appstoreconnect.apple.com/apps → **+** → Nuova app: piattaforma iOS, nome «Pianta Libera», lingua principale Italiano, bundle ID `it.piantalibera.app` (già nell'elenco), SKU `pianta-libera-ios`, accesso completo. Poi: Actions → Store → azione `invia`.
 
+### AAB per Play Console da GitHub
+
+Actions → **Store (TestFlight e Google Play)** → Run workflow con piattaforma `android` e azione **`aab`**: l'ultimo AAB firmato (stessa chiave di caricamento registrata in Play Console) viene pubblicato nella release GitHub **`play-latest`**, da cui si scarica per «Test interni → Crea nuova release». L'APK di `app-latest` invece ha la firma di prova e Google non lo accetta come aggiornamento.
+
 ### Google Play (una volta, dal sito)
 
 https://play.google.com/console → Crea app: «Pianta Libera», italiano, app, gratuita → Test → Test interno → Crea release → carica l'AAB (link dall'azione `stato`).
