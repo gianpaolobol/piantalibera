@@ -81,7 +81,8 @@ export function wallCorners(m) {
     for (let y = 2; y < h - 1; y++) if (F.has(at(x, y)) && W.has(at(x, y - 1)) && W.has(at(x, y - 2))) { bot.push([x, y - .5]); break; }    // parete ↔ pavimento
   }
   const pc = top.length >= w * .25 ? fitPolyline(top, w) : null, pf = bot.length >= w * .15 ? fitPolyline(bot, w) : null;
-  const back = pl => { if (!pl) return null; const s = pl.segs; if (s.length === 3) return 1; if (s.length === 1) return 0; return Math.abs(s[0].L.a) <= Math.abs(s[1].L.a) ? 0 : 1; };
+  // parete di fondo = il tratto davanti alla fotocamera, cioè quello che contiene il centro della foto
+  const back = pl => { if (!pl) return null; const s = pl.segs, c = w / 2; let i = s.findIndex(g => g.x0 <= c && g.x1 > c); if (i < 0) i = s.reduce((b, g, k) => (g.x1 - g.x0) > (s[b].x1 - s[b].x0) ? k : b, 0); return i; };
   const ends = (pl, i) => { const s = pl.segs, x0 = i > 0 ? meet(s[i - 1].L, s[i].L, s[i].x0) : 0, x1 = i < s.length - 1 ? meet(s[i].L, s[i + 1].L, s[i].x1) : w - 1; return [x0, x1]; };
   const N = ([x, y]) => [+(x / (w - 1)).toFixed(4), +(y / (h - 1)).toFixed(4)];
   let cl, cr, fl, fr, xL, xR;
@@ -116,6 +117,15 @@ export function segComponents(m, roomType = "") {
       for (const k of [j - 1, j + 1, j - w, j + w]) { if (k < 0 || k >= w * h || seen[k] || (k === j - 1 && x === 0) || (k === j + 1 && x === w - 1)) continue; const l = lab[k]; if (l !== 255 && catOf[l] === c) { seen[k] = 1; Q[qt++] = k; } } }
     if (n >= minA) out.push({ category: c, label: names[lab[i]], box: [x0 / w, y0 / h, (x1 + 1) / w, (y1 + 1) / h].map(v => +v.toFixed(4)), area: +(n / (w * h)).toFixed(4), fill: +(n / ((x1 - x0 + 1) * (y1 - y0 + 1))).toFixed(2) });
   }
+  // un'apertura tagliata in due da un arredo davanti (o da una traversa): si ricompone
+  const op = c => OPEN.includes(c.category);
+  for (let changed = true; changed;) { changed = false;
+    for (let i = 0; i < out.length && !changed; i++) for (let j = i + 1; j < out.length && !changed; j++) {
+      const a = out[i], b = out[j]; if (!op(a) || a.category !== b.category) continue;
+      const ox = Math.min(a.box[2], b.box[2]) - Math.max(a.box[0], b.box[0]), mw = Math.min(a.box[2] - a.box[0], b.box[2] - b.box[0]);
+      const gap = Math.max(a.box[1], b.box[1]) - Math.min(a.box[3], b.box[3]);
+      if (ox > mw * .6 && gap < .06) { a.box = [Math.min(a.box[0], b.box[0]), Math.min(a.box[1], b.box[1]), Math.max(a.box[2], b.box[2]), Math.max(a.box[3], b.box[3])]; a.area = +(a.area + b.area).toFixed(4); out.splice(j, 1); changed = true; }
+    } }
   return out.sort((a, b) => b.area - a.area);
 }
 
@@ -146,8 +156,9 @@ export function mergeSegmentation(items, comps, quad = null) {
       used.add(out.length - 1);
     }
   }
-  // aperture del modello non confermate dalla segmentazione: probabili doppioni o abbagli, escluse (si possono riattivare)
-  out.forEach((it, i) => { if (OPEN.includes(it.category) && !it.seg && comps.some(c => FAMILY(c.category) === "apertura")) it.doubt = true; });
+  // elementi visti solo dal modello linguistico (riquadri spesso spostati): con la segmentazione disponibile
+  // restano in elenco ma esclusi, da riattivare a mano; quelli del rilevatore di oggetti restano attivi
+  if (comps.length) out.forEach(it => { if (!it.seg && !String(it.source).includes("rilevatore")) it.doubt = true; });
   // doppioni tra aperture: due elementi sullo stesso riquadro → resta il primo
   for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++)
     if (FAMILY(out[i].category) === FAMILY(out[j].category) && iou(out[i].box, out[j].box) > .55 && !out[j].dup) out[j].dup = true;
