@@ -536,3 +536,41 @@ test("telefono: nessuno scorrimento orizzontale", async ({ page }) => {
   await open(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(400);
 });
+
+test("porta in 3D: Specchia sposta la maniglia, «Apre dall'altro lato» sposta l'anta; pulsanti nel pannello", async ({ page }) => {
+  await open(page);
+  // centro della maniglia (metallo) e dell'anta (legno) del modello, per la sola porta scelta
+  const probe = () => page.evaluate(() => {
+    const o = P.openings.find(o => o.type === "door" && (!o.style || o.style === "battente"));
+    const w = P.walls.find(w => w.id === o.wall), c = {s0:o.t - o.w/2, s1:o.t + o.w/2, o}, pcs = [];
+    const piece = (s0, s1, y0, y1, d, mat, cat, off = 0) => pcs.push({mat, cat, s:(s0 + s1)/2, off});
+    buildOpeningFill(w, c, piece, 0, 0, o.h, w.thick);
+    const handle = pcs.filter(p => p.mat === "metallo"), leaf = pcs.find(p => p.cat === "door");
+    return {id:o.id, flip:o.flip || 0, hs:+(handle.reduce((a, p) => a + p.s, 0) / handle.length).toFixed(3), leafOff:+leaf.off.toFixed(3), mid:+o.t.toFixed(3)};
+  });
+  const a = await probe();
+  await page.evaluate(id => { setSel([{type:"opening", id}]); renderInspector(); }, a.id);
+  await page.click("#oHinge");
+  const b = await probe();
+  expect(b.flip).toBe(a.flip ^ 1);
+  expect(Math.sign(b.hs - b.mid)).toBe(-Math.sign(a.hs - a.mid));          // maniglia dall'altra parte
+  await page.click("#oSide");
+  const c = await probe();
+  expect(c.flip).toBe(b.flip ^ 2); expect(c.leafOff).toBe(-b.leafOff); expect(c.leafOff).not.toBe(0);
+});
+
+test("nuova versione pubblicata: avviso con Aggiorna", async ({ page }) => {
+  await open(page);
+  await page.route(/\/(\?.*)?$/, async r => {
+    if (!r.request().headers()["x-pl-version-check"]) return r.continue();
+    const res = await r.fetch(); const body = (await res.text()).replace(/'sha256-[^']+'/, "'sha256-NUOVA'");
+    return r.fulfill({ response: res, body });
+  });
+  await page.evaluate(() => checkNewVersion(true));
+  await expect(page.locator("#newVersion")).toBeVisible();
+  await page.click("#nvNo"); await expect(page.locator("#newVersion")).toHaveCount(0);
+  // stessa versione: nessun avviso
+  await page.unroute(/\/(\?.*)?$/);
+  await page.evaluate(() => checkNewVersion(true)); await page.waitForTimeout(500);
+  await expect(page.locator("#newVersion")).toHaveCount(0);
+});

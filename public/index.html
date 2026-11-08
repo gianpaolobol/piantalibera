@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-v+e844Ms009oV9/T7/z6bCRN0HOMhmrwvFnDifajKkU=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-jAsblgEViiW1tQQ+BhNbQrYHqhH4nG+LC9AiEwo0yqs=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -295,6 +295,7 @@ body.compact .cam{max-width:calc(100% - 16px);top:auto;bottom:8px;right:8px;left
 body.compact .cam .btn{flex:none}
 body.compact .hud{bottom:52px}
 @media (prefers-reduced-motion: reduce){ #toast{transition:none} }
+.new-version{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top));z-index:90;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px);background:var(--panel);border:1px solid var(--accent);border-radius:8px;padding:8px 10px;box-shadow:0 6px 24px rgba(0,0,0,.18);font-size:14px}
 </style>
 
 <div id="app">
@@ -2470,6 +2471,17 @@ function openingDefaultsHTML(){
   const d = S.tool === "door" ? S.defaults.door : S.defaults.win;
   return `<div class="row"><div class="f"><span class="lbl">Modello</span><select id="dOstyle" class="inp">${styleOptions(S.tool === "door" ? DOOR_STYLES : WIN_STYLES, d.style)}</select></div>${S.tool === "window" ? `<div class="f"><span class="lbl">Oscurante</span><select id="dOshut" class="inp">${styleOptions(SHUTTERS, d.shut || "")}</select></div>` : "<div></div>"}</div>`;
 }
+/* porta a battente in 3D: l'anta sta a filo del lato verso cui apre (flip & 2) e la maniglia
+   sta dal lato opposto alla cerniera (flip & 1), come l'arco in pianta: «Specchia» si vede anche qui */
+function doorOff(o, fd){ return ((o.flip & 2) ? -1 : 1) * Math.max(0, (fd - .045) / 2); }
+function doorHandle(o, piece, s0, s1, e0, fd){
+  const lo = doorOff(o, fd), hingeAtS0 = !(o.flip & 1), hs = hingeAtS0 ? s1 - .12 : s0 + .12, lever = hingeAtS0 ? [hs - .13, hs + .015] : [hs - .015, hs + .13];
+  for (const sg of [-1, 1]){
+    piece(hs - .025, hs + .025, e0 + .95, e0 + 1.1, .012, "metallo", "frame", lo + sg * (.0225 + .006));      // placca
+    piece(lever[0], lever[1], e0 + 1.0, e0 + 1.025, .022, "metallo", "frame", lo + sg * (.0225 + .045));     // leva
+    piece(hs - .012, hs + .012, e0 + 1.0, e0 + 1.025, .045, "metallo", "frame", lo + sg * (.0225 + .022));    // perno
+  }
+}
 /* riempimento 3D del vano: telai, ante, vetri, oscuranti. piece(s0,s1,y0,y1,spessore,mat,cat,offset) */
 function buildOpeningFill(w, c, piece, e0, bot, topO, t){
   const o = c.o, fd = Math.min(.09, t*.8), s0 = c.s0, s1 = c.s1, y0 = e0 + bot, y1 = e0 + topO, W = s1 - s0, mid = (s0 + s1) / 2, ext = extSide(w, o);
@@ -2491,12 +2503,12 @@ function buildOpeningFill(w, c, piece, e0, bot, topO, t){
   const st = o.style || "battente";
   const jambs = () => { piece(s0, s0 + .05, e0, y1, fd, "serramento", "frame"); piece(s1 - .05, s1, e0, y1, fd, "serramento", "frame"); piece(s0 + .05, s1 - .05, y1 - .05, y1, fd, "serramento", "frame"); };
   if (st === "doppia"){ jambs(); piece(s0 + .05, mid - .003, e0 + .01, y1 - .05, .045, "legno", "door"); piece(mid + .003, s1 - .05, e0 + .01, y1 - .05, .045, "legno", "door"); }
-  else if (st === "vetrata"){ jambs(); sash(s0 + .05, s1 - .05, e0 + .01, y1 - .05, 0, .045, .08); }
+  else if (st === "vetrata"){ jambs(); sash(s0 + .05, s1 - .05, e0 + .01, y1 - .05, doorOff(o, fd), .045, .08); doorHandle(o, piece, s0, s1, e0, fd); }
   else if (st === "portafinestra"){ jambs(); sash(s0 + .05, mid, e0 + .01, y1 - .05, 0, .05, .07); sash(mid, s1 - .05, e0 + .01, y1 - .05, 0, .05, .07); }
   else if (st === "scorrevole"){ const off = -ext * (t/2 + .03), sh = W * .55; piece(s0 - .02, s1 + W + .05, y1 + .02, y1 + .07, .04, "metallo_nero", "frame", off); piece(s0 - .03 + sh, s1 + .03 + sh, e0 + .01, y1 + .02, .04, "legno", "door", off); piece(s0, s1, y1 - .04, y1, .02, "serramento", "frame"); }
   else if (st === "scomparsa"){ jambs(); piece(s0 + .05, s0 + .05 + W * .2, e0 + .01, y1 - .05, .04, "legno", "door"); }
   else if (st === "basculante"){ piece(s0, s1, e0 + .01, y1, .05, "lamiera", "door", ext * (t/2 - .04)); }
-  else { jambs(); piece(s0 + .05, s1 - .05, e0 + .01, y1 - .05, .045, "legno", "door"); }
+  else { jambs(); piece(s0 + .05, s1 - .05, e0 + .01, y1 - .05, .045, "legno", "door", doorOff(o, fd)); doorHandle(o, piece, s0, s1, e0, fd); }
 }
 /* simboli di pianta. Restituisce true se ha disegnato */
 function drawOpeningStyle(g, w, c){
@@ -2828,7 +2840,7 @@ function renderInspector(){
       h += `<div class="sec"><h3>${sel.type==="door"?"Porta":"Finestra"}</h3><div class="row3">${F("oW","Larghezza",fmt(sel.w),'inputmode="decimal"')}${F("oH","Altezza",fmt(sel.h),'inputmode="decimal"')}${sel.type==="window"?F("oS","Davanzale",fmt(sel.sill),'inputmode="decimal"'):""}</div>
         <div class="row">${F("oT","Distanza asse (m)",fmt(sel.t),'inputmode="decimal"')}<div class="f"><span class="lbl">Tipo</span><select id="oType" class="inp"><option value="door" ${sel.type==="door"?"selected":""}>Porta</option><option value="window" ${sel.type==="window"?"selected":""}>Finestra</option></select></div></div>
         ${openingExtraHTML(sel)}<p class="note">Distanza misurata dall'inizio del muro (${fmt(wallFrame(w).len)} m).</p>
-        <div class="btns">${sel.type==="door"?`<button class="btn" id="oFlip">Ribalta apertura</button>`:""}<button class="btn danger" id="delSel">Elimina</button></div></div>`; }
+        <div class="btns">${sel.type==="door"?`<button class="btn" id="oHinge">Specchia (cerniera)</button><button class="btn" id="oSide">Apre dall'altro lato</button>`:""}<button class="btn danger" id="delSel">Elimina</button></div></div>`; }
     if (S.sel.type === "room"){ const A = Math.abs(polyArea(sel.pts));
       const ra = roomAreas(sel);
       h += `<div class="sec"><h3>Locale</h3>${F("rName","Nome",sel.name)}<dl class="kv"><dt>Superficie netta</dt><dd>${fmt(A)} m²</dd><dt>Superficie lorda</dt><dd>${fmt(ra.gross)} m² <small>con metà muri</small></dd><dt>Perimetro</dt><dd>${fmtL(ra.per)}</dd><dt>Volume netto</dt><dd>${fmt(A*L.height,1)} m³</dd></dl>
@@ -2944,6 +2956,8 @@ P_.addEventListener("click", e => {
     case "wFlip": { [sel.a, sel.b] = [sel.b, sel.a]; const len = wallFrame(sel).len; P.openings.filter(o=>o.wall===sel.id).forEach(o=>o.t = len - o.t); commit(); break; }
     case "wAll": wallsOf(L.id).forEach(w => w.mat = sel.mat); commit(); break;
     case "oFlip": sel.flip = ((sel.flip||0)+1) % 4; commit(); break;
+    case "oHinge": sel.flip = (sel.flip||0) ^ 1; commit(); break;
+    case "oSide": sel.flip = (sel.flip||0) ^ 2; commit(); break;
     case "obRot": sel.rot = ((sel.rot||0) + 90) % 360; commit(); break;
     case "obDup": { const c = {...sel, id:uid(), x:sel.x+.6, y:sel.y+.6}; P.objects.push(c); S.sel = {type:"object", id:c.id}; commit(); break; }
     case "camRoom": camPreset("int"); break;
@@ -5521,6 +5535,28 @@ if ("serviceWorker" in navigator && (location.protocol === "https:" || ["localho
 }
 /* risposte dell'app nativa (app-mobile/) al salvataggio dei file */
 addEventListener("pl-native-error", e => toast("Salvataggio non riuscito: " + e.detail, true));
+
+/* ---------- nuova versione pubblicata ----------
+   L'app per telefono (e una scheda lasciata aperta) resta viva in sottofondo e non ricarica la pagina:
+   tornando in primo piano si confronta l'impronta dello script con quella pubblicata e, se è cambiata,
+   si propone di aggiornare. Il progetto è già salvato nel dispositivo, quindi ricaricare non perde nulla. */
+const buildHash = html => (String(html).match(/script-src[^;]*?'(sha256-[^']+)'/) || [])[1] || "";
+const BUILD_NOW = buildHash($('meta[http-equiv="Content-Security-Policy"]')?.content);
+let lastVersionCheck = Date.now();
+async function checkNewVersion(force = false){
+  if (!BUILD_NOW || !/^https?:/.test(location.protocol) || $("#newVersion")) return;
+  if (!force && Date.now() - lastVersionCheck < 60e3) return;
+  lastVersionCheck = Date.now();
+  try {
+    const r = await fetch(location.pathname, {cache:"no-store", headers:{"x-pl-version-check":"1"}}); if (!r.ok) return;
+    const h = buildHash(await r.text()); if (!h || h === BUILD_NOW) return;
+    document.body.insertAdjacentHTML("beforeend", `<div class="new-version" id="newVersion" role="status"><span>È disponibile una nuova versione di Pianta Libera.</span><button class="btn primary" id="nvGo">Aggiorna</button><button class="btn" id="nvNo" aria-label="Più tardi">Più tardi</button></div>`);
+    $("#nvGo").onclick = () => { try { save(); } catch(e){} location.reload(); };
+    $("#nvNo").onclick = () => $("#newVersion")?.remove();
+  } catch(e){ /* senza rete: si riprova al prossimo ritorno in primo piano */ }
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkNewVersion(); });
+setInterval(() => { if (document.visibilityState === "visible") checkNewVersion(); }, 15 * 60e3);
 
 /* ---- 054-muri.js ---- */
 /* ============================================================

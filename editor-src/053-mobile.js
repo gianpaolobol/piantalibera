@@ -64,3 +64,25 @@ if ("serviceWorker" in navigator && (location.protocol === "https:" || ["localho
 }
 /* risposte dell'app nativa (app-mobile/) al salvataggio dei file */
 addEventListener("pl-native-error", e => toast("Salvataggio non riuscito: " + e.detail, true));
+
+/* ---------- nuova versione pubblicata ----------
+   L'app per telefono (e una scheda lasciata aperta) resta viva in sottofondo e non ricarica la pagina:
+   tornando in primo piano si confronta l'impronta dello script con quella pubblicata e, se è cambiata,
+   si propone di aggiornare. Il progetto è già salvato nel dispositivo, quindi ricaricare non perde nulla. */
+const buildHash = html => (String(html).match(/script-src[^;]*?'(sha256-[^']+)'/) || [])[1] || "";
+const BUILD_NOW = buildHash($('meta[http-equiv="Content-Security-Policy"]')?.content);
+let lastVersionCheck = Date.now();
+async function checkNewVersion(force = false){
+  if (!BUILD_NOW || !/^https?:/.test(location.protocol) || $("#newVersion")) return;
+  if (!force && Date.now() - lastVersionCheck < 60e3) return;
+  lastVersionCheck = Date.now();
+  try {
+    const r = await fetch(location.pathname, {cache:"no-store", headers:{"x-pl-version-check":"1"}}); if (!r.ok) return;
+    const h = buildHash(await r.text()); if (!h || h === BUILD_NOW) return;
+    document.body.insertAdjacentHTML("beforeend", `<div class="new-version" id="newVersion" role="status"><span>È disponibile una nuova versione di Pianta Libera.</span><button class="btn primary" id="nvGo">Aggiorna</button><button class="btn" id="nvNo" aria-label="Più tardi">Più tardi</button></div>`);
+    $("#nvGo").onclick = () => { try { save(); } catch(e){} location.reload(); };
+    $("#nvNo").onclick = () => $("#newVersion")?.remove();
+  } catch(e){ /* senza rete: si riprova al prossimo ritorno in primo piano */ }
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkNewVersion(); });
+setInterval(() => { if (document.visibilityState === "visible") checkNewVersion(); }, 15 * 60e3);

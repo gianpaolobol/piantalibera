@@ -224,6 +224,17 @@ function openingDefaultsHTML(){
   const d = S.tool === "door" ? S.defaults.door : S.defaults.win;
   return `<div class="row"><div class="f"><span class="lbl">Modello</span><select id="dOstyle" class="inp">${styleOptions(S.tool === "door" ? DOOR_STYLES : WIN_STYLES, d.style)}</select></div>${S.tool === "window" ? `<div class="f"><span class="lbl">Oscurante</span><select id="dOshut" class="inp">${styleOptions(SHUTTERS, d.shut || "")}</select></div>` : "<div></div>"}</div>`;
 }
+/* porta a battente in 3D: l'anta sta a filo del lato verso cui apre (flip & 2) e la maniglia
+   sta dal lato opposto alla cerniera (flip & 1), come l'arco in pianta: «Specchia» si vede anche qui */
+function doorOff(o, fd){ return ((o.flip & 2) ? -1 : 1) * Math.max(0, (fd - .045) / 2); }
+function doorHandle(o, piece, s0, s1, e0, fd){
+  const lo = doorOff(o, fd), hingeAtS0 = !(o.flip & 1), hs = hingeAtS0 ? s1 - .12 : s0 + .12, lever = hingeAtS0 ? [hs - .13, hs + .015] : [hs - .015, hs + .13];
+  for (const sg of [-1, 1]){
+    piece(hs - .025, hs + .025, e0 + .95, e0 + 1.1, .012, "metallo", "frame", lo + sg * (.0225 + .006));      // placca
+    piece(lever[0], lever[1], e0 + 1.0, e0 + 1.025, .022, "metallo", "frame", lo + sg * (.0225 + .045));     // leva
+    piece(hs - .012, hs + .012, e0 + 1.0, e0 + 1.025, .045, "metallo", "frame", lo + sg * (.0225 + .022));    // perno
+  }
+}
 /* riempimento 3D del vano: telai, ante, vetri, oscuranti. piece(s0,s1,y0,y1,spessore,mat,cat,offset) */
 function buildOpeningFill(w, c, piece, e0, bot, topO, t){
   const o = c.o, fd = Math.min(.09, t*.8), s0 = c.s0, s1 = c.s1, y0 = e0 + bot, y1 = e0 + topO, W = s1 - s0, mid = (s0 + s1) / 2, ext = extSide(w, o);
@@ -245,12 +256,12 @@ function buildOpeningFill(w, c, piece, e0, bot, topO, t){
   const st = o.style || "battente";
   const jambs = () => { piece(s0, s0 + .05, e0, y1, fd, "serramento", "frame"); piece(s1 - .05, s1, e0, y1, fd, "serramento", "frame"); piece(s0 + .05, s1 - .05, y1 - .05, y1, fd, "serramento", "frame"); };
   if (st === "doppia"){ jambs(); piece(s0 + .05, mid - .003, e0 + .01, y1 - .05, .045, "legno", "door"); piece(mid + .003, s1 - .05, e0 + .01, y1 - .05, .045, "legno", "door"); }
-  else if (st === "vetrata"){ jambs(); sash(s0 + .05, s1 - .05, e0 + .01, y1 - .05, 0, .045, .08); }
+  else if (st === "vetrata"){ jambs(); sash(s0 + .05, s1 - .05, e0 + .01, y1 - .05, doorOff(o, fd), .045, .08); doorHandle(o, piece, s0, s1, e0, fd); }
   else if (st === "portafinestra"){ jambs(); sash(s0 + .05, mid, e0 + .01, y1 - .05, 0, .05, .07); sash(mid, s1 - .05, e0 + .01, y1 - .05, 0, .05, .07); }
   else if (st === "scorrevole"){ const off = -ext * (t/2 + .03), sh = W * .55; piece(s0 - .02, s1 + W + .05, y1 + .02, y1 + .07, .04, "metallo_nero", "frame", off); piece(s0 - .03 + sh, s1 + .03 + sh, e0 + .01, y1 + .02, .04, "legno", "door", off); piece(s0, s1, y1 - .04, y1, .02, "serramento", "frame"); }
   else if (st === "scomparsa"){ jambs(); piece(s0 + .05, s0 + .05 + W * .2, e0 + .01, y1 - .05, .04, "legno", "door"); }
   else if (st === "basculante"){ piece(s0, s1, e0 + .01, y1, .05, "lamiera", "door", ext * (t/2 - .04)); }
-  else { jambs(); piece(s0 + .05, s1 - .05, e0 + .01, y1 - .05, .045, "legno", "door"); }
+  else { jambs(); piece(s0 + .05, s1 - .05, e0 + .01, y1 - .05, .045, "legno", "door", doorOff(o, fd)); doorHandle(o, piece, s0, s1, e0, fd); }
 }
 /* simboli di pianta. Restituisce true se ha disegnato */
 function drawOpeningStyle(g, w, c){
