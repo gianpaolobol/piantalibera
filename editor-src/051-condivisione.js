@@ -26,7 +26,7 @@ async function shareFetch(path, init = {}){
   if (!r.ok) throw new Error(d?.error?.message || `il server ha risposto ${r.status}`); return d;
 }
 /* progetto da condividere: senza prezzi, senza file dei modelli importati, senza dati di condivisione */
-function sharePayload(){ const d = projectData(); delete d.prices; delete d.share; delete d.imports; delete d.pid; d.objects = d.objects.filter(o => o.kind !== "import"); return d; }
+function sharePayload(){ const d = projectData(); delete d.prices; delete d.share; delete d.imports; delete d.pid; d.objects = d.objects.filter(o => o.kind !== "import"); d.cameras = (d.cameras || []).map(({photo, ...c}) => c); return d; }   // la foto di «Da foto al 3D» resta nel dispositivo
 async function mountShareTs(box){
   const key = SH.cfg?.site_key || backendCfg.data?.turnstile_site_key; if (!box) return;
   if (!key){ box.textContent = "Verifica anti-bot richiesta ma chiave non disponibile: apri la scheda Render AI e riprova."; return; }

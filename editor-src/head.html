@@ -295,6 +295,31 @@ body.compact .cam .btn{flex:none}
 body.compact .hud{bottom:52px}
 @media (prefers-reduced-motion: reduce){ #toast{transition:none} }
 .new-version{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top));z-index:90;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px);background:var(--panel);border:1px solid var(--accent);border-radius:8px;padding:8px 10px;box-shadow:0 6px 24px rgba(0,0,0,.18);font-size:14px}
+.f3modal{position:fixed;inset:0;z-index:80;background:color-mix(in srgb, #000 45%, transparent);display:flex;align-items:stretch;justify-content:center;padding:max(12px, env(safe-area-inset-top)) 12px 12px}
+.f3m-in{background:var(--panel);color:var(--ink);border-radius:10px;width:min(1400px, 100%);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.f3m-in>header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}.f3m-in>header h3{margin:0;font-size:17px}.f3m-in>header .note{flex:1;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.f3m-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0, 1fr) minmax(320px, 400px)}
+.f3m-photo{padding:12px 14px;overflow:auto}.f3m-side{padding:12px 14px;overflow:auto;border-left:1px solid var(--line)}
+.f3m-go{position:sticky;bottom:-12px;background:var(--panel);padding:8px 0 4px}
+@media (max-width: 900px){ .f3modal{padding:0}.f3m-in{border-radius:0}.f3m-body{display:block;overflow:auto}.f3m-side{border-left:0;overflow:visible}.f3m-photo{overflow:visible} }
+/* Da foto al 3D */
+.f3thumb{display:flex;gap:10px;align-items:center;margin:6px 0}.f3thumb img{width:120px;height:auto;border-radius:4px;border:1px solid var(--line)}
+.f3stage{margin:6px 0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--bg);touch-action:none;user-select:none;-webkit-user-select:none}
+.f3stage svg{display:block;width:100%;height:auto}
+.f3pad{fill:color-mix(in srgb, var(--ink) 12%, transparent)}
+.f3q{fill:color-mix(in srgb, var(--accent) 14%, transparent);stroke:var(--accent);stroke-width:4;stroke-linejoin:round}
+.f3h circle{fill:#fff;stroke:var(--accent);stroke-width:5;cursor:grab}.f3h circle.hit{fill:transparent;stroke:none}
+.f3b rect{fill:transparent;stroke:#e0a020;stroke-width:3;cursor:move}.f3b.op rect{stroke:#2f7fd8}.f3b.off rect{stroke-dasharray:8 8;opacity:.45}
+.f3b.sel rect{stroke-width:6;fill:color-mix(in srgb, #e0a020 12%, transparent)}.f3b text{font:600 22px var(--f-ui, sans-serif);fill:#fff;stroke:#000;stroke-width:4;paint-order:stroke;pointer-events:none}
+.f3rh{fill:#fff;stroke:#e0a020;stroke-width:5;cursor:nwse-resize}
+.f3q.thin{stroke-width:1.4;fill:none}.f3lr{fill:none;stroke:#fff;stroke-width:5;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}.f3lx{stroke:#e0302f;stroke-width:2.5}
+@media (pointer:coarse){ .f3h circle{r:20px}.f3h circle.hit{r:60px}.f3rh{r:26px} }
+.f3plan{width:100%;height:auto;aspect-ratio:2/1.1;border:1px solid var(--line);border-radius:6px;background:var(--panel);margin:4px 0}
+.f3list{display:flex;flex-direction:column;gap:4px;max-height:320px;overflow:auto;margin:4px 0}
+.f3row{display:grid;grid-template-columns:auto minmax(0,9rem) 1fr auto;gap:6px;align-items:center;padding:2px 4px;border-radius:4px}
+.f3row.sel{background:var(--accent-soft)}.f3row .note{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0}
+.btn.mini{min-height:30px;padding:2px 8px}
+.photo-ov{position:absolute;inset:0;pointer-events:none;display:flex;justify-content:center;z-index:2}.photo-ov img{height:100%;width:auto;max-width:none}
 </style>
 
 <div id="app">
@@ -359,6 +384,7 @@ body.compact .hud{bottom:52px}
   <div id="toast" role="status"></div>
   <input type="file" id="fPlan" accept=".dxf,.dwg,.pdf,.png,.jpg,.jpeg,.webp" hidden>
   <input type="file" id="fA3" accept=".dxf,.dwg" multiple hidden>
+  <input type="file" id="fF3" accept="image/*" hidden>
   <input type="file" id="fModel" accept=".dae,.zip,.glb,.gltf,.bin,.obj,.mtl,.fbx,.3ds,.stl,.png,.jpg,.jpeg,.tga,.bmp,.webp" multiple hidden>
   <input type="file" id="fProj" accept=".json" hidden>
   <input type="file" id="fTex" accept=".png,.jpg,.jpeg,.webp" hidden>

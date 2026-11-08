@@ -21,7 +21,7 @@ table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0}th,td{bord
 <h2>2. In breve</h2>
 <ul>
 <li>Per usare l'editor non serve un account: il progetto resta <b>nel tuo browser</b> (memoria locale e IndexedDB) e nei file che scarichi.</li>
-<li>I dati lasciano il tuo dispositivo solo se <b>chiedi un render AI</b> o <b>crei un link per il cliente</b>, e solo dopo che hai spuntato la casella di consenso.</li>
+<li>I dati lasciano il tuo dispositivo solo se <b>chiedi un render AI</b>, <b>analizzi una foto con «Da foto al 3D»</b> o <b>crei un link per il cliente</b>, e solo dopo che hai spuntato la casella di consenso.</li>
 <li>Non usiamo cookie di profilazione, pubblicità o strumenti di statistica.</li>
 </ul>
 
@@ -30,15 +30,16 @@ table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0}th,td{bord
 <tr><th>Attività</th><th>Dati</th><th>Finalità e base giuridica</th><th>Conservazione</th></tr>
 <tr><td>Uso dell'editor</td><td>Progetto, preferenze, galleria dei render, raccolta dei progetti</td><td>Restano nel tuo browser: il titolare non li riceve</td><td>Finché non li cancelli dal browser</td></tr>
 <tr><td>Render AI (anche ritocco con maschera)</td><td>Immagine della vista 3D (fino a 512 px), mappe di profondità e contorni, testo del prompt, parametri e posizione della camera, nome del progetto</td><td>Generare l'immagine richiesta · consenso (art. 6.1.a)</td><td>Immagini e stato del lavoro cancellati automaticamente dopo <b>1 ora</b>, o prima con «Elimina»</td></tr>
+<tr><td>Da foto al 3D</td><td>La foto che carichi (ridotta a 1280 px sul lato lungo, senza i metadati EXIF)</td><td>Riconoscere ambiente, aperture, arredi, luci e persone per ricostruire la bozza 3D · consenso (art. 6.1.a)</td><td><b>Non conservata</b> dal server: viene analizzata e scartata; una copia ridotta resta solo nel tuo progetto, nel browser, e non viene inviata con il link per il cliente</td></tr>
 <tr><td>Link per il cliente</td><td>Progetto condiviso (senza prezzi del computo né file dei modelli importati); commenti: nome scelto da chi scrive, testo, punto in pianta e, se spuntata, la vista 3D; con un link «con modifica», lo storico delle versioni: quelle pubblicate dal progettista e quelle inviate dal cliente, con nome, messaggi, approvazioni e risposte</td><td>Condividere il progetto con chi riceve il link · consenso (art. 6.1.a)</td><td>Cancellati dopo <b>30 giorni</b> (<b>90</b> per i link con modifica), o subito con «Elimina il link»</td></tr>
 <tr><td>Quote e protezione dagli abusi</td><td>Indirizzo IP trasformato in un'impronta non reversibile (hash con un sale segreto), conteggio giornaliero; esito della verifica anti-bot</td><td>Sicurezza del servizio e contenimento dei costi del piano gratuito · legittimo interesse (art. 6.1.f)</td><td>1–2 giorni</td></tr>
 <tr><td>Funzionamento tecnico del sito</td><td>Indirizzo IP, data e ora, pagina richiesta, browser (dati trattati dai fornitori di rete per consegnare le pagine)</td><td>Erogazione e sicurezza del sito · legittimo interesse (art. 6.1.f)</td><td>Secondo le politiche dei fornitori indicati sotto</td></tr>
 </table>
-<p>Non trattiamo categorie particolari di dati. Ti chiediamo di non inserire dati personali di terzi nei nomi dei progetti, nei prompt o nei commenti.</p>
+<p>Non trattiamo categorie particolari di dati. Ti chiediamo di non inserire dati personali di terzi nei nomi dei progetti, nei prompt o nei commenti e di non caricare in «Da foto al 3D» foto di persone che non ne sono informate.</p>
 
 <h2>4. A chi sono comunicati i dati</h2>
 <ul>
-<li><b>Cloudflare, Inc.</b> (USA) — ospita il sito e il servizio (Workers, KV, Durable Objects), esegue il modello di render (Workers AI, modello FLUX.2 klein 4B di Black Forest Labs) e la verifica anti-bot (Turnstile). Agisce come responsabile del trattamento. Secondo la documentazione di Cloudflare, i contenuti inviati a Workers AI <b>non sono usati per addestrare modelli</b> e non sono conservati oltre il tempo della richiesta, salvo la memorizzazione che chiediamo noi (le immagini del render, per 1 ora).</li>
+<li><b>Cloudflare, Inc.</b> (USA) — ospita il sito e il servizio (Workers, KV, Durable Objects), esegue il modello di render (Workers AI, modello FLUX.2 klein 4B di Black Forest Labs) e l'analisi delle foto (Llama 4 Scout di Meta e DETR ResNet-50) e la verifica anti-bot (Turnstile). Agisce come responsabile del trattamento. Secondo la documentazione di Cloudflare, i contenuti inviati a Workers AI <b>non sono usati per addestrare modelli</b> e non sono conservati oltre il tempo della richiesta, salvo la memorizzazione che chiediamo noi (le immagini del render, per 1 ora).</li>
 <li><b>jsDelivr</b> (rete di distribuzione) — fornisce le librerie software dell'editor; riceve l'indirizzo IP del browser che le scarica.</li>
 <li><b>Google Fonts</b> — fornisce i caratteri tipografici; riceve l'indirizzo IP del browser.</li>
 <li><b>Poly Haven</b> — fornisce modelli, materiali e cieli solo quando li scegli dalla libreria; riceve l'indirizzo IP.</li>

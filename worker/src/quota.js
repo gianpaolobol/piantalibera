@@ -8,6 +8,7 @@
 //   neurons        Neurons stimati impegnati nel giorno da tutti (tetto di spesa totale)
 //   vneurons       Neurons impegnati dai visitatori (sotto-tetto: il resto è riservato al proprietario)
 //   renders        richieste dei visitatori accettate nel giorno (il proprietario non conta)
+//   photos         analisi «Da foto al 3D» dei visitatori accettate nel giorno (ip:foto:<hash> per visitatore)
 // I contatori dei giorni precedenti vengono cancellati con un allarme.
 
 export const dayKey = (d = new Date()) => d.toISOString().slice(0, 10).replace(/-/g, "");
@@ -22,8 +23,9 @@ export class QuotaGate {
     const k = name => `${day}:${name}`;
     if (url.pathname === "/reserve") {
       // visitor=false: proprietario del sito, senza limite per IP né tetto dei visitatori, solo il tetto totale
-      const { ipHash, neurons, perIpDaily, maxConcurrent, neuronBudget, globalDaily, visitorBudget, visitor = true } = body;
-      const [ip, inflight, used, vused, renders] = await Promise.all([s.get(k(`ip:${ipHash}`)), s.get(k(`inflight:${ipHash}`)), s.get(k("neurons")), s.get(k("vneurons")), s.get(k("renders"))]);
+      // counter: contatore globale dei visitatori («renders» per i render, «photos» per «Da foto al 3D»)
+      const { ipHash, neurons, perIpDaily, maxConcurrent, neuronBudget, globalDaily, visitorBudget, visitor = true, counter = "renders" } = body;
+      const [ip, inflight, used, vused, renders] = await Promise.all([s.get(k(`ip:${ipHash}`)), s.get(k(`inflight:${ipHash}`)), s.get(k("neurons")), s.get(k("vneurons")), s.get(k(counter))]);
       const st = { ip: ip || 0, inflight: inflight || 0, neurons: used || 0, vneurons: vused || 0, renders: renders || 0 };
       if (visitor && st.ip >= perIpDaily) return Response.json({ ok: false, reason: "quota_exceeded", ...st });
       if (st.inflight >= maxConcurrent) return Response.json({ ok: false, reason: "too_many_concurrent", ...st });
@@ -31,7 +33,7 @@ export class QuotaGate {
       if (visitor && visitorBudget != null && st.vneurons + neurons > visitorBudget) return Response.json({ ok: false, reason: "global_quota_exceeded", ...st });
       if (st.neurons + neurons > neuronBudget) return Response.json({ ok: false, reason: "budget_exceeded", ...st });
       const upd = { [k(`ip:${ipHash}`)]: st.ip + 1, [k(`inflight:${ipHash}`)]: st.inflight + 1, [k("neurons")]: st.neurons + neurons };
-      if (visitor) { upd[k("renders")] = st.renders + 1; upd[k("vneurons")] = st.vneurons + neurons; }
+      if (visitor) { upd[k(counter)] = st.renders + 1; upd[k("vneurons")] = st.vneurons + neurons; }
       await s.put(upd);
       if (s.setAlarm && !(await s.getAlarm?.())) await s.setAlarm(Date.now() + 26 * 3600e3);
       return Response.json({ ok: true, ip: st.ip + 1, neurons: st.neurons + neurons, renders: st.renders + (visitor ? 1 : 0) });
@@ -39,11 +41,13 @@ export class QuotaGate {
     if (url.pathname === "/release") {
       // a fine lavoro: libera la concorrenza; se il modello ha fallito restituisce la quota
       // dell'utente ma NON i Neurons (una chiamata fallita può comunque essere fatturata)
-      const { ipHash, neurons, failed, reservedDay, visitor = true } = body;
+      const { ipHash, neurons, failed, reservedDay, visitor = true, counter = "renders", actualNeurons } = body;
       const kd = name => `${reservedDay || day}:${name}`;
-      const [ip, inflight, used, renders] = await Promise.all([s.get(kd(`ip:${ipHash}`)), s.get(kd(`inflight:${ipHash}`)), s.get(kd("neurons")), s.get(kd("renders"))]);
+      const [ip, inflight, used, renders, vused] = await Promise.all([s.get(kd(`ip:${ipHash}`)), s.get(kd(`inflight:${ipHash}`)), s.get(kd("neurons")), s.get(kd(counter)), s.get(kd("vneurons"))]);
       const upd = { [kd(`inflight:${ipHash}`)]: Math.max(0, (inflight || 1) - 1) };
-      if (failed) { upd[kd(`ip:${ipHash}`)] = Math.max(0, (ip || 1) - 1); if (visitor) upd[kd("renders")] = Math.max(0, (renders || 1) - 1); }
+      if (failed) { upd[kd(`ip:${ipHash}`)] = Math.max(0, (ip || 1) - 1); if (visitor) upd[kd(counter)] = Math.max(0, (renders || 1) - 1); }
+      // consumo misurato (dai token restituiti dal modello) più alto della stima: si corregge il conteggio
+      if (actualNeurons != null && actualNeurons > neurons) { const extra = Math.ceil(actualNeurons - neurons); upd[kd("neurons")] = (used || 0) + extra; if (visitor) upd[kd("vneurons")] = (vused || 0) + extra; }
       await s.put(upd);
       return Response.json({ ok: true });
     }
@@ -58,9 +62,9 @@ export class QuotaGate {
       return Response.json({ ok: true });
     }
     if (url.pathname === "/status") {
-      const { ipHash } = body;
-      const [ip, used, vused, renders] = await Promise.all([s.get(k(`ip:${ipHash}`)), s.get(k("neurons")), s.get(k("vneurons")), s.get(k("renders"))]);
-      return Response.json({ ip: ip || 0, neurons: used || 0, vneurons: vused || 0, renders: renders || 0 });
+      const { ipHash, photoHash } = body;
+      const [ip, used, vused, renders, photo, photos] = await Promise.all([s.get(k(`ip:${ipHash}`)), s.get(k("neurons")), s.get(k("vneurons")), s.get(k("renders")), photoHash ? s.get(k(`ip:${photoHash}`)) : 0, s.get(k("photos"))]);
+      return Response.json({ ip: ip || 0, neurons: used || 0, vneurons: vused || 0, renders: renders || 0, photo: photo || 0, photos: photos || 0 });
     }
     return new Response("not found", { status: 404 });
   }

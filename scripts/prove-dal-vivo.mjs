@@ -61,6 +61,24 @@ if (TOKEN) {
   }
 }
 
+// ---- «Da foto al 3D»: una foto vera di un interno (Wikimedia Commons, solo per la prova) analizzata dal sito
+check("/api/config: analisi da foto attiva", cfg.photo?.enabled === true, `${cfg.photo?.model} + ${cfg.photo?.detect_model} · ${cfg.photo?.per_ip_daily} al giorno`);
+if (TOKEN && cfg.photo?.enabled) {
+  try {
+    const UA = { "User-Agent": "PiantaLiberaProve/1.0 (https://github.com/gianpaolobol/piantalibera)" };
+    const j = await (await fetch("https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=categorymembers&gcmtitle=Category:Living_rooms_in_the_United_States&gcmtype=file&gcmlimit=30&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=1024", { headers: UA })).json();
+    const f = Object.values(j.query?.pages || {}).find(p => p.imageinfo?.[0]?.mime === "image/jpeg" && p.imageinfo[0].width > p.imageinfo[0].height);
+    const buf = Buffer.from(await (await fetch(f.imageinfo[0].thumburl, { headers: UA })).arrayBuffer());
+    const t1 = Date.now(), r = await api("api/foto", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: "data:image/jpeg;base64," + buf.toString("base64"), consent: true }) });
+    const a = r.body?.analysis;
+    check("analisi di una foto vera", r.status === 200 && a?.items?.length > 0, `HTTP ${r.status} in ${((Date.now() - t1) / 1000).toFixed(1)} s · ${a?.items?.length ?? 0} elementi · ${r.body?.neurons_measured ?? "?"} Neurons · ${f.title} ${r.body?.error?.message || ""}`);
+    if (a) { report.photo = { title: f.title, page: f.imageinfo[0].descriptionurl, ms: r.body.duration_ms, neurons: r.body.neurons_measured, items: a.items.map(i => `${i.category} (${i.source})`) };
+      // la stessa analisi nell'editor: con spigoli di prova deve nascere una stanza con i suoi oggetti
+      const built = await page.evaluate(an => { Object.assign(F3, { img: "data:,", thumb: null, w: 1024, h: 768, name: "prova" }); f3Accept({ analysis: an }); const s = f3Solve(); const lay = s.ok ? f3Layout(s) : null; return { ok: s.ok, err: s.err, objs: lay?.objects.length, ops: lay?.openings.length }; }, a);
+      check("l'editor ricostruisce la stanza dall'analisi", built.ok, JSON.stringify(built)); }
+  } catch (e) { check("analisi di una foto vera", false, e.message); }
+}
+
 // ---- fedeltà geometrica del render AI
 const SCENES = [
   { id: "esterno", nome: "Esterno a altezza d'uomo", setup: () => { P = sampleProject(); P.pid = "prova"; S.level = "L0"; refresh(); camPreset("ext"); } },

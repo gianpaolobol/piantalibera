@@ -104,6 +104,17 @@ Variabili d'ambiente (solo nomi): `PL_PROVIDER_MODE`, `PL_PROVIDER_URL`, `PL_PRO
 
 Per i test: **Cloudflare Workers AI, `@cf/black-forest-labs/flux-2-klein-4b`** (decisione del proprietario, 6/11/2026). Il Worker manda in multipart `prompt`, `width`, `height`, `seed` e fino a tre `input_image_N` (vista, profondità, contorni), con un prompt che chiede di conservare camera, aperture e volumi. Il modello restituisce `{image: base64}`. Dettagli e costi in [deploy-cloudflare.md](deploy-cloudflare.md).
 
+## Da foto al 3D (`POST /api/foto`)
+
+Analisi sincrona di una foto di un interno (Worker Cloudflare e server locale; il backend PHP non la offre e `/api/config` non dichiara `photo`). Contratto in `shared/photo.js`.
+
+- **Richiesta** `application/json`: `{image: "data:image/jpeg;base64,…", consent: true, turnstile}`. Foto JPEG, PNG o WebP fino a 2 MB, lato lungo ≤ 1600 px e corto ≥ 256 px (l'editor la riduce a 1280 px e toglie l'EXIF). Turnstile come per il render; il proprietario (`X-Owner-Token`) e le prove automatiche ne sono esenti.
+- **Elaborazione**: Llama 4 Scout (`@cf/meta/llama-4-scout-17b-16e-instruct`) riceve la foto e uno schema JSON (`PHOTO_SCHEMA`) e descrive ambiente, misure stimate, materiali, luce ed elementi con riquadri indicativi; in parallelo DETR ResNet-50 (`@cf/facebook/detr-resnet-50`) rileva arredi e persone (classi COCO) e i suoi riquadri, più precisi, sostituiscono quelli del modello quando coincidono. La foto non viene salvata.
+- **Risposta 200**: `{analysis, provider, model, detect_model, generated: true, neurons_estimated, neurons_measured, duration_ms, remaining_today}`; `analysis` = `{scene, room_type, camera, room, materials, lighting, back_wall|null, items:[{category, label, box:[x0,y0,x1,y1] in 0..1, w, d, h, facing, against, source}]}`. Categorie e corrispondenze con la libreria in `CATEGORIES` e `COCO`.
+- **Errori**: come sopra (`consent_required`, `invalid_input`, `too_large`, `bot_check_failed`, `quota_exceeded`, `global_quota_exceeded`, `budget_exceeded`, `config_incomplete`, `disabled`); 502 `{error}` se il modello fallisce (la quota del visitatore viene restituita, i Neurons no).
+- **Quote**: `PHOTO_PER_IP_DAILY` (1) per visitatore, `PHOTO_GLOBAL_DAILY` (10) in totale; i Neurons (stima `PHOTO_NEURONS_ESTIMATE` = 400, poi corretti con quelli dichiarati dal modello) entrano nello stesso tetto giornaliero dei render.
+- La geometria (spigoli della parete di fondo, scala, posizioni) si ricava nell'editor: `editor-src/077-foto3d.js`.
+
 ## Aperto
 
 - Fedeltà geometrica da misurare sulle scene di prova; se insufficiente: ComfyUI con ControlNet depth/lineart (klein 9B solo per prove: licenza non commerciale).

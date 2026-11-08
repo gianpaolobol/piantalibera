@@ -92,6 +92,12 @@ Logica in `shared/share.js`, comune al Worker e al server locale. Progetti fino 
 
 Due modalità, scelte alla creazione e cambiabili dopo: **sola lettura** (il cliente guarda e commenta) e **con modifica** (il cliente usa l'editor completo e invia le modifiche). La chiave di modifica è nel frammento del link (`#modifica=…`), che il browser non manda al server; le modifiche restano nel browser del cliente finché non le invia e al progettista arrivano come proposta: la può guardare, **approvare** (diventa la versione del link), rimandare con «Chiedi modifiche» e una risposta, o scartare. Ogni pubblicazione e ogni invio restano nello **storico**, visibile a entrambi, e il progettista può riaprire qualsiasi versione. I link con modifica durano 90 giorni. Tornando in sola lettura la chiave viene invalidata; riattivando le modifiche se ne crea una nuova.
 
+## Da foto al 3D (`/api/foto`)
+
+Stesso Worker e stesso binding `AI`, nessuna chiave in più. Variabili facoltative (solo nomi): `PHOTO_ENABLED` ("0" la spegne), `PHOTO_MODEL`, `DETECT_MODEL`, `PHOTO_DETECT` ("0" senza rilevatore), `PHOTO_PER_IP_DAILY` (1), `PHOTO_GLOBAL_DAILY` (10), `PHOTO_NEURONS_ESTIMATE` (400), `PHOTO_NEURONS_PER_M_IN`, `PHOTO_NEURONS_PER_M_OUT`, `PHOTO_TIMEOUT_MS`.
+
+Misure sul servizio vero (8/11/2026, workflow «Diagnosi foto 3D», foto di Wikimedia Commons): Llama 4 Scout 88–117 Neurons e 8–42 s per foto (Workers AI dichiara i Neurons nella risposta), DETR meno di 1 s. Con il tetto di 9.000 Neurons al giorno un'analisi vale circa un render; le 10 analisi dei visitatori pesano al massimo ~1.200 Neurons. Modelli scartati: Moondream 3.1 (via API risponde vuoto), Qwen 3.8 e Mistral Small 3.1 (ragionano o si ripetono fino al limite: 240–1.100 Neurons e oltre un minuto), Gemma 4 (2 minuti, errori interni), GLM-5.3 Flash (non disponibile nel piano gratuito di Workers). Spigoli della parete di fondo: nessun modello li dà in modo affidabile, quindi li posiziona l'utente con una lente d'ingrandimento.
+
 ## Modalità proprietario (`OWNER_TOKEN`)
 
 Il proprietario del sito non ha il limite per visitatore né il tetto dei visitatori e non deve risolvere Turnstile; resta soltanto il tetto totale `NEURON_DAILY_BUDGET`, così tutto rimane nella quota gratuita di Workers AI. Con i valori predefiniti ha sempre almeno ~28 render al giorno a 1024×768 e fino a ~78 nei giorni in cui i visitatori non ne usano.

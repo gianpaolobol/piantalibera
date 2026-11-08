@@ -206,9 +206,19 @@ function camState(){ return {pos:camera.position.toArray().map(v => +v.toFixed(3
 function saveCamera(){ P.cameras = P.cameras || []; const c = {id:uid(), name:`Vista ${P.cameras.length + 1}`, ...camState()}; P.cameras.push(c); commit(); renderCamSel(c.id); toast(`Camera «${c.name}» salvata: rinominala nel pannello Proprietà`); }
 function goCamera(id){ const c = (P.cameras || []).find(x => x.id === id); if (!c) return; if (WALK.on) exitWalk(); camera.position.fromArray(c.pos); controls.target.fromArray(c.target); camera.fov = c.fov || 45; camera.updateProjectionMatrix(); controls.update(); render3D(); }
 function renderCamSel(selId){ const s = $("#camSel"); if (!s) return; s.innerHTML = `<option value="">Camere…</option>${(P.cameras || []).map(c => `<option value="${c.id}" ${c.id === selId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}<option value="__save">＋ Salva questa vista</option>`; }
-function camerasHTML(){ const cs = P.cameras || []; if (!cs.length) return ""; return `<div class="sec"><h3>Camere salvate</h3>${cs.map(c => `<div class="row camrow"><input class="inp" data-camname="${c.id}" value="${esc(c.name)}" aria-label="Nome della camera"><div class="btns"><button class="btn" data-camgo="${c.id}">Vai</button><button class="btn danger" data-camdel="${c.id}" aria-label="Elimina ${esc(c.name)}">✕</button></div></div>`).join("")}<p class="note">Le camere restano nel progetto: scegline una prima di un render o di un render AI.</p></div>`; }
+/* foto di «Da foto al 3D» sovrapposta alla vista 3D dalla sua camera: confronto diretto con la ricostruzione */
+const PHOTO_OV = {id:null};
+function togglePhotoOverlay(id){
+  $("#photoOv")?.remove(); if (PHOTO_OV.id === id){ PHOTO_OV.id = null; return; }
+  const c = (P.cameras || []).find(x => x.id === id); if (!c?.photo) return; PHOTO_OV.id = id; goCamera(id);
+  if ($("#views")?.dataset.mode === "2d") $('#viewSeg [data-v="3d"]')?.click();
+  $("#pane3d").insertAdjacentHTML("beforeend", `<div class="photo-ov" id="photoOv"><img src="${c.photo}" alt="Foto originale sovrapposta" style="opacity:.5"></div>`);
+  toast("Foto sovrapposta al 50%: tocca di nuovo «Foto» per toglierla");
+}
+function camerasHTML(){ const cs = P.cameras || []; if (!cs.length) return ""; return `<div class="sec"><h3>Camere salvate</h3>${cs.map(c => `<div class="row camrow"><input class="inp" data-camname="${c.id}" value="${esc(c.name)}" aria-label="Nome della camera"><div class="btns"><button class="btn" data-camgo="${c.id}">Vai</button>${c.photo ? `<button class="btn" data-camphoto="${c.id}" aria-pressed="${PHOTO_OV.id === c.id}">Foto</button>` : ""}<button class="btn danger" data-camdel="${c.id}" aria-label="Elimina ${esc(c.name)}">✕</button></div></div>`).join("")}<p class="note">Le camere restano nel progetto: scegline una prima di un render o di un render AI.</p></div>`; }
 $("#panel-props").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.camgo) goCamera(b.dataset.camgo);
+  if (b.dataset.camphoto){ togglePhotoOverlay(b.dataset.camphoto); renderInspector(); }
   if (b.dataset.camdel){ P.cameras = P.cameras.filter(c => c.id !== b.dataset.camdel); commit(); renderCamSel(); }
   if (b.id === "favBtn"){ const r = S.furn, i = PREFS.favs.indexOf(r); if (i >= 0) PREFS.favs.splice(i, 1); else PREFS.favs.unshift(r); savePrefs(); renderInspector(); } });
 $("#panel-props").addEventListener("change", e => { if (e.target.dataset.camname){ const c = P.cameras.find(x => x.id === e.target.dataset.camname); if (c){ c.name = e.target.value || c.name; commit(); renderCamSel(); } } });
