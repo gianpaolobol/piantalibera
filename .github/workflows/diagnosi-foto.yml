@@ -8,7 +8,7 @@ on:
       n: { description: "Quante foto", default: "3" }
   push:
     branches: ["feature/foto-*"]
-    paths: ["shared/photo.js", "scripts/diagnosi-foto.mjs", ".github/workflows/diagnosi-foto.yml"]
+    paths: ["shared/photo.js", "scripts/diagnosi-foto.mjs", "scripts/catalogo-ai.mjs", ".github/workflows/diagnosi-foto.yml"]
 
 permissions:
   contents: read
@@ -25,11 +25,14 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       N: ${{ inputs.n || '3' }}
+      SOLO_CATALOGO: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
+      - run: node scripts/catalogo-ai.mjs
       - run: node scripts/diagnosi-foto.mjs
+        if: env.SOLO_CATALOGO != '1'
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: diagnosi-foto, path: diagnosi-foto/, retention-days: 14 }
