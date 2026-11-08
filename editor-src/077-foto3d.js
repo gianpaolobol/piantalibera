@@ -88,9 +88,9 @@ async function f3Analyze(){
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j?.error?.message || "errore " + r.status);
     if (!j.analysis) throw new Error("risposta del servizio senza analisi");
-    f3Accept(j);
+    f3Accept(j); F3.openAfter = true;
   } catch(e){ F3.err = "Analisi non riuscita: " + (e.message || e); }
-  finally { F3.busy = false; busy(""); F3.ts.token = ""; try { if (F3.ts.widget != null) window.turnstile?.reset(F3.ts.widget); } catch(e){} renderImport(); }
+  finally { F3.busy = false; busy(""); F3.ts.token = ""; try { if (F3.ts.widget != null) window.turnstile?.reset(F3.ts.widget); } catch(e){} renderImport(); if (F3.openAfter){ F3.openAfter = false; f3OpenModal(); } }
 }
 /* accoglie l'analisi del servizio: spigoli proposti, misure, elementi da rivedere */
 function f3Accept(j){
@@ -248,7 +248,8 @@ function f3Build(){
       lay.skipped.length ? `Non creati: ${lay.skipped.map(i => i.label || F3_CATS[i.category]?.n).slice(0, 6).join(", ")}${lay.skipped.length > 6 ? "…" : ""}.` : "",
       "Il muro alle spalle della fotocamera non si vede nella foto: la profondità è stimata.",
       "In 3D è attiva la camera «Vista della foto»: confronta con la foto e usala per il render AI."].filter(Boolean)};
-  toast(F3.report.title); renderImport();
+  toast(F3.report.title); F3.err = ""; f3CloseModal();
+  if ($("#views")?.dataset.mode === "2d") $('#viewSeg [data-v="3d"]')?.click();
 }
 
 /* ---------- interfaccia ---------- */
@@ -268,29 +269,56 @@ function f3PanelHTML(){
       ${c?.turnstile_site_key && !owner ? `<div id="f3Turnstile" class="ts"></div>` : ""}
       <p class="note">${esc(quota)}</p>`}
       <div class="btns">${avail ? "" : `<button class="btn primary" id="f3Go" ${F3.busy ? "disabled" : ""}>${F3.busy ? "Analisi in corso…" : "Analizza la foto"}</button>`}<button class="btn" id="f3Reset">Cambia foto</button></div>`;
-  } else h += f3ReviewHTML();
-  if (F3.err) h += `<p class="note warn" role="alert">${esc(F3.err)}</p>`;
+  } else {
+    const st = f3Solve(), n = F3.items.filter(i => i.on).length;
+    h += `<div class="f3thumb"><img src="${F3.thumb}" alt="Foto analizzata"><div><b>${esc(F3.name)}</b><br><span class="note">${F3.items.length} elementi riconosciuti, ${n} da creare${st.ok ? ` · stanza ${fmt(st.W, 2)} × ${fmt(st.D, 2)} m` : ""}</span></div></div>
+      ${F3.report ? `<div class="a3rep"><b>${esc(F3.report.title)}</b><ul>${F3.report.lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul></div>` : ""}
+      <div class="btns"><button class="btn primary" id="f3Open">${F3.report ? "Riapri la revisione" : "Rivedi e crea il 3D"}</button><button class="btn" id="f3Reset">Nuova foto</button></div>`;
+  }
+  if (F3.err && !F3.open) h += `<p class="note warn" role="alert">${esc(F3.err)}</p>`;
   return h + `</div>`;
 }
+/* finestra di revisione: foto grande per posizionare gli spigoli con precisione */
+function f3OpenModal(){
+  F3.open = true; let m = $("#f3Modal");
+  if (!m){ m = document.createElement("div"); m.id = "f3Modal"; m.className = "f3modal"; m.setAttribute("role", "dialog"); m.setAttribute("aria-modal", "true"); m.setAttribute("aria-label", "Da foto al 3D: revisione");
+    document.body.appendChild(m); m.addEventListener("click", f3Click); m.addEventListener("change", f3Change);
+    m.addEventListener("pointerdown", e => { if (e.target.closest("#f3Svg")) f3PointerDown(e); }); m.addEventListener("pointermove", e => { if (f3Drag) f3PointerMove(e); });
+    m.addEventListener("pointerup", f3PointerUp); m.addEventListener("pointercancel", f3PointerUp); }
+  f3RenderModal(); m.querySelector("#f3Close")?.focus();
+}
+function f3CloseModal(){ F3.open = false; $("#f3Modal")?.remove(); renderImport(); }
+function f3RenderModal(){
+  const m = $("#f3Modal"); if (!m) return; const sc = m.querySelector(".f3m-side")?.scrollTop || 0;
+  m.innerHTML = `<div class="f3m-in"><header><h3>Da foto al 3D</h3><span class="note">${esc(F3.name)}</span><button class="btn" id="f3Close" aria-label="Chiudi la revisione">✕</button></header>${f3ReviewHTML()}</div>`;
+  const side = m.querySelector(".f3m-side"); if (side) side.scrollTop = sc;
+  requestAnimationFrame(f3DrawPlan);
+}
 function f3ReviewHTML(){
-  const s = f3Solve(), o = F3.opts, q = F3.quad, VW = 1000, VH = Math.round(1000 * F3.h / F3.w), m = 120;
+  const s = f3Solve(), o = F3.opts, q = F3.quad, VW = 1000, VH = Math.round(1000 * F3.h / F3.w), m = 90;
   const P_ = p => `${(p[0] * VW).toFixed(1)},${(p[1] * VH).toFixed(1)}`;
   const boxes = F3.items.map((it, i) => { const [x0, y0, x1, y1] = it.box, C = F3_CATS[it.category] || F3_CATS.altro, cls = `f3b${it.on ? "" : " off"}${i === F3.sel ? " sel" : ""}${C.kind === "door" || C.kind === "window" ? " op" : ""}`;
     return `<g class="${cls}" data-f3box="${i}"><rect x="${x0 * VW}" y="${y0 * VH}" width="${(x1 - x0) * VW}" height="${(y1 - y0) * VH}"/><text x="${x0 * VW + 6}" y="${y0 * VH + 22}">${i + 1}</text>${i === F3.sel ? `<circle class="f3rh" data-f3rs="${i}" cx="${x1 * VW}" cy="${y1 * VH}" r="16"/>` : ""}</g>`; }).join("");
   const handles = ["fl", "fr", "cr", "cl"].filter(k => o.ceil || k[0] === "f").map(k => `<g class="f3h" data-f3h="${k}"><circle cx="${q[k][0] * VW}" cy="${q[k][1] * VH}" r="34" class="hit"/><circle cx="${q[k][0] * VW}" cy="${q[k][1] * VH}" r="13"/></g>`).join("");
   const quadPts = o.ceil ? [q.fl, q.fr, q.cr, q.cl] : [q.fl, q.fr];
+  // lente d'ingrandimento (3×) mentre si trascina uno spigolo: il dito non copre il punto
+  let loupe = "";
+  if (f3Drag?.kind === "h"){ const [px, py] = [q[f3Drag.k][0] * VW, q[f3Drag.k][1] * VH], R = 95, Z = 3, cy = py > R * 2.2 ? py - R * 1.9 : py + R * 1.9;
+    loupe = `<defs><clipPath id="f3lc"><circle cx="${px}" cy="${cy}" r="${R}"/></clipPath></defs><g clip-path="url(#f3lc)"><rect x="${px - R}" y="${cy - R}" width="${2 * R}" height="${2 * R}" class="f3pad"/>
+      <g transform="translate(${px} ${cy}) scale(${Z}) translate(${-px} ${-py})"><image href="${F3.img}" x="0" y="0" width="${VW}" height="${VH}"/><polygon class="f3q thin" points="${quadPts.map(P_).join(" ")}"/></g></g>
+      <circle cx="${px}" cy="${cy}" r="${R}" class="f3lr"/><path d="M${px - 14} ${cy}h28M${px} ${cy - 14}v28" class="f3lx"/>`; }
   const stage = `<div class="f3stage"><svg id="f3Svg" viewBox="${-m} ${-m} ${VW + 2 * m} ${VH + 2 * m}" role="img" aria-label="Foto con la parete di fondo e gli elementi riconosciuti">
       <rect x="${-m}" y="${-m}" width="${VW + 2 * m}" height="${VH + 2 * m}" class="f3pad"/><image href="${F3.img}" x="0" y="0" width="${VW}" height="${VH}"/>
-      <g class="f3boxes">${boxes}</g>${o.ceil ? `<polygon class="f3q" points="${quadPts.map(P_).join(" ")}"/>` : `<polyline class="f3q" points="${quadPts.map(P_).join(" ")}"/>`}${handles}</svg></div>`;
+      <g class="f3boxes">${boxes}</g>${o.ceil ? `<polygon class="f3q" points="${quadPts.map(P_).join(" ")}"/>` : `<polyline class="f3q" points="${quadPts.map(P_).join(" ")}"/>`}${handles}${loupe}</svg></div>`;
   const sum = s.ok ? `Stanza <b>${fmt(s.W, 2)} × ${fmt(s.D, 2)} m</b>, altezza <b>${fmt(s.H, 2)} m</b> · fotocamera a ${fmt(s.hc, 2)} m, inclinata di ${fmt(s.p * 180 / Math.PI, 1)}°` : `<span class="warn">${esc(s.err)}</span>`;
   const list = F3.items.map((it, i) => `<div class="f3row${i === F3.sel ? " sel" : ""}"><label class="chk"><input type="checkbox" data-f3on="${i}" ${it.on ? "checked" : ""}><b>${i + 1}</b></label>
       <select class="inp" data-f3cat="${i}" aria-label="Categoria dell'elemento ${i + 1}">${Object.entries(F3_CATS).map(([k, v]) => `<option value="${k}" ${k === it.category ? "selected" : ""}>${esc(v.n)}</option>`).join("")}</select>
-      <span class="note">${esc(it.label || "")}${it.source === "rilevatore" ? " · riquadro preciso" : ""}</span><button class="btn mini" data-f3pick="${i}" aria-label="Seleziona l'elemento ${i + 1} sulla foto">⌖</button></div>`).join("");
+      <span class="note">${esc(it.label && it.label.toLowerCase() !== (F3_CATS[it.category]?.n || "").toLowerCase() ? it.label : "")}${it.source === "rilevatore" ? `${it.label && it.label.toLowerCase() !== (F3_CATS[it.category]?.n || "").toLowerCase() ? " · " : ""}riquadro preciso` : ""}</span><button class="btn mini" data-f3pick="${i}" aria-label="Seleziona l'elemento ${i + 1} sulla foto">⌖</button></div>`).join("");
   const meta = F3.meta || {};
-  return `<p class="note"><b>1.</b> Trascina i ${o.ceil ? "quattro" : "due"} punti sugli <b>spigoli della parete di fondo</b> (${esc(F3.quadSource)}): in basso dove incontra il pavimento${o.ceil ? ", in alto dove incontra il soffitto" : ""}. Se lo spigolo è fuori dalla foto, mettilo nel bordo grigio.</p>
+  return `<div class="f3m-body"><div class="f3m-photo"><p class="note"><b>1.</b> Trascina i ${o.ceil ? "quattro" : "due"} punti sugli <b>spigoli della parete di fondo</b> (${esc(F3.quadSource)}): in basso dove incontra il pavimento${o.ceil ? ", in alto dove incontra il soffitto" : ""}. Se lo spigolo è fuori dalla foto, mettilo nel bordo grigio.</p>
     ${stage}
-    <div class="row f3opts"><label class="chk"><input type="checkbox" id="f3Ceil" ${o.ceil ? "checked" : ""}> Il soffitto si vede</label></div>
-    <p class="note"><b>2.</b> Una misura che conosci, per la scala:</p>
+    <div class="row f3opts"><label class="chk"><input type="checkbox" id="f3Ceil" ${o.ceil ? "checked" : ""}> Il soffitto si vede</label></div></div>
+    <div class="f3m-side"><p class="note"><b>2.</b> Una misura che conosci, per la scala:</p>
     <div class="row"><div class="f"><span class="lbl">Misura nota</span><select id="f3RefKind" class="inp">${F3_REF.filter(([k]) => o.ceil || k !== "ceil").map(([k, n]) => `<option value="${k}" ${k === o.refKind ? "selected" : ""}>${n}</option>`).join("")}${!o.ceil ? `<option value="ceil" ${o.refKind === "ceil" ? "selected" : ""}>Altezza del soffitto (con fotocamera a 1,5 m)</option>` : ""}</select></div>
       <div class="f"><span class="lbl">Valore (m)</span><input id="f3RefVal" class="inp" inputmode="decimal" value="${fmt(o.refVal, 2)}"></div></div>
     <div class="row"><div class="f"><span class="lbl">Campo visivo (°)</span><input id="f3Fov" class="inp" inputmode="decimal" value="${fmt(f3Fov(), 0)}"><span class="note">${o.fov ? "impostato da te" : F3.exifFov ? "dalla foto (EXIF)" : "stimato: telefono ~65°, grandangolo ~75°"}</span></div>
@@ -300,9 +328,9 @@ function f3ReviewHTML(){
     <p class="note"><b>3.</b> Controlla gli elementi: togli la spunta a quelli da non creare, correggi la categoria; tocca un riquadro per spostarlo o ridimensionarlo.</p>
     <div class="f3list">${list || `<p class="note">Nessun elemento riconosciuto.</p>`}</div>
     <div class="btns"><select id="f3AddCat" class="inp" aria-label="Categoria da aggiungere"><option value="">＋ Aggiungi un elemento…</option>${Object.entries(F3_CATS).filter(([, v]) => !v.skip).map(([k, v]) => `<option value="${k}">${esc(v.n)}</option>`).join("")}</select></div>
-    ${F3.report ? `<div class="a3rep"><b>${esc(F3.report.title)}</b><ul>${F3.report.lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul></div>` : ""}
-    <div class="btns"><button class="btn primary" id="f3Build" ${s.ok ? "" : "disabled"}>${F3.report ? "Crea un'altra copia" : "Crea il modello 3D"}</button><button class="btn" id="f3Reset">Nuova foto</button></div>
-    <p class="note">${meta.mock ? "Risposta di prova del server locale. " : ""}${meta.model ? `Analisi: ${esc(meta.model.replace(/^@cf\//, ""))}${meta.detect ? " + " + esc(meta.detect.replace(/^@cf\//, "")) : ""}` : ""}${meta.ms ? ` in ${fmt(meta.ms / 1000, 0)} s` : ""}${meta.remaining != null ? ` · analisi rimaste oggi: ${meta.remaining}` : ""}.</p>`;
+    <div class="btns f3m-go"><button class="btn primary" id="f3Build" ${s.ok ? "" : "disabled"}>${F3.report ? "Crea un'altra copia" : "Crea il modello 3D"}</button><button class="btn" id="f3Cancel">Chiudi</button></div>
+    ${F3.err ? `<p class="note warn" role="alert">${esc(F3.err)}</p>` : ""}
+    <p class="note">${meta.mock ? "Risposta di prova del server locale. " : ""}${meta.model ? `Analisi: ${esc(meta.model.replace(/^@cf\//, ""))}${meta.detect ? " + " + esc(meta.detect.replace(/^@cf\//, "")) : ""}` : ""}${meta.ms ? ` in ${fmt(meta.ms / 1000, 0)} s` : ""}${meta.remaining != null ? ` · analisi rimaste oggi: ${meta.remaining}` : ""}.</p></div></div>`;
 }
 /* anteprima in pianta: stanza, fotocamera con il suo campo visivo, aperture e oggetti */
 function f3DrawPlan(){
@@ -323,11 +351,12 @@ function f3DrawPlan(){
   g.fillStyle = mut; g.globalAlpha = .18; g.beginPath(); g.moveTo(...cq); g.arc(cq[0], cq[1], Math.min(cw, ch) * .45, ang - fv, ang + fv); g.closePath(); g.fill(); g.globalAlpha = 1;
   g.fillStyle = ink; g.beginPath(); g.arc(cq[0], cq[1], 5, 0, 7); g.fill();
 }
-function f3Refresh(){ // aggiorna stage, riassunto e anteprima senza rifare tutto il pannello (trascinamento fluido)
-  const box = $("#f3Box"); if (!box) return;
-  const tmp = document.createElement("div"); tmp.innerHTML = f3PanelHTML(); const nb = tmp.firstElementChild;
+function f3Refresh(){ // aggiorna foto, riassunto e anteprima senza rifare tutta la finestra (trascinamento fluido)
+  const box = $("#f3Modal"); if (!box) return;
+  const tmp = document.createElement("div"); tmp.innerHTML = f3ReviewHTML(); const nb = tmp;
   for (const sel of [".f3stage", ".f3sum"]){ const a = $(sel, box), b = $(sel, nb); if (a && b) a.replaceWith(b); }
-  const btn = $("#f3Build"); if (btn) btn.disabled = !f3Solve().ok;
+  const st = f3Solve(), btn = $("#f3Build"); if (btn) btn.disabled = !st.ok;
+  const dp = $("#f3Depth"); if (dp && st.ok) dp.placeholder = fmt(st.depthAuto, 2);
   f3DrawPlan();
 }
 const f3Pt = e => { const svg = $("#f3Svg"); const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; const p = pt.matrixTransform(svg.getScreenCTM().inverse()); return [p.x / 1000, p.y / (1000 * F3.h / F3.w)]; };
@@ -349,31 +378,33 @@ function f3PointerMove(e){
   cancelAnimationFrame(f3PointerMove.raf); f3PointerMove.raf = requestAnimationFrame(f3Refresh);
 }
 function f3PointerUp(){ if (f3Drag){ f3Drag = null; f3Refresh(); } }
-function f3SyncList(){ document.querySelectorAll(".f3row").forEach((r, i) => r.classList.toggle("sel", i === F3.sel)); }
+function f3SyncList(){ document.querySelectorAll("#f3Modal .f3row").forEach((r, i) => r.classList.toggle("sel", i === F3.sel)); }
 
-PI.addEventListener("click", async e => { const b = e.target.closest("button"); if (!b) return;
+function f3Click(e){ const b = e.target.closest("button"); if (!b) return;
   if (b.id === "f3Pick") $("#fF3").click();
   else if (b.id === "f3Reset"){ Object.assign(F3, {img:null, thumb:null, a:null, quad:null, items:[], sel:-1, err:"", report:null}); renderImport(); }
   else if (b.id === "f3Go") f3Analyze();
+  else if (b.id === "f3Open") f3OpenModal();
+  else if (b.id === "f3Close" || b.id === "f3Cancel") f3CloseModal();
   else if (b.id === "f3Build") f3Build();
   else if (b.dataset.f3pick != null){ F3.sel = +b.dataset.f3pick; f3Refresh(); f3SyncList(); $("#f3Svg")?.scrollIntoView({block:"nearest", behavior:"smooth"}); }
-});
-PI.addEventListener("change", e => { const t = e.target;
+}
+function f3Change(e){ const t = e.target, rr = () => F3.open ? f3RenderModal() : renderImport();
   if (t.id === "f3Consent"){ f3Consent = t.checked; try { localStorage.setItem(F3_CONSENT_KEY, f3Consent ? "1" : "0"); } catch(_){} if (f3Consent) F3.err = ""; return; }
-  if (t.id === "f3Ceil"){ F3.opts.ceil = t.checked; if (!t.checked && F3.opts.refKind === "ceil") F3.opts.refVal = F3.opts.refVal || 2.7; renderImport(); return; }
-  if (t.id === "f3RefKind"){ F3.opts.refKind = t.value; F3.opts.refVal = {ceil:F3.a?.room?.height_m || 2.7, width:F3.a?.room?.width_m || 4, cam:1.5}[t.value]; renderImport(); return; }
-  if (t.id === "f3RefVal"){ const v = num(t.value); if (v > .2 && v < 50) F3.opts.refVal = v; renderImport(); return; }
-  if (t.id === "f3Fov"){ const v = num(t.value); F3.opts.fov = v >= 20 && v <= 130 ? v : null; renderImport(); return; }
-  if (t.id === "f3Depth"){ const v = num(t.value); F3.opts.depth = v > 0 ? clamp(v, 1, 40) : null; renderImport(); return; }
+  if (t.id === "f3Ceil"){ F3.opts.ceil = t.checked; if (!t.checked && F3.opts.refKind === "ceil") F3.opts.refVal = F3.opts.refVal || 2.7; rr(); return; }
+  if (t.id === "f3RefKind"){ F3.opts.refKind = t.value; F3.opts.refVal = {ceil:F3.a?.room?.height_m || 2.7, width:F3.a?.room?.width_m || 4, cam:1.5}[t.value]; rr(); return; }
+  // campi numerici: si aggiornano foto, riassunto e anteprima, non i campi (rifarli mentre perdono il fuoco è vietato)
+  if (t.id === "f3RefVal"){ const v = num(t.value); if (v > .2 && v < 50) F3.opts.refVal = v; f3Refresh(); return; }
+  if (t.id === "f3Fov"){ const v = num(t.value); F3.opts.fov = v >= 20 && v <= 130 ? v : null; f3Refresh(); return; }
+  if (t.id === "f3Depth"){ const v = num(t.value); F3.opts.depth = v > 0 ? clamp(v, 1, 40) : null; f3Refresh(); return; }
   if (t.dataset.f3on != null){ F3.items[+t.dataset.f3on].on = t.checked; f3Refresh(); return; }
-  if (t.dataset.f3cat != null){ const it = F3.items[+t.dataset.f3cat]; it.category = t.value; it.on = !F3_CATS[t.value]?.skip; renderImport(); return; }
-  if (t.id === "f3AddCat" && t.value){ const id = F3.items.length; F3.items.push({id, category:t.value, label:F3_CATS[t.value].n, box:[.42, .45, .58, .7], w:F3_CATS[t.value].w, d:F3_CATS[t.value].d, facing:"camera", against:"none", source:"aggiunto", on:true}); F3.sel = id; renderImport(); return; }
-});
-PI.addEventListener("pointerdown", e => { if (e.target.closest("#f3Svg")) f3PointerDown(e); });
-PI.addEventListener("pointermove", e => { if (f3Drag) f3PointerMove(e); });
-PI.addEventListener("pointerup", f3PointerUp); PI.addEventListener("pointercancel", f3PointerUp);
+  if (t.dataset.f3cat != null){ const it = F3.items[+t.dataset.f3cat]; it.category = t.value; it.on = !F3_CATS[t.value]?.skip; rr(); return; }
+  if (t.id === "f3AddCat" && t.value){ const id = F3.items.length; F3.items.push({id, category:t.value, label:F3_CATS[t.value].n, box:[.42, .45, .58, .7], w:F3_CATS[t.value].w, d:F3_CATS[t.value].d, facing:"camera", against:"none", source:"aggiunto", on:true}); F3.sel = id; rr(); return; }
+}
+PI.addEventListener("click", f3Click); PI.addEventListener("change", f3Change);
+addEventListener("keydown", e => { if (e.key === "Escape" && F3.open && !f3Drag) f3CloseModal(); });
 $("#fF3").addEventListener("change", async e => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
   try { busy("Preparo la foto…"); await f3LoadFile(f); } catch(err){ F3.err = err.message || String(err); } finally { busy(""); }
   renderImport(); });
 /* chiamato da renderImport (07-io.js) dopo aver scritto il pannello */
-function f3AfterRender(){ if (!F3.cfg && !F3.cfgLoading) f3LoadConfig(); if (F3.img && !F3.a) f3MountTurnstile(); if (F3.a) requestAnimationFrame(f3DrawPlan); }
+function f3AfterRender(){ if (!F3.cfg && !F3.cfgLoading) f3LoadConfig(); if (F3.img && !F3.a) f3MountTurnstile(); }
