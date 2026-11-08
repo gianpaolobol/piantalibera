@@ -53,6 +53,7 @@ function transformSel(kind, deg = 90){
     if (s.type === "wall" || s.type === "dim"){ it.a = T(it.a); it.b = T(it.b); }
     else if (s.type === "room") it.pts = it.pts.map(T);
     else if (s.type === "object"){ [it.x, it.y] = T([it.x, it.y]); it.rot = kind === "mirror" ? ((360 - (it.rot || 0)) % 360) : (((it.rot || 0) + deg) % 360 + 360) % 360; }
+    else if (s.type === "opening" && kind === "mirror" && !isSelected(it.wall)) it.flip = (it.flip || 0) ^ 1;   // porta specchiata: cerniera dall'altro lato
   }
   for (const e of snap.ends) e.w[e.k] = T(e.o);
   if (kind === "mirror") for (const o of P.openings) if (isSelected(o.wall)) o.flip = (o.flip || 0) ^ 2;
@@ -119,6 +120,7 @@ function openCtxMenu(sp, raw){
     if (CLIP) items.push(["Incolla qui", "Ctrl+V", () => pasteClip(raw)]);
     items.push(null, ["Ruota di 90°", "]", () => transformSel("rot", 90)], ["Ruota di −90°", "[", () => transformSel("rot", -90)], ["Specchia", "", () => transformSel("mirror")]);
     if (s1?.type === "wall") items.push(null, ["Dividi il muro qui", "", () => splitWallAt(it, raw)]);
+    if (s1?.type === "opening" && it?.type === "door") items.push(null, ["Cerniera dall'altro lato", "", () => { it.flip = (it.flip || 0) ^ 1; commit(); }], ["Apre verso l'altro lato", "", () => { it.flip = (it.flip || 0) ^ 2; commit(); }]);
     if (s1?.type === "opening") items.push(null, ["Inverti apertura", "", () => { it.flip = ((it.flip || 0) + 1) % 4; commit(); }]);
     items.push(null, ["Elimina", "Canc", deleteSel]);
   } else {
