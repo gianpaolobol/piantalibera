@@ -65,7 +65,8 @@ const CONSENT_KEY = "pianta-libera-ai-consenso-v1";
 let aiConsent = (() => { try { return localStorage.getItem(CONSENT_KEY) === "1"; } catch(e){ return false; } })();
 const backendCfg = {url:"", data:null, error:"", loading:false};
 let tsToken = "", tsWidget = null, tsLoading = null, aiQuotaLeft = null;
-/* Modalità proprietario: il codice (segreto OWNER_TOKEN del Worker) resta solo in questo browser e viaggia
+/* Modalità proprietario (accesso nascosto: tieni premuto o tocca 5 volte il nome «Pianta Libera» in alto).
+   Il codice (segreto OWNER_TOKEN del Worker) resta solo in questo browser o app e viaggia
    nell'intestazione X-Owner-Token verso /api/render, /api/config e /api/share dello stesso sito. */
 const OWNER_KEY = "pianta-libera-proprietario";
 const ownerToken = () => { try { return localStorage.getItem(OWNER_KEY) || ""; } catch(e){ return ""; } };
@@ -105,10 +106,7 @@ function backendBlock(){
     <label class="chk"><input type="checkbox" id="aiConsent" ${aiConsent?"checked":""}><span>Acconsento all'invio della vista, delle mappe di profondità e contorni e del prompt ${d?.provider && !d.mock ? `a <b>${esc(d.provider)}</b>` : "al servizio di render"} per generare l'immagine (<a href="privacy.html" target="_blank" rel="noopener">informativa</a>).</span></label>
     ${d?.privacy ? `<details><summary class="lbl">Informativa</summary><p class="note">${esc(d.privacy)}</p><p class="note"><a href="https://github.com/gianpaolobol/piantalibera/blob/main/docs/privacy.md" target="_blank" rel="noopener">Testo completo</a></p></details>` : ""}
     ${d?.turnstile_site_key && !d.quota?.owner ? `<div id="aiTurnstile" class="ts"></div>` : ""}
-    ${d && !d.mock && sameOrigin(backendCfg.url) ? `<details${ownerToken() && !d.quota?.owner ? " open" : ""}><summary class="lbl">Sei il proprietario del sito?</summary>
-      ${d.quota?.owner ? `<p class="note">Codice riconosciuto in questo browser.</p><div class="btns"><button class="btn" id="ownOff">Esci dalla modalità proprietario</button></div>`
-        : `${ownerToken() ? `<p class="note warn">Codice non riconosciuto: controlla che sia uguale al segreto OWNER_TOKEN.</p>` : `<p class="note">Con il tuo codice i render non hanno il limite dei visitatori. Il codice resta solo in questo browser.</p>`}
-        <div class="f"><label class="lbl" for="ownCode">Codice del proprietario</label><input id="ownCode" class="inp" type="password" autocomplete="off" minlength="16"></div><div class="btns"><button class="btn" id="ownSave">Attiva</button>${ownerToken() ? `<button class="btn" id="ownOff">Dimentica il codice</button>` : ""}</div>`}</details>` : ""}`;
+    ${d?.quota?.owner ? `<p class="note owner-line">Proprietario · <button class="linkbtn" id="ownOff">esci</button></p>` : ""}`;
 }
 function aiSave(){ try { localStorage.setItem(AI_KEY, JSON.stringify(AI)); } catch(e){} }
 const AF = (id, label, val, extra="") => `<div class="f"><label class="lbl" for="${id}">${label}</label><input id="${id}" class="inp" value="${esc(val)}" ${extra}></div>`;
@@ -184,7 +182,6 @@ PA.addEventListener("change", e => { const t = e.target;
 PA.addEventListener("click", async e => {
   const b = e.target.closest("button, code[data-ins], img[data-cmp]"); if (!b) return;
   if (b.dataset.aim){ AI.mode = b.dataset.aim; aiSave(); renderAI(); return; }
-  if (b.id === "ownSave"){ const v = $("#ownCode").value.trim(); if (v.length < 16){ aiStatus("Il codice ha almeno 16 caratteri.", "err"); return; } try { localStorage.setItem(OWNER_KEY, v); } catch(_){} aiQuotaLeft = null; SH.cfg = null; await loadBackendConfig(true); if (isOwner()) toast("Modalità proprietario attiva"); return; }
   if (b.id === "ownOff"){ try { localStorage.removeItem(OWNER_KEY); } catch(_){} aiQuotaLeft = null; SH.cfg = null; await loadBackendConfig(true); toast("Modalità proprietario disattivata in questo browser"); return; }
   if (b.dataset.ins){ const ta = $("#a_template"); const s = ta.selectionStart; ta.setRangeText(b.dataset.ins, s, ta.selectionEnd, "end"); ta.focus(); AI.adv.template = ta.value; aiSave(); return; }
   if (b.dataset.cmp !== undefined){ openCompare(aiResults[+b.dataset.cmp]); return; }
@@ -319,3 +316,24 @@ async function saveResult(r){
   try { const blob = await (await fetch(r.src)).blob(); await saveFile(`${slug()}-render-ai-${Date.now().toString(36)}.png`, blob); }
   catch(e){ toast("Non riesco a scaricare l'immagine dal servizio: aprila con il tasto destro → Salva immagine", true); }
 }
+
+/* ---------- accesso nascosto del proprietario ---------- */
+function openOwnerDialog(){
+  closeHelp?.();
+  const d = document.createElement("div"); d.id = "helpBox"; d.className = "help"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Accesso");
+  d.innerHTML = `<div class="help-in owner-in"><header><h3>Accesso</h3><button class="btn" id="helpClose" aria-label="Chiudi">✕</button></header>
+    <form id="ownForm"><div class="f"><label class="lbl" for="ownCode">Codice</label><input id="ownCode" class="inp" type="password" autocomplete="current-password" minlength="16" required></div>
+    <p class="status" id="ownMsg"></p><div class="btns"><button class="btn primary" type="submit">Entra</button></div></form></div>`;
+  document.body.appendChild(d); d.addEventListener("click", e => { if (e.target === d || e.target.closest("#helpClose")) closeHelp(); }); setTimeout(() => $("#ownCode")?.focus(), 30);
+  $("#ownForm").addEventListener("submit", async e => { e.preventDefault(); const v = $("#ownCode").value.trim(), msg = $("#ownMsg");
+    try { localStorage.setItem(OWNER_KEY, v); } catch(_){}
+    aiQuotaLeft = null; SH.cfg = null; await loadBackendConfig(true);
+    if (isOwner()){ closeHelp(); toast("Accesso del proprietario attivo su questo dispositivo"); if (S.tab === "ai") renderAI(); }
+    else { try { localStorage.removeItem(OWNER_KEY); } catch(_){} msg.textContent = backendCfg.data ? "Codice non riconosciuto." : "Servizio non raggiungibile: riprova."; msg.className = "status err"; } });
+}
+(() => { const t = $(".brand b"); if (!t) return; let taps = 0, last = 0, timer = null;
+  t.addEventListener("pointerdown", () => { timer = setTimeout(() => { timer = null; taps = 0; openOwnerDialog(); }, 800); });
+  for (const ev of ["pointerup", "pointerleave", "pointercancel"]) t.addEventListener(ev, () => { if (timer){ clearTimeout(timer); timer = null; } });
+  t.addEventListener("click", () => { const now = Date.now(); taps = now - last < 600 ? taps + 1 : 1; last = now; if (taps >= 5){ taps = 0; openOwnerDialog(); } });
+  t.style.userSelect = "none"; t.style.webkitUserSelect = "none"; t.style.webkitTouchCallout = "none";
+})();

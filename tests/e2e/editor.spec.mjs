@@ -415,17 +415,21 @@ test("link con modifica: il cliente invia una proposta, il progettista la apre e
   expect(errors).toEqual([]);
 });
 
-test("modalità proprietario: niente Turnstile e quota del proprietario nel pannello", async ({ page }) => {
+test("modalità proprietario: accesso nascosto, niente Turnstile e quota del proprietario nel pannello", async ({ page }) => {
   await page.route("**/api/config", async r => { const res = await r.fetch(); const d = await res.json(); const own = r.request().headers()["x-owner-token"] === "codice-proprietario-di-prova";
     await r.fulfill({ json: { ...d, mock: false, provider: "Cloudflare Workers AI", turnstile_site_key: "0x4AAA", quota: own ? { owner: true, renders_left_estimate: 42 } : { per_ip_daily: 2, used_today: 0 } } }); });
   const errors = await open(page);
   await page.click('[data-tab="ai"]');
   await expect(page.locator("#panel-ai")).toContainText("su 2");
-  await page.locator("#panel-ai summary", { hasText: "proprietario" }).click();
-  await page.fill("#ownCode", "codice-proprietario-di-prova"); await page.click("#ownSave");
-  await expect(page.locator("#panel-ai")).toContainText("Modalità proprietario"); await expect(page.locator("#panel-ai")).toContainText("42");
+  await expect(page.locator("#panel-ai")).not.toContainText("proprietario");                 // nessuna traccia visibile per i visitatori
+  for (let i = 0; i < 5; i++) await page.click(".brand b");                                  // accesso nascosto: 5 tocchi sul nome
+  await page.fill("#ownCode", "codice-sbagliato-ma-lungo"); await page.click('#ownForm button[type="submit"]');
+  await expect(page.locator("#ownMsg")).toContainText("non riconosciuto");
+  await page.fill("#ownCode", "codice-proprietario-di-prova"); await page.click('#ownForm button[type="submit"]');
+  await expect(page.locator("#helpBox")).toHaveCount(0);
+  await expect(page.locator("#panel-ai")).toContainText("42"); await expect(page.locator("#panel-ai .owner-line")).toContainText("Proprietario");
   await expect(page.locator("#aiTurnstile")).toHaveCount(0);
-  await page.locator("#panel-ai summary", { hasText: "proprietario" }).click(); await page.click("#ownOff"); await expect(page.locator("#panel-ai")).toContainText("su 2");
+  await page.click("#ownOff"); await expect(page.locator("#panel-ai")).toContainText("su 2");
   expect(errors.filter(e => !/turnstile|challenges/i.test(e))).toEqual([]);
 });
 
