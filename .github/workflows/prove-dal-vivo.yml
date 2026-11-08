@@ -38,6 +38,13 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - name: La versione pubblicata è quella di main
+        run: |
+          h() { grep -o "script-src[^;]*" | grep -o "sha256-[^']*" | head -1; }
+          live=$(curl -fsS -H "Cache-Control: no-cache" "$BASE/?v=$GITHUB_RUN_ID" | h); here=$(h < public/index.html)
+          echo "pubblicata: $live"; echo "main:       $here"
+          [ -n "$live" ] && [ "$live" = "$here" ] || { echo "::error::Il sito pubblicato non corrisponde a main"; exit 1; }
+          echo "Versione pubblicata = main ($here)" >> "$GITHUB_STEP_SUMMARY"
       - name: Token temporaneo per le prove
         run: |
           t=$(openssl rand -hex 24); echo "::add-mask::$t"; printf '%s' "$t" > "$RUNNER_TEMP/tok"
