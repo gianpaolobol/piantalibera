@@ -2,7 +2,7 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import worker, { QuotaGate } from "../worker/src/index.js";
-import { normalizeAnalysis, extractJson, parseDetections, detectTargets, neuronsFromUsage, CATEGORIES, PHOTO_SCHEMA } from "../shared/photo.js";
+import { normalizeAnalysis, extractJson, parseDetections, neuronsFromUsage, CATEGORIES, COCO, PHOTO_SCHEMA } from "../shared/photo.js";
 
 // JPEG minimo valido nell'intestazione: SOI + SOF0 con dimensioni 1024×768
 function jpeg(w = 1024, h = 768) {
@@ -34,10 +34,15 @@ test("analisi: numeri limitati, categorie note, colori normalizzati, spigoli del
   const sofa = a.items.find(i => i.category === "divano"); assert.equal(sofa.w, 2.3); assert.equal(sofa.against, "back");
   assert.deepEqual(sofa.box, [.3, .52, .7, .76]);
 });
-test("analisi: i riquadri del rilevatore sostituiscono quelli del modello e aggiungono quelli mancanti", () => {
-  const a = normalizeAnalysis(RAW, { sofa: [[.29, .53, .71, .77]], window: [[.59, .26, .74, .68], [.05, .3, .15, .6]] }, 1024, 768);
+test("analisi: i riquadri del rilevatore sostituiscono quelli del modello e aggiungono quelli mancanti se molto sicuri", () => {
+  const dets = [{ label: "couch", score: .99, box: [.29, .53, .71, .77] }, { label: "chair", score: .95, box: [.05, .6, .15, .9] }, { label: "chair", score: .65, box: [.8, .6, .9, .9] }];
+  const a = normalizeAnalysis(RAW, dets, 1024, 768);
   const sofa = a.items.find(i => i.category === "divano"); assert.equal(sofa.source, "rilevatore"); assert.equal(sofa.w, 2.3); assert.deepEqual(sofa.box, [.29, .53, .71, .77]);
-  assert.equal(a.items.filter(i => i.category === "finestra").length, 2);
+  assert.equal(a.items.filter(i => i.category === "sedia").length, 1);          // la sedia poco sicura e senza corrispondenza non entra
+  assert.equal(a.items.find(i => i.category === "finestra").source, "modello");
+});
+test("analisi: gli angoli della foto non sono spigoli della parete", () => {
+  assert.equal(normalizeAnalysis({ ...RAW, back_wall: { floor_left: [0, 1000], floor_right: [1000, 1000], ceiling_left: [0, 0], ceiling_right: [1000, 0] } }).back_wall, null);
 });
 test("analisi: senza spigoli plausibili la parete di fondo resta da indicare a mano", () => {
   assert.equal(normalizeAnalysis({ ...RAW, back_wall: { floor_left: [800, 700], floor_right: [200, 700] } }).back_wall, null);
@@ -47,13 +52,12 @@ test("lettura delle risposte: JSON in testo, in blocchi ``` e già oggetto; riqu
   assert.deepEqual(extractJson({ response: "Ecco:\n```json\n{\"a\":1}\n```" }), { a: 1 });
   assert.deepEqual(extractJson({ response: { a: 2 } }), { a: 2 });
   assert.equal(extractJson({ response: "niente" }), null);
-  assert.deepEqual(parseDetections({ objects: [{ x_min: .1, y_min: .2, x_max: .3, y_max: .4 }, { bbox: [100, 200, 300, 400] }] }, 1000, 1000), [[.1, .2, .3, .4], [.1, .2, .3, .4]]);
-  assert.deepEqual(parseDetections({ objects: [{ x_min: 1024, y_min: 0, x_max: 2048, y_max: 1536 }] }, 2048, 1536), [[.5, 0, 1, 1]]);
+  const d = parseDetections([{ score: .99, label: "couch", box: { xmin: 512, ymin: 384, xmax: 1024, ymax: 768 } }, { score: .99, label: "clock", box: { xmin: 1, ymin: 1, xmax: 9, ymax: 9 } }, { score: .3, label: "chair", box: { xmin: 1, ymin: 1, xmax: 90, ymax: 90 } }], 1024, 768);
+  assert.deepEqual(d, [{ label: "couch", score: .99, box: [.5, .5, 1, 1] }]);
 });
-test("rilevatore: porte e finestre sempre, una sola chiamata per nome inglese, al massimo 9", () => {
-  const t = detectTargets({ items: [{ category: "tavolo" }, { category: "tavolo_tondo" }, { category: "divano" }] });
-  assert.deepEqual(t.map(x => x.en), ["door", "window", "dining table", "sofa"]);
-  assert.ok(Object.values(CATEGORIES).every(c => c.kind === "other" || c.en));
+test("classi COCO: solo categorie esistenti; Neurons dichiarati o calcolati dai token", () => {
+  assert.ok(Object.values(COCO).flat().every(c => CATEGORIES[c]));
+  assert.equal(neuronsFromUsage({ prompt_tokens: 1, neurons: 115.3 }, { in: 0, out: 0 }), 116);
   assert.equal(neuronsFromUsage({ prompt_tokens: 3000, completion_tokens: 1000 }, { in: 24545, out: 77273 }), 151);
   assert.ok(PHOTO_SCHEMA.properties.items.items.properties.category.enum.includes("lampadario"));
 });
@@ -69,7 +73,7 @@ function env(over = {}) {
   const calls = [];
   const e = { calls,
     AI: { async run(model, input) { calls.push({ model, input });
-      if (model.includes("moondream")) return { objects: input.target === "sofa" ? [{ x_min: .29, y_min: .53, x_max: .71, y_max: .77 }] : [] };
+      if (model.includes("detr")) return [{ score: .99, label: "couch", box: { xmin: 297, ymin: 407, xmax: 727, ymax: 591 } }];
       return { response: JSON.stringify(RAW), usage: { prompt_tokens: 3000, completion_tokens: 1200 } }; } },
     RENDER_KV: { async get() { return null; }, async put() {} },
     IP_SALT: "sale-di-prova-lungo-abbastanza", TURNSTILE_SECRET: "segreto", TURNSTILE_SITE_KEY: "0x4AAA-pubblica", OWNER_TOKEN: "proprietario-1234567890", ...over };
@@ -85,8 +89,8 @@ test("/api/foto: analisi completa, rilevatore chiamato per le categorie trovate,
   const e = env(); const r = await worker.fetch(post(ok), e); const j = await r.json();
   assert.equal(r.status, 200); assert.equal(j.analysis.scene, "interior");
   assert.equal(j.analysis.items.find(i => i.category === "divano").source, "rilevatore");
-  const det = e.calls.filter(c => c.model.includes("moondream")).map(c => c.input.target);
-  assert.deepEqual(det.sort(), ["chair", "door", "pendant lamp", "sofa", "window"]);   // anche la sedia senza riquadro: la cerca il rilevatore
+  const det = e.calls.filter(c => c.model.includes("detr"));
+  assert.equal(det.length, 1); assert.ok(Array.isArray(det[0].input.image) && det[0].input.image[0] === 0xff);
   assert.ok(e.calls[0].input.messages[1].content.some(p => p.type === "image_url"));
   assert.equal(j.neurons_measured, Math.ceil((3000 * 24545 + 1200 * 77273) / 1e6));
   assert.equal(j.remaining_today, 0);
@@ -115,7 +119,7 @@ test("/api/foto: se il modello fallisce la quota del visitatore viene restituita
 });
 test("/api/foto: se lo schema JSON non è accettato riprova senza, e i rilevamenti falliti non bloccano", async () => {
   let n = 0;
-  const e = env({ AI: { async run(model, input) { if (model.includes("moondream")) throw new Error("rilevatore giù"); n++; if (input.response_format) throw new Error("response_format non supportato"); return { response: "```json\n" + JSON.stringify(RAW) + "\n```" }; } } });
+  const e = env({ AI: { async run(model, input) { if (model.includes("detr")) throw new Error("rilevatore giù"); n++; if (input.response_format) throw new Error("response_format non supportato"); return { response: "```json\n" + JSON.stringify(RAW) + "\n```" }; } } });
   const r = await worker.fetch(post(ok), e); const j = await r.json();
   assert.equal(r.status, 200); assert.equal(n, 2); assert.equal(j.analysis.items.find(i => i.category === "divano").source, "modello");
 });

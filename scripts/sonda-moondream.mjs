@@ -9,7 +9,7 @@ async function run(model, input) {
   const j = await r.json().catch(() => ({})); return { ms: Date.now() - t, status: r.status, result: j.result, errors: j.errors };
 }
 const cats = ["Category:Living_rooms_in_the_United_States", "Category:Kitchens_in_the_United_States", "Category:Bedrooms_in_the_United_States"];
-for (const c of cats) {
+for (const c of cats) { try {
   const j = await (await fetch(`https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=categorymembers&gcmtitle=${encodeURIComponent(c)}&gcmtype=file&gcmlimit=40&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=1024`, { headers: UA })).json();
   const files = Object.values(j.query?.pages || {}).filter(p => p.imageinfo?.[0]?.mime === "image/jpeg" && p.imageinfo[0].width > p.imageinfo[0].height * 1.2);
   const f = files[Math.min(Number(process.env.IDX || 4), files.length - 1)]; if (!f) continue;
@@ -37,7 +37,8 @@ for (const c of cats) {
     if (a.back_wall) { const b = a.back_wall; svg += `<polygon points="${[b.fl, b.fr, b.cr, b.cl].map(p => `${p[0] * W},${p[1] * H}`).join(" ")}" fill="none" stroke="${col[name]}" stroke-width="4" stroke-dasharray="10 6"/>`; } }
   for (const o of Array.isArray(d.result) ? d.result : []) if (o.score > .5) { const b = o.box; svg += `<rect x="${b.xmin}" y="${b.ymin}" width="${b.xmax - b.xmin}" height="${b.ymax - b.ymin}" fill="none" stroke="#18a058" stroke-width="3"/><text x="${b.xmin + 3}" y="${b.ymax - 4}" fill="#18a058" stroke="white" stroke-width="3" paint-order="stroke">${o.label} ${o.score.toFixed(2)}</text>`; }
   svg += "</svg>";
-  const base = await sharp(buf).rotate().resize(W, H, { fit: "fill" }).toBuffer();
-  const out = await sharp(base).composite([{ input: Buffer.from(svg), top: 0, left: 0 }]).resize(900).jpeg({ quality: 70 }).toBuffer();
+  const base = await sharp(buf).resize(W, H, { fit: "fill" }).toBuffer();
+  const ov = await sharp(Buffer.from(svg)).resize(W, H, { fit: "fill" }).png().toBuffer();
+  const out = await sharp(base).composite([{ input: ov, top: 0, left: 0 }]).resize(900).jpeg({ quality: 70 }).toBuffer();
   console.log(`===IMG=== ${f.title.replace(/\W+/g, "_").slice(0, 40)}\n${out.toString("base64")}\n===FINE===`);
-}
+  } catch (e) { console.log("errore:", e.message); } }

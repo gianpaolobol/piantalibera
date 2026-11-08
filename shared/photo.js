@@ -1,8 +1,12 @@
 // «Da foto al 3D» — contratto condiviso tra Worker Cloudflare, server locale ed editor.
 // Una foto di un interno viene analizzata da due modelli di Workers AI:
 //   1. un modello linguistico con visione (Llama 4 Scout) descrive la scena in JSON: tipo di ambiente,
-//      spigoli della parete di fondo, misure stimate, materiali, luce e l'elenco di aperture e arredi;
-//   2. un rilevatore (Moondream) ritrova con precisione i riquadri degli oggetti di quelle categorie.
+//      misure stimate, materiali, luce e l'elenco di aperture, arredi, luci e persone con riquadri indicativi;
+//   2. un rilevatore di oggetti (DETR ResNet-50, classi COCO) ritrova con precisione i riquadri di arredi
+//      e persone; si sostituiscono a quelli del modello quando coincidono.
+// Prove sul servizio vero (novembre 2026, scripts/diagnosi-foto.mjs): Llama ~115 Neurons e 17–40 s per foto,
+// riquadri approssimati e spigoli della parete di fondo inaffidabili (si fanno indicare all'utente);
+// DETR < 1 s e riquadri precisi; Moondream via API risponde vuoto; Qwen 3.8 ragiona a lungo (~1.100 Neurons).
 // Qui: limiti, prompt, schema JSON richiesto al modello, lettura tollerante delle risposte e unione
 // dei risultati in un'«analisi» normalizzata e sicura (numeri limitati, testi corti, categorie note).
 // La geometria 3D si ricostruisce poi nell'editor (editor-src/077-foto3d.js), dove l'utente corregge.
@@ -14,7 +18,8 @@ export const PHOTO = {
   maxSide: 1600,          // il client riduce a 1280 px sul lato lungo
   minSide: 256,
   maxItems: 60,
-  maxDetectTargets: 9,
+  minScore: .6,           // rilevamenti DETR sotto questa confidenza: scartati
+  newItemScore: .8,       // rilevamenti senza corrispondenza nel modello: aggiunti solo se molto sicuri
 };
 
 /* categorie riconosciute → oggetto della libreria dell'editor, nome inglese per il rilevatore e misure tipiche (m) */
@@ -137,12 +142,13 @@ function normPt(p, W, H) {
   if (s > 1000 * 1.6 && W && H) { x /= W; y /= H; } else if (s > 1.6) { x /= 1000; y /= 1000; }
   return [clamp(x, -1, 2), clamp(y, -1, 2)];
 }
-function normBox(b, W, H) {
+function normBox(b, W, H, pixels = false) {
   let arr = Array.isArray(b) ? b : b && typeof b === "object" ? [b.x_min ?? b.xmin ?? b.x0 ?? b.left, b.y_min ?? b.ymin ?? b.y0 ?? b.top, b.x_max ?? b.xmax ?? b.x1 ?? b.right, b.y_max ?? b.ymax ?? b.y1 ?? b.bottom] : null;
   if (!arr || arr.length < 4) return null;
   arr = arr.slice(0, 4).map(v => n(v)); if (arr.some(v => v == null)) return null;
   const s = Math.max(...arr.map(Math.abs));
-  const sx = s > 1000 * 1.6 && W ? W : s > 1.6 ? 1000 : 1, sy = s > 1000 * 1.6 && H ? H : sx;
+  const px = pixels && W && H;   // DETR: sempre pixel
+  const sx = px || (s > 1000 * 1.6 && W) ? W : s > 1.6 ? 1000 : 1, sy = px || (s > 1000 * 1.6 && H) ? H : sx;
   let [x0, y0, x1, y1] = [arr[0] / sx, arr[1] / sy, arr[2] / sx, arr[3] / sy];
   if (x1 < x0) [x0, x1] = [x1, x0]; if (y1 < y0) [y0, y1] = [y1, y0];
   x0 = clamp(x0, 0, 1); x1 = clamp(x1, 0, 1); y0 = clamp(y0, 0, 1); y1 = clamp(y1, 0, 1);
@@ -151,23 +157,21 @@ function normBox(b, W, H) {
 const iou = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), iy = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])), i = ix * iy, u = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i; return u > 0 ? i / u : 0; };
 const size = (v, d, max) => { const x = n(v); return x != null && x > 0 ? +clamp(x, .02, max).toFixed(2) : d; };
 
-/** Riquadri del rilevatore: accetta {objects:[…]}, un array o varianti di nome dei campi. */
+/* classi COCO del rilevatore → categorie possibili (la prima è quella predefinita) */
+export const COCO = {
+  couch: ["divano", "divano_angolare", "poltrona"], chair: ["sedia", "poltrona", "sedia_ufficio", "sgabello"],
+  bed: ["letto_matrimoniale", "letto_singolo"], "dining table": ["tavolo", "tavolo_tondo", "tavolino", "tavolino_tondo", "scrivania", "isola"],
+  tv: ["mobile_tv"], "potted plant": ["pianta"], person: ["persona"], toilet: ["wc", "bidet"], sink: ["lavabo"],
+  refrigerator: ["frigorifero"], oven: ["cucina"],
+};
+/** Rilevamenti DETR ([{label, score, box:{xmin,…}}] in pixel) → [{label, score, box normalizzato}] delle classi utili. */
 export function parseDetections(out, W, H) {
-  const list = Array.isArray(out) ? out : out?.objects || out?.result?.objects || out?.detections || [];
-  return (Array.isArray(list) ? list : []).map(o => normBox(o?.bbox || o?.box || o, W, H)).filter(Boolean).slice(0, 40);
+  const list = Array.isArray(out) ? out : Array.isArray(out?.result) ? out.result : Array.isArray(out?.objects) ? out.objects : [];
+  return list.filter(o => COCO[o?.label] && n(o.score, 0) >= PHOTO.minScore).map(o => ({ label: o.label, score: +n(o.score).toFixed(3), box: normBox(o.box || o.bbox, W, H, true) })).filter(o => o.box).slice(0, 40);
 }
 
-/** Categorie da passare al rilevatore: porte e finestre sempre, poi quelle trovate dal modello. */
-export function detectTargets(raw) {
-  const cats = new Set(["porta", "finestra"]);
-  for (const it of Array.isArray(raw?.items) ? raw.items : []) if (CATEGORIES[it?.category]?.en) cats.add(it.category);
-  const byEn = new Map();
-  for (const c of cats) { const en = CATEGORIES[c].en; if (!byEn.has(en)) byEn.set(en, []); byEn.get(en).push(c); }
-  return [...byEn.entries()].slice(0, PHOTO.maxDetectTargets).map(([en, cats]) => ({ en, cats }));
-}
-
-/** Analisi normalizzata. raw: JSON del modello; dets: {en: [box…]} del rilevatore; W,H: pixel della foto. */
-export function normalizeAnalysis(raw, dets = {}, W = null, H = null) {
+/** Analisi normalizzata. raw: JSON del modello; dets: rilevamenti (parseDetections); W,H: pixel della foto. */
+export function normalizeAnalysis(raw, dets = [], W = null, H = null) {
   if (!raw || typeof raw !== "object") throw Object.assign(new Error("il modello non ha descritto la foto"), { code: "invalid_provider_output" });
   const room = raw.room || {}, cam = raw.camera || {}, bw = raw.back_wall || {}, mat = raw.materials || {}, li = raw.lighting || {};
   const a = {
@@ -180,7 +184,8 @@ export function normalizeAnalysis(raw, dets = {}, W = null, H = null) {
     back_wall: null, items: [],
   };
   const corners = { fl: normPt(bw.floor_left, W, H), fr: normPt(bw.floor_right, W, H), cl: normPt(bw.ceiling_left, W, H), cr: normPt(bw.ceiling_right, W, H) };
-  if (corners.fl && corners.fr && corners.fr[0] > corners.fl[0] + .05) {
+  const trivial = ["fl", "fr", "cl", "cr"].every(k => corners[k] && corners[k].every(v => v <= .02 || v >= .98));   // gli angoli della foto: risposta inutile
+  if (!trivial && corners.fl && corners.fr && corners.fr[0] > corners.fl[0] + .05) {
     if (!corners.cl || corners.cl[1] >= corners.fl[1] - .05) corners.cl = [corners.fl[0], Math.max(-.5, corners.fl[1] - .45)];
     if (!corners.cr || corners.cr[1] >= corners.fr[1] - .05) corners.cr = [corners.fr[0], Math.max(-.5, corners.fr[1] - .45)];
     a.back_wall = { ...Object.fromEntries(Object.entries(corners).map(([k, v]) => [k, v.map(x => +x.toFixed(4))])), ceiling_visible: bw.ceiling_visible !== false, left_wall_visible: bw.left_wall_visible !== false, right_wall_visible: bw.right_wall_visible !== false, source: "modello" };
@@ -194,16 +199,14 @@ export function normalizeAnalysis(raw, dets = {}, W = null, H = null) {
       w: size(it.width_m, c.w, 12), d: size(it.depth_m, c.d ?? .1, 12), h: size(it.height_m, c.h, 6),
       facing: pick(it.facing, ["camera", "away", "left", "right"], "camera"), against: pick(it.against_wall, ["none", "back", "left", "right"], "none"), source: "modello" });
   }
-  // unione con il rilevatore: i suoi riquadri sono più precisi; le misure e l'orientamento restano del modello
+  // unione con il rilevatore: i suoi riquadri sono più precisi; categoria, misure e orientamento restano del modello
   const used = new Set();
-  for (const [en, boxes] of Object.entries(dets || {})) {
-    const cats = CATEGORY_KEYS.filter(k => CATEGORIES[k].en === en);
-    for (const box of boxes) {
-      let best = -1, bi = -1;
-      llm.forEach((it, i) => { if (used.has(i) || !cats.includes(it.category)) return; const v = iou(it.box, box); if (v > best) { best = v; bi = i; } });
-      if (bi >= 0 && best > .05) { used.add(bi); a.items.push({ ...llm[bi], box, source: "rilevatore" }); }
-      else { const cat = cats[0], c = CATEGORIES[cat]; a.items.push({ category: cat, label: cat.replace(/_/g, " "), box, w: c.w, d: c.d ?? .1, h: c.h, facing: "camera", against: "none", source: "rilevatore" }); }
-    }
+  for (const d of [...(Array.isArray(dets) ? dets : [])].sort((x, y) => y.score - x.score)) {
+    const cats = COCO[d.label] || [];
+    let best = 0, bi = -1;
+    llm.forEach((it, i) => { if (used.has(i) || !cats.includes(it.category)) return; const v = iou(it.box, d.box); if (v > best) { best = v; bi = i; } });
+    if (bi >= 0 && best > .1) { used.add(bi); a.items.push({ ...llm[bi], box: d.box, score: d.score, source: "rilevatore" }); }
+    else if (d.score >= PHOTO.newItemScore) { const cat = cats[0], c = CATEGORIES[cat]; a.items.push({ category: cat, label: cat.replace(/_/g, " "), box: d.box, w: c.w, d: c.d ?? .1, h: c.h, facing: "camera", against: "none", score: d.score, source: "rilevatore" }); }
   }
   llm.forEach((it, i) => { if (!used.has(i)) a.items.push(it); });
   // doppioni (stesso oggetto due volte): tieni il primo

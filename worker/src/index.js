@@ -11,7 +11,7 @@
 import { LIMITS, validateRenderRequest, decodeDataUrl, buildModelPrompt, jsonError } from "../../shared/contract.js";
 import { QuotaGate, estimateNeurons, dayKey } from "./quota.js";
 import { handleShare, SHARE } from "../../shared/share.js";
-import { PHOTO, photoMessages, PHOTO_SCHEMA, extractJson, normalizeAnalysis, parseDetections, detectTargets, neuronsFromUsage } from "../../shared/photo.js";
+import { PHOTO, photoMessages, PHOTO_SCHEMA, extractJson, normalizeAnalysis, parseDetections, neuronsFromUsage } from "../../shared/photo.js";
 export { QuotaGate };
 
 const JSON_HEADERS = { "Content-Type": "application/json", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
@@ -77,13 +77,12 @@ function config(env) {
     photo: {
       enabled: env.PHOTO_ENABLED !== "0",
       model: env.PHOTO_MODEL || "@cf/meta/llama-4-scout-17b-16e-instruct",
-      detectModel: env.DETECT_MODEL || "@cf/moondream/moondream3.1-9B-A2B",
+      detectModel: env.DETECT_MODEL || "@cf/facebook/detr-resnet-50",
       detect: env.PHOTO_DETECT !== "0",
       perIpDaily: num(env.PHOTO_PER_IP_DAILY, 1),
       globalDaily: num(env.PHOTO_GLOBAL_DAILY, 10),
       neurons: num(env.PHOTO_NEURONS_ESTIMATE, 400),
       rate: { in: num(env.PHOTO_NEURONS_PER_M_IN, 24545), out: num(env.PHOTO_NEURONS_PER_M_OUT, 77273) },
-      detectRate: { in: num(env.DETECT_NEURONS_PER_M_IN, 27273), out: num(env.DETECT_NEURONS_PER_M_OUT, 90909) },
       timeoutMs: num(env.PHOTO_TIMEOUT_MS, 90000),
     },
     missing, ready: missing.length === 0,
@@ -250,8 +249,8 @@ async function runVision(env, cfg, image) {
   }
   throw last;
 }
-async function runDetect(env, cfg, image, target) {
-  return withTimeout(env.AI.run(cfg.photo.detectModel, { task: "detect", image, target, max_objects: 20 }), 30000);
+async function runDetect(env, cfg, bytes) {
+  return withTimeout(env.AI.run(cfg.photo.detectModel, { image: [...bytes] }), 30000);
 }
 async function photoApi(request, env, cfg) {
   if (!cfg.ready || !cfg.photo.enabled) return jsonError(503, "config_incomplete", "l'analisi delle foto non è attiva su questo server");
@@ -282,16 +281,13 @@ async function photoApi(request, env, cfg) {
   const t0 = Date.now(), debug = isTest && request.headers.get("x-debug") === "1";
   let failed = false, measured = null, out, err, dbg = {};
   try {
-    const vis = await runVision(env, cfg, body.image);
+    // il rilevatore lavora in parallelo al modello con visione; se non risponde si va avanti senza
+    const [vis, det] = await Promise.all([runVision(env, cfg, body.image), cfg.photo.detect ? runDetect(env, cfg, img.bytes).catch(e => ({ error: String(e?.message || e) })) : null]);
     const raw = extractJson(vis);
     if (debug) dbg.vision = { keys: vis && typeof vis === "object" ? Object.keys(vis) : typeof vis, response: typeof vis?.response === "string" ? vis.response.slice(0, 6000) : vis?.response, usage: vis?.usage };
+    if (debug) dbg.detect = JSON.stringify(det).slice(0, 3000);
     measured = neuronsFromUsage(vis?.usage, cfg.photo.rate);
-    const dets = {}, targets = cfg.photo.detect && raw ? detectTargets(raw) : [];
-    const results = await Promise.allSettled(targets.map(t => runDetect(env, cfg, body.image, t.en)));
-    results.forEach((r, i) => {
-      if (r.status === "fulfilled") { dets[targets[i].en] = parseDetections(r.value, info.w, info.h); const u = neuronsFromUsage(r.value?.usage || r.value?.metrics, cfg.photo.detectRate); if (u != null) measured = (measured || 0) + u; }
-      if (debug) (dbg.detect ||= {})[targets[i].en] = r.status === "fulfilled" ? JSON.stringify(r.value).slice(0, 1500) : String(r.reason?.message || r.reason).slice(0, 300);
-    });
+    const dets = det && !det.error ? parseDetections(det, info.w, info.h) : [];
     out = normalizeAnalysis(raw, dets, info.w, info.h);
   } catch (e) {
     failed = true; err = { code: e?.code || "provider_error", message: String(e?.message || e).slice(0, 300) };
