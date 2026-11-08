@@ -43,6 +43,12 @@ PROVIDER_TIMEOUT_MS = "60000"
 ALLOWED_ORIGINS = ""             # vuoto = solo lo stesso dominio
 TURNSTILE_SITE_KEY = ""          # chiave pubblica del widget Turnstile (non è un segreto)
 SHARE_ENABLED = "1"              # link per il cliente e commenti (progetti in KV per 30 giorni); "0" li disattiva
+PHOTO_ENABLED = "1"              # «Da foto al 3D» (/api/foto); "0" la spegne
+PHOTO_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct"   # modello con visione (descrizione della stanza)
+DETECT_MODEL = "@cf/facebook/detr-resnet-50"              # rilevatore di arredi e persone (riquadri precisi)
+PHOTO_PER_IP_DAILY = "1"         # analisi da foto al giorno per visitatore (deciso dal proprietario l'8/11/2026)
+PHOTO_GLOBAL_DAILY = "10"        # analisi al giorno di tutti i visitatori insieme
+PHOTO_NEURONS_ESTIMATE = "400"   # riserva per analisi; poi conta il consumo dichiarato dal modello (misurato: ~85–120)
 SHARE_DAILY_WRITES = "200"       # tetto globale di link, versioni e commenti al giorno: ogni operazione fa fino a 4 scritture KV (gratuite: 1.000/giorno)
 
 # Segreti obbligatori (mai nel file; senza di essi il render resta disattivato):
