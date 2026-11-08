@@ -50,7 +50,10 @@ export default function App() {
   }, []);
 
   // resta dentro il sito; tutto il resto (privacy esterne, GitHub, Poly Haven…) si apre nel browser del telefono
-  const onNav = useCallback((req: WebViewNavigation) => {
+  const onNav = useCallback((req: WebViewNavigation & { isTopFrame?: boolean }) => {
+    // i riquadri interni della pagina (verifica anti-bot Cloudflare Turnstile, ecc.) restano dentro la pagina:
+    // aprirli nel browser faceva comparire finestre bianche di Cloudflare e nascondeva la verifica
+    if (req.isTopFrame === false) return true;
     if (req.url.startsWith(ORIGIN) || req.url.startsWith("about:") || req.url.startsWith("blob:") || req.url.startsWith("data:")) return true;
     if (/^https?:/.test(req.url)) { Linking.openURL(req.url); return false; }
     return false;
