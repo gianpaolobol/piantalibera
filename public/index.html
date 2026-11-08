@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-BwaTOKoUODNBfzL9inOQUS+Dsoh4Y73oywOKaGwrrNQ=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-v+e844Ms009oV9/T7/z6bCRN0HOMhmrwvFnDifajKkU=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -81,6 +81,11 @@ button.viewtag{cursor:pointer;font:inherit;pointer-events:auto;border:0}
 #tag2d{display:flex;gap:2px;padding:2px;pointer-events:auto;text-transform:none;letter-spacing:0}
 #tag2d .lvl{border:0;background:none;color:var(--muted);font:600 11px var(--f-ui, inherit);padding:3px 8px;border-radius:3px;cursor:pointer}
 #tag2d .lvl[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink)}
+.wtypes .wt-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:2px 0 6px}
+.wtypes .wt{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 2px;display:grid;gap:1px;justify-items:center;cursor:pointer;min-height:44px}
+.wtypes .wt b{font:600 13px var(--f-data)}.wtypes .wt small{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.wtypes .wt[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.wtypes .wt-other{display:flex;align-items:center;gap:8px}.wtypes .wt-other .inp{width:90px}
 .lvl-menu{position:fixed;z-index:60;min-width:200px;max-width:calc(100vw - 16px);background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.22);padding:6px;display:grid;gap:2px}
 .lvl-menu b{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:4px 8px}
 .lvl-menu button{background:none;border:0;text-align:left;padding:9px 8px;border-radius:5px;font:inherit}.lvl-menu button:hover{background:var(--bg)}.lvl-menu .danger{color:var(--danger)}.lvl-menu .note{padding:4px 8px}
@@ -1666,13 +1671,13 @@ function addWall(a, b, chained){
     const p1 = prev.a, d1 = [prev.b[0]-prev.a[0], prev.b[1]-prev.a[1]], d2 = [B[0]-A[0], B[1]-A[1]], den = d1[0]*d2[1] - d1[1]*d2[0];
     if (Math.abs(den) > 1e-9){ const t = ((A[0]-p1[0])*d2[1] - (A[1]-p1[1])*d2[0]) / den, X = [+(p1[0]+d1[0]*t).toFixed(4), +(p1[1]+d1[1]*t).toFixed(4)]; prev.b = X.slice(); A = X.slice(); }
   }
-  const w = {id:uid(), level:S.level, a:A, b:B, thick:d.wallThick, height:null, mat:d.wallMat}; P.walls.push(w); setSel([{type:"wall", id:w.id}]);
+  const w = {id:uid(), level:S.level, a:A, b:B, thick:d.wallThick, height:null, mat:d.wallMat, ...wallTypeProps(d)}; P.walls.push(w); setSel([{type:"wall", id:w.id}]);
   if (S.draw) S.draw.chain = {id:w.id}; commit(); }
 function addRectRoom(a, b){
   const d=S.defaults, t=d.wallThick, k = PREFS.rectRef === "interno" ? t/2 : PREFS.rectRef === "esterno" ? -t/2 : 0;
   const x0=Math.min(a[0],b[0])-k, x1=Math.max(a[0],b[0])+k, y0=Math.min(a[1],b[1])-k, y1=Math.max(a[1],b[1])+k;
   const C4 = [[x0,y0],[x1,y0],[x1,y1],[x0,y1]];
-  for (let i=0;i<4;i++){ const p=C4[i], q=C4[(i+1)%4]; const same = (u,v) => Math.hypot(u[0]-v[0],u[1]-v[1]) < 1e-4; const exists = wallsOf(S.level).some(w => (same(w.a,p) && same(w.b,q)) || (same(w.a,q) && same(w.b,p))); if (!exists) P.walls.push({id:uid(), level:S.level, a:p.slice(), b:q.slice(), thick:t, height:null, mat:d.wallMat}); }
+  for (let i=0;i<4;i++){ const p=C4[i], q=C4[(i+1)%4]; const same = (u,v) => Math.hypot(u[0]-v[0],u[1]-v[1]) < 1e-4; const exists = wallsOf(S.level).some(w => (same(w.a,p) && same(w.b,q)) || (same(w.a,q) && same(w.b,p))); if (!exists) P.walls.push({id:uid(), level:S.level, a:p.slice(), b:q.slice(), thick:t, height:null, mat:d.wallMat, ...wallTypeProps(d)}); }
   const r = {id:uid(), level:S.level, name:"Locale " + (P.rooms.filter(r=>r.level===S.level).length+1), mat:d.roomMat, pts:[[x0+t/2,y0+t/2],[x1-t/2,y0+t/2],[x1-t/2,y1-t/2],[x0+t/2,y1-t/2]]};
   P.rooms.push(r); S.sel = {type:"room", id:r.id}; commit();
 }
@@ -1784,6 +1789,7 @@ function transformSel(kind, deg = 90){
     if (s.type === "wall" || s.type === "dim"){ it.a = T(it.a); it.b = T(it.b); }
     else if (s.type === "room") it.pts = it.pts.map(T);
     else if (s.type === "object"){ [it.x, it.y] = T([it.x, it.y]); it.rot = kind === "mirror" ? ((360 - (it.rot || 0)) % 360) : (((it.rot || 0) + deg) % 360 + 360) % 360; }
+    else if (s.type === "opening" && kind === "mirror" && !isSelected(it.wall)) it.flip = (it.flip || 0) ^ 1;   // porta specchiata: cerniera dall'altro lato
   }
   for (const e of snap.ends) e.w[e.k] = T(e.o);
   if (kind === "mirror") for (const o of P.openings) if (isSelected(o.wall)) o.flip = (o.flip || 0) ^ 2;
@@ -1850,6 +1856,7 @@ function openCtxMenu(sp, raw){
     if (CLIP) items.push(["Incolla qui", "Ctrl+V", () => pasteClip(raw)]);
     items.push(null, ["Ruota di 90°", "]", () => transformSel("rot", 90)], ["Ruota di −90°", "[", () => transformSel("rot", -90)], ["Specchia", "", () => transformSel("mirror")]);
     if (s1?.type === "wall") items.push(null, ["Dividi il muro qui", "", () => splitWallAt(it, raw)]);
+    if (s1?.type === "opening" && it?.type === "door") items.push(null, ["Cerniera dall'altro lato", "", () => { it.flip = (it.flip || 0) ^ 1; commit(); }], ["Apre verso l'altro lato", "", () => { it.flip = (it.flip || 0) ^ 2; commit(); }]);
     if (s1?.type === "opening") items.push(null, ["Inverti apertura", "", () => { it.flip = ((it.flip || 0) + 1) % 4; commit(); }]);
     items.push(null, ["Elimina", "Canc", deleteSel]);
   } else {
@@ -2785,7 +2792,7 @@ function renderInspector(){
   else if (S.tool === "paint") h += paintPanelHTML();
   else if (["wall","rect"].includes(S.tool)){
     const d = S.defaults;
-    h += `<div class="sec"><h3>Nuovi muri</h3><div class="row">${F("dThick","Spessore (m)",fmt(d.wallThick),'inputmode="decimal"')}<div class="f"><span class="lbl">Tipologia</span><select id="dPreset" class="inp"><option value="">—</option><option value=".30">Esterno 30</option><option value=".40">Esterno 40</option><option value=".12">Tramezzo 12</option><option value=".08">Tramezzo 8</option></select></div></div>
+    h += `<div class="sec"><h3>Nuovi muri</h3><div class="row"></div>${wallTypeHTML(d.wallThick, d.wallType, "new")}<div class="row"></div>
       <span class="lbl">Finitura</span>${swatches(WALL_MATS, d.wallMat, "dwm")}
       ${S.tool==="rect" ? `<div class="f"><span class="lbl">Le misure che disegni sono</span><select id="rectRef" class="inp"><option value="interno" ${PREFS.rectRef==="interno"?"selected":""}>Interne (filo interno dei muri)</option><option value="asse" ${PREFS.rectRef==="asse"?"selected":""}>In asse ai muri</option><option value="esterno" ${PREFS.rectRef==="esterno"?"selected":""}>Esterne (filo esterno)</option></select></div><span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, d.roomMat, "drm")}`
         : `<div class="f"><span class="lbl">Forma</span><select id="wallShape" class="inp"><option value="dritto" ${PREFS.wallShape!=="arco"?"selected":""}>Muro dritto</option><option value="arco" ${PREFS.wallShape==="arco"?"selected":""}>Muro ad arco (estremi, poi curvatura)</option></select></div>
@@ -2806,13 +2813,14 @@ function renderInspector(){
     const cnt = {}; for (const x of S.multi) cnt[x.type] = (cnt[x.type] || 0) + 1;
     const names = {wall:["muro","muri"], room:["locale","locali"], object:["oggetto","oggetti"], opening:["apertura","aperture"], dim:["quota","quote"]};
     h += `<div class="sec"><h3>${S.multi.length} elementi selezionati</h3><p class="note">${Object.entries(cnt).map(([k, n]) => `${n} ${names[k][n > 1 ? 1 : 0]}`).join(" · ")}</p>
+      ${cnt.wall ? wallTypeHTML(selectedWalls()[0]?.thick || .3, selectedWalls()[0]?.wtype, "multi") : ""}
       <div class="btns"><button class="btn" id="grRotL">Ruota −90°</button><button class="btn" id="grRot">Ruota 90°</button><button class="btn" id="grMir">Specchia</button><button class="btn" id="grDup">Duplica</button><button class="btn danger" id="delSel">Elimina</button></div>
       <p class="note">Trascina un elemento selezionato per spostarli tutti; frecce per spostamenti precisi (Maiusc ×10).</p></div>`;
   } else if (sel && S.sel){
     if (S.sel.type === "dim"){ const L0 = Math.hypot(sel.b[0]-sel.a[0], sel.b[1]-sel.a[1]);
       h += `<div class="sec"><h3>Quota</h3><div class="row">${F("dimLen","Lunghezza (m)",fmt(L0,3),'inputmode="decimal"')}${F("dimOff","Distanza dalla linea (m)",fmt(sel.off),'inputmode="decimal"')}</div><p class="note">Cambiando la lunghezza si sposta il secondo punto.</p><div class="btns"><button class="btn danger" id="delSel">Elimina</button></div></div>`; }
     if (S.sel.type === "wall"){ const f = wallFrame(sel);
-      h += `<div class="sec"><h3>Muro</h3><div class="row">${F("wLen","Lunghezza (m)",fmt(f.len),'inputmode="decimal"')}${F("wThick","Spessore (m)",fmt(sel.thick),'inputmode="decimal"')}</div>
+      h += `<div class="sec"><h3>Muro</h3><div class="row">${F("wLen","Lunghezza (m)",fmt(f.len),'inputmode="decimal"')}</div>${wallTypeHTML(sel.thick, sel.wtype, "sel")}
         <div class="row">${F("wH","Altezza (m)",sel.height?fmt(sel.height):"",`inputmode="decimal" placeholder="${fmt(L.height)} (piano)"`)}<div class="f"><span class="lbl">Aperture</span><div class="inp" style="font-family:var(--f-data)">${P.openings.filter(o=>o.wall===sel.id).length}</div></div></div>
         <span class="lbl">Finitura</span>${swatches(WALL_MATS, sel.mat, "wm")}${wallSidesHTML(sel)}
         <div class="btns"><button class="btn" id="wFlip">Inverti verso</button><button class="btn" id="wAll">Applica finitura a tutto il piano</button><button class="btn danger" id="delSel">Elimina</button></div></div>`; }
@@ -5514,6 +5522,94 @@ if ("serviceWorker" in navigator && (location.protocol === "https:" || ["localho
 /* risposte dell'app nativa (app-mobile/) al salvataggio dei file */
 addEventListener("pl-native-error", e => toast("Salvataggio non riuscito: " + e.detail, true));
 
+/* ---- 054-muri.js ---- */
+/* ============================================================
+   Tipi di muro e spessori (decisioni del titolare, 8/11/2026)
+   - Tramezzi 8, 10, 12 cm; portante interno 30 cm; esterno 40 + cappotto 15 cm (55 cm).
+   - Pulsanti rapidi + «Altro» in centimetri; vale per uno o più muri selezionati e diventa
+     il predefinito dei muri successivi.
+   - Quando un muro cambia spessore la faccia verso i locali resta ferma (le stanze mantengono
+     le misure) e il muro cresce verso l'esterno; i muri senza un lato «interno» crescono dall'asse.
+   ============================================================ */
+const WALL_TYPES = [
+  {id:"t8", nome:"Tramezzo 8", t:.08, kind:"tramezzo"},
+  {id:"t10", nome:"Tramezzo 10", t:.10, kind:"tramezzo"},
+  {id:"t12", nome:"Tramezzo 12", t:.12, kind:"tramezzo"},
+  {id:"p30", nome:"Portante interno 30", t:.30, kind:"portante"},
+  {id:"e55", nome:"Esterno 40 + cappotto 15", t:.55, kind:"esterno", layers:{core:.40, insul:.15}},
+];
+const WALL_TYPE = Object.fromEntries(WALL_TYPES.map(w => [w.id, w]));
+const cmOf = t => Math.round(t * 1000) / 10;
+function wallTypeHTML(cur, curType, scope){
+  const label = scope === "new" ? "Spessore dei nuovi muri" : "Spessore";
+  const match = curType && WALL_TYPE[curType] && Math.abs(WALL_TYPE[curType].t - cur) < 1e-4 ? curType : (WALL_TYPES.find(w => Math.abs(w.t - cur) < 1e-4)?.id || "");
+  return `<div class="f wtypes" data-scope="${scope}"><span class="lbl">${label}</span>
+    <div class="wt-chips">${WALL_TYPES.map(w => `<button type="button" class="wt" data-wt="${w.id}" aria-pressed="${w.id === match}" title="${esc(w.nome)}"><b>${w.kind === "esterno" ? "40+15" : cmOf(w.t)}</b><small>${w.kind === "tramezzo" ? "tramezzo" : w.kind === "portante" ? "portante" : "esterno"}</small></button>`).join("")}</div>
+    <div class="wt-other"><label class="lbl" for="wtCm-${scope}">Altro (cm)</label><input id="wtCm-${scope}" class="inp" inputmode="decimal" value="${cmOf(cur)}"></div></div>`;
+}
+/* lato «interno» di un muro: quello rivolto verso un locale. +1 = verso la normale, −1 = opposto, 0 = nessuno/entrambi */
+function wallInnerSide(w){
+  const f = wallFrame(w), m = [(w.a[0] + w.b[0]) / 2, (w.a[1] + w.b[1]) / 2], d = (w.thick || .3) / 2 + .06;
+  const rooms = P.rooms.filter(r => r.level === w.level && r.pts?.length > 2);
+  const pA = [m[0] + f.nx * d, m[1] + f.ny * d], pB = [m[0] - f.nx * d, m[1] - f.ny * d];
+  if (rooms.length){ const a = rooms.some(r => inPoly(pA, r.pts)), b = rooms.some(r => inPoly(pB, r.pts)); return a && !b ? 1 : b && !a ? -1 : 0; }
+  // senza locali disegnati: per i muri esterni vale il lato verso il centro dell'edificio
+  const ws = wallsOf(w.level); if (ws.length < 3) return 0;
+  const c = ws.reduce((s, x) => [s[0] + (x.a[0] + x.b[0]) / 2 / ws.length, s[1] + (x.a[1] + x.b[1]) / 2 / ws.length], [0, 0]);
+  return Math.hypot(pA[0] - c[0], pA[1] - c[1]) < Math.hypot(pB[0] - c[0], pB[1] - c[1]) ? 1 : -1;
+}
+function setWallsThickness(walls, t, typeId){
+  if (!(t > .01 && t < 2)) return;
+  const type = WALL_TYPE[typeId], set = new Set(walls), plan = new Map();
+  for (const w of walls){
+    const f = wallFrame(w), inner = type?.kind === "esterno" || !type ? wallInnerSide(w) : (type.kind === "portante" ? wallInnerSide(w) : 0);
+    const keepFace = inner !== 0 && (type ? type.kind !== "tramezzo" : true);
+    const k = keepFace ? -inner * (t - (w.thick || .3)) / 2 : 0;            // spostamento dell'asse verso l'esterno
+    plan.set(w, {d:[f.nx * k, f.ny * k], a0:w.a.slice(), b0:w.b.slice(), f});
+  }
+  const lineOf = w => { const p = plan.get(w); return p ? [[p.a0[0] + p.d[0], p.a0[1] + p.d[1]], [p.b0[0] + p.d[0], p.b0[1] + p.d[1]]] : [w.a.slice(), w.b.slice()]; };
+  const meet = (l1, l2) => { const d1 = [l1[1][0] - l1[0][0], l1[1][1] - l1[0][1]], d2 = [l2[1][0] - l2[0][0], l2[1][1] - l2[0][1]], den = d1[0] * d2[1] - d1[1] * d2[0];
+    if (Math.abs(den) < 1e-9) return null; const s = ((l2[0][0] - l1[0][0]) * d2[1] - (l2[0][1] - l1[0][1]) * d2[0]) / den; return [+(l1[0][0] + d1[0] * s).toFixed(4), +(l1[0][1] + d1[1] * s).toFixed(4)]; };
+  const all = wallsOf(walls[0]?.level ?? S.level), moves = [];
+  for (const [w, p] of plan){
+    const L = lineOf(w);
+    for (const [k, i] of [["a", 0], ["b", 1]]){
+      const orig = k === "a" ? p.a0 : p.b0, others = [];
+      for (const o of all){ if (o === w) continue; const po = plan.get(o); for (const k2 of ["a", "b"]){ const q = po ? (k2 === "a" ? po.a0 : po.b0) : o[k2]; if (Math.hypot(q[0] - orig[0], q[1] - orig[1]) < 1e-4) others.push([o, k2]); } }
+      let X = null; for (const [o] of others){ X = meet(L, lineOf(o)); if (X) break; }
+      const target = X || L[i];
+      moves.push([w, k, target]); for (const [o, k2] of others) if (X && !set.has(o)) moves.push([o, k2, X]);
+    }
+  }
+  for (const [w, p] of plan){ // le aperture restano allo stesso punto del muro
+    const na = moves.find(m => m[0] === w && m[1] === "a")?.[2] || w.a, shift = (na[0] - (p.a0[0] + p.d[0])) * p.f.ux + (na[1] - (p.a0[1] + p.d[1])) * p.f.uy;
+    for (const o of P.openings) if (o.wall === w.id) o.t = +(o.t - shift).toFixed(4);
+  }
+  for (const [w, k, X] of moves) w[k] = X.slice();
+  for (const w of walls){ w.thick = t; if (type){ w.wtype = type.id; if (type.layers) w.layers = {...type.layers}; else delete w.layers; } else { delete w.wtype; delete w.layers; } }
+  // il valore scelto vale anche per i muri che si disegnano dopo
+  S.defaults.wallThick = t; S.defaults.wallType = type?.id || null; PREFS.wallThick = t; PREFS.wallType = S.defaults.wallType; savePrefs();
+  commit();
+}
+/* proprietà di tipo per un muro nuovo (dai predefiniti) */
+function wallTypeProps(d){ const ty = d.wallType && WALL_TYPE[d.wallType]; return ty && Math.abs(ty.t - d.wallThick) < 1e-4 ? {wtype:ty.id, ...(ty.layers ? {layers:{...ty.layers}} : {})} : {}; }
+function selectedWalls(){ return selList().filter(s => s.type === "wall").map(s => itemOf(s)).filter(Boolean); }
+$("#panel-props").addEventListener("click", e => {
+  const b = e.target.closest("[data-wt]"); if (!b) return; const scope = b.closest(".wtypes")?.dataset.scope, type = WALL_TYPE[b.dataset.wt];
+  if (scope === "new"){ S.defaults.wallThick = type.t; S.defaults.wallType = type.id; PREFS.wallThick = type.t; PREFS.wallType = type.id; savePrefs(); renderInspector(); toast(`Nuovi muri: ${type.nome}`); return; }
+  const ws = selectedWalls(); if (!ws.length) return; setWallsThickness(ws, type.t, type.id); renderInspector();
+  toast(ws.length > 1 ? `${ws.length} muri: ${type.nome}` : type.nome);
+});
+$("#panel-props").addEventListener("change", e => {
+  const m = e.target.id?.match(/^wtCm-(\w+)$/); if (!m) return; const v = num(e.target.value); if (!(v > 1 && v < 200)){ toast("Spessore in centimetri, tra 1 e 200", true); return; }
+  const t = v / 100, type = WALL_TYPES.find(w => Math.abs(w.t - t) < 1e-4);
+  // il pannello si ridisegna dopo la perdita del fuoco del campo, non durante
+  if (m[1] === "new"){ S.defaults.wallThick = t; S.defaults.wallType = type?.id || null; PREFS.wallThick = t; PREFS.wallType = S.defaults.wallType; savePrefs(); setTimeout(renderInspector, 0); return; }
+  const ws = selectedWalls(); if (ws.length){ setWallsThickness(ws, t, type?.id); setTimeout(renderInspector, 0); }
+});
+// all'avvio: l'ultimo spessore scelto torna il predefinito dei nuovi muri
+if (PREFS.wallThick > 0){ S.defaults.wallThick = PREFS.wallThick; S.defaults.wallType = PREFS.wallType || null; }
+
 /* ---- 09-init.js ---- */
 /* ============================================================
    Progetto di esempio, migrazione, avvio
@@ -5567,7 +5663,7 @@ function sanitizeProject(p){
     if (L.roof && typeof L.roof === "object"){ L.roof = {type:["none", "flat", "gable", "hip", "shed"].includes(L.roof.type) ? L.roof.type : "none", pitch:N(L.roof.pitch, 30), overhang:N(L.roof.overhang, .5), mat:K(L.roof.mat) || "tegole", ...(L.roof.ridge === "x" || L.roof.ridge === "y" ? {ridge:L.roof.ridge} : {}), ...(["s", "n", "e", "o"].includes(L.roof.dir) ? {dir:L.roof.dir} : {})}; } else L.roof = null;
     if (L.underlay && typeof L.underlay === "object"){ const U = L.underlay; if (U.kind === "img" && !okUrl(U.src)) L.underlay = null; else for (const k of ["ox", "oy", "mpp", "k", "opacity"]) if (k in U) U[k] = N(U[k]); } }
   if (!p.levels.length) p.levels.push({id:"L0", name:"Piano terra", elev:0, height:2.9, slab:.25, roof:null, underlay:null});
-  for (const w of arr("walls")){ w.id = fix(w.id); w.level = fix(w.level); w.a = pt(w.a); w.b = pt(w.b); w.thick = N(w.thick, .3) || .3; w.height = Nn(w.height); for (const k of ["mat", "matA", "matB"]) if (w[k] != null) w[k] = K(w[k]);
+  for (const w of arr("walls")){ w.id = fix(w.id); w.level = fix(w.level); w.a = pt(w.a); w.b = pt(w.b); w.thick = N(w.thick, .3) || .3; w.height = Nn(w.height); for (const k of ["mat", "matA", "matB"]) if (w[k] != null) w[k] = K(w[k]); if (w.wtype != null) w.wtype = K(w.wtype); if (w.layers) w.layers = {core:N(w.layers.core), insul:N(w.layers.insul)};
     if (w.arc){ w.arc = {g:fix(w.arc.g), i:N(w.arc.i), h:N(w.arc.h), A:pt(w.arc.A), B:pt(w.arc.B)}; } }
   for (const r of arr("rooms")){ r.id = fix(r.id); r.level = fix(r.level); r.pts = Array.isArray(r.pts) ? r.pts.map(pt) : []; r.name = T(r.name, 80); r.mat = K(r.mat); if (r.lab) r.lab = pt(r.lab);
     if (r.ceilH != null) r.ceilH = Nn(r.ceilH); if (r.ceilMat != null) r.ceilMat = K(r.ceilMat); if (r.tile) r.tile = {scale:N(r.tile.scale, 1), rot:N(r.tile.rot), ox:N(r.tile.ox), oy:N(r.tile.oy)}; if (r.skirt) r.skirt = {h:N(r.skirt.h, .08), mat:K(r.skirt.mat) || "bianco"}; }

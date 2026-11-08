@@ -507,6 +507,30 @@ test("informazioni, privacy, termini, licenza e versione dello schema", async ({
   expect(errors).toEqual([]);
 });
 
+test("tipi di muro: pulsanti, faccia interna ferma, angoli raccordati, predefinito; porta specchiata", async ({ page }) => {
+  const errors = await open(page);
+  // muro sud (0,0)-(11,0) da 30 cm, locali a nord: diventa esterno 40+15 e cresce verso l'esterno
+  const id = await page.evaluate(() => { const w = P.walls.find(w => w.a[1] === 0 && w.b[1] === 0); setSel([{type:"wall", id:w.id}]); S.tab = "props"; renderTabs(); renderInspector(); return w.id; });
+  await page.click('.wtypes[data-scope="sel"] [data-wt="e55"]');
+  const r = await page.evaluate(id => { const w = P.walls.find(w => w.id === id), o = P.walls.find(x => x !== w && x.level === w.level && Math.hypot(x.b[0] - w.a[0], x.b[1] - w.a[1]) < 1e-4);
+    return {thick:w.thick, wtype:w.wtype, layers:w.layers, inner:+(w.a[1] + w.thick / 2).toFixed(4), corner:!!o, def:[S.defaults.wallThick, S.defaults.wallType]}; }, id);
+  expect(r.thick).toBe(.55); expect(r.wtype).toBe("e55"); expect(r.layers).toEqual({core:.4, insul:.15});
+  expect(r.inner).toBe(.15);                          // la faccia interna resta a 15 cm (filo del locale)
+  expect(r.corner).toBe(true);                        // il muro ovest è ancora raccordato all'angolo
+  expect(r.def).toEqual([.55, "e55"]);                // diventa il predefinito dei nuovi muri
+  await expect(page.locator('.wtypes[data-scope="sel"] [data-wt="e55"]')).toHaveAttribute("aria-pressed", "true");
+  // tramezzo: cambia dall'asse; «Altro» in centimetri
+  const tid = await page.evaluate(() => { const w = P.walls.find(w => w.thick < .2); setSel([{type:"wall", id:w.id}]); renderInspector(); return w.id; });
+  const ax0 = await page.evaluate(id => P.walls.find(w => w.id === id).a[0], tid);
+  await page.click('.wtypes[data-scope="sel"] [data-wt="t8"]'); expect(await page.evaluate(id => [P.walls.find(w => w.id === id).thick, P.walls.find(w => w.id === id).a[0]], tid)).toEqual([.08, ax0]);
+  await page.fill("#wtCm-sel", "15"); await page.locator("#wtCm-sel").dispatchEvent("change");
+  expect(await page.evaluate(id => P.walls.find(w => w.id === id).thick, tid)).toBe(.15);
+  // porta: Specchia porta la cerniera dall'altro lato
+  const f0 = await page.evaluate(() => { const o = P.openings.find(o => o.type === "door"); setSel([{type:"opening", id:o.id}]); const f = o.flip || 0; transformSel("mirror"); return [f, P.openings.find(x => x.id === o.id).flip]; });
+  expect(f0[1]).toBe(f0[0] ^ 1);
+  expect(errors).toEqual([]);
+});
+
 test("telefono: nessuno scorrimento orizzontale", async ({ page }) => {
   await page.setViewportSize({ width: 400, height: 860 });
   await open(page);

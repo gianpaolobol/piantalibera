@@ -38,7 +38,7 @@ function renderInspector(){
   else if (S.tool === "paint") h += paintPanelHTML();
   else if (["wall","rect"].includes(S.tool)){
     const d = S.defaults;
-    h += `<div class="sec"><h3>Nuovi muri</h3><div class="row">${F("dThick","Spessore (m)",fmt(d.wallThick),'inputmode="decimal"')}<div class="f"><span class="lbl">Tipologia</span><select id="dPreset" class="inp"><option value="">—</option><option value=".30">Esterno 30</option><option value=".40">Esterno 40</option><option value=".12">Tramezzo 12</option><option value=".08">Tramezzo 8</option></select></div></div>
+    h += `<div class="sec"><h3>Nuovi muri</h3><div class="row"></div>${wallTypeHTML(d.wallThick, d.wallType, "new")}<div class="row"></div>
       <span class="lbl">Finitura</span>${swatches(WALL_MATS, d.wallMat, "dwm")}
       ${S.tool==="rect" ? `<div class="f"><span class="lbl">Le misure che disegni sono</span><select id="rectRef" class="inp"><option value="interno" ${PREFS.rectRef==="interno"?"selected":""}>Interne (filo interno dei muri)</option><option value="asse" ${PREFS.rectRef==="asse"?"selected":""}>In asse ai muri</option><option value="esterno" ${PREFS.rectRef==="esterno"?"selected":""}>Esterne (filo esterno)</option></select></div><span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, d.roomMat, "drm")}`
         : `<div class="f"><span class="lbl">Forma</span><select id="wallShape" class="inp"><option value="dritto" ${PREFS.wallShape!=="arco"?"selected":""}>Muro dritto</option><option value="arco" ${PREFS.wallShape==="arco"?"selected":""}>Muro ad arco (estremi, poi curvatura)</option></select></div>
@@ -59,13 +59,14 @@ function renderInspector(){
     const cnt = {}; for (const x of S.multi) cnt[x.type] = (cnt[x.type] || 0) + 1;
     const names = {wall:["muro","muri"], room:["locale","locali"], object:["oggetto","oggetti"], opening:["apertura","aperture"], dim:["quota","quote"]};
     h += `<div class="sec"><h3>${S.multi.length} elementi selezionati</h3><p class="note">${Object.entries(cnt).map(([k, n]) => `${n} ${names[k][n > 1 ? 1 : 0]}`).join(" · ")}</p>
+      ${cnt.wall ? wallTypeHTML(selectedWalls()[0]?.thick || .3, selectedWalls()[0]?.wtype, "multi") : ""}
       <div class="btns"><button class="btn" id="grRotL">Ruota −90°</button><button class="btn" id="grRot">Ruota 90°</button><button class="btn" id="grMir">Specchia</button><button class="btn" id="grDup">Duplica</button><button class="btn danger" id="delSel">Elimina</button></div>
       <p class="note">Trascina un elemento selezionato per spostarli tutti; frecce per spostamenti precisi (Maiusc ×10).</p></div>`;
   } else if (sel && S.sel){
     if (S.sel.type === "dim"){ const L0 = Math.hypot(sel.b[0]-sel.a[0], sel.b[1]-sel.a[1]);
       h += `<div class="sec"><h3>Quota</h3><div class="row">${F("dimLen","Lunghezza (m)",fmt(L0,3),'inputmode="decimal"')}${F("dimOff","Distanza dalla linea (m)",fmt(sel.off),'inputmode="decimal"')}</div><p class="note">Cambiando la lunghezza si sposta il secondo punto.</p><div class="btns"><button class="btn danger" id="delSel">Elimina</button></div></div>`; }
     if (S.sel.type === "wall"){ const f = wallFrame(sel);
-      h += `<div class="sec"><h3>Muro</h3><div class="row">${F("wLen","Lunghezza (m)",fmt(f.len),'inputmode="decimal"')}${F("wThick","Spessore (m)",fmt(sel.thick),'inputmode="decimal"')}</div>
+      h += `<div class="sec"><h3>Muro</h3><div class="row">${F("wLen","Lunghezza (m)",fmt(f.len),'inputmode="decimal"')}</div>${wallTypeHTML(sel.thick, sel.wtype, "sel")}
         <div class="row">${F("wH","Altezza (m)",sel.height?fmt(sel.height):"",`inputmode="decimal" placeholder="${fmt(L.height)} (piano)"`)}<div class="f"><span class="lbl">Aperture</span><div class="inp" style="font-family:var(--f-data)">${P.openings.filter(o=>o.wall===sel.id).length}</div></div></div>
         <span class="lbl">Finitura</span>${swatches(WALL_MATS, sel.mat, "wm")}${wallSidesHTML(sel)}
         <div class="btns"><button class="btn" id="wFlip">Inverti verso</button><button class="btn" id="wAll">Applica finitura a tutto il piano</button><button class="btn danger" id="delSel">Elimina</button></div></div>`; }

@@ -40,7 +40,7 @@ Un progetto con versione superiore a quella dell'editor viene aperto comunque, c
 
 **Level** — `id`, `name`, `elev` (quota del pavimento), `height` (interpiano), `slab` (spessore del solaio), `roof` (`null` o `{type:"none"·"flat"·"gable"·"hip"·"shed", pitch, overhang, mat, ridge?:"x"·"y", dir?:"s"·"n"·"e"·"o"}`), `underlay` (`null` o sfondo: `{kind:"img"·"vec", src, ox, oy, mpp, k, opacity}`; immagini solo `data:`).
 
-**Wall** — `id`, `level`, `a`, `b` (estremi), `thick`, `height` (`null` = altezza del piano), `mat`, `matA`/`matB` (finitura dei due lati), `arc` (`{g, i, h, A, B}` per i muri ad arco, spezzati in segmenti dello stesso gruppo `g`).
+**Wall** — `id`, `level`, `a`, `b` (estremi), `thick`, `wtype` (tipo scelto: `t8`·`t10`·`t12` tramezzo, `p30` portante interno, `e55` esterno; assente = spessore libero), `layers` (`{core, insul}` solo per l'esterno con cappotto, metri), `height` (`null` = altezza del piano), `mat`, `matA`/`matB` (finitura dei due lati), `arc` (`{g, i, h, A, B}` per i muri ad arco, spezzati in segmenti dello stesso gruppo `g`).
 
 **Room** — `id`, `level`, `name`, `pts` (poligono), `mat`, `lab` (posizione dell'etichetta), `ceilH`/`ceilMat` (controsoffitto), `tile` (`{scale, rot, ox, oy}` posa del pavimento), `skirt` (`{h, mat}` battiscopa).
 

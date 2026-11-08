@@ -365,13 +365,13 @@ function addWall(a, b, chained){
     const p1 = prev.a, d1 = [prev.b[0]-prev.a[0], prev.b[1]-prev.a[1]], d2 = [B[0]-A[0], B[1]-A[1]], den = d1[0]*d2[1] - d1[1]*d2[0];
     if (Math.abs(den) > 1e-9){ const t = ((A[0]-p1[0])*d2[1] - (A[1]-p1[1])*d2[0]) / den, X = [+(p1[0]+d1[0]*t).toFixed(4), +(p1[1]+d1[1]*t).toFixed(4)]; prev.b = X.slice(); A = X.slice(); }
   }
-  const w = {id:uid(), level:S.level, a:A, b:B, thick:d.wallThick, height:null, mat:d.wallMat}; P.walls.push(w); setSel([{type:"wall", id:w.id}]);
+  const w = {id:uid(), level:S.level, a:A, b:B, thick:d.wallThick, height:null, mat:d.wallMat, ...wallTypeProps(d)}; P.walls.push(w); setSel([{type:"wall", id:w.id}]);
   if (S.draw) S.draw.chain = {id:w.id}; commit(); }
 function addRectRoom(a, b){
   const d=S.defaults, t=d.wallThick, k = PREFS.rectRef === "interno" ? t/2 : PREFS.rectRef === "esterno" ? -t/2 : 0;
   const x0=Math.min(a[0],b[0])-k, x1=Math.max(a[0],b[0])+k, y0=Math.min(a[1],b[1])-k, y1=Math.max(a[1],b[1])+k;
   const C4 = [[x0,y0],[x1,y0],[x1,y1],[x0,y1]];
-  for (let i=0;i<4;i++){ const p=C4[i], q=C4[(i+1)%4]; const same = (u,v) => Math.hypot(u[0]-v[0],u[1]-v[1]) < 1e-4; const exists = wallsOf(S.level).some(w => (same(w.a,p) && same(w.b,q)) || (same(w.a,q) && same(w.b,p))); if (!exists) P.walls.push({id:uid(), level:S.level, a:p.slice(), b:q.slice(), thick:t, height:null, mat:d.wallMat}); }
+  for (let i=0;i<4;i++){ const p=C4[i], q=C4[(i+1)%4]; const same = (u,v) => Math.hypot(u[0]-v[0],u[1]-v[1]) < 1e-4; const exists = wallsOf(S.level).some(w => (same(w.a,p) && same(w.b,q)) || (same(w.a,q) && same(w.b,p))); if (!exists) P.walls.push({id:uid(), level:S.level, a:p.slice(), b:q.slice(), thick:t, height:null, mat:d.wallMat, ...wallTypeProps(d)}); }
   const r = {id:uid(), level:S.level, name:"Locale " + (P.rooms.filter(r=>r.level===S.level).length+1), mat:d.roomMat, pts:[[x0+t/2,y0+t/2],[x1-t/2,y0+t/2],[x1-t/2,y1-t/2],[x0+t/2,y1-t/2]]};
   P.rooms.push(r); S.sel = {type:"room", id:r.id}; commit();
 }
