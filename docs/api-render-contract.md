@@ -113,7 +113,7 @@ Analisi sincrona di una foto di un interno (Worker Cloudflare e server locale; i
 - **Risposta 200**: `{analysis, provider, model, detect_model, generated: true, neurons_estimated, neurons_measured, duration_ms, remaining_today}`; `analysis` = `{scene, room_type, camera, room, materials, lighting, back_wall|null, items:[{category, label, box:[x0,y0,x1,y1] in 0..1, w, d, h, facing, against, source}]}`. Categorie e corrispondenze con la libreria in `CATEGORIES` e `COCO`.
 - **Errori**: come sopra (`consent_required`, `invalid_input`, `too_large`, `bot_check_failed`, `quota_exceeded`, `global_quota_exceeded`, `budget_exceeded`, `config_incomplete`, `disabled`); 502 `{error}` se il modello fallisce (la quota del visitatore viene restituita, i Neurons no).
 - **Quote**: `PHOTO_PER_IP_DAILY` (1) per visitatore, `PHOTO_GLOBAL_DAILY` (10) in totale; i Neurons (stima `PHOTO_NEURONS_ESTIMATE` = 400, poi corretti con quelli dichiarati dal modello) entrano nello stesso tetto giornaliero dei render.
-- La geometria (spigoli della parete di fondo, scala, posizioni) si ricava nell'editor: `editor-src/077-foto3d.js`.
+- La geometria (spigoli della parete di fondo, scala, posizioni) si ricava nell'editor: `editor-src/077-foto3d.js`; la segmentazione per pixel (SegFormer-b2 ADE20K) gira nel browser con `shared/photo-seg.js` e non passa dal server.
 
 ## Aperto
 

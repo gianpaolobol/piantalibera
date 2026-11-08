@@ -15,7 +15,7 @@ const ALLOWED = new Set([]);
 const seen = new Map(), dup = [];
 const add = (name, where) => { if (!name) return; if (seen.has(name)) dup.push(`${name}: ${seen.get(name)} e ${where}`); else seen.set(name, where); };
 for (const f of parts){
-  const lines = readFileSync(join(root, "editor-src", f), "utf8").split("\n");
+  const lines = readFileSync(join(root, "editor-src", f), "utf8").replace(/^export\s+/gm, "").split("\n");
   let depth = 0, inStr = null;
   lines.forEach((line, i) => {
     const where = `${f}:${i + 1}`;

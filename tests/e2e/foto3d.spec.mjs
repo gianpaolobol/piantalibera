@@ -121,3 +121,47 @@ test("pannello: foto, consenso, analisi con il server di prova, spigoli trascina
   await expect(page.locator("#camSel")).toContainText("Vista della foto");
   expect(errors).toEqual([]);
 });
+
+test("segmentazione nel dispositivo: spigoli proposti, porta e portafinestra sullo stesso vano diventano una sola apertura", async ({ page }) => {
+  const errors = await open(page);
+  const r = await page.evaluate(() => {
+    // maschere sintetiche 400×300: parete di fondo 120–300, una porta (150–185), una finestra (240–285)
+    const W = 400, H = 300, names = ["wall", "floor", "ceiling", "door", "windowpane"], lab = new Uint8Array(W * H);
+    const cY = x => x < 120 ? 60 - (120 - x) * .35 : x > 300 ? 70 - (x - 300) * .4 : 60 + (x - 120) * 10 / 180, fY = x => x < 120 ? 220 + (120 - x) * .5 : x > 300 ? 230 + (x - 300) * .55 : 220 + (x - 120) * 10 / 180;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) lab[y * W + x] = y < cY(x) ? 2 : y >= fY(x) ? 1 : (x >= 150 && x < 185 && y >= 100) ? 3 : (x >= 240 && x < 285 && y >= 110 && y < 180) ? 4 : 0;
+    const segs = names.map((label, k) => ({ label, mask: { width: W, height: H, data: Uint8Array.from(lab, v => v === k ? 255 : 0) } }));
+    const m = labelMap(segs, 320), c = document.createElement("canvas"); c.width = 40; c.height = 30;
+    Object.assign(F3, { img: c.toDataURL("image/jpeg"), thumb: null, w: 1200, h: 900, name: "prova.jpg", exifFov: null });
+    F3.seg = { state: "ok", img: F3.img, m, quad: wallCorners(m) };
+    f3Accept({ analysis: { scene: "interior", room_type: "soggiorno", camera: {}, room: { height_m: 2.7 }, materials: {}, lighting: {}, back_wall: null, items: [
+      { category: "portafinestra", label: "Portafinestra", box: [.36, .3, .5, .75], source: "modello", facing: "camera", against: "none" },
+      { category: "porta", label: "Porta", box: [.34, .35, .47, .74], source: "modello", facing: "camera", against: "none" },
+      { category: "tappeto", label: "Tappeto", box: [.1, .85, .3, 1], source: "modello", facing: "camera", against: "none" } ] } });
+    F3.opts.fov = 60;
+    const s = f3Solve(), lay = f3Layout(s);
+    return { src: F3.quadSource, fl: F3.quad.fl, cr: F3.quad.cr, on: F3.items.filter(i => i.on).map(i => i.category).sort(), off: F3.items.filter(i => !i.on).map(i => i.category).sort(),
+      ops: lay.openings.map(o => o.type + ":" + o.wall).sort(), note: F3.segNote };
+  });
+  expect(r.src).toContain("segmentazione");
+  expect(r.fl[0]).toBeCloseTo(.3, 1); expect(r.cr[0]).toBeCloseTo(.75, 1);
+  expect(r.on).toEqual(["finestra", "porta"].concat(r.on.includes("portafinestra") ? ["portafinestra"] : []).sort());
+  expect(r.ops).toEqual(["door:back", "window:back"]);
+  expect(r.off).toContain("tappeto");
+  expect(r.note).toContain("aperture");
+  expect(errors).toEqual([]);
+});
+
+test("aperture sovrapposte sullo stesso muro: la seconda si sposta o non viene creata", async ({ page }) => {
+  await open(page);
+  const r = await page.evaluate(() => {
+    const c = document.createElement("canvas"); c.width = 40; c.height = 30;
+    Object.assign(F3, { img: c.toDataURL("image/jpeg"), w: 1200, h: 900, seg: null });
+    f3Accept({ analysis: { scene: "interior", camera: {}, room: { height_m: 2.7 }, materials: {}, lighting: {}, back_wall: { fl: [.2, .78], fr: [.8, .78], cl: [.2, .16], cr: [.8, .16], ceiling_visible: true }, items: [
+      { category: "porta", box: [.4, .3, .5, .78], source: "modello" }, { category: "portafinestra", box: [.41, .28, .52, .78], source: "modello" }, { category: "finestra", box: [.62, .3, .72, .55], source: "modello" } ] } });
+    F3.items.forEach(i => i.on = true); F3.opts.fov = 60;
+    const lay = f3Layout(f3Solve()), back = lay.openings.filter(o => o.wall === "back").sort((a, b) => a.t - b.t);
+    const overlap = back.some((o, i) => i && back[i - 1].t + back[i - 1].w / 2 > o.t - o.w / 2);
+    return { n: back.length, overlap, skipped: lay.skipped.map(i => i.category) };
+  });
+  expect(r.overlap).toBe(false); expect(r.n).toBe(2); expect(r.skipped.length).toBe(1);
+});

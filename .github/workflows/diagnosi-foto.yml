@@ -1,4 +1,6 @@
-# Diagnosi di «Da foto al 3D» sui modelli veri di Workers AI (REST API, nessun deploy).
+# Diagnosi di «Da foto al 3D» su foto vere: segmentazione (come nel browser), spigoli, Llama 4 Scout + DETR
+# su Workers AI (REST API, nessun deploy) e unione; immagini annotate nel log. scripts/diagnosi-foto.mjs resta
+# per provare solo i modelli del server.
 # Parte da sola sui rami feature/foto-* quando cambiano il contratto o lo script; a mano da Actions.
 name: Diagnosi foto 3D
 
@@ -8,7 +10,7 @@ on:
       n: { description: "Quante foto", default: "3" }
   push:
     branches: ["feature/foto-*"]
-    paths: ["shared/photo.js", "scripts/diagnosi-foto.mjs", ".github/workflows/diagnosi-foto.yml"]
+    paths: ["shared/photo.js", "scripts/prova-seg-browser.mjs", "editor-src/077-foto3d.js", "scripts/diagnosi-foto.mjs", "scripts/sonda-seg.mjs", "shared/photo-seg.js", ".github/workflows/diagnosi-foto.yml"]
 
 permissions:
   contents: read
@@ -25,11 +27,15 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       N: ${{ inputs.n || '3' }}
+      IDX: "2,6"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: node scripts/diagnosi-foto.mjs
+      - run: npm i --no-save @huggingface/transformers@3.8.1 sharp@0.34.4
+      - run: node scripts/sonda-seg.mjs
+      - run: npm ci && npx playwright install --with-deps chromium
+      - run: node scripts/prova-seg-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: diagnosi-foto, path: diagnosi-foto/, retention-days: 14 }
