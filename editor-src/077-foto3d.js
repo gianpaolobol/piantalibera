@@ -50,10 +50,13 @@ function exifFocal35(buf){
   return null;
 }
 async function f3LoadFile(file){
-  if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(file.type) && !/\.(jpe?g|png|webp|heic)$/i.test(file.name)) throw new Error("serve una foto JPEG, PNG o WebP");
+  if (file.type && !/^image\//.test(file.type)) throw new Error("serve una foto (JPEG, PNG, WebP o HEIC)");
   if (file.size > 40e6) throw new Error("foto troppo grande (massimo 40 MB)");
   const f35 = exifFocal35(await file.slice(0, 256 * 1024).arrayBuffer());
-  const bmp = await createImageBitmap(file, {imageOrientation:"from-image"}).catch(() => { throw new Error("formato della foto non leggibile da questo browser"); });
+  // createImageBitmap con l'orientamento EXIF; se il browser non lo regge (WebView, Safari datati) si passa da <img>
+  const bmp = await createImageBitmap(file, {imageOrientation:"from-image"}).catch(() => createImageBitmap(file)).catch(() => new Promise((ok, ko) => {
+    const u = URL.createObjectURL(file), im = new Image(); im.onload = () => { URL.revokeObjectURL(u); ok(im); }; im.onerror = () => { URL.revokeObjectURL(u); ko(new Error("formato della foto non leggibile da questo browser")); }; im.src = u; }));
+  if (!bmp.width && bmp.naturalWidth){ bmp.width = bmp.naturalWidth; bmp.height = bmp.naturalHeight; }
   const scale = (max) => Math.min(1, max / Math.max(bmp.width, bmp.height));
   const draw = (max, q) => { const k = scale(max), c = document.createElement("canvas"); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k); c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height); return {url:c.toDataURL("image/jpeg", q), w:c.width, h:c.height}; };
   const big = draw(1280, .86), small = draw(640, .8);
@@ -260,7 +263,7 @@ function f3PanelHTML(){
   let h = `<div class="exp f3" id="f3Box"><header><h4>Da foto al 3D</h4><span class="tag">Interni · AI</span></header>
     <p class="note">Carica o scatta la foto di una stanza: l'AI riconosce porte, finestre, arredi, luci e persone e Pianta Libera ricostruisce una <b>bozza 3D modificabile</b>, pronta per il render. Non è un rilievo: le misure vanno verificate.</p>`;
   if (!F3.img){
-    h += `<div class="btns"><button class="btn primary" id="f3Pick">Scegli o scatta una foto</button></div>
+    h += `<div class="btns"><button class="btn primary" id="f3Shoot">Scatta una foto</button><button class="btn" id="f3Pick">Scegli una foto</button></div>
       <p class="note">Consigli: foto orizzontale, fotocamera diritta all'altezza degli occhi, verso una parete, con il pavimento e il soffitto visibili. Un solo locale per foto.</p>`;
   } else if (!F3.a){
     h += `<div class="f3thumb"><img src="${F3.thumb}" alt="Foto da analizzare"><div><b>${esc(F3.name)}</b><br><span class="note">${F3.w}×${F3.h} px${F3.exifFov ? ` · campo visivo ${fmt(F3.exifFov, 0)}° dalla foto` : ""}</span></div></div>
@@ -383,6 +386,7 @@ function f3SyncList(){ document.querySelectorAll("#f3Modal .f3row").forEach((r, 
 
 function f3Click(e){ const b = e.target.closest("button"); if (!b) return;
   if (b.id === "f3Pick") $("#fF3").click();
+  else if (b.id === "f3Shoot") $("#fF3c").click();
   else if (b.id === "f3Reset"){ Object.assign(F3, {img:null, thumb:null, a:null, quad:null, items:[], sel:-1, err:"", report:null}); renderImport(); }
   else if (b.id === "f3Go") f3Analyze();
   else if (b.id === "f3Open") f3OpenModal();
@@ -404,7 +408,7 @@ function f3Change(e){ const t = e.target, rr = () => F3.open ? f3RenderModal() :
 }
 PI.addEventListener("click", f3Click); PI.addEventListener("change", f3Change);
 addEventListener("keydown", e => { if (e.key === "Escape" && F3.open && !f3Drag) f3CloseModal(); });
-$("#fF3").addEventListener("change", async e => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
+for (const id of ["#fF3", "#fF3c"]) $(id).addEventListener("change", async e => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
   try { busy("Preparo la foto…"); await f3LoadFile(f); } catch(err){ F3.err = err.message || String(err); } finally { busy(""); }
   renderImport(); });
 /* chiamato da renderImport (07-io.js) dopo aver scritto il pannello */
