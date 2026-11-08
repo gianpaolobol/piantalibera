@@ -10,7 +10,7 @@ on:
       n: { description: "Quante foto", default: "3" }
   push:
     branches: ["feature/foto-*"]
-    paths: ["shared/photo.js", "scripts/diagnosi-foto.mjs", "scripts/sonda-seg.mjs", "shared/photo-seg.js", ".github/workflows/diagnosi-foto.yml"]
+    paths: ["shared/photo.js", "scripts/prova-seg-browser.mjs", "editor-src/077-foto3d.js", "scripts/diagnosi-foto.mjs", "scripts/sonda-seg.mjs", "shared/photo-seg.js", ".github/workflows/diagnosi-foto.yml"]
 
 permissions:
   contents: read
@@ -34,6 +34,8 @@ jobs:
         with: { node-version: 22 }
       - run: npm i --no-save @huggingface/transformers@3.8.1 sharp@0.34.4
       - run: node scripts/sonda-seg.mjs
+      - run: npm ci && npx playwright install --with-deps chromium
+      - run: node scripts/prova-seg-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: diagnosi-foto, path: diagnosi-foto/, retention-days: 14 }
