@@ -160,7 +160,10 @@ export function mergeSegmentation(items, comps, quad = null) {
   // restano in elenco ma esclusi, da riattivare a mano; quelli del rilevatore di oggetti restano attivi
   if (comps.length) out.forEach(it => { if (!it.seg && !String(it.source).includes("rilevatore")) it.doubt = true; });
   // doppioni tra aperture: due elementi sullo stesso riquadro → resta il primo
-  for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++)
-    if (FAMILY(out[i].category) === FAMILY(out[j].category) && iou(out[i].box, out[j].box) > .55 && !out[j].dup) out[j].dup = true;
+  const trust = o => (o.seg ? 2 : 0) + (String(o.source).includes("rilevatore") ? 1 : 0) - (o.doubt ? 1 : 0);
+  for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++) {
+    const A = out[i], B = out[j]; if (A.dup || B.dup || FAMILY(A.category) !== FAMILY(B.category) || iou(A.box, B.box) <= .55) continue;
+    (trust(B) > trust(A) ? A : B).dup = true;            // resta il più affidabile (confermato dalla foto)
+  }
   return out.filter(it => !it.dup);
 }
