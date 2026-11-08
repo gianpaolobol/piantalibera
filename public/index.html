@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-eXopFNOBtGJev6U6iQTo0oAXymWlmte5AUkrg1abT1Y=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-xk8mBy1c+cejdUrOT6Jsl2fihrRHg2/swuds4NkYoIg=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4357,7 +4357,7 @@ function f3ReviewHTML(){
   const s = f3Solve(), o = F3.opts, q = F3.quad, VW = 1000, VH = Math.round(1000 * F3.h / F3.w), m = 90;
   const P_ = p => `${(p[0] * VW).toFixed(1)},${(p[1] * VH).toFixed(1)}`;
   const boxes = F3.items.map((it, i) => { const [x0, y0, x1, y1] = it.box, C = F3_CATS[it.category] || F3_CATS.altro, cls = `f3b${it.on ? "" : " off"}${i === F3.sel ? " sel" : ""}${C.kind === "door" || C.kind === "window" ? " op" : ""}`;
-    return `<g class="${cls}" data-f3box="${i}"><rect x="${x0 * VW}" y="${y0 * VH}" width="${(x1 - x0) * VW}" height="${(y1 - y0) * VH}"/><text x="${x0 * VW + 6}" y="${y0 * VH + 22}">${i + 1}</text>${i === F3.sel ? `<circle class="f3rh" data-f3rs="${i}" cx="${x1 * VW}" cy="${y1 * VH}" r="16"/>` : ""}</g>`; }).join("");
+    return `<g class="${cls}" data-f3box="${i}"><rect x="${x0 * VW}" y="${y0 * VH}" width="${(x1 - x0) * VW}" height="${(y1 - y0) * VH}"/><text x="${x0 * VW + 6}" y="${y0 * VH + 22}">${i + 1}</text>${i === F3.sel ? `<circle class="f3rh" data-f3rs="${i}" data-c="tl" cx="${x0 * VW}" cy="${y0 * VH}" r="16"/><circle class="f3rh" data-f3rs="${i}" data-c="br" cx="${x1 * VW}" cy="${y1 * VH}" r="16"/>` : ""}</g>`; }).join("");
   const handles = ["fl", "fr", "cr", "cl"].filter(k => o.ceil || k[0] === "f").map(k => `<g class="f3h" data-f3h="${k}"><circle cx="${q[k][0] * VW}" cy="${q[k][1] * VH}" r="34" class="hit"/><circle cx="${q[k][0] * VW}" cy="${q[k][1] * VH}" r="13"/></g>`).join("");
   const quadPts = o.ceil ? [q.fl, q.fr, q.cr, q.cl] : [q.fl, q.fr];
   // lente d'ingrandimento (3×) mentre si trascina uno spigolo: il dito non copre il punto
@@ -4425,14 +4425,15 @@ function f3PointerDown(e){
   if (!h && !rs && !b) return;
   e.preventDefault(); const p = f3Pt(e);
   if (h) f3Drag = {kind:"h", k:h.dataset.f3h};
-  else if (rs) f3Drag = {kind:"rs", i:+rs.dataset.f3rs};
+  else if (rs) f3Drag = {kind:"rs", i:+rs.dataset.f3rs, c:rs.dataset.c};
   else { const i = +b.dataset.f3box; if (F3.sel !== i){ F3.sel = i; f3Refresh(); f3SyncList(); } f3Drag = {kind:"mv", i, p0:p, b0:F3.items[i].box.slice()}; }
   $("#f3Svg")?.setPointerCapture?.(e.pointerId);
 }
 function f3PointerMove(e){
   if (!f3Drag) return; e.preventDefault(); const p = f3Pt(e), lim = v => clamp(v, -.11, 1.11);
   if (f3Drag.kind === "h"){ F3.quad[f3Drag.k] = [lim(p[0]), lim(p[1])]; F3.quadSource = "posizionati da te"; }
-  else if (f3Drag.kind === "rs"){ const b = F3.items[f3Drag.i].box; b[2] = clamp(p[0], b[0] + .01, 1); b[3] = clamp(p[1], b[1] + .01, 1); }
+  else if (f3Drag.kind === "rs"){ const b = F3.items[f3Drag.i].box;
+    if (f3Drag.c === "tl"){ b[0] = clamp(p[0], 0, b[2] - .01); b[1] = clamp(p[1], 0, b[3] - .01); } else { b[2] = clamp(p[0], b[0] + .01, 1); b[3] = clamp(p[1], b[1] + .01, 1); } }
   else { const b0 = f3Drag.b0, dx = clamp(p[0] - f3Drag.p0[0], -b0[0], 1 - b0[2]), dy = clamp(p[1] - f3Drag.p0[1], -b0[1], 1 - b0[3]); F3.items[f3Drag.i].box = [b0[0] + dx, b0[1] + dy, b0[2] + dx, b0[3] + dy]; }
   cancelAnimationFrame(f3PointerMove.raf); f3PointerMove.raf = requestAnimationFrame(f3Refresh);
 }

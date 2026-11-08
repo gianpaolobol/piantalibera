@@ -50,7 +50,7 @@ Un progetto con versione superiore a quella dell'editor viene aperto comunque, c
 
 **Dim** — quota: `id`, `level`, `a`, `b`, `off`.
 
-**Camera** — `id`, `name`, `pos`, `target` (`[x, y, z]`), `fov`.
+**Camera** — `id`, `name`, `pos`, `target` (`[x, y, z]`), `fov` (verticale), `photo` (facoltativo: foto ridotta di «Da foto al 3D», solo `data:image/…` fino a 600 kB; non va nel link per il cliente).
 
 **Materiale** — `nome`, `color` (`#rgb`…`#rrggbbaa`), `rough`, `metal`, `size`, `opacity`, `map`/`normalMap`/`roughMap` (solo `data:image/…` o Poly Haven).
 

@@ -126,6 +126,10 @@ Il pacchetto parla con **ComfyUI** installato sullo stesso computer e usa il mod
 
 Dalla scheda **Esporta → Condividi con il cliente** il server locale crea link che valgono finché resta acceso (i progetti condivisi stanno in memoria, non su disco). Per farli aprire da un altro dispositivo della stessa rete avvia il server con `HOST=0.0.0.0` e manda il link con l'indirizzo del computer (es. `http://192.168.1.20:8787/?condividi=…`). Puoi scegliere se il cliente può solo guardare e commentare o anche modificare il progetto: in quel caso il link contiene `#modifica=…` e le sue modifiche ti arrivano come proposta da aprire o scartare.
 
+### Da foto al 3D in locale
+
+Il server locale non ha un modello con visione: **Importa → Da foto al 3D** risponde sempre con la stessa analisi di prova (un soggiorno con porta, finestra, divano e lampada), utile per provare calibrazione e creazione anche senza internet. Con `PHOTO_FIXTURE=percorso/analisi.json` usa un'altra risposta, nello stesso formato del modello (vedi `shared/photo.js`). L'analisi vera è quella del sito pubblicato.
+
 ### Su telefono e tablet
 
 L'editor si adatta da solo a telefono e tablet (una vista per volta, pannello che sale dal basso, gesti a tocco: vedi `docs/app.md`). Con il server avviato con `HOST=0.0.0.0` lo apri dal telefono all'indirizzo del computer (es. `http://192.168.1.20:8787/`).

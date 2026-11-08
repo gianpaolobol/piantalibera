@@ -1,12 +1,15 @@
 // Diagnosi «Da foto al 3D» sui modelli veri di Workers AI (REST API dell'account, nessun deploy).
+// Confronto dei modelli (8/11/2026): Llama 4 Scout + DETR scelti; Moondream 3.1 risponde vuoto via API,
+// Qwen 3.8 e Mistral Small 3.1 ragionano o si ripetono fino al limite, Gemma 4 impiega 2 minuti ed è
+// instabile, GLM-5.3 Flash non è disponibile nel piano gratuito di Workers.
 // Scarica alcune foto di interni da Wikimedia Commons (solo per la prova, non vengono ripubblicate),
 // le manda al modello con visione e al rilevatore come fa /api/foto e stampa risposte grezze, tempi,
 // token e l'analisi normalizzata. Uso (GitHub Actions): CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID.
-import { photoMessages, PHOTO_SCHEMA, extractJson, normalizeAnalysis, parseDetections, detectTargets, neuronsFromUsage } from "../shared/photo.js";
+import { photoMessages, PHOTO_SCHEMA, extractJson, normalizeAnalysis, parseDetections, neuronsFromUsage } from "../shared/photo.js";
 import { writeFileSync, mkdirSync } from "node:fs";
 
 const ACC = process.env.CLOUDFLARE_ACCOUNT_ID, TOK = process.env.CLOUDFLARE_API_TOKEN;
-const VISION = process.env.PHOTO_MODEL || "@cf/meta/llama-4-scout-17b-16e-instruct", DETECT = "@cf/moondream/moondream3.1-9B-A2B";
+const VISION = process.env.PHOTO_MODEL || "@cf/meta/llama-4-scout-17b-16e-instruct", DETECT = process.env.DETECT_MODEL || "@cf/facebook/detr-resnet-50";
 const N = Number(process.env.N || 3), OUT = process.env.OUT || "diagnosi-foto";
 mkdirSync(OUT, { recursive: true });
 const UA = { "User-Agent": "PiantaLiberaDiagnosi/1.0 (https://github.com/gianpaolobol/piantalibera)" };
@@ -18,7 +21,8 @@ async function photos() {
     const u = `https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=categorymembers&gcmtitle=${encodeURIComponent(c)}&gcmtype=file&gcmlimit=30&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=1024`;
     const j = await (await fetch(u, { headers: UA })).json();
     const files = Object.values(j.query?.pages || {}).filter(p => p.imageinfo?.[0]?.mime === "image/jpeg" && p.imageinfo[0].width > p.imageinfo[0].height * 1.2);
-    if (files[0]) out.push({ title: files[0].title, url: files[0].imageinfo[0].thumburl, page: files[0].imageinfo[0].descriptionurl });
+    const f = files[Math.min(Number(process.env.IDX || 0), files.length - 1)];
+    if (f) out.push({ title: f.title, url: f.imageinfo[0].thumburl, page: f.imageinfo[0].descriptionurl, w: f.imageinfo[0].thumbwidth, h: f.imageinfo[0].thumbheight });
     if (out.length >= N) break;
   }
   return out;
@@ -40,15 +44,10 @@ for (const p of await photos()) {
   const raw = extractJson(vis.result);
   console.log("chiavi:", vis.result && Object.keys(vis.result), "usage:", JSON.stringify(vis.result?.usage));
   console.log("risposta:", (typeof vis.result?.response === "string" ? vis.result.response : JSON.stringify(vis.result?.response))?.slice(0, 3500));
-  const dets = {}; let dn = 0;
-  for (const t of raw ? detectTargets(raw) : []) {
-    const d = await run(DETECT, { task: "detect", image, target: t.en, max_objects: 20 });
-    console.log(`detect «${t.en}»: HTTP ${d.status} ${d.ms} ms`, JSON.stringify(d.ok ? d.result : d.errors).slice(0, 700));
-    if (d.ok) { dets[t.en] = parseDetections(d.result, 1024, null); dn += neuronsFromUsage(d.result?.usage || d.result?.metrics, { in: 27273, out: 90909 }) || 0; }
-  }
-  const pt = await run(DETECT, { task: "point", image, target: "corner where the back wall meets the floor" });
-  console.log("point angolo:", JSON.stringify(pt.ok ? pt.result : pt.errors).slice(0, 500));
-  let a = null; try { a = normalizeAnalysis(raw, dets, 1024, null); } catch (e) { console.log("normalizzazione fallita:", e.message); }
+  const d = await run(DETECT, { image: [...buf] });
+  console.log(`rilevatore: HTTP ${d.status} ${d.ms} ms`, JSON.stringify(d.result ?? d.errors).slice(0, 900));
+  const dets = d.ok ? parseDetections(d.result, p.w, p.h) : [], dn = 0;
+  let a = null; try { a = normalizeAnalysis(raw, dets, p.w, p.h); } catch (e) { console.log("normalizzazione fallita:", e.message); }
   const vn = neuronsFromUsage(vis.result?.usage, { in: 24545, out: 77273 });
   console.log("analisi:", JSON.stringify(a).slice(0, 2500));
   summary.push({ title: p.title, page: p.page, url: p.url, vision_ms: vis.ms, neurons_vision: vn, neurons_detect: dn, items: a?.items?.length, back_wall: a?.back_wall, analysis: a });
