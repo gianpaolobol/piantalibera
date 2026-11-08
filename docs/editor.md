@@ -65,6 +65,7 @@ Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, ve
 - **Locale automatico**: doppio clic nel vuoto dentro muri chiusi (bordo agganciato alle facce dei muri).
 - **Piani a schede** sopra la pianta, piano inferiore in trasparenza; doppio clic su un elemento apre le proprietà; `?` mostra tutte le scorciatoie.
 
+- **Etichette degli strumenti**: una parola sotto ogni icona (Seleziona, Muro, Stanza, Pavimento, Porta, Finestra, Materiali, Arredi, Quota, Scala rif., Sposta rif.); «Scala rif.» e «Sposta rif.» lavorano sulla base di ricalco importata.
 - **Tipi di muro** (pannello Muro, Nuovi muri e selezione multipla): Tramezzo 8/10/12, Portante interno 30, Esterno 40+15 (cappotto) e «Altro (cm)». Ingrossando un muro esterno la faccia interna resta ferma (lato verso i locali) e gli angoli si raccordano; i tramezzi crescono sull'asse. L'ultimo tipo scelto diventa il predefinito dei muri nuovi (`editor-src/054-muri.js`).
 - **Porte specchiate**: «Specchia» (pannello: «Specchia (cerniera)») inverte il lato della cerniera, «Apre dall'altro lato» il verso; in 3D l'anta sta a filo del lato verso cui apre e la maniglia è dal lato opposto alla cerniera.
 - **Nuova versione**: tornando in primo piano (app per telefono, scheda aperta) l'editor confronta l'impronta dello script con quella pubblicata e propone «Aggiorna».
