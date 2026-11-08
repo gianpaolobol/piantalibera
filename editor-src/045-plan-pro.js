@@ -203,4 +203,27 @@ function renderLevelTabs(){
 }
 $("#tag2d")?.addEventListener("click", e => { const b = e.target.closest("[data-lvl]"); if (!b) return;
   if (b.dataset.lvl === "+"){ $("#addLevel").click(); return; }
-  S.level = b.dataset.lvl; setSel([]); S.draw = null; applyVisibility(); render3D(); refresh(); });
+  if (b.dataset.lvl === S.level){ openLevelMenu(b); return; }          // secondo tocco sul piano attivo: opzioni del piano
+  closeLevelMenu(); S.level = b.dataset.lvl; setSel([]); S.draw = null; applyVisibility(); render3D(); refresh(); });
+$("#tag2d")?.addEventListener("contextmenu", e => { const b = e.target.closest("[data-lvl]"); if (!b || b.dataset.lvl === "+") return; e.preventDefault();
+  if (b.dataset.lvl !== S.level){ S.level = b.dataset.lvl; setSel([]); applyVisibility(); render3D(); refresh(); } openLevelMenu($(`#tag2d [data-lvl="${S.level}"]`)); });
+/* opzioni del piano: proprietà ed eliminazione (con Annulla per tornare indietro) */
+function closeLevelMenu(){ document.getElementById("lvlMenu")?.remove(); }
+function openLevelMenu(anchor){
+  closeLevelMenu(); const L = level(); if (!L || !anchor) return;
+  const r = anchor.getBoundingClientRect(), m = document.createElement("div"); m.id = "lvlMenu"; m.className = "lvl-menu"; m.setAttribute("role", "menu");
+  m.innerHTML = `<b>${esc(L.name)}</b><button role="menuitem" data-lm="props">Proprietà del piano</button>${P.levels.length > 1 ? `<button role="menuitem" class="danger" data-lm="del">Elimina piano</button>` : `<span class="note">È l'unico piano: non si può eliminare.</span>`}`;
+  m.style.left = Math.max(8, Math.min(innerWidth - 220, r.left)) + "px"; m.style.top = (r.bottom + 6) + "px"; document.body.appendChild(m);
+  m.addEventListener("click", e => { const b = e.target.closest("[data-lm]"); if (!b) return;
+    if (b.dataset.lm === "props"){ closeLevelMenu(); setSel([]); setTool("select"); S.tab = "props"; renderTabs(); renderInspector(); if (typeof revealPanel === "function") revealPanel(); return; }
+    if (b.dataset.lm === "del"){ if (b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = `Conferma: elimina «${L.name}» e il suo contenuto`; return; } closeLevelMenu(); deleteLevel(L.id); } });
+  setTimeout(() => document.addEventListener("pointerdown", function off(ev){ if (!ev.target.closest("#lvlMenu")){ closeLevelMenu(); document.removeEventListener("pointerdown", off, true); } }, true), 0);
+}
+function deleteLevel(id){
+  if (P.levels.length < 2){ toast("Serve almeno un piano", true); return; }
+  const L = level(id); if (!L) return;
+  P.walls = P.walls.filter(w => w.level !== id); P.rooms = P.rooms.filter(r => r.level !== id); P.objects = P.objects.filter(o => o.level !== id);
+  P.dims = (P.dims || []).filter(d => d.level !== id); P.openings = P.openings.filter(o => wallById(o.wall)); P.levels = P.levels.filter(l => l.id !== id);
+  const rest = [...P.levels].sort((a, b) => Math.abs(a.elev - L.elev) - Math.abs(b.elev - L.elev)); S.level = rest[0].id; setSel([]); S.sel = null;
+  commit(); renderLevels(); applyVisibility(); render3D(); toast(`Piano «${L.name}» eliminato. Annulla per ripristinarlo.`);
+}

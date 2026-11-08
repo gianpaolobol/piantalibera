@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-OVlYTFULbUpDBPBX3rMvcsnkNYZp9BY6/0sUMjzUhrw=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-BwaTOKoUODNBfzL9inOQUS+Dsoh4Y73oywOKaGwrrNQ=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -81,6 +81,12 @@ button.viewtag{cursor:pointer;font:inherit;pointer-events:auto;border:0}
 #tag2d{display:flex;gap:2px;padding:2px;pointer-events:auto;text-transform:none;letter-spacing:0}
 #tag2d .lvl{border:0;background:none;color:var(--muted);font:600 11px var(--f-ui, inherit);padding:3px 8px;border-radius:3px;cursor:pointer}
 #tag2d .lvl[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink)}
+.lvl-menu{position:fixed;z-index:60;min-width:200px;max-width:calc(100vw - 16px);background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.22);padding:6px;display:grid;gap:2px}
+.lvl-menu b{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:4px 8px}
+.lvl-menu button{background:none;border:0;text-align:left;padding:9px 8px;border-radius:5px;font:inherit}.lvl-menu button:hover{background:var(--bg)}.lvl-menu .danger{color:var(--danger)}.lvl-menu .note{padding:4px 8px}
+/* telefono e tablet: il tocco lungo apre i menu dell'editor, non la selezione del testo di iOS (barre blu) */
+@media (pointer:coarse){body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}body input,body textarea,body select,body [contenteditable],body .cmts p,body pre{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}}
+canvas{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 .statusbar{position:absolute;left:0;right:0;bottom:0;height:28px;display:flex;align-items:center;gap:8px;padding:0 6px;border-top:1px solid var(--line);background:color-mix(in srgb, var(--panel) 94%, transparent);font:10.5px var(--f-data);color:var(--muted)}
 .sb-left{flex:1;min-width:0;display:flex;gap:10px;overflow:hidden;white-space:nowrap}.sb-left span{overflow:hidden;text-overflow:ellipsis}.sb-left span+span{flex:none}
 .sb-right{display:flex;align-items:center;gap:2px;flex:none;position:relative}
@@ -1928,7 +1934,30 @@ function renderLevelTabs(){
 }
 $("#tag2d")?.addEventListener("click", e => { const b = e.target.closest("[data-lvl]"); if (!b) return;
   if (b.dataset.lvl === "+"){ $("#addLevel").click(); return; }
-  S.level = b.dataset.lvl; setSel([]); S.draw = null; applyVisibility(); render3D(); refresh(); });
+  if (b.dataset.lvl === S.level){ openLevelMenu(b); return; }          // secondo tocco sul piano attivo: opzioni del piano
+  closeLevelMenu(); S.level = b.dataset.lvl; setSel([]); S.draw = null; applyVisibility(); render3D(); refresh(); });
+$("#tag2d")?.addEventListener("contextmenu", e => { const b = e.target.closest("[data-lvl]"); if (!b || b.dataset.lvl === "+") return; e.preventDefault();
+  if (b.dataset.lvl !== S.level){ S.level = b.dataset.lvl; setSel([]); applyVisibility(); render3D(); refresh(); } openLevelMenu($(`#tag2d [data-lvl="${S.level}"]`)); });
+/* opzioni del piano: proprietà ed eliminazione (con Annulla per tornare indietro) */
+function closeLevelMenu(){ document.getElementById("lvlMenu")?.remove(); }
+function openLevelMenu(anchor){
+  closeLevelMenu(); const L = level(); if (!L || !anchor) return;
+  const r = anchor.getBoundingClientRect(), m = document.createElement("div"); m.id = "lvlMenu"; m.className = "lvl-menu"; m.setAttribute("role", "menu");
+  m.innerHTML = `<b>${esc(L.name)}</b><button role="menuitem" data-lm="props">Proprietà del piano</button>${P.levels.length > 1 ? `<button role="menuitem" class="danger" data-lm="del">Elimina piano</button>` : `<span class="note">È l'unico piano: non si può eliminare.</span>`}`;
+  m.style.left = Math.max(8, Math.min(innerWidth - 220, r.left)) + "px"; m.style.top = (r.bottom + 6) + "px"; document.body.appendChild(m);
+  m.addEventListener("click", e => { const b = e.target.closest("[data-lm]"); if (!b) return;
+    if (b.dataset.lm === "props"){ closeLevelMenu(); setSel([]); setTool("select"); S.tab = "props"; renderTabs(); renderInspector(); if (typeof revealPanel === "function") revealPanel(); return; }
+    if (b.dataset.lm === "del"){ if (b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = `Conferma: elimina «${L.name}» e il suo contenuto`; return; } closeLevelMenu(); deleteLevel(L.id); } });
+  setTimeout(() => document.addEventListener("pointerdown", function off(ev){ if (!ev.target.closest("#lvlMenu")){ closeLevelMenu(); document.removeEventListener("pointerdown", off, true); } }, true), 0);
+}
+function deleteLevel(id){
+  if (P.levels.length < 2){ toast("Serve almeno un piano", true); return; }
+  const L = level(id); if (!L) return;
+  P.walls = P.walls.filter(w => w.level !== id); P.rooms = P.rooms.filter(r => r.level !== id); P.objects = P.objects.filter(o => o.level !== id);
+  P.dims = (P.dims || []).filter(d => d.level !== id); P.openings = P.openings.filter(o => wallById(o.wall)); P.levels = P.levels.filter(l => l.id !== id);
+  const rest = [...P.levels].sort((a, b) => Math.abs(a.elev - L.elev) - Math.abs(b.elev - L.elev)); S.level = rest[0].id; setSel([]); S.sel = null;
+  commit(); renderLevels(); applyVisibility(); render3D(); toast(`Piano «${L.name}» eliminato. Annulla per ripristinarlo.`);
+}
 
 /* ---- 047-fase2.js ---- */
 /* ============================================================
@@ -2910,7 +2939,7 @@ P_.addEventListener("click", e => {
     case "obRot": sel.rot = ((sel.rot||0) + 90) % 360; commit(); break;
     case "obDup": { const c = {...sel, id:uid(), x:sel.x+.6, y:sel.y+.6}; P.objects.push(c); S.sel = {type:"object", id:c.id}; commit(); break; }
     case "camRoom": camPreset("int"); break;
-    case "lDel": P.walls = P.walls.filter(w=>w.level!==L.id); P.rooms = P.rooms.filter(r=>r.level!==L.id); P.objects = P.objects.filter(o=>o.level!==L.id); P.openings = P.openings.filter(o=>wallById(o.wall)); P.levels = P.levels.filter(l=>l.id!==L.id); S.level = P.levels[0].id; S.sel = null; commit(); break;
+    case "lDel": deleteLevel(L.id); return;
     case "uDel": L.underlay = null; commit(); break;
     case "fit": fitPlan(); break;
     case "newProj": { const p = sampleProject(); p.name = "Nuovo progetto"; p.walls = []; p.openings = []; p.rooms = []; p.objects = []; p.levels[0].roof.type = "none"; p.pid = uid(); P = p; S.level = "L0"; S.sel = null; commit(); $("#projName").value = P.name; fitPlan(); setTool("rect"); break; }
