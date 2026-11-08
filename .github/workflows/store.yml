@@ -12,9 +12,9 @@ on:
         options: [ios, android, all]
         default: ios
       azione:
-        description: "build = nuova build firmata · invia = manda a TestFlight l'ultima build iOS già pronta · stato = elenco delle build"
+        description: "build = nuova build firmata · invia = manda a TestFlight l'ultima build iOS già pronta · stato = elenco delle build · aab = pubblica su GitHub (release play-latest) l'ultimo AAB Android per Play Console"
         type: choice
-        options: [build, invia, stato]
+        options: [build, invia, stato, aab]
         default: build
       submit:
         description: "Con «build»: invia a TestFlight appena pronta. Con «invia»: togliendo la spunta prepara solo il gruppo di test, senza nuovo invio"
@@ -22,7 +22,7 @@ on:
         default: true
 
 permissions:
-  contents: read
+  contents: write   # solo per l'azione «aab»: pubblica il file nella release play-latest
 
 concurrency:
   group: store
@@ -56,6 +56,25 @@ jobs:
         run: |
           $EAS build:list --limit 8 --non-interactive --json > "$RUNNER_TEMP/b.json"
           jq -r '.[] | "\(.platform)\t\(.status)\tversione \(.appVersion) (\(.appBuildVersion))\t\(.createdAt)\t\(if .platform=="ANDROID" then (.artifacts.buildUrl // "") else "" end)"' "$RUNNER_TEMP/b.json" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: AAB Android per Play Console nella release GitHub play-latest
+        if: inputs.azione == 'aab'
+        env: { EXPO_PROJECT_ID: "${{ steps.prep.outputs.project_id }}", EAS_NO_VCS: "1", GH_TOKEN: "${{ github.token }}", REPO: "${{ github.repository }}" }
+        run: |
+          # firmato da EAS con la chiave di caricamento già registrata in Play Console: è l'unico file che Google accetta come aggiornamento
+          $EAS build:list --platform android --status finished --limit 1 --non-interactive --json > "$RUNNER_TEMP/a.json"
+          url=$(jq -r '.[0].artifacts.buildUrl' "$RUNNER_TEMP/a.json"); vc=$(jq -r '.[0].appBuildVersion' "$RUNNER_TEMP/a.json"); ver=$(jq -r '.[0].appVersion' "$RUNNER_TEMP/a.json")
+          case "$url" in https://*.aab) ;; *) echo "::error::Nessun AAB Android pronto"; exit 1;; esac
+          mkdir -p "$RUNNER_TEMP/rel"; f="$RUNNER_TEMP/rel/Pianta-Libera-$ver-$vc.aab"
+          curl -fsSL "$url" -o "$f"; (cd "$RUNNER_TEMP/rel" && sha256sum *.aab > SHA256SUMS.txt)
+          notes="AAB firmato per Google Play Console, versione $ver (versionCode $vc). Da caricare in Test interni → Crea nuova release. Aggiornato con: Actions → Store → azione «aab»."
+          if gh release view play-latest -R "$REPO" >/dev/null 2>&1; then
+            for a in $(gh release view play-latest -R "$REPO" --json assets --jq '.assets[].name'); do gh release delete-asset play-latest "$a" -R "$REPO" -y; done
+            gh release edit play-latest -R "$REPO" --title "Pianta Libera — Android per Play Console ($ver, $vc)" --notes "$notes" --prerelease
+          else
+            gh release create play-latest -R "$REPO" --title "Pianta Libera — Android per Play Console ($ver, $vc)" --notes "$notes" --prerelease --target "$GITHUB_SHA"
+          fi
+          gh release upload play-latest "$RUNNER_TEMP"/rel/* -R "$REPO" --clobber
+          echo "Play Console: https://github.com/$REPO/releases/download/play-latest/$(basename "$f")" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Invia a TestFlight l'ultima build iOS
         if: inputs.azione == 'invia'
         env: { EXPO_PROJECT_ID: "${{ steps.prep.outputs.project_id }}", EAS_NO_VCS: "1", ASC_APP_ID: "${{ steps.prep.outputs.asc_app_id }}", SOLO_TESTER: "${{ !inputs.submit }}" }
