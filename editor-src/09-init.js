@@ -59,7 +59,8 @@ function sanitizeProject(p){
     if (o.p && typeof o.p === "object") for (const [k, v] of Object.entries(o.p)) o.p[k] = typeof v === "number" ? N(v) : typeof v === "boolean" ? v : K(v);
     if (o.light && typeof o.light === "object") o.light = {on:o.light.on !== false, ...(o.light.lm != null ? {lm:N(o.light.lm, 800)} : {}), ...(o.light.k != null ? {k:N(o.light.k, 3000)} : {})}; }
   for (const d of arr("dims")){ d.id = fix(d.id); d.level = fix(d.level); d.a = pt(d.a); d.b = pt(d.b); d.off = N(d.off); }
-  for (const c of arr("cameras")){ c.id = fix(c.id); c.name = T(c.name, 80) || "Vista"; c.pos = v3(c.pos); c.target = v3(c.target); c.fov = N(c.fov, 45); }
+  for (const c of arr("cameras")){ c.id = fix(c.id); c.name = T(c.name, 80) || "Vista"; c.pos = v3(c.pos); c.target = v3(c.target); c.fov = N(c.fov, 45);
+    if (typeof c.photo !== "string" || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(c.photo) || c.photo.length > 600000) delete c.photo; }
   if (p.materials && typeof p.materials === "object"){ const m2 = {};
     for (const [k, m] of Object.entries(p.materials)){ if (!m || typeof m !== "object") continue; const key = K(k), c = {...m};
       c.nome = T(m.nome, 80); c.color = /^#[0-9a-f]{3,8}$/i.test(m.color || "") ? m.color : "#cccccc"; for (const u of ["map", "mapData", "normalMap", "roughMap"]) if (c[u] != null && !okUrl(c[u])) delete c[u];

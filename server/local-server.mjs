@@ -19,6 +19,15 @@ import { randomUUID } from "node:crypto";
 import { LIMITS as CONTRACT, validateRenderRequest, buildModelPrompt, decodeDataUrl } from "../shared/contract.js";
 import { fillWorkflow, isApiWorkflow } from "./comfy-workflow.mjs";
 import { handleShare, SHARE } from "../shared/share.js";
+import { PHOTO, normalizeAnalysis } from "../shared/photo.js";
+
+/* «Da foto al 3D» in locale: nessun modello con visione, risposta di prova (mock) con un soggiorno tipico,
+   così l'interfaccia si prova anche senza internet. Con PHOTO_FIXTURE=file.json si usa un'altra risposta. */
+const PHOTO_MOCK = {scene: "interior", room_type: "soggiorno", camera: {hfov_deg: 65, pitch_deg: 0},
+  back_wall: {floor_left: [170, 800], floor_right: [830, 800], ceiling_left: [170, 150], ceiling_right: [830, 150], ceiling_visible: true},
+  room: {width_m: 5, depth_m: 5.5, height_m: 2.7}, materials: {floor: "parquet", wall_color: "#e9e4da"}, lighting: {time: "day", lamps_on: false},
+  items: [{category: "finestra", label: "Finestra", box: [560, 260, 760, 600]}, {category: "porta", label: "Porta", box: [200, 330, 300, 800]},
+    {category: "divano", label: "Divano", box: [330, 640, 640, 860], facing: "camera", against_wall: "none"}, {category: "lampadario", label: "Lampada a sospensione", box: [470, 150, 530, 330]}]};
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || process.env.MOCK_PORT || 8787);
@@ -119,7 +128,16 @@ createServer(async (req, res) => {
         quota: {per_ip_daily: local ? 9999 : LIMITS.perHour, used_today: local ? 0 : used, window: local ? "nessun limite" : "1h"}, limits: {max_side: CONTRACT.maxSide, max_variants: CONTRACT.maxVariants},
         retention_seconds: Math.round(LIMITS.retentionMs / 1000), note: engineNote || undefined,
         share: {enabled: true, ttl_days: SHARE.ttlDays, max_bytes: SHARE.maxBytes, turnstile: false, local: true},
+        photo: {enabled: true, mock: true, model: "servizio di prova", detect_model: null, per_ip_daily: 99, used_today: 0, max_side: PHOTO.maxSide, privacy: "Servizio di prova in locale: la foto resta su questo computer e la risposta è sempre la stessa."},
         privacy: local ? "Le immagini restano su questo computer: le elabora ComfyUI in locale." : "Servizio di prova in locale: le immagini restano su questo computer e non vengono inviate a terzi."});
+    }
+    if (url.pathname === "/api/foto"){
+      if (req.method !== "POST") return fail(res, 405, "method_not_allowed", "usa POST /api/foto");
+      let body; try { body = JSON.parse(await readBody(req)); } catch(e){ return fail(res, 400, "invalid_json", "JSON non valido"); }
+      if (body?.consent !== true) return fail(res, 400, "consent_required", "serve il consenso all'invio della foto");
+      if (!/^data:image\/(jpeg|png|webp);base64,/.test(body?.image || "")) return fail(res, 400, "invalid_input", "image: serve una foto come data URL");
+      const raw = process.env.PHOTO_FIXTURE ? JSON.parse(readFileSync(process.env.PHOTO_FIXTURE, "utf8")) : PHOTO_MOCK;
+      return send(res, 200, {analysis: normalizeAnalysis(raw, [], null, null), mock: true, provider: "Servizio di prova locale", model: "servizio di prova", detect_model: null, generated: false, neurons_estimated: 0, duration_ms: 5, remaining_today: 98});
     }
     if (url.pathname === "/api/share" || url.pathname.startsWith("/api/share/")){
       const parts = url.pathname.replace(/^\/api\/share\/?/, "").split("/").filter(Boolean);

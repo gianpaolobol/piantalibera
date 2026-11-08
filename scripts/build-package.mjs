@@ -53,7 +53,7 @@ html = html.replace(/'sha256-[A-Za-z0-9+/=]+'/, () => `'sha256-${createHash("sha
 writeFileSync(join(app, "index.html"), html);
 
 // 4. server locale
-for (const f of ["server/local-server.mjs", "server/comfy-workflow.mjs", "shared/contract.js", "shared/share.js"]){ mkdirSync(dirname(join(out, f)), { recursive: true }); cpSync(join(root, f), join(out, f)); }
+for (const f of ["server/local-server.mjs", "server/comfy-workflow.mjs", "shared/contract.js", "shared/share.js", "shared/photo.js"]){ mkdirSync(dirname(join(out, f)), { recursive: true }); cpSync(join(root, f), join(out, f)); }
 writeFileSync(join(out, "package.json"), JSON.stringify({ name: NAME, private: true, type: "module", engines: { node: ">=20" } }, null, 2) + "\n");
 mkdirSync(join(out, "comfyui"), { recursive: true });
 writeFileSync(join(out, "comfyui", "METTI-QUI-IL-WORKFLOW.txt"), `Per i render AI con la GPU di questo computer:\nesporta da ComfyUI il workflow in formato API e salvalo qui con il nome workflow-api.json.\nIstruzioni: ${GUIDE}\n`);

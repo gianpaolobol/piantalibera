@@ -214,6 +214,7 @@ let dxfPending = null;
 function renderImport(){
   const el = $("#panel-import"); const pm = projMatKeys();
   el.innerHTML = `
+  ${f3PanelHTML()}
   ${autoPanelHTML()}
   <div class="exp"><header><h4>Pianta da ricalcare</h4><span class="tag">DWG · DXF · PDF · PNG · JPG</span></header>
     <p class="note">La pianta diventa la base del piano corrente. Poi la calibri con una misura nota e ci disegni sopra muri e aperture.</p>
@@ -236,6 +237,7 @@ function renderImport(){
   $("#phHdriBox").addEventListener("toggle", e => { if (e.target.open) hydratePHList("hdris"); }, {once:true});
   $("#phTexBox").addEventListener("toggle", e => { if (e.target.open) hydratePHList("textures"); }, {once:true});
   if (dxfPending) $("#dxU").value = String(dxfPending.unit);
+  f3AfterRender();
 }
 function dxfPanel(){ const d = dxfPending;
   return `<div class="exp" id="dxfBox"><header><h4>${esc(d.name)}</h4><span class="tag">${d.count} entità</span></header>

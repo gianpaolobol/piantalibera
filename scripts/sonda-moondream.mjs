@@ -39,6 +39,7 @@ for (const c of cats) { try {
   svg += "</svg>";
   const base = await sharp(buf).resize(W, H, { fit: "fill" }).toBuffer();
   const ov = await sharp(Buffer.from(svg)).resize(W, H, { fit: "fill" }).png().toBuffer();
-  const out = await sharp(base).composite([{ input: ov, top: 0, left: 0 }]).resize(900).jpeg({ quality: 70 }).toBuffer();
+  const comp = await sharp(base).composite([{ input: ov, top: 0, left: 0 }]).png().toBuffer();
+  const out = await sharp(comp).resize(900).jpeg({ quality: 70 }).toBuffer();
   console.log(`===IMG=== ${f.title.replace(/\W+/g, "_").slice(0, 40)}\n${out.toString("base64")}\n===FINE===`);
   } catch (e) { console.log("errore:", e.message); } }
