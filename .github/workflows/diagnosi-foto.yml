@@ -26,7 +26,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       N: ${{ inputs.n || '3' }}
       SOLO_SONDA: "1"
-      MODELS: "llama=@cf/meta/llama-4-scout-17b-16e-instruct,mistral=@cf/mistralai/mistral-small-3.1-24b-instruct"
+      MODELS: "glm=@cf/zai-org/glm-5.3-flash,gemma=@cf/google/gemma-4-26b-a4b-it"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

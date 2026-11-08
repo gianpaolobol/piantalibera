@@ -21,7 +21,7 @@ for (const c of cats) { try {
   console.log(`\n\n######## ${f.title} ${W}x${H} ${f.imageinfo[0].descriptionurl}`);
   const res = {};
   for (const [name, model, extra] of (process.env.MODELS || "llama=@cf/meta/llama-4-scout-17b-16e-instruct").split(",").map(x => { const [k, v] = x.split("="); return [k, v, {}]; })) {
-    const r = await run(model, { messages: photoMessages(data), max_tokens: 3500, temperature: 0.1, response_format: { type: "json_schema", json_schema: PHOTO_SCHEMA }, ...extra });
+    const r = await run(model, { messages: photoMessages(data), max_tokens: 6000, temperature: 0.1, response_format: { type: "json_schema", json_schema: PHOTO_SCHEMA }, ...extra });
     const raw = extractJson(r.result); let a = null; try { a = normalizeAnalysis(raw, {}, W, H); } catch (e) {}
     console.log(`\n## ${name}: HTTP ${r.status} ${r.ms} ms neurons=${neuronsFromUsage(r.result?.usage, { in: 0, out: 0 })} usage=${JSON.stringify(r.result?.usage)}`, r.errors?.length ? JSON.stringify(r.errors).slice(0, 300) : "");
     console.log((typeof r.result?.response === "string" ? r.result.response : JSON.stringify(r.result?.response ?? r.result))?.slice(0, 2500));
