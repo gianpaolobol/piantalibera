@@ -72,7 +72,7 @@ Rules:
 - scene: "interior" or "exterior".
 - back_wall: the wall the camera faces. Give its four corners as seen in the photo: where it meets the floor (left, right) and the ceiling (left, right). If a corner is outside the photo, extrapolate along the edge (values may go below 0 or above 1000).
 - room: realistic size in metres of the whole room (width along the back wall, depth towards the camera, height).
-- items: EVERY visible door, window, piece of furniture, lamp (pendant, ceiling, wall, floor lamp), plant and person. One entry per object, tight box around it. Use only the given categories; use "altro" if none fits.
+- items: EVERY visible door, window, piece of furniture, lamp (pendant, ceiling, wall, floor lamp), plant and person. One entry per object with a TIGHT box measured on the photo (not rounded to 50 or 100). Never list floor, ceiling, walls, beams, curtains, pictures or small decorations. Use only the given categories; use "altro" only for real furniture that fits no category.
 - width_m/depth_m/height_m: realistic object size in metres.
 - facing: where the front of the object points: "camera", "away", "left", "right".
 - against_wall: which wall the object touches ("back", "left", "right") or "none".
@@ -86,7 +86,7 @@ export const PHOTO_SCHEMA = {
     scene: { type: "string", enum: ["interior", "exterior"] },
     room_type: { type: "string" },
     camera: { type: "object", properties: { hfov_deg: num, pitch_deg: num, height_m: num } },
-    back_wall: { type: "object", properties: { floor_left: pt, floor_right: pt, ceiling_left: pt, ceiling_right: pt, ceiling_visible: { type: "boolean" }, left_wall_visible: { type: "boolean" }, right_wall_visible: { type: "boolean" } } },
+    back_wall: { type: "object", properties: { floor_left: pt, floor_right: pt, ceiling_left: pt, ceiling_right: pt, ceiling_visible: { type: "boolean" }, left_wall_visible: { type: "boolean" }, right_wall_visible: { type: "boolean" } }, required: ["floor_left", "floor_right", "ceiling_left", "ceiling_right"] },
     room: { type: "object", properties: { width_m: num, depth_m: num, height_m: num } },
     materials: { type: "object", properties: { floor: { type: "string", enum: FLOORS }, floor_color: { type: "string" }, wall_color: { type: "string" }, ceiling_color: { type: "string" } } },
     lighting: { type: "object", properties: { time: { type: "string", enum: ["day", "evening", "night"] }, lamps_on: { type: "boolean" }, color_temperature_k: num } },
@@ -213,6 +213,7 @@ export function normalizeAnalysis(raw, dets = {}, W = null, H = null) {
 
 /** Neurons dalle statistiche d'uso (token) con le tariffe pubblicate; null se il modello non le restituisce. */
 export function neuronsFromUsage(usage, rate) {
+  if (Number.isFinite(usage?.neurons)) return Math.ceil(usage.neurons);          // Workers AI li dichiara direttamente
   const p = n(usage?.prompt_tokens ?? usage?.input_tokens), c = n(usage?.completion_tokens ?? usage?.output_tokens);
   return p == null && c == null ? null : Math.ceil(((p || 0) * rate.in + (c || 0) * rate.out) / 1e6);
 }

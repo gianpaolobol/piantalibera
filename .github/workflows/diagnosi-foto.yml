@@ -30,6 +30,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
+      - run: npm i --no-save sharp@0.34.4
+        if: hashFiles('scripts/sonda-moondream.mjs') != ''
       - run: node scripts/sonda-moondream.mjs
         if: hashFiles('scripts/sonda-moondream.mjs') != ''
       - run: node scripts/diagnosi-foto.mjs
