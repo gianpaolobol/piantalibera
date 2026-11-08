@@ -192,7 +192,7 @@ P_.addEventListener("click", e => {
     case "obRot": sel.rot = ((sel.rot||0) + 90) % 360; commit(); break;
     case "obDup": { const c = {...sel, id:uid(), x:sel.x+.6, y:sel.y+.6}; P.objects.push(c); S.sel = {type:"object", id:c.id}; commit(); break; }
     case "camRoom": camPreset("int"); break;
-    case "lDel": P.walls = P.walls.filter(w=>w.level!==L.id); P.rooms = P.rooms.filter(r=>r.level!==L.id); P.objects = P.objects.filter(o=>o.level!==L.id); P.openings = P.openings.filter(o=>wallById(o.wall)); P.levels = P.levels.filter(l=>l.id!==L.id); S.level = P.levels[0].id; S.sel = null; commit(); break;
+    case "lDel": deleteLevel(L.id); return;
     case "uDel": L.underlay = null; commit(); break;
     case "fit": fitPlan(); break;
     case "newProj": { const p = sampleProject(); p.name = "Nuovo progetto"; p.walls = []; p.openings = []; p.rooms = []; p.objects = []; p.levels[0].roof.type = "none"; p.pid = uid(); P = p; S.level = "L0"; S.sel = null; commit(); $("#projName").value = P.name; fitPlan(); setTool("rect"); break; }

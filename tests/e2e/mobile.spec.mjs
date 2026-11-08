@@ -89,6 +89,19 @@ test.describe("telefono", () => {
     expect(errors).toEqual([]);
   });
 
+  test("piani: secondo tocco sul piano attivo apre le opzioni, eliminazione con conferma e Annulla; niente selezione del testo", async ({ page }) => {
+    const errors = await open(page);
+    expect(await page.evaluate(() => getComputedStyle(document.querySelector(".brand b")).webkitUserSelect || getComputedStyle(document.querySelector(".brand b")).userSelect)).toBe("none");
+    await page.evaluate(() => $("#addLevel").click()); expect(await page.evaluate(() => P.levels.length)).toBe(2);
+    const id = await page.evaluate(() => S.level);
+    await page.tap(`#tag2d [data-lvl="${id}"]`); await expect(page.locator("#lvlMenu")).toBeVisible();
+    await page.tap('#lvlMenu [data-lm="del"]'); await expect(page.locator('#lvlMenu [data-lm="del"]')).toContainText("Conferma");
+    await page.tap('#lvlMenu [data-lm="del"]'); await expect(page.locator("#lvlMenu")).toHaveCount(0);
+    expect(await page.evaluate(() => P.levels.length)).toBe(1);
+    await page.evaluate(() => undo()); expect(await page.evaluate(() => P.levels.length)).toBe(2);
+    expect(errors).toEqual([]);
+  });
+
   test("app installabile: manifest, icone e service worker", async ({ page, request }) => {
     await open(page);
     const href = await page.locator('link[rel="manifest"]').getAttribute("href"); expect(href).toBe("manifest.webmanifest");
