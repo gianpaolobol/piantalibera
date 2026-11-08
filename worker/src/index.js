@@ -11,6 +11,7 @@
 import { LIMITS, validateRenderRequest, decodeDataUrl, buildModelPrompt, jsonError } from "../../shared/contract.js";
 import { QuotaGate, estimateNeurons, dayKey } from "./quota.js";
 import { handleShare, SHARE } from "../../shared/share.js";
+import { PHOTO, photoMessages, PHOTO_SCHEMA, extractJson, normalizeAnalysis, parseDetections, detectTargets, neuronsFromUsage } from "../../shared/photo.js";
 export { QuotaGate };
 
 const JSON_HEADERS = { "Content-Type": "application/json", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
@@ -72,6 +73,19 @@ function config(env) {
     shareReady: env.SHARE_ENABLED !== "0" && saltOk && !!env.RENDER_KV && !!env.QUOTA && (turnstileOn || env.ALLOW_NO_TURNSTILE === "1"),
     shareDaily: num(env.SHARE_DAILY_WRITES, SHARE.globalDaily),
     testDaily: num(env.TEST_DAILY, 20),
+    // «Da foto al 3D»: modello con visione + rilevatore; quote proprie, Neurons dallo stesso budget giornaliero
+    photo: {
+      enabled: env.PHOTO_ENABLED !== "0",
+      model: env.PHOTO_MODEL || "@cf/meta/llama-4-scout-17b-16e-instruct",
+      detectModel: env.DETECT_MODEL || "@cf/moondream/moondream3.1-9B-A2B",
+      detect: env.PHOTO_DETECT !== "0",
+      perIpDaily: num(env.PHOTO_PER_IP_DAILY, 1),
+      globalDaily: num(env.PHOTO_GLOBAL_DAILY, 10),
+      neurons: num(env.PHOTO_NEURONS_ESTIMATE, 400),
+      rate: { in: num(env.PHOTO_NEURONS_PER_M_IN, 24545), out: num(env.PHOTO_NEURONS_PER_M_OUT, 77273) },
+      detectRate: { in: num(env.DETECT_NEURONS_PER_M_IN, 27273), out: num(env.DETECT_NEURONS_PER_M_OUT, 90909) },
+      timeoutMs: num(env.PHOTO_TIMEOUT_MS, 90000),
+    },
     missing, ready: missing.length === 0,
   };
 }
@@ -188,7 +202,7 @@ async function createJob(request, env, cfg) {
 async function getConfig(request, env, cfg) {
   const ip = request.headers.get("cf-connecting-ip") || "0.0.0.0", isOwner = ownerOk(env, request);
   let usedToday = null, st = null;
-  if (cfg.ready) { try { st = await quotaCall(env, "/status", { ipHash: isOwner ? "proprietario" : await sha256(ip + env.IP_SALT) }); usedToday = st.ip; } catch {} }
+  if (cfg.ready) { try { const h = isOwner ? "proprietario" : await sha256(ip + env.IP_SALT); st = await quotaCall(env, "/status", { ipHash: h, photoHash: "foto:" + h }); usedToday = st.ip; } catch {} }
   const enabled = cfg.ready && !(await killed(env));
   return json(200, {
     enabled, reason: !cfg.ready ? "config_incomplete" : enabled ? null : "disabled",
@@ -200,6 +214,8 @@ async function getConfig(request, env, cfg) {
     limits: { max_input_side: cfg.maxInputSide, max_side: LIMITS.maxSide, max_variants: cfg.maxVariants },
     retention_seconds: cfg.retention,
     share: { enabled: cfg.shareReady, ttl_days: SHARE.ttlDays, max_bytes: SHARE.maxBytes, turnstile: cfg.turnstileOn },
+    photo: { enabled: enabled && cfg.photo.enabled, model: cfg.photo.model, detect_model: cfg.photo.detect ? cfg.photo.detectModel : null, per_ip_daily: isOwner ? null : cfg.photo.perIpDaily, used_today: st ? st.photo : null, max_side: PHOTO.maxSide,
+      privacy: "La foto viene inviata a Cloudflare Workers AI solo per l'analisi e non viene conservata dal server; resta nel tuo progetto, sul tuo dispositivo." },
     privacy: "Vista, profondità, contorni, prompt e camera vengono inviati a Cloudflare Workers AI per generare l'immagine. Lavori e immagini sono cancellati dopo il periodo indicato; l'IP è conservato solo come hash per le quote giornaliere.",
   });
 }
@@ -220,12 +236,82 @@ async function shareApi(request, env, cfg, url) {
   return r.status === 204 ? new Response(null, { status: 204 }) : json(r.status, r.body);
 }
 
+/* ---------- «Da foto al 3D» ----------
+   POST /api/foto {image: data URL JPEG/PNG/WebP, consent: true, turnstile}. Risposta sincrona con l'analisi
+   normalizzata (shared/photo.js); la foto non viene salvata. Quote: PHOTO_PER_IP_DAILY per visitatore e
+   PHOTO_GLOBAL_DAILY in totale; i Neurons stimati entrano nello stesso budget giornaliero dei render. */
+async function runVision(env, cfg, image) {
+  const base = { messages: photoMessages(image), max_tokens: 3000, temperature: 0.15 };
+  const tries = [{ ...base, response_format: { type: "json_schema", json_schema: PHOTO_SCHEMA } }, base];
+  let last;
+  for (const input of tries) {
+    try { return await withTimeout(env.AI.run(cfg.photo.model, input), cfg.photo.timeoutMs); }
+    catch (e) { last = e; if (/timeout|non ha risposto|capacity|rate/i.test(String(e?.message))) break; }
+  }
+  throw last;
+}
+async function runDetect(env, cfg, image, target) {
+  return withTimeout(env.AI.run(cfg.photo.detectModel, { task: "detect", image, target, max_objects: 20 }), 30000);
+}
+async function photoApi(request, env, cfg) {
+  if (!cfg.ready || !cfg.photo.enabled) return jsonError(503, "config_incomplete", "l'analisi delle foto non è attiva su questo server");
+  if (await killed(env)) return jsonError(503, "disabled", "i servizi AI sono momentaneamente sospesi");
+  if (!(request.headers.get("content-type") || "").includes("application/json")) return jsonError(415, "unsupported_media_type", "serve application/json");
+  if (num(request.headers.get("content-length"), 0) > PHOTO.maxBodyBytes) return jsonError(413, "too_large", "foto troppo grande: massimo 2 MB");
+  let body;
+  try { const text = await request.text(); if (text.length > PHOTO.maxBodyBytes) return jsonError(413, "too_large", "foto troppo grande: massimo 2 MB"); body = JSON.parse(text); }
+  catch { return jsonError(400, "invalid_json", "JSON non valido"); }
+  if (body?.consent !== true) return jsonError(400, "consent_required", "serve il consenso all'invio della foto al fornitore AI");
+  let img;
+  try { img = decodeDataUrl(body.image); } catch { return jsonError(400, "invalid_input", "image: serve una foto JPEG, PNG o WebP come data URL"); }
+  const info = inspectImage(img.bytes);
+  if (!info) return jsonError(400, "invalid_input", "il file non è una foto JPEG, PNG o WebP");
+  if (img.bytes.length > PHOTO.maxImageBytes) return jsonError(413, "too_large", "foto troppo grande: massimo 2 MB");
+  if (info.w && (Math.max(info.w, info.h) > PHOTO.maxSide || Math.min(info.w, info.h) < PHOTO.minSide)) return jsonError(400, "invalid_input", `la foto deve avere il lato lungo fino a ${PHOTO.maxSide} px e il corto almeno ${PHOTO.minSide} px`);
+
+  const ip = request.headers.get("cf-connecting-ip") || "0.0.0.0";
+  const isOwner = ownerOk(env, request), isTest = !isOwner && testTokenOk(env, request);
+  if (cfg.turnstileOn && !isTest && !isOwner && !(await turnstileOk(env, body.turnstile, ip))) return jsonError(403, "bot_check_failed", "verifica anti-bot non superata");
+  const ipHash = "foto:" + (isOwner ? "proprietario" : isTest ? "prove-automatiche" : await sha256(ip + env.IP_SALT));
+  const neurons = cfg.photo.neurons, day = dayKey();
+  const q = await quotaCall(env, "/reserve", { ipHash, neurons, visitor: !isOwner, counter: "photos", perIpDaily: isTest ? cfg.testDaily : cfg.photo.perIpDaily, maxConcurrent: isOwner ? cfg.ownerConcurrent : 1, neuronBudget: cfg.neuronBudget, globalDaily: cfg.photo.globalDaily, visitorBudget: cfg.visitorBudget });
+  if (!q.ok) {
+    const msg = { quota_exceeded: `hai già usato l'analisi da foto disponibile oggi (${cfg.photo.perIpDaily} al giorno)`, too_many_concurrent: "c'è già un'analisi in corso: attendi che finisca", global_quota_exceeded: "limite giornaliero delle analisi da foto raggiunto: riprova domani", budget_exceeded: isOwner ? "quota gratuita di oggi esaurita (si rinnova all'1:00 ora italiana)" : "budget giornaliero del servizio esaurito" }[q.reason] || "quota non disponibile";
+    return jsonError(429, q.reason, msg, q.reason === "too_many_concurrent" ? { "Retry-After": "30" } : { "Retry-After": String(secondsToMidnightUTC()) });
+  }
+  const t0 = Date.now(), debug = isTest && request.headers.get("x-debug") === "1";
+  let failed = false, measured = null, out, err, dbg = {};
+  try {
+    const vis = await runVision(env, cfg, body.image);
+    const raw = extractJson(vis);
+    if (debug) dbg.vision = { keys: vis && typeof vis === "object" ? Object.keys(vis) : typeof vis, response: typeof vis?.response === "string" ? vis.response.slice(0, 6000) : vis?.response, usage: vis?.usage };
+    measured = neuronsFromUsage(vis?.usage, cfg.photo.rate);
+    const dets = {}, targets = cfg.photo.detect && raw ? detectTargets(raw) : [];
+    const results = await Promise.allSettled(targets.map(t => runDetect(env, cfg, body.image, t.en)));
+    results.forEach((r, i) => {
+      if (r.status === "fulfilled") { dets[targets[i].en] = parseDetections(r.value, info.w, info.h); const u = neuronsFromUsage(r.value?.usage || r.value?.metrics, cfg.photo.detectRate); if (u != null) measured = (measured || 0) + u; }
+      if (debug) (dbg.detect ||= {})[targets[i].en] = r.status === "fulfilled" ? JSON.stringify(r.value).slice(0, 1500) : String(r.reason?.message || r.reason).slice(0, 300);
+    });
+    out = normalizeAnalysis(raw, dets, info.w, info.h);
+  } catch (e) {
+    failed = true; err = { code: e?.code || "provider_error", message: String(e?.message || e).slice(0, 300) };
+  } finally {
+    await quotaCall(env, "/release", { ipHash, neurons, failed, reservedDay: day, visitor: !isOwner, counter: "photos", actualNeurons: measured }).catch(() => {});
+  }
+  const ms = Date.now() - t0;
+  console.log(JSON.stringify({ evt: "foto", test: isTest || undefined, owner: isOwner || undefined, ok: !failed, ms, neurons, measured, items: out?.items?.length, day_neurons: q.neurons }));
+  if (failed) return json(502, { error: err, ...(debug ? { debug: dbg } : {}) });
+  const remaining = isOwner ? null : Math.max(0, cfg.photo.perIpDaily - q.ip);
+  return json(200, { analysis: out, provider: "Cloudflare Workers AI", model: cfg.photo.model, detect_model: cfg.photo.detect ? cfg.photo.detectModel : null, generated: true, neurons_estimated: neurons, neurons_measured: measured, duration_ms: ms, remaining_today: remaining, ...(debug ? { debug: dbg } : {}) });
+}
+
 async function handleApi(request, env, url) {
   const cfg = config(env);
   const origin = request.headers.get("origin");
   if (origin && origin !== url.origin && !cfg.allowedOrigins.includes(origin)) return jsonError(403, "origin_not_allowed", "origine non consentita");
   if (url.pathname === "/api/config" && request.method === "GET") return getConfig(request, env, cfg);
   if (url.pathname === "/api/share" || url.pathname.startsWith("/api/share/")) return shareApi(request, env, cfg, url);
+  if (url.pathname === "/api/foto") return request.method === "POST" ? photoApi(request, env, cfg) : jsonError(405, "method_not_allowed", "usa POST /api/foto");
   const m = url.pathname.match(/^\/api\/render(?:\/([^/]+)(?:\/image\/(\d+))?)?\/?$/);
   if (!m) return jsonError(404, "not_found", "endpoint inesistente");
   const [, id, img] = m;
