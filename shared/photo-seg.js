@@ -109,13 +109,16 @@ export function wallCorners(m) {
 export function segComponents(m, roomType = "") {
   if (!m) return [];
   const { w, h, lab, names } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && /cucin|kitchen/i.test(roomType)) c = "cucina"; return c && c[0] !== "@" ? c : null; });
-  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h);
+  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor");
   for (let i = 0; i < w * h; i++) {
     const c = lab[i] === 255 ? null : catOf[lab[i]]; if (!c || seen[i]) continue;
     let qh = 0, qt = 0, n = 0, x0 = w, y0 = h, x1 = 0, y1 = 0; Q[qt++] = i; seen[i] = 1;
     while (qh < qt) { const j = Q[qh++], x = j % w, y = (j / w) | 0; n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
       for (const k of [j - 1, j + 1, j - w, j + w]) { if (k < 0 || k >= w * h || seen[k] || (k === j - 1 && x === 0) || (k === j + 1 && x === w - 1)) continue; const l = lab[k]; if (l !== 255 && catOf[l] === c) { seen[k] = 1; Q[qt++] = k; } } }
-    if (n >= minA) out.push({ category: c, label: names[lab[i]], box: [x0 / w, y0 / h, (x1 + 1) / w, (y1 + 1) / h].map(v => +v.toFixed(4)), area: +(n / (w * h)).toFixed(4), fill: +(n / ((x1 - x0 + 1) * (y1 - y0 + 1))).toFixed(2) });
+    if (n < minA) continue;
+    // pavimento subito sotto il bordo inferiore: per distinguere una finestra da una portafinestra
+    let fl = 0, tot = 0; for (let x = x0; x <= x1; x++) for (let y = y1 + 1; y <= Math.min(h - 1, y1 + Math.max(2, h * .03)); y++) { tot++; if (floorIds.has(lab[y * w + x])) fl++; }
+    out.push({ category: c, label: names[lab[i]], box: [x0 / w, y0 / h, (x1 + 1) / w, (y1 + 1) / h].map(v => +v.toFixed(4)), area: +(n / (w * h)).toFixed(4), fill: +(n / ((x1 - x0 + 1) * (y1 - y0 + 1))).toFixed(2), onFloor: tot ? fl / tot > .3 : false });
   }
   // un'apertura tagliata in due da un arredo davanti (o da una traversa): si ricompone
   const op = c => OPEN.includes(c.category);
@@ -136,7 +139,6 @@ const near = (a, b) => Math.max(iou(a, b), inside(a, b) || inside(b, a) ? .2 : 0
 /** Unisce elementi dell'analisi e componenti della segmentazione. items: quelli di normalizeAnalysis. */
 export function mergeSegmentation(items, comps, quad = null) {
   const out = items.map(it => ({ ...it })), used = new Set();
-  const floorY = x => quad ? quad.fl[1] + (quad.fr[1] - quad.fl[1]) * (x - quad.fl[0]) / Math.max(1e-6, quad.fr[0] - quad.fl[0]) : .8;
   for (const c of comps) {
     const fam = FAMILY(c.category);
     let best = 0, bi = -1;
@@ -151,7 +153,7 @@ export function mergeSegmentation(items, comps, quad = null) {
     // non trovato dal modello: si aggiunge se è un'apertura o un arredo abbastanza grande
     if (fam === "apertura" || c.area > .006) {
       let cat = c.category; const C = (out.find(o => o.category === cat) || {});
-      if (cat === "finestra" && c.box[3] >= floorY((c.box[0] + c.box[2]) / 2) - .03) cat = "portafinestra";   // vetrata fino a terra
+      if (cat === "finestra" && c.onFloor) cat = "portafinestra";   // vetrata fino a terra (pavimento subito sotto)
       out.push({ category: cat, label: "", box: c.box, w: C.w, d: C.d, h: C.h, facing: "camera", against: "none", source: "segmentazione", seg: true, added: true });
       used.add(out.length - 1);
     }

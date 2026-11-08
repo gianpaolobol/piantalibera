@@ -120,7 +120,7 @@ async function f3Segment(){
 /* applica la segmentazione all'analisi: spigoli (se l'utente non li ha già spostati) e riquadri */
 function f3ApplySeg(){
   const sg = F3.seg; if (!sg || sg.state !== "ok" || !F3.a || sg.applied) return; sg.applied = true;
-  if (sg.quad && sg.quad.conf >= .35 && F3.quadSource !== "posizionati da te"){
+  if (sg.quad && sg.quad.conf >= .6 && F3.quadSource !== "posizionati da te"){
     F3.quad = {fl:sg.quad.fl, fr:sg.quad.fr, cl:sg.quad.cl, cr:sg.quad.cr}; F3.quadSource = "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
   }
   const comps = segComponents(sg.m, F3.a.room_type || "");
