@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VGutp9T0y3raggPLNFxdiDhieMY2HEjVGhlEWZy5XZE=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-aN6VXmb/DcPqXWqPn8noPb7RetB1Xe/oEbsHX9lgqtQ=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4603,10 +4603,13 @@ function f3Layout(s, items = F3.items){
     const hv = (() => { const d = s.ray(uc, vc), l = Math.hypot(d[0], d[1]) || 1; return [d[0] / l, d[1] / l]; })(), rl = Math.hypot(s.right[0], s.right[1]) || 1, cr = [s.right[0] / rl, s.right[1] / rl];
     if (C.mount === "ceiling"){
       // il bordo alto della lampada spesso è il paralume, non il soffitto: si usa il fondo, appeso circa 75 cm sotto il soffitto
-      // distanza dalla larghezza apparente del paralume (misura tipica); senza, il fondo appeso 75 cm sotto il soffitto
+      // attacco al soffitto se il riquadro lo comprende; altrimenti distanza dalla larghezza apparente del paralume
+      // (misura tipica) o, in mancanza, il fondo appeso 75 cm sotto il soffitto
       const da = s.ray(x0, y1), db = s.ray(x1, y1), na = Math.hypot(...da), nb = Math.hypot(...db), cosA = (da[0] * db[0] + da[1] * db[1] + da[2] * db[2]) / (na * nb), ang = Math.acos(clamp(cosA, -1, 1));
       const zB = clamp(s.H - .75, 1.8, s.H - .3), d = s.ray(uc, y1), hl = Math.hypot(d[0], d[1]) || 1;
-      if (ang > .01 && cat === "lampadario"){ const dist = clamp((C.w || .44) / (2 * Math.tan(ang / 2)), .5, 15); p = [s.c[0] + d[0] / hl * dist, s.c[1] + d[1] / hl * dist]; }
+      const pc = f3Ceil(s, uc, y0), inRoom = pc && pc[0] > 0 && pc[0] < s.W && pc[1] > .05 && pc[1] < s.D;
+      if (inRoom) p = pc;                   // il riquadro arriva al punto di attacco: vale quello
+      else if (ang > .01 && cat === "lampadario"){ const dist = clamp((C.w || .44) / (2 * Math.tan(ang / 2)), .5, 15); p = [s.c[0] + d[0] / hl * dist, s.c[1] + d[1] / hl * dist]; }
       else { const t = Math.abs(d[2]) > 1e-4 ? (zB - s.hc) / d[2] : -1; p = t > 0 ? [s.c[0] + t * d[0], s.c[1] + t * d[1]] : (f3Ceil(s, uc, y0) || f3Floor(s, uc, y1)); } }
     else if (C.mount === "wall"){ const hit = f3WallAt(s, uc, vc); const inN = {back:[0, 1], left:[1, 0], right:[-1, 0]}[hit.wall]; p = [hit.x + inN[0] * .08, hit.y + inN[1] * .08]; rot = f3Ang(inN); z = clamp(hit.z - .1, .5, s.H - .2); }
     else {
@@ -4618,9 +4621,11 @@ function f3Layout(s, items = F3.items){
       if (!p){ out.skipped.push(it); continue; }
       // misure reali dalla foto: larghezza alla base e altezza della sommità alla distanza dell'oggetto
       const dist = Math.hypot(p[0] - s.c[0], p[1] - s.c[1]), rt = s.ray(uc, y0), hTop = s.hc + dist / (Math.hypot(rt[0], rt[1]) || 1) * rt[2];
-      const pa0 = f3Floor(s, x0, y1), pb0 = f3Floor(s, x1, y1), wid = pa0 && pb0 ? Math.hypot(pb0[0] - pa0[0], pb0[1] - pa0[1]) : null;
+      // larghezza alla base o, se la base è fuori dalla foto, al bordo alto (quota tipica dello schienale o del piano)
+      const atZ = (u, v, zz) => { const d = s.ray(u, v); if (Math.abs(d[2]) < 1e-4) return null; const t = (zz - s.hc) / d[2]; return t > 0 ? [s.c[0] + t * d[0], s.c[1] + t * d[1]] : null; };
+      const pa0 = cut ? atZ(x0, y0, topH) : f3Floor(s, x0, y1), pb0 = cut ? atZ(x1, y0, topH) : f3Floor(s, x1, y1), wid = pa0 && pb0 ? Math.hypot(pb0[0] - pa0[0], pb0[1] - pa0[1]) : null;
       // categoria corretta dalle misure (se l'utente non l'ha scelta): divano/poltrona, tavolo/tavolino, letto
-      if (!it.userCat && wid && !cut){
+      if (!it.userCat && wid){
         const sw = {divano:wid < 1.2 ? "poltrona" : null, poltrona:wid > 1.45 ? "divano" : null, tavolo:hTop < .56 ? "tavolino" : null, tavolino:hTop > .66 ? "tavolo" : null, tavolo_tondo:hTop < .56 ? "tavolino_tondo" : null,
           letto_matrimoniale:wid < 1.25 ? "letto_singolo" : null, letto_singolo:wid > 1.45 ? "letto_matrimoniale" : null}[cat]
           // piccolo piano basso in una camera: comodino
