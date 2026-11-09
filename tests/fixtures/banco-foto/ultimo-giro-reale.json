@@ -1,0 +1,1383 @@
+{
+ "when": "2026-11-09T15:07:14.512Z",
+ "fovNoto": true,
+ "sum": {
+  "scene": 12,
+  "risolte": 12,
+  "spigoli_err_pct": 4.1,
+  "spigoli_mediana_pct": 3.3,
+  "larghezza_err_m": 0.15,
+  "spigoli_misurati": 12,
+  "altezza_foto_err_m": 0.12,
+  "inclinazione_err": 1.8,
+  "aperture_trovate": "15/17",
+  "muro_giusto": "15/15",
+  "pos_lungo_muro_err_m": 0.26,
+  "davanzale_err_m": 0.49,
+  "altezza_ap_err_m": 0.4,
+  "larghezza_ap_err_m": 0.3,
+  "aperture_in_piu": 4,
+  "arredi_trovati": "15/31",
+  "arredi_pos_err_m": 0.51,
+  "arredi_in_piu": 44,
+  "neurons_spesi": 2444
+ },
+ "rows": [
+  {
+   "seed": 100,
+   "gt": {
+    "W": 5.18,
+    "D": 4.64,
+    "H": 2.69,
+    "openings": [
+     {
+      "type": "door",
+      "wall": "left",
+      "t": 3.339,
+      "w": 0.87,
+      "h": 2.16,
+      "sill": 0,
+      "visible": true
+     },
+     {
+      "type": "window",
+      "wall": "back",
+      "t": 1.391,
+      "w": 1.33,
+      "h": 1.22,
+      "sill": 0.95,
+      "visible": true
+     }
+    ],
+    "objects": [
+     {
+      "ref": "divano3",
+      "cat": "divano",
+      "x": 2.3786779310181734,
+      "y": 0.52,
+      "visible": true
+     },
+     {
+      "ref": "tavolino",
+      "cat": "tavolino",
+      "x": 2.3091534392535684,
+      "y": 1.6,
+      "visible": true
+     },
+     {
+      "ref": "sospensione",
+      "cat": "lampadario",
+      "x": 2.665083010457456,
+      "y": 2.081768520390615,
+      "visible": false
+     }
+    ],
+    "camera": {
+     "x": 2.712025440967455,
+     "y": 4.110881527219899,
+     "h": 1.37,
+     "pitch": -5.5,
+     "yaw": 14.4,
+     "hfov": 74
+    },
+    "kind": "soggiorno"
+   },
+   "sc": {
+    "ok": true,
+    "corner": 3.3,
+    "bothVisible": false,
+    "dW": null,
+    "dH": 0,
+    "dHc": -0.14,
+    "dPitch": 2.5,
+    "dFov": 0,
+    "ops": [
+     {
+      "type": "door",
+      "found": true,
+      "wallOk": true,
+      "dT": -0.24,
+      "dSill": 0,
+      "dH": 0.08,
+      "dW": 0.1
+     },
+     {
+      "type": "window",
+      "found": true,
+      "wallOk": true,
+      "dT": -0.06,
+      "dSill": -0.01,
+      "dH": 0.06,
+      "dW": 0.02
+     }
+    ],
+    "extraOps": 0,
+    "objs": [
+     {
+      "cat": "divano",
+      "found": true,
+      "d": 0.42
+     },
+     {
+      "cat": "tavolino",
+      "found": true,
+      "d": 0.25
+     }
+    ],
+    "extraObjs": 1
+   },
+   "r": {
+    "segState": "ok",
+    "quadSource": "trovati dal modello di stanza: controllali",
+    "tSeg": 10759
+   },
+   "stale": false
+  },
+  {
+   "seed": 101,
+   "gt": {
+    "W": 3.69,
+    "D": 4.81,
+    "H": 3.03,
+    "openings": [
+     {
+      "type": "door",
+      "wall": "back",
+      "t": 1.504,
+      "w": 0.92,
+      "h": 2.08,
+      "sill": 0,
+      "visible": true
+     },
+     {
+      "type": "window",
+      "wall": "back",
+      "t": 2.84,
+      "w": 0.93,
+      "h": 1.26,
+      "sill": 1.05,
+      "visible": true
+     }
+    ],
+    "objects": [
+     {
+      "ref": "tavolo6",
+      "cat": "tavolo",
+      "x": 1.6260850219801068,
+      "y": 2.0890679183322933,
+      "visible": true
+     },
+     {
+      "ref": "sedia",
+      "cat": "sedia",
+      "x": 1.1260850219801068,
+      "y": 1.4390679183322934,
+      "visible": true
+     },
+     {
+      "ref": "sedia",
+      "cat": "sedia",
+      "x": 2.126085021980107,
+      "y": 2.7390679183322932,
+      "visible": false
+     },
+     {
+      "ref": "sospensione",
+      "cat": "lampadario",
+      "x": 1.6510678595211357,
+      "y": 1.7392067015194332,
+      "visible": true
+     }
+    ],
+    "camera": {
+     "x": 1.681361437262222,
+     "y": 4.301467659990303,
+     "h": 1.4,
+     "pitch": -1.4,
+     "yaw": 1.7,
+     "hfov": 74
+    },
+    "kind": "pranzo"
+   },
+   "sc": {
+    "ok": true,
+    "corner": 6.7,
+    "bothVisible": true,
+    "dW": -0.02,
+    "dH": 0,
+    "dHc": 0.49,
+    "dPitch": -7.8,
+    "dFov": 0,
+    "ops": [
+     {
+      "type": "door",
+      "found": true,
+      "wallOk": true,
+      "dT": 0.02,
+      "dSill": 0,
+      "dH": -0.08,
+      "dW": 0.17
+     },
+     {
+      "type": "window",
+      "found": true,
+      "wallOk": true,
+      "dT": 0.16,
+      "dSill": -0.31,
+      "dH": 0.3,
+      "dW": 0.18
+     }
+    ],
+    "extraOps": 0,
+    "objs": [
+     {
+      "cat": "tavolo",
+      "found": true,
+      "d": 1.17
+     },
+     {
+      "cat": "sedia",
+      "found": true,
+      "d": 0.53
+     },
+     {
+      "cat": "lampadario",
+      "found": false
+     }
+    ],
+    "extraObjs": 6
+   },
+   "r": {
+    "segState": "ok",
+    "quadSource": "trovati dal modello di stanza: controllali",
+    "tSeg": 6981
+   },
+   "stale": false
+  },
+  {
+   "seed": 102,
+   "gt": {
+    "W": 5.63,
+    "D": 5.98,
+    "H": 3.09,
+    "openings": [
+     {
+      "type": "door",
+      "wall": "left",
+      "t": 2.94,
+      "w": 0.94,
+      "h": 2.15,
+      "sill": 0,
+      "visible": true
+     },
+     {
+      "type": "window",
+      "wall": "back",
+      "t": 2.305,
+      "w": 1.59,
+      "h": 1.43,
+      "sill": 0.81,
+      "visible": true
+     },
+     {
+      "type": "window",
+      "wall": "right",
+      "t": 2.36,
+      "w": 0.92,
+      "h": 1.41,
+      "sill": 0.89,
+      "visible": false
+     }
+    ],
+    "objects": [
+     {
+      "ref": "letto2",
+      "cat": "letto_matrimoniale",
+      "x": 2.5625730208680033,
+      "y": 1.1,
+      "visible": true
+     },
+     {
+      "ref": "comodino",
+      "cat": "comodino",
+      "x": 1.615,
+      "y": 0.25,
+      "visible": true
+     }
+    ],
+    "camera": {
+     "x": 2.1529488602112976,
+     "y": 5.553506789910608,
+     "h": 1.46,
+     "pitch": -1.9,
+     "yaw": 15.6,
+     "hfov": 69
+    },
+    "kind": "camera"
+   },
+   "sc": {
+    "ok": true,
+    "corner": 2.2,
+    "bothVisible": false,
+    "dW": null,
+    "dH": 0,
+    "dHc": -0.03,
+    "dPitch": -1.4,
+    "dFov": 0,
+    "ops": [
+     {
+      "type": "door",
+      "found": true,
+      "wallOk": true,
+      "dT": 0.24,
+      "dSill": 0,
+      "dH": 0.19,
+      "dW": 0.19
+     },
+     {
+      "type": "window",
+      "found": true,
+      "wallOk": true,
+      "dT": 0.49,
+      "dSill": -0.81,
+      "dH": 0.89,
+      "dW": 0.89
+     }
+    ],
+    "extraOps": 0,
+    "objs": [
+     {
+      "cat": "letto_matrimoniale",
+      "found": false
+     },
+     {
+      "cat": "comodino",
+      "found": false
+     }
+    ],
+    "extraObjs": 1
+   },
+   "r": {
+    "segState": "ok",
+    "quadSource": "trovati dal modello di stanza: controllali",
+    "tSeg": 7067
+   },
+   "stale": false
+  },
+  {
+   "seed": 103,
+   "gt": {
+    "W": 5.85,
+    "D": 6.33,
+    "H": 2.66,
+    "openings": [
+     {
+      "type": "door",
+      "wall": "left",
+      "t": 3.068,
+      "w": 0.81,
+      "h": 2.23,
+      "sill": 0,
+      "visible": false
+     },
+     {
+      "type": "window",
+      "wall": "back",
+      "t": 1.826,
+      "w": 1.07,
+      "h": 1.42,
+      "sill": 0.92,
+      "visible": true
+     }
+    ],
+    "objects": [
+     {
+      "ref": "divano3",
+      "cat": "divano",
+      "x": 2.6775535454973576,
+      "y": 0.52,
+      "visible": true
+     },
+     {
+      "ref": "tavolino",
+      "cat": "tavolino",
+      "x": 2.8778488582000135,
+      "y": 1.6,
+      "visible": true
+     },
+     {
+      "ref": "vaso_verde",
+      "cat": "pianta",
+      "x": 5.3999999999999995,
+      "y": 0.45,
+      "visible": true
+     },
+     {
+      "ref": "sospensione",
+      "cat": "lampadario",
+      "x": 2.783089247625321,
+      "y": 2.9403826004196887,
+      "visible": true
+     }
+    ],
+    "camera": {
+     "x": 2.5594076746031638,
+     "y": 5.803617654747796,
+     "h": 1.38,
+     "pitch": 2.3,
+     "yaw": -13.7,
+     "hfov": 65
+    },
+    "kind": "soggiorno"
+   },
+   "sc": {
+    "ok": true,
+    "corner": 1.5,
+    "bothVisible": false,
+    "dW": null,
+    "dH": 0,
+    "dHc": 0.21,
+    "dPitch": -2.4,
+    "dFov": 0,
+    "ops": [
+     {
+      "type": "window",
+      "found": true,
+      "wallOk": true,
+      "dT": 0.41,
+      "dSill": -0.07,
+      "dH": 0.15,
+      "dW": 0.17
+     }
+    ],
+    "extraOps": 0,
+    "objs": [
+     {
+      "cat": "divano",
+      "found": true,
+      "d": 0.6
+     },
+     {
+      "cat": "tavolino",
+      "found": false
+     },
+     {
+      "cat": "pianta",
+      "found": true,
+      "d": 0.37
+     },
+     {
+      "cat": "lampadario",
+      "found": false
+     }
+    ],
+    "extraObjs": 6
+   },
+   "r": {
+    "segState": "ok",
+    "quadSource": "trovati dal modello di stanza: controllali",
+    "tSeg": 7575
+   },
+   "stale": false
+  },
+  {
+   "seed": 104,
+   "gt": {
+    "W": 3.86,
+    "D": 4.81,
+    "H": 2.73,
+    "openings": [
+     {
+      "type": "door",
+      "wall": "right",
+      "t": 2.986,
+      "w": 0.93,
+      "h": 2.23,
+      "sill": 0,
+      "visible": false
+     },
+     {
+      "type": "window",
+      "wall": "back",
+      "t": 2.028,
+      "w": 1.46,
+      "h": 1.47,
+      "sill": 0.91,
+      "visible": true
+     }
+    ],
+    "objects": [
+     {
+      "ref": "tavolo6",
+      "cat": "tavolo",
+      "x": 1.6755520333722234,
+      "y": 2.2749435974820513,
+      "visible": false
+     },
+     {
+      "ref": "sedia",
+      "cat": "sedia",
+      "x": 1.1755520333722234,
+      "y": 1.6249435974820514,
+      "visible": false
+     },
+     {
+      "ref": "sedia",
+      "cat": "sedia",
+      "x": 2.1755520333722234,
+      "y": 2.9249435974820512,
+      "visible": false
+     },
+     {
+      "ref": "madia",
+      "cat": "madia",
+      "x": 2.209241464100778,
+      "y": 0.25,
+      "visible": true
+     }
+    ],
+    "camera": {
+     "x": 2.270705421770736,
+     "y": 4.328901001068298,
+     "h": 1.43,
+     "pitch": 2.6,
+     "yaw": -7.2,
+     "hfov": 60
+    },
+    "kind": "pranzo"
+   },
+   "sc": {
+    "ok": true,
+    "corner": 5.3,
+    "bothVisible": false,
+    "dW": null,
+    "dH": 0,
+    "dHc": -0.25,
+    "dPitch": -0.4,
+    "dFov": 0,
+    "ops": [
+     {
+      "type": "window",
+      "found": true,
+      "wallOk": true,
+      "dT": -0.46,
+      "dSill": -0.11,
+      "dH": 0.13,
+      "dW": 0.47
+     }
+    ],
+    "extraOps": 0,
+    "objs": [
+     {
+      "cat": "madia",
+      "found": false
+     }
+    ],
+    "extraObjs": 6
+   },
+   "r": {
+    "segState": "ok",
+    "quadSource": "trovati dal modello di stanza: controllali",
+    "tSeg": 7403
+   },
+   "stale": false
+  },
+  {
+   "seed": 105,
+   "gt": {
+    "W": 5.92,
+    "D": 6.2,
+    "H": 2.73,
+    "openings": [
+     {
+      "type": "door",
+      "wall": "left",
+      "t": 4.14,
+      "w": 0.89,
+      "h": 2.17,
+      "sill": 0,
+      "visible": false
+     },
+     {
+      "type": "window",
+      "wall": "back",
+      "t": 5.002,
+      "w": 1.03,
+      "h": 1.24,
+      "sill": 1.04,
+      "visible": true
+     },
+     {
+      "type": "window",
+      "wall": "back",
+      "t": 3.418,
+      "w": 1.42,
+      "h": 1.48,
+      "sill": 0.94,
+      "visible": true
+     }
+    ],
+    "objects": [
+     {
+      "ref": "letto2",
+      "cat": "letto_matrimoniale",
+      "x": 3.2963605809863656,
+      "y": 1.1,
+      "visible": true
+     },
+     {
+      "ref": "comodino",
+      "cat": "comodino",
+      "x": 1.76,
+      "y": 0.25,
+      "visible": true
+     },
+     {
+      "ref": "armadio2",
+      "cat": "armadio",
+      "x": 5.56,
+      "y": 2.5442245265468957,
+      "visible": false
+     }
+    ],
+    "camera": {
+     "x": 3.514086983329057,
+     "y": 5.866117271280382,
+     "h": 1.56,
+     "pitch": 2.9,
+     "yaw": 5,
+     "hfov": 60
+    },
+    "kind": "camera"
+   },
+   "sc": {
+    "ok": true,
+    "corner": 2.7,
+    "bothVisible": true,
+    "dW": -0.22,
+    "dH": 0,
+    "dHc": 0.09,
+    "dPitch": -2.3,
+    "dFov": 0,
+    "ops": [
+     {
+      "type": "window",
+      "found": true,
+      "wallOk": true,
+      "dT": 0.06,
+      "dSill": -0.06,
+      "dH": 0.14,
+      "dW": 0.1
+     },
+     {
+      "type": "window",
+      "found": true,
+      "wallOk": true,
+      "dT": -0.22,
+      "dSill": -0.94,
+      "dH": 0.94,
+      "dW": 0.95
+     }
+    ],
+    "extraOps": 0,
+    "objs": [
+     {
+      "cat": "letto_matrimoniale",
+      "found": true,
+      "d": 0.78
+     },
+     {
+      "cat": "comodino",
+      "found": false
+     }
+    ],
+    "extraObjs": 3
+   },
+   "r": {
+    "segState": "ok",
+    "quadSource": "trovati dal modello di stanza: controllali",
+    "tSeg": 7062
+   },
+   "stale": false
+  },
+  {
+   "seed": 106,
+   "gt": {
+    "W": 5,
+    "D": 6.4,
+    "H": 2.83,
+    "openings": [
+     {
+      "type": "door",
+      "wall": "back",
+      "t": 3.462,
+      "w": 0.81,
+      "h": 2.18,
+      "sill": 0,
+      "visible": true
+     },
+     {
+      "type": "window",
+      "wall": "back",
+      "t": 1.752,
+      "w": 1.47,
+      "h": 1.24,
+      "sill": 0.94,
+      "visible": true
+     }
+    ],
+    "objects": [
+     {
+      "ref": "letto2",
+      "cat": "letto_matrimoniale",
+      "x": 2.82535783899948,
+      "y": 1.1,
+      "visible": true
+     },
+     {
+      "ref": "comodino",
+      "cat": "comodino",
+      "x": 1.3,
+      "y": 0.25,
+      "visible": true
+     },
+     {
+      "ref": "sospensione",
+      "cat": "lampadario",
+      "x": 2.7507391014602036,
+      "y": 3.0385098265949635,
+      "visible": true
+     }
+    ],
+    "camera": {
+     "x": 2.77743006972596,
+     "y": 5.967418296635151,
+     "h": 1.67,
+     "pitch": 1,
+     "yaw": 12.1,
+     "hfov": 65
+    },
+    "kind": "camera"
+   },
+   "sc": {
+    "ok": true,
+    "corner": 6,
+    "bothVisible": false,
+    "dW": null,
+    "dH": 0,
+    "dHc": 0.02,
+    "dPitch": -0.8,
+    "dFov": 0,
+    "ops": [
+     {
+      "type": "door",
+      "found": true,
+      "wallOk": true,
+      "dT": 0.16,
+      "dSill": 0,
+      "dH": 0.13,
+      "dW": -0.03
+     },
+     {
+      "type": "window",
+      "found": true,
+      "wallOk": true,
+      "dT": 0.24,
+      "dSill": -0.94,
+      "dH": 1.03,
+      "dW": 0.08
+     }
+    ],
+    "extraOps": 0,
+    "objs": [
+     {
+      "cat": "letto_matrimoniale",
+      "found": true,
+      "d": 0.2
+     },
+     {
+      "cat": "comodino",
+      "found": false
+     },
+     {
+      "cat": "lampadario",
+      "found": false
+     }
+    ],
+    "extraObjs": 1
+   },
+   "r": {
+    "segState": "ok",
+    "quadSource": "trovati dal modello di stanza: controllali",
+    "tSeg": 6822
+   },
+   "stale": false
+  },
+  {
+   "seed": 107,
+   "gt": {
+    "W": 5.78,
+    "D": 5.63,
+    "H": 3.08,
+    "openings": [
+     {
+      "type": "door",
+      "wall": "left",
+      "t": 3.463,
+      "w": 0.93,
+      "h": 2.21,
+      "sill": 0,
+      "visible": false
+     },
+     {
+      "type": "window",
+      "wall": "right",
+      "t": 1.59,
+      "w": 1.23,
+      "h": 1.41,
+      "sill": 0.95,
+      "visible": false
+     },
+     {
+      "type": "window",
+      "wall": "left",
+      "t": 1.643,
+      "w": 1.6,
+      "h": 1.21,
+      "sill": 0.98,
+      "visible": false
+     }
+    ],
+    "objects": [
+     {
+      "ref": "divano3",
+      "cat": "divano",
+      "x": 3.0564539637044073,
+      "y": 0.52,
+      "visible": true
+     },
+     {
+      "ref": "tavolino",
+      "cat": "tavolino",
+      "x": 3.1190611432865265,
+      "y": 1.6,
+      "visible": true
+     },
+     {
+      "ref": "poltrona",
+      "cat": "poltrona",
+      "x": 0.7524178931489587,
+      "y": 2.2033687505871056,
+      "visible": true
+     },
+     {
+      "ref": "vaso_verde",
+      "cat": "pianta",
+      "x": 5.33,
+      "y": 0.45,
+      "visible": false
+     }
+    ],
+    "camera": {
+     "x": 2.5825843835864215,
+     "y": 5.1888845595368185,
+     "h": 1.4,
+     "pitch": -6.6,
+     "yaw": 3.3,
+     "hfov": 60
+    },
+    "kind": "soggiorno"
+   },
+   "sc": {
+    "ok": true,
+    "corner": 11,
+    "bothVisible": false,
+    "dW": null,
+    "dH": 0,
+    "dHc": 0.01,
+    "dPitch": 2.4,
+    "dFov": 0,
+    "ops": [],
+    "extraOps": 2,
+    "objs": [
+     {
+      "cat": "divano",
+      "found": true,
+      "d": 0.11
+     },
+     {
+      "cat": "tavolino",
+      "found": true,
+      "d": 0.21
+     },
+     {
+      "cat": "poltrona",
+      "found": true,
+      "d": 0.7
+     }
+    ],
+    "extraObjs": 5
+   },
+   "r": {
+    "segState": "ok",
+    "quadSource": "trovati dal modello di stanza: controllali",
+    "tSeg": 7166
+   },
+   "stale": false
+  },
+  {
+   "seed": 108,
+   "gt": {
+    "W": 4.03,
+    "D": 5.83,
+    "H": 2.8,
+    "openings": [
+     {
+      "type": "door",
+      "wall": "right",
+      "t": 2.13,
+      "w": 0.94,
+      "h": 2.17,
+      "sill": 0,
+      "visible": false
+     },
+     {
+      "type": "window",
+      "wall": "back",
+      "t": 1.634,
+      "w": 1.27,
+      "h": 1.24,
+      "sill": 0.93,
+      "visible": true
+     },
+     {
+      "type": "window",
+      "wall": "back",
+      "t": 3.149,
+      "w": 1.13,
+      "h": 1.35,
+      "sill": 0.84,
+      "visible": true
+     }
+    ],
+    "objects": [
+     {
+      "ref": "letto2",
+      "cat": "letto_matrimoniale",
+      "x": 2.4462521282117815,
+      "y": 1.1,
+      "visible": true
+     },
+     {
+      "ref": "comodino",
+      "cat": "comodino",
+      "x": 0.8150000000000002,
+      "y": 0.25,
+      "visible": true
+     },
+     {
+      "ref": "sospensione",
+      "cat": "lampadario",
+      "x": 2.0794418531563132,
+      "y": 2.2756382316409143,
+      "visible": true
+     }
+    ],
+    "camera": {
+     "x": 1.8883625995507465,
+     "y": 5.406268183637876,
+     "h": 1.47,
+     "pitch": -4.2,
+     "yaw": 9.9,
+     "hfov": 74
+    },
+    "kind": "camera"
+   },
+   "sc": {
+    "ok": true,
+    "corner": 1.1,
+    "bothVisible": true,
+    "dW": -0.25,
+    "dH": 0,
+    "dHc": -0.01,
+    "dPitch": 0.2,
+    "dFov": 0,
+    "ops": [
+     {
+      "type": "window",
+      "found": false
+     },
+     {
+      "type": "window",
+      "found": false
+     }
+    ],
+    "extraOps": 1,
+    "objs": [
+     {
+      "cat": "letto_matrimoniale",
+      "found": true,
+      "d": 0.1
+     },
+     {
+      "cat": "comodino",
+      "found": false
+     },
+     {
+      "cat": "lampadario",
+      "found": false
+     }
+    ],
+    "extraObjs": 3
+   },
+   "r": {
+    "segState": "ok",
+    "quadSource": "trovati dal modello di stanza: controllali",
+    "tSeg": 6837
+   },
+   "stale": false
+  },
+  {
+   "seed": 109,
+   "gt": {
+    "W": 4.94,
+    "D": 6.38,
+    "H": 2.63,
+    "openings": [
+     {
+      "type": "door",
+      "wall": "back",
+      "t": 3.854,
+      "w": 0.8,
+      "h": 2.17,
+      "sill": 0,
+      "visible": true
+     },
+     {
+      "type": "window",
+      "wall": "left",
+      "t": 2.422,
+      "w": 1.26,
+      "h": 1.2,
+      "sill": 0.86,
+      "visible": false
+     },
+     {
+      "type": "window",
+      "wall": "right",
+      "t": 2.214,
+      "w": 1.01,
+      "h": 1.25,
+      "sill": 0.93,
+      "visible": false
+     }
+    ],
+    "objects": [
+     {
+      "ref": "tavolo6",
+      "cat": "tavolo",
+      "x": 2.2486622805520895,
+      "y": 3.6509864094527438,
+      "visible": true
+     },
+     {
+      "ref": "sedia",
+      "cat": "sedia",
+      "x": 1.7486622805520895,
+      "y": 3.000986409452744,
+      "visible": true
+     },
+     {
+      "ref": "sedia",
+      "cat": "sedia",
+      "x": 2.7486622805520895,
+      "y": 4.300986409452744,
+      "visible": false
+     },
+     {
+      "ref": "sospensione",
+      "cat": "lampadario",
+      "x": 2.2909628261160107,
+      "y": 2.679185434563551,
+      "visible": true
+     }
+    ],
+    "camera": {
+     "x": 2.6768954923201354,
+     "y": 6.0662242382369005,
+     "h": 1.37,
+     "pitch": -1.1,
+     "yaw": 0.4,
+     "hfov": 60
+    },
+    "kind": "pranzo"
+   },
+   "sc": {
+    "ok": true,
+    "corner": 2.1,
+    "bothVisible": true,
+    "dW": -0.11,
+    "dH": 0,
+    "dHc": 0.04,
+    "dPitch": -0.6,
+    "dFov": 0,
+    "ops": [
+     {
+      "type": "door",
+      "found": true,
+      "wallOk": true,
+      "dT": 0.03,
+      "dSill": 0,
+      "dH": 0.01,
+      "dW": 0.01
+     }
+    ],
+    "extraOps": 1,
+    "objs": [
+     {
+      "cat": "tavolo",
+      "found": true,
+      "d": 1.04
+     },
+     {
+      "cat": "sedia",
+      "found": true,
+      "d": 0.07
+     },
+     {
+      "cat": "lampadario",
+      "found": false
+     }
+    ],
+    "extraObjs": 7
+   },
+   "r": {
+    "segState": "ok",
+    "quadSource": "trovati dal modello di stanza: controllali",
+    "tSeg": 6668
+   },
+   "stale": false
+  },
+  {
+   "seed": 110,
+   "gt": {
+    "W": 4.36,
+    "D": 4.74,
+    "H": 3.05,
+    "openings": [
+     {
+      "type": "door",
+      "wall": "right",
+      "t": 2.672,
+      "w": 0.9,
+      "h": 2.23,
+      "sill": 0,
+      "visible": false
+     },
+     {
+      "type": "window",
+      "wall": "back",
+      "t": 1.559,
+      "w": 0.93,
+      "h": 1.44,
+      "sill": 0.83,
+      "visible": true
+     },
+     {
+      "type": "window",
+      "wall": "left",
+      "t": 1.635,
+      "w": 0.92,
+      "h": 1.25,
+      "sill": 0.87,
+      "visible": false
+     }
+    ],
+    "objects": [
+     {
+      "ref": "letto2",
+      "cat": "letto_matrimoniale",
+      "x": 1.8493572448566558,
+      "y": 1.1,
+      "visible": true
+     },
+     {
+      "ref": "comodino",
+      "cat": "comodino",
+      "x": 0.9800000000000002,
+      "y": 0.25,
+      "visible": true
+     },
+     {
+      "ref": "armadio2",
+      "cat": "armadio",
+      "x": 4,
+      "y": 2.3525348470034078,
+      "visible": false
+     },
+     {
+      "ref": "sospensione",
+      "cat": "lampadario",
+      "x": 1.8897653270699086,
+      "y": 2.1391294158413077,
+      "visible": true
+     }
+    ],
+    "camera": {
+     "x": 2.5774817332625393,
+     "y": 4.307895345378202,
+     "h": 1.4,
+     "pitch": 2.8,
+     "yaw": 15.5,
+     "hfov": 69
+    },
+    "kind": "camera"
+   },
+   "sc": {
+    "ok": true,
+    "corner": 1.6,
+    "bothVisible": false,
+    "dW": null,
+    "dH": 0,
+    "dHc": -0.02,
+    "dPitch": 0.4,
+    "dFov": 0,
+    "ops": [
+     {
+      "type": "window",
+      "found": true,
+      "wallOk": true,
+      "dT": -0.15,
+      "dSill": -0.83,
+      "dH": 0.94,
+      "dW": 0.7
+     }
+    ],
+    "extraOps": 0,
+    "objs": [
+     {
+      "cat": "letto_matrimoniale",
+      "found": true,
+      "d": 1.08
+     },
+     {
+      "cat": "comodino",
+      "found": false
+     },
+     {
+      "cat": "lampadario",
+      "found": false
+     }
+    ],
+    "extraObjs": 1
+   },
+   "r": {
+    "segState": "ok",
+    "quadSource": "trovati dal modello di stanza: controllali",
+    "tSeg": 6711
+   },
+   "stale": false
+  },
+  {
+   "seed": 111,
+   "gt": {
+    "W": 5.39,
+    "D": 4.18,
+    "H": 2.78,
+    "openings": [
+     {
+      "type": "door",
+      "wall": "right",
+      "t": 3.456,
+      "w": 0.86,
+      "h": 2.23,
+      "sill": 0,
+      "visible": false
+     },
+     {
+      "type": "window",
+      "wall": "right",
+      "t": 2.117,
+      "w": 1.1,
+      "h": 1.3,
+      "sill": 1.01,
+      "visible": false
+     },
+     {
+      "type": "window",
+      "wall": "back",
+      "t": 3.546,
+      "w": 1.15,
+      "h": 1.25,
+      "sill": 0.87,
+      "visible": true
+     }
+    ],
+    "objects": [
+     {
+      "ref": "letto2",
+      "cat": "letto_matrimoniale",
+      "x": 2.6654664906021206,
+      "y": 1.1,
+      "visible": true
+     },
+     {
+      "ref": "comodino",
+      "cat": "comodino",
+      "x": 1.4949999999999999,
+      "y": 0.25,
+      "visible": true
+     }
+    ],
+    "camera": {
+     "x": 2.9791976974410934,
+     "y": 3.735830579996109,
+     "h": 1.52,
+     "pitch": -1.6,
+     "yaw": -3.6,
+     "hfov": 69
+    },
+    "kind": "camera"
+   },
+   "sc": {
+    "ok": true,
+    "corner": 6.2,
+    "bothVisible": false,
+    "dW": null,
+    "dH": 0,
+    "dHc": -0.09,
+    "dPitch": 0.5,
+    "dFov": 0,
+    "ops": [
+     {
+      "type": "window",
+      "found": true,
+      "wallOk": true,
+      "dT": -1.02,
+      "dSill": -0.87,
+      "dH": 0.9,
+      "dW": 0.38
+     }
+    ],
+    "extraOps": 0,
+    "objs": [
+     {
+      "cat": "letto_matrimoniale",
+      "found": false
+     },
+     {
+      "cat": "comodino",
+      "found": false
+     }
+    ],
+    "extraObjs": 4
+   },
+   "r": {
+    "segState": "ok",
+    "quadSource": "trovati dal modello di stanza: controllali",
+    "tSeg": 7235
+   },
+   "stale": false
+  }
+ ]
+}
