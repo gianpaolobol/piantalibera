@@ -109,8 +109,9 @@ export function wallCorners(m) {
 export function segComponents(m, roomType = "") {
   if (!m) return [];
   const { w, h, lab, names } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && /cucin|kitchen/i.test(roomType)) c = "cucina"; return c && c[0] !== "@" ? c : null; });
-  // «fuori»: solo classi di esterni (cielo, verde, edifici…), viste attraverso il vetro
-  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n));
+  // «fuori»: classi di esterni e quelle che non sono né struttura né arredo (paesaggio, dipinti…), viste attraverso il
+  // vetro; mai tessili, cuscini o tende (un letto sotto la finestra non deve allungarla)
+  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n) || (!SEG_CAT[n] && !NOT_OPENING.has(n)));
   for (let i = 0; i < w * h; i++) {
     const c = lab[i] === 255 ? null : catOf[lab[i]]; if (!c || seen[i]) continue;
     let qh = 0, qt = 0, n = 0, x0 = w, y0 = h, x1 = 0, y1 = 0; Q[qt++] = i; seen[i] = 1;
@@ -275,5 +276,5 @@ export function fitRoomBox(m, { hfov = null, aspect = null, evalAt = null } = {}
 
 /* le finestre si vedono «attraverso»: il vetro (windowpane) più quello che sta fuori (cielo, alberi, prato,
    edifici…) racchiuso dalla parete forma il vano; senza questo il vano risulta basso e corto */
-export const NOT_OPENING = new Set(["curtain", "blind", "cushion", "pillow", "box", "base", "column", "mirror", "fireplace", "radiator", "railing", "bannister", "towel", "apparel", "bag", "basket", "book", "bottle", "vase", "clock", "plate", "glass", "tray", "pot", "food"]);
+export const NOT_OPENING = new Set(["curtain", "blind", "cushion", "pillow", "blanket", "cradle", "counter", "countertop", "stairs", "step", "ottoman", "desk", "seat", "bench", "kitchen island", "television receiver", "computer", "monitor", "screen", "crt screen", "plaything", "animal", "person", "box", "base", "column", "mirror", "fireplace", "radiator", "railing", "bannister", "towel", "apparel", "bag", "basket", "book", "bottle", "vase", "clock", "plate", "glass", "tray", "pot", "food"]);
 export const OUTSIDE = new Set(["sky", "tree", "grass", "building", "house", "mountain", "field", "road", "sidewalk", "earth", "water", "sea", "palm", "fence", "car", "skyscraper", "hill", "land", "path", "awning", "streetlight", "pole"]);
