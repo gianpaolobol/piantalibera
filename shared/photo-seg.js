@@ -109,9 +109,9 @@ export function wallCorners(m) {
 export function segComponents(m, roomType = "") {
   if (!m) return [];
   const { w, h, lab, names } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && /cucin|kitchen/i.test(roomType)) c = "cucina"; return c && c[0] !== "@" ? c : null; });
-  // «fuori»: classi di esterni e quelle che non sono né struttura né arredo (paesaggio, dipinti…), viste attraverso il
-  // vetro; mai tessili, cuscini o tende (un letto sotto la finestra non deve allungarla)
-  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n) || (!SEG_CAT[n] && !NOT_OPENING.has(n)));
+  // «fuori»: solo classi di esterni (cielo, verde, edifici…) viste attraverso il vetro. Nelle foto vere la segmentazione
+  // include già nel vetro il paesaggio; allargare ad altre classi allungava le finestre sopra letti e mobili (banco 9/11)
+  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n));
   for (let i = 0; i < w * h; i++) {
     const c = lab[i] === 255 ? null : catOf[lab[i]]; if (!c || seen[i]) continue;
     let qh = 0, qt = 0, n = 0, x0 = w, y0 = h, x1 = 0, y1 = 0; Q[qt++] = i; seen[i] = 1;

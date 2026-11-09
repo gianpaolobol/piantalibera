@@ -212,7 +212,7 @@ for (let i = 0; i < N; i++) {
       poly(gq, "#0c0"); if (q) poly(q, "#18f");
       for (const it of items || []) { g.strokeStyle = it.on ? (/porta|finestra/.test(it.cat) ? "#e23" : "#fb3") : "#999"; g.lineWidth = 2; g.strokeRect(it.box[0] * 640, it.box[1] * 480, (it.box[2] - it.box[0]) * 640, (it.box[3] - it.box[1]) * 480); g.fillStyle = g.strokeStyle; g.font = "12px sans-serif"; g.fillText(it.cat, it.box[0] * 640 + 2, it.box[1] * 480 + 12); }
       ok(c.toDataURL("image/jpeg", .7)); }; im.src = url; }), { url: shot.url, q: r.quad, gq: shot.quad, items: r.items });
-    console.log(`===IMG=== scena_${seed}\n${img.split(",")[1]}\n===FINE===`);
+    console.log(`===IMG=== scena_${seed}${REALE ? "_reale" : ""}\n${img.split(",")[1]}\n===FINE===`);
   }
 }
 /* riepilogo */

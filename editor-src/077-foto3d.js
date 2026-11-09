@@ -24,6 +24,8 @@ const F3_CATS = {
   lampadario:{n:"Lampadario", ref:"sospensione", w:.44, d:.44, mount:"ceiling", light:true}, plafoniera:{n:"Plafoniera", ref:"plafoniera", w:.4, d:.4, mount:"ceiling", light:true}, faretto:{n:"Faretto", ref:"faretto", w:.1, d:.1, mount:"ceiling", light:true},
   applique:{n:"Applique", ref:"applique", w:.2, d:.15, mount:"wall", light:true}, scala:{n:"Scala", ref:"scala_dritta", w:1, d:3}, altro:{n:"Altro (non creato)", skip:true},
 };
+/* quota del bordo superiore visibile (piano del tavolo, materasso, schienale): serve quando la base non si vede */
+const F3_TOP = {tavolo:.75, tavolo_tondo:.75, tavolino:.4, tavolino_tondo:.4, scrivania:.75, isola:.9, madia:.8, cassettiera:.85, comodino:.55, letto_matrimoniale:.55, letto_singolo:.55, divano:.85, poltrona:.8};
 const F3_WALLISH = new Set(["divano", "divano_angolare", "letto_matrimoniale", "letto_singolo", "armadio", "libreria", "madia", "cassettiera", "mobile_tv", "cucina", "comodino", "scrivania", "frigorifero", "lavabo", "wc", "bidet", "vasca"]);
 const F3_FLOOR = {parquet:"parquet", laminato:"parquet", piastrelle:"gres", resina:"cemento", cemento:"cemento", marmo:"marmo", pietra:"pietra", cotto:"gres", moquette:"tappeto", altro:"parquet"};
 const F3_REF = [["ceil", "Altezza del soffitto"], ["width", "Larghezza della parete di fondo"], ["cam", "Altezza della fotocamera da terra"]];
@@ -239,7 +241,12 @@ function f3Layout(s, items = F3.items){
     if (C.mount === "ceiling"){ p = f3Ceil(s, uc, y0) || f3Floor(s, uc, y1); }
     else if (C.mount === "wall"){ const hit = f3WallAt(s, uc, vc); const inN = {back:[0, 1], left:[1, 0], right:[-1, 0]}[hit.wall]; p = [hit.x + inN[0] * .08, hit.y + inN[1] * .08]; rot = f3Ang(inN); z = clamp(hit.z - .1, .5, s.H - .2); }
     else {
-      p = f3Floor(s, uc, y1); if (!p){ out.skipped.push(it); continue; }
+      p = f3Floor(s, uc, y1);
+      // base tagliata dal bordo della foto (oggetto vicino alla fotocamera): si usa il bordo alto del piano, a quota nota
+      const topH = F3_TOP[cat];
+      if (topH && y1 > .97){ const d = s.ray(uc, y0); if (d[2] < -1e-4 && s.hc > topH){ const t = (topH - s.hc) / d[2], far = [s.c[0] + t * d[0], s.c[1] + t * d[1]], hl = Math.hypot(d[0], d[1]) || 1; const dep = (C.d || .6);
+        p = [far[0] - d[0] / hl * dep, far[1] - d[1] / hl * dep]; } }
+      if (!p){ out.skipped.push(it); continue; }
       // misure reali dalla foto: larghezza alla base e altezza della sommità alla distanza dell'oggetto
       const dist = Math.hypot(p[0] - s.c[0], p[1] - s.c[1]), rt = s.ray(uc, y0), hTop = s.hc + dist / (Math.hypot(rt[0], rt[1]) || 1) * rt[2];
       const pa0 = f3Floor(s, x0, y1), pb0 = f3Floor(s, x1, y1), wid = pa0 && pb0 ? Math.hypot(pb0[0] - pa0[0], pb0[1] - pa0[1]) : null;
