@@ -11,11 +11,23 @@ import { spawn } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { photoMessages, PHOTO_SCHEMA, extractJson, normalizeAnalysis, parseDetections } from "../shared/photo.js";
+import { buildModelPrompt } from "../shared/contract.js";
 
 const N = Number(process.argv[2] || process.env.N || 10), DIR = "tests/fixtures/banco-foto", ACC = process.env.CLOUDFLARE_ACCOUNT_ID, TOK = process.env.CLOUDFLARE_API_TOKEN;
-const IMGS = (process.env.IMGS || "0,1,2,3").split(",").map(Number), FOV_NOTO = process.env.FOV_NOTO !== "0";
+const IMGS = (process.env.IMGS || "0,1,2,3").split(",").map(Number), FOV_NOTO = process.env.FOV_NOTO !== "0", REALE = process.env.REALE === "1";
 mkdirSync(DIR, { recursive: true });
 const run = async (model, input) => { const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACC}/ai/run/${model}`, { method: "POST", headers: { Authorization: `Bearer ${TOK}`, "Content-Type": "application/json" }, body: JSON.stringify(input) }); const j = await r.json(); if (!j.success) throw new Error(JSON.stringify(j.errors).slice(0, 300)); return j.result; };
+/* versione fotorealistica della scena: FLUX.2 klein con vista, profondità e contorni (stessa procedura del render
+   «fedele» del sito), salvata nel ramo per non rifarla; la geometria resta quasi uguale alla scena */
+async function photoreal(shot, seed) {
+  const form = new FormData(), dec = d => new Blob([Buffer.from(d.split(",")[1], "base64")], { type: d.slice(5, d.indexOf(";")) });
+  form.append("prompt", buildModelPrompt({ mode: "fedele", prompt: "Furnished home interior photographed with a phone camera, natural daylight from the windows, realistic furniture, fabrics, wood and painted plaster walls." }, { depth: 1, lines: 2 }));
+  form.append("width", "1024"); form.append("height", "768"); form.append("seed", String(seed));
+  form.append("input_image_0", dec(shot.small), "image.jpg"); form.append("input_image_1", dec(shot.depth), "depth.png"); form.append("input_image_2", dec(shot.lines), "lines.png");
+  const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACC}/ai/run/@cf/black-forest-labs/flux-2-klein-4b`, { method: "POST", headers: { Authorization: `Bearer ${TOK}` }, body: form });
+  const j = await r.json(); if (!j.success || !j.result?.image) throw new Error("klein: " + JSON.stringify(j.errors || j).slice(0, 300));
+  return "data:image/jpeg;base64," + j.result.image;
+}
 async function analyze(photo, W, H) {
   const [vis, det] = await Promise.all([run("@cf/meta/llama-4-scout-17b-16e-instruct", { messages: photoMessages(photo), max_tokens: 3000, temperature: .15, response_format: { type: "json_schema", json_schema: PHOTO_SCHEMA } }), run("@cf/facebook/detr-resnet-50", { image: [...Buffer.from(photo.split(",")[1], "base64")] })]);
   return { raw: extractJson(vis), det: parseDetections(det, W, H), neurons: vis?.usage?.neurons };
@@ -61,6 +73,8 @@ const SHOT = async function (cfg) {
   renderer.setPixelRatio(1); renderer.setSize(cfg.W, cfg.H, false); camera.aspect = cfg.W / cfg.H; camera.fov = cfg.vfov;
   camera.position.set(cam.x, cam.h, cam.y); camera.rotation.order = "YXZ"; camera.rotation.set(cam.pitch * Math.PI / 180, cam.yaw * Math.PI / 180, 0); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
   drawFrame(true); const url = c3d.toDataURL("image/jpeg", .9);
+  let small = null, depth = null, lines = null;
+  if (cfg.reale) { small = renderAt(1, null, { longSide: 512, hq: true }).toDataURL("image/jpeg", .9); depth = depthCanvas(1, { longSide: 512 }).toDataURL("image/png"); lines = linesCanvas(1, { longSide: 512 }).toDataURL("image/png"); }
   // verità a terra proiettata: spigoli della parete di fondo e riquadri delle aperture
   const pr = (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(camera); return [+((v.x + 1) / 2).toFixed(4), +((1 - v.y) / 2).toFixed(4)]; };
   const g = cfg.gt, quad = { fl: pr(0, 0, 0), fr: pr(g.W, 0, 0), cl: pr(0, g.H, 0), cr: pr(g.W, g.H, 0) };
@@ -70,7 +84,7 @@ const SHOT = async function (cfg) {
   for (const o of g.openings) { const [x, z] = wp(o, o.t); o.visible = inView(x, o.sill + o.h / 2, z); }
   for (const o of g.objects) o.visible = inView(o.x, o.cat === "lampadario" ? g.H - .4 : .4, o.y);
   renderer.setPixelRatio(old.pr); renderer.setSize(old.size.x, old.size.y, false); camera.aspect = old.aspect; camera.fov = old.fov; camera.updateProjectionMatrix();
-  return { url, quad, gt: g };
+  return { url, quad, gt: g, small, depth, lines };
 };
 /* ricostruzione automatica (nella pagina) */
 const RECON = async function ({ photo, W, H, analysis, gt, fovKnown }) {
@@ -126,9 +140,16 @@ await page.evaluate(() => { $('#viewSeg [data-v="3d"]')?.click(); });
 const rows = [];
 let neurons = 0;
 for (let i = 0; i < N; i++) {
-  const seed = 100 + i, file = `${DIR}/scena-${seed}.json`;
+  const seed = 100 + i, file = `${DIR}/scena-${seed}${REALE ? "-reale" : ""}.json`;
   const cfg = await page.evaluate(`(() => { try { return (${GEN})(${seed}); } catch (e) { return { err: e.stack }; } })()`); if (cfg.err) { console.log("generatore:", cfg.err); break; }
+  cfg.reale = REALE;
   const shot = await page.evaluate(`(${SHOT})(${JSON.stringify(cfg)})`); cfg.gt = shot.gt;
+  const realFile = `${DIR}/scena-${seed}-reale.jpg`;
+  if (REALE) {
+    if (!existsSync(realFile)) { if (!TOK) { console.log(`scena ${seed}: manca la versione fotorealistica e il token`); continue; }
+      try { const d = await photoreal(shot, seed); writeFileSync(realFile, Buffer.from(d.split(",")[1], "base64")); neurons += 113; } catch (e) { console.log(`scena ${seed}:`, e.message); continue; } }
+    shot.url = "data:image/jpeg;base64," + readFileSync(realFile).toString("base64");
+  }
   if (process.env.SALVA_FOTO) await page.evaluate(([n, d]) => window.__salva(n, d), [`scena-${seed}`, shot.url]);
   const hash = createHash("sha256").update(shot.url).digest("hex").slice(0, 16);
   let fx = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : null;
@@ -159,5 +180,5 @@ const sum = { scene: rows.length, risolte: ok.length, spigoli_err_pct: +mean(ok.
   altezza_ap_err_m: +mean(abs(found.map(o => o.dH))).toFixed(2), larghezza_ap_err_m: +mean(abs(found.map(o => o.dW))).toFixed(2), aperture_in_piu: ok.reduce((s, r) => s + r.sc.extraOps, 0),
   arredi_trovati: `${fo.length}/${objs.length}`, arredi_pos_err_m: +mean(fo.map(o => o.d)).toFixed(2), arredi_in_piu: ok.reduce((s, r) => s + r.sc.extraObjs, 0), neurons_spesi: Math.round(neurons) };
 console.log("\n=== RIEPILOGO", JSON.stringify(sum, null, 1));
-writeFileSync(`${DIR}/ultimo-giro.json`, JSON.stringify({ when: new Date().toISOString(), fovNoto: FOV_NOTO, sum, rows }, null, 1));
+writeFileSync(`${DIR}/ultimo-giro${REALE ? "-reale" : ""}.json`, JSON.stringify({ when: new Date().toISOString(), fovNoto: FOV_NOTO, sum, rows }, null, 1));
 await browser.close(); srv.kill();

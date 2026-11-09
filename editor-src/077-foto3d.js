@@ -113,8 +113,8 @@ async function f3Segment(){
       const m = labelMap(segs, 320);
       // spigoli: modello di stanza adattato alle giunzioni (robusto agli arredi); in subordine la spezzata
       const box = fitRoomBox(m, {hfov:F3.opts.fov || F3.exifFov || null, aspect:F3.h / F3.w}), poly = wallCorners(m);
-      const quad = box && box.conf >= .5 ? box : poly && poly.conf >= .6 ? poly : null;
-      Object.assign(job, {state:"ok", m, quad, box, labels:segs.map(x => x.label)});
+      const alts = [box && box.conf >= .5 ? box : null, poly && poly.conf >= .6 ? poly : null].filter(Boolean);
+      Object.assign(job, {state:"ok", m, quad:alts[0] || null, alts, box, labels:segs.map(x => x.label)});
     } catch(e){ console.warn("segmentazione:", e); if (F3.seg === job) Object.assign(job, {state:"err", err:String(e?.message || e)}); }
     if (F3.seg === job && F3.a) { f3ApplySeg(); if (F3.open) f3RenderModal(); }
   })();
@@ -123,6 +123,10 @@ async function f3Segment(){
 /* applica la segmentazione all'analisi: spigoli (se l'utente non li ha già spostati) e riquadri */
 function f3ApplySeg(){
   const sg = F3.seg; if (!sg || sg.state !== "ok" || !F3.a || sg.applied) return; sg.applied = true;
+  // prima proposta che dà una geometria possibile (spigoli alti sopra l'orizzonte, fotocamera davanti alla parete)
+  if (sg.alts?.length && F3.quadSource !== "posizionati da te"){
+    const keep = F3.quad; sg.quad = sg.alts.find(q => { F3.quad = {fl:q.fl, fr:q.fr, cl:q.cl, cr:q.cr}; F3.quadOpen = q === sg.box ? {l:q.openL, r:q.openR} : null; return f3Solve().ok; }) || null; F3.quad = keep;
+  }
   if (sg.quad && F3.quadSource !== "posizionati da te"){
     F3.quad = {fl:sg.quad.fl, fr:sg.quad.fr, cl:sg.quad.cl, cr:sg.quad.cr}; F3.quadOpen = sg.quad === sg.box ? {l:sg.box.openL, r:sg.box.openR} : null; F3.quadSource = sg.quad === sg.box ? "trovati dal modello di stanza: controllali" : "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
     if (sg.box && sg.quad === sg.box && !F3.exifFov && !F3.opts.fov) F3.fitFov = sg.box.hfov;       // campo visivo stimato dalla prospettiva
@@ -188,7 +192,7 @@ function f3Solve(quad = F3.quad, opts = F3.opts, w = F3.w, h = F3.h, a = F3.a){
   // modello (o 0,6 m) mantenendo fermo lo spigolo visibile, così aperture e arredi restano alla distanza giusta
   const outL = !!F3.quadOpen?.l, outR = !!F3.quadOpen?.r;
   let shift = 0, Wv = W;
-  if ((outL || outR) && !opts.widthFixed){ const est = Math.max(W + .6, +(a?.room?.width_m || 0)); const extra = Math.min(est - W, 4);
+  if ((outL || outR) && !opts.widthFixed){ const est = Math.max(W + .6, +(a?.room?.width_m || 0)); const extra = Math.min(est - W, 1.2);
     if (outL && !outR){ shift = extra; Wv = W + extra; } else if (outR && !outL) Wv = W + extra; else { shift = extra / 2; Wv = W + extra; } }
   const ray = (u, v) => { const d = f3Dir(u, v, cam), hp = toPlanV([d[0], d[2]]); return [hp[0], hp[1], d[1]]; };
   return {ok:true, cam, p, hc, H, W:Wv, Wseen:W, D, depthAuto:+(c[1] + .4).toFixed(2), c:[c[0] + shift, c[1]], ray, right:toPlanV([1, 0]), useCeil, partial:outL || outR};

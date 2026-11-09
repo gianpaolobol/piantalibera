@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-7YRlsBYFcrcG6TyCE7j0tqVtZzQtEzGfsCt2nE4R8GE=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-chEVKiH3nSGn+VThRFQ5nTkQRsNHENR5QSPZig2YDvE=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4177,7 +4177,13 @@ function segComponents(m, roomType = "") {
     const grow = c === "finestra" || c === "portafinestra";      // il vano comprende quello che si vede fuori
     while (qh < qt) { const j = Q[qh++], x = j % w, y = (j / w) | 0; n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
       for (const k of [j - 1, j + 1, j - w, j + w]) { if (k < 0 || k >= w * h || seen[k] || (k === j - 1 && x === 0) || (k === j + 1 && x === w - 1)) continue; const l = lab[k];
-        if (l !== 255 && (catOf[l] === c || (grow && outside[l] && Math.abs((k % w) - (i % w)) < w * .35 && Math.abs(((k / w) | 0) - ((i / w) | 0)) < h * .45))) { seen[k] = 1; Q[qt++] = k; } } }
+        if (l !== 255 && catOf[l] === c) { seen[k] = 1; Q[qt++] = k; } } }
+    if (grow) {   // secondo passo: dal vetro verso ciò che si vede fuori, entro un intorno del vetro (non dentro la parete)
+      const bw = x1 - x0 + 1, bh = y1 - y0 + 1, gx0 = x0 - bw * .25, gx1 = x1 + bw * .25, gy0 = y0 - bh * .6, gy1 = y1 + bh * 1.2;
+      for (let q = 0; q < qt; q++) { const j = Q[q], x = j % w, y = (j / w) | 0;
+        for (const k of [j - 1, j + 1, j - w, j + w]) { if (k < 0 || k >= w * h || seen[k] || (k === j - 1 && x === 0) || (k === j + 1 && x === w - 1)) continue; const kx = k % w, ky = (k / w) | 0, l = lab[k];
+          if (l !== 255 && outside[l] && kx >= gx0 && kx <= gx1 && ky >= gy0 && ky <= gy1) { seen[k] = 1; Q[qt++] = k; n++; if (kx < x0) x0 = kx; if (kx > x1) x1 = kx; if (ky < y0) y0 = ky; if (ky > y1) y1 = ky; } } }
+    }
     if (n < minA) continue;
     // pavimento subito sotto il bordo inferiore: per distinguere una finestra da una portafinestra
     let fl = 0, tot = 0; for (let x = x0; x <= x1; x++) for (let y = y1 + 1; y <= Math.min(h - 1, y1 + Math.max(2, h * .03)); y++) { tot++; if (floorIds.has(lab[y * w + x])) fl++; }
@@ -4297,13 +4303,16 @@ function fitRoomBox(m, { hfov = null, aspect = null, evalAt = null } = {}) {
     }
     return { x: simp[0], s: val[0] };
   };
-  let best = null;
-  for (const p0 of [-6, 2]) for (const y0 of [-14, 0, 14]) for (const db0 of [1.2, 2.4]) {
+  // più partenze (inclinazione, rotazione, distanza); si tengono le migliori e si rifiniscono
+  const cands = [];
+  for (const p0 of [-12, -5, 2, 8]) for (const y0 of [-14, 0, 14]) for (const db0 of [1.2, 2.4]) {
     const x0 = [p0 * rad, y0 * rad, Math.atan(.52 / db0), Math.atan(.48 / db0), Math.atan(.9 / db0), Math.atan(.9 / db0)], st = [4 * rad, 6 * rad, 5 * rad, 5 * rad, 10 * rad, 10 * rad];
     if (fitFov) { x0.push(65); st.push(8); }
-    const r1 = nm(x0, st, 160); if (!best || r1.s > best.s) best = r1;
+    cands.push(nm(x0, st, 140));
   }
-  for (let k = 0; k < 3; k++) best = nm(best.x, best.x.map((v, i) => [1 * rad, 1.5 * rad, 1 * rad, 1 * rad, 2 * rad, 2 * rad, 2][i]));
+  cands.sort((a, b) => b.s - a.s);
+  let best = null;
+  for (const c of cands.slice(0, 3)) { let r1 = c; for (let k = 0; k < 2; k++) r1 = nm(r1.x, r1.x.map((v, i) => [1 * rad, 1.5 * rad, 1 * rad, 1 * rad, 2 * rad, 2 * rad, 2][i])); if (!best || r1.s > best.s) best = r1; }
   const G = geo(best.x), f = toF(G.fov), Hc = 1 - G.hc;
   const pj = P => { const q = projectPt(P, f, r, G.p, G.yaw); return q ? q.map(v => +v.toFixed(4)) : null; };
   const quad = { fl: pj([-G.dl, -G.hc, -G.db]), fr: pj([G.dr, -G.hc, -G.db]), cl: pj([-G.dl, Hc, -G.db]), cr: pj([G.dr, Hc, -G.db]) };
@@ -4436,8 +4445,8 @@ async function f3Segment(){
       const m = labelMap(segs, 320);
       // spigoli: modello di stanza adattato alle giunzioni (robusto agli arredi); in subordine la spezzata
       const box = fitRoomBox(m, {hfov:F3.opts.fov || F3.exifFov || null, aspect:F3.h / F3.w}), poly = wallCorners(m);
-      const quad = box && box.conf >= .5 ? box : poly && poly.conf >= .6 ? poly : null;
-      Object.assign(job, {state:"ok", m, quad, box, labels:segs.map(x => x.label)});
+      const alts = [box && box.conf >= .5 ? box : null, poly && poly.conf >= .6 ? poly : null].filter(Boolean);
+      Object.assign(job, {state:"ok", m, quad:alts[0] || null, alts, box, labels:segs.map(x => x.label)});
     } catch(e){ console.warn("segmentazione:", e); if (F3.seg === job) Object.assign(job, {state:"err", err:String(e?.message || e)}); }
     if (F3.seg === job && F3.a) { f3ApplySeg(); if (F3.open) f3RenderModal(); }
   })();
@@ -4446,6 +4455,10 @@ async function f3Segment(){
 /* applica la segmentazione all'analisi: spigoli (se l'utente non li ha già spostati) e riquadri */
 function f3ApplySeg(){
   const sg = F3.seg; if (!sg || sg.state !== "ok" || !F3.a || sg.applied) return; sg.applied = true;
+  // prima proposta che dà una geometria possibile (spigoli alti sopra l'orizzonte, fotocamera davanti alla parete)
+  if (sg.alts?.length && F3.quadSource !== "posizionati da te"){
+    const keep = F3.quad; sg.quad = sg.alts.find(q => { F3.quad = {fl:q.fl, fr:q.fr, cl:q.cl, cr:q.cr}; F3.quadOpen = q === sg.box ? {l:q.openL, r:q.openR} : null; return f3Solve().ok; }) || null; F3.quad = keep;
+  }
   if (sg.quad && F3.quadSource !== "posizionati da te"){
     F3.quad = {fl:sg.quad.fl, fr:sg.quad.fr, cl:sg.quad.cl, cr:sg.quad.cr}; F3.quadOpen = sg.quad === sg.box ? {l:sg.box.openL, r:sg.box.openR} : null; F3.quadSource = sg.quad === sg.box ? "trovati dal modello di stanza: controllali" : "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
     if (sg.box && sg.quad === sg.box && !F3.exifFov && !F3.opts.fov) F3.fitFov = sg.box.hfov;       // campo visivo stimato dalla prospettiva
@@ -4511,7 +4524,7 @@ function f3Solve(quad = F3.quad, opts = F3.opts, w = F3.w, h = F3.h, a = F3.a){
   // modello (o 0,6 m) mantenendo fermo lo spigolo visibile, così aperture e arredi restano alla distanza giusta
   const outL = !!F3.quadOpen?.l, outR = !!F3.quadOpen?.r;
   let shift = 0, Wv = W;
-  if ((outL || outR) && !opts.widthFixed){ const est = Math.max(W + .6, +(a?.room?.width_m || 0)); const extra = Math.min(est - W, 4);
+  if ((outL || outR) && !opts.widthFixed){ const est = Math.max(W + .6, +(a?.room?.width_m || 0)); const extra = Math.min(est - W, 1.2);
     if (outL && !outR){ shift = extra; Wv = W + extra; } else if (outR && !outL) Wv = W + extra; else { shift = extra / 2; Wv = W + extra; } }
   const ray = (u, v) => { const d = f3Dir(u, v, cam), hp = toPlanV([d[0], d[2]]); return [hp[0], hp[1], d[1]]; };
   return {ok:true, cam, p, hc, H, W:Wv, Wseen:W, D, depthAuto:+(c[1] + .4).toFixed(2), c:[c[0] + shift, c[1]], ray, right:toPlanV([1, 0]), useCeil, partial:outL || outR};

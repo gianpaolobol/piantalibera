@@ -117,7 +117,13 @@ export function segComponents(m, roomType = "") {
     const grow = c === "finestra" || c === "portafinestra";      // il vano comprende quello che si vede fuori
     while (qh < qt) { const j = Q[qh++], x = j % w, y = (j / w) | 0; n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
       for (const k of [j - 1, j + 1, j - w, j + w]) { if (k < 0 || k >= w * h || seen[k] || (k === j - 1 && x === 0) || (k === j + 1 && x === w - 1)) continue; const l = lab[k];
-        if (l !== 255 && (catOf[l] === c || (grow && outside[l] && Math.abs((k % w) - (i % w)) < w * .35 && Math.abs(((k / w) | 0) - ((i / w) | 0)) < h * .45))) { seen[k] = 1; Q[qt++] = k; } } }
+        if (l !== 255 && catOf[l] === c) { seen[k] = 1; Q[qt++] = k; } } }
+    if (grow) {   // secondo passo: dal vetro verso ciò che si vede fuori, entro un intorno del vetro (non dentro la parete)
+      const bw = x1 - x0 + 1, bh = y1 - y0 + 1, gx0 = x0 - bw * .25, gx1 = x1 + bw * .25, gy0 = y0 - bh * .6, gy1 = y1 + bh * 1.2;
+      for (let q = 0; q < qt; q++) { const j = Q[q], x = j % w, y = (j / w) | 0;
+        for (const k of [j - 1, j + 1, j - w, j + w]) { if (k < 0 || k >= w * h || seen[k] || (k === j - 1 && x === 0) || (k === j + 1 && x === w - 1)) continue; const kx = k % w, ky = (k / w) | 0, l = lab[k];
+          if (l !== 255 && outside[l] && kx >= gx0 && kx <= gx1 && ky >= gy0 && ky <= gy1) { seen[k] = 1; Q[qt++] = k; n++; if (kx < x0) x0 = kx; if (kx > x1) x1 = kx; if (ky < y0) y0 = ky; if (ky > y1) y1 = ky; } } }
+    }
     if (n < minA) continue;
     // pavimento subito sotto il bordo inferiore: per distinguere una finestra da una portafinestra
     let fl = 0, tot = 0; for (let x = x0; x <= x1; x++) for (let y = y1 + 1; y <= Math.min(h - 1, y1 + Math.max(2, h * .03)); y++) { tot++; if (floorIds.has(lab[y * w + x])) fl++; }
