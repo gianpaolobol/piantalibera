@@ -31,7 +31,7 @@ export function labelMap(segs, wt = 320) {
   const W0 = segs[0]?.mask?.width, H0 = segs[0]?.mask?.height; if (!W0) return null;
   const w = Math.min(wt, W0), h = Math.max(1, Math.round(H0 * w / W0)), lab = new Uint8Array(w * h).fill(255), score = new Float32Array(w * h), names = [];
   segs.forEach((s, k) => {
-    names.push(s.label); const d = s.mask.data, ch = d.length / (W0 * H0) | 0 || 1;
+    names.push(String(s.label).trim()); const d = s.mask.data, ch = d.length / (W0 * H0) | 0 || 1;
     for (let y = 0; y < h; y++) { const sy = Math.min(H0 - 1, Math.floor((y + .5) * H0 / h)) * W0;
       for (let x = 0; x < w; x++) { const v = d[(sy + Math.min(W0 - 1, Math.floor((x + .5) * W0 / w))) * ch]; const i = y * w + x; if (v > 127 && v >= score[i]) { score[i] = v; lab[i] = k; } } }
   });
@@ -196,6 +196,9 @@ export function mergeSegmentation(items, comps, quad = null) {
     const ta = trust(A), tb = trust(B), keepB = tb > ta || (tb === ta && area(B.box) > area(A.box));
     (keepB ? A : B).dup = true;            // resta il più affidabile (confermato dalla foto), a parità il più grande
   }
+  // lenzuola e coperte riconosciute come «tavolo» dentro il letto: fanno parte del letto
+  for (const A of out) if (!A.dup && FAMILY(A.category) === "letto" && A.seg)
+    for (const B of out) if (B !== A && !B.dup && /^tavol/.test(B.category) && B.seg && !String(B.source).includes("rilevatore") && within(A.box, B.box) > .7 && area(B.box) < area(A.box)) B.dup = true;
   return out.filter(it => !it.dup);
 }
 
