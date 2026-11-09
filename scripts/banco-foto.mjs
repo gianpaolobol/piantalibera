@@ -210,6 +210,7 @@ for (let i = 0; i < N; i++) {
   const sc = score(cfg.gt, r, shot.quad); rows.push({ seed, gt: cfg.gt, sc, r: { segState: r.segState, quadSource: r.quadSource, tSeg: Math.round(r.tSeg || 0) }, stale: fx.hash !== hash });
   console.log(`\n## scena ${seed} (${cfg.gt.kind}, ${cfg.gt.W}×${cfg.gt.D}×${cfg.gt.H} m, fotocamera h ${cfg.gt.camera.h} incl ${cfg.gt.camera.pitch}° rot ${cfg.gt.camera.yaw}° fov ${cfg.gt.camera.hfov}°)${fx.hash !== hash ? " [analisi di una foto precedente]" : ""}`);
   console.log(JSON.stringify(sc)); console.log(`seg ${r.segState} ${Math.round(r.tSeg || 0)} ms · modello stanza ${JSON.stringify(r.box)} · spigoli: ${r.quadSource} · elementi: ${(r.items || []).map(x => x.cat + (x.on ? "" : "?") + "/" + x.src).join(", ")}`);
+  if (r.objects) console.log(`arredi: ${r.objects.map(o => `${o.cat}@${o.x.toFixed(1)},${o.y.toFixed(1)}`).join(" ")} | veri: ${cfg.gt.objects.filter(o => o.visible).map(o => `${o.cat}@${o.x.toFixed(1)},${o.y.toFixed(1)}`).join(" ")}`);
   // mappa delle etichette e spigoli veri: per provare il modello di stanza in locale (scripts/prova-stanza.mjs)
   if (r.map) console.log(`===MAP=== scena_${seed}${REALE ? "_reale" : ""}\n${JSON.stringify({ ...r.map, gq: shot.quad, cam: cfg.gt.camera, fovKnown: FOV_NOTO })}\n===FINE===`);
   if (IMGS.includes(i)) {
