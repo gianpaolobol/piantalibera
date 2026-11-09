@@ -1,23 +1,25 @@
 {
- "when": "2026-11-09T14:38:57.984Z",
+ "when": "2026-11-09T14:47:27.288Z",
  "fovNoto": true,
  "sum": {
   "scene": 12,
   "risolte": 11,
-  "spigoli_err_pct": 10,
-  "larghezza_err_m": 0.93,
-  "altezza_foto_err_m": 0.04,
-  "inclinazione_err": 1.5,
+  "spigoli_err_pct": 2.2,
+  "spigoli_mediana_pct": 0.5,
+  "larghezza_err_m": 0.25,
+  "spigoli_misurati": 11,
+  "altezza_foto_err_m": 0.06,
+  "inclinazione_err": 1,
   "aperture_trovate": "15/28",
-  "muro_giusto": "12/15",
-  "pos_lungo_muro_err_m": 0.55,
-  "davanzale_err_m": 0.22,
-  "altezza_ap_err_m": 0.27,
-  "larghezza_ap_err_m": 0.18,
+  "muro_giusto": "13/15",
+  "pos_lungo_muro_err_m": 0.31,
+  "davanzale_err_m": 0.11,
+  "altezza_ap_err_m": 0.09,
+  "larghezza_ap_err_m": 0.19,
   "aperture_in_piu": 1,
-  "arredi_trovati": "7/38",
-  "arredi_pos_err_m": 0.72,
-  "arredi_in_piu": 13,
+  "arredi_trovati": "6/38",
+  "arredi_pos_err_m": 0.65,
+  "arredi_in_piu": 14,
   "neurons_spesi": 0
  },
  "rows": [
@@ -77,8 +79,9 @@
    },
    "sc": {
     "ok": true,
-    "corner": 8.5,
-    "dW": -0.72,
+    "corner": 0.4,
+    "bothVisible": false,
+    "dW": null,
     "dH": 0,
     "dHc": 0,
     "dPitch": 0.2,
@@ -88,7 +91,7 @@
       "type": "door",
       "found": true,
       "wallOk": true,
-      "dT": -0.14,
+      "dT": -0.13,
       "dSill": 0,
       "dH": 0.11,
       "dW": 0.15
@@ -124,7 +127,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 9339
+    "tSeg": 9018
    },
    "stale": true
   },
@@ -190,30 +193,31 @@
    },
    "sc": {
     "ok": true,
-    "corner": 1.4,
-    "dW": -0.17,
+    "corner": 1.3,
+    "bothVisible": true,
+    "dW": -0.15,
     "dH": 0,
-    "dHc": -0.07,
-    "dPitch": 1.7,
+    "dHc": -0.04,
+    "dPitch": 1.3,
     "dFov": 0,
     "ops": [
      {
       "type": "door",
       "found": true,
       "wallOk": true,
-      "dT": -0.08,
+      "dT": -0.06,
       "dSill": 0,
       "dH": 0.04,
-      "dW": 0.02
+      "dW": 0.03
      },
      {
       "type": "window",
       "found": true,
       "wallOk": true,
-      "dT": -0.09,
-      "dSill": 0.06,
-      "dH": -0.04,
-      "dW": -0.05
+      "dT": -0.07,
+      "dSill": 0.03,
+      "dH": -0.01,
+      "dW": -0.04
      }
     ],
     "extraOps": 0,
@@ -221,7 +225,7 @@
      {
       "cat": "tavolo",
       "found": true,
-      "d": 1.02
+      "d": 1
      },
      {
       "cat": "sedia",
@@ -241,7 +245,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5199
+    "tSeg": 4984
    },
    "stale": true
   },
@@ -306,7 +310,7 @@
     "err": "gli spigoli in alto devono stare sopra la fotocamera: alzali sul soffitto"
    },
    "r": {
-    "tSeg": 5439
+    "tSeg": 5204
    },
    "stale": true
   },
@@ -372,11 +376,12 @@
    },
    "sc": {
     "ok": true,
-    "corner": 6,
-    "dW": -0.79,
+    "corner": 1,
+    "bothVisible": false,
+    "dW": null,
     "dH": 0,
-    "dHc": -0.04,
-    "dPitch": 0.6,
+    "dHc": -0.03,
+    "dPitch": 0.5,
     "dFov": 0,
     "ops": [
      {
@@ -387,18 +392,17 @@
       "type": "window",
       "found": true,
       "wallOk": true,
-      "dT": -0.65,
-      "dSill": 0.68,
-      "dH": -0.65,
-      "dW": -0.08
+      "dT": -0.07,
+      "dSill": 0.01,
+      "dH": 0.02,
+      "dW": -0.02
      }
     ],
     "extraOps": 0,
     "objs": [
      {
       "cat": "divano",
-      "found": true,
-      "d": 0.7
+      "found": false
      },
      {
       "cat": "tavolino",
@@ -407,7 +411,7 @@
      {
       "cat": "pianta",
       "found": true,
-      "d": 0.64
+      "d": 0.23
      },
      {
       "cat": "lampadario",
@@ -419,7 +423,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 6150
+    "tSeg": 6086
    },
    "stale": true
   },
@@ -485,11 +489,12 @@
    },
    "sc": {
     "ok": true,
-    "corner": 6,
-    "dW": -0.5,
+    "corner": 0.4,
+    "bothVisible": false,
+    "dW": null,
     "dH": 0,
-    "dHc": 0.05,
-    "dPitch": -0.4,
+    "dHc": -0.06,
+    "dPitch": 0.9,
     "dFov": 0,
     "ops": [
      {
@@ -500,8 +505,8 @@
       "type": "window",
       "found": true,
       "wallOk": true,
-      "dT": -0.48,
-      "dSill": -0.02,
+      "dT": 2.13,
+      "dSill": -0.03,
       "dH": 0.08,
       "dW": 0.05
      }
@@ -530,7 +535,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5132
+    "tSeg": 5059
    },
    "stale": true
   },
@@ -598,11 +603,12 @@
    },
    "sc": {
     "ok": true,
-    "corner": 36.2,
-    "dW": -5.01,
+    "corner": 3.5,
+    "bothVisible": true,
+    "dW": -0.81,
     "dH": 0,
-    "dHc": -0.2,
-    "dPitch": -2.9,
+    "dHc": 0.16,
+    "dPitch": 0,
     "dFov": 0,
     "ops": [
      {
@@ -613,19 +619,19 @@
       "type": "window",
       "found": true,
       "wallOk": true,
-      "dT": -4.53,
-      "dSill": -0.08,
-      "dH": -0.52,
-      "dW": -0.26
+      "dT": -0.66,
+      "dSill": 0.2,
+      "dH": -0.12,
+      "dW": -0.11
      },
      {
       "type": "window",
       "found": true,
-      "wallOk": false,
-      "dT": -1.67,
-      "dSill": 0.23,
-      "dH": -1.08,
-      "dW": -0.67
+      "wallOk": true,
+      "dT": -0.47,
+      "dSill": 0.38,
+      "dH": -0.31,
+      "dW": -0.16
      }
     ],
     "extraOps": 0,
@@ -647,8 +653,8 @@
    },
    "r": {
     "segState": "ok",
-    "quadSource": "proposti dall'AI",
-    "tSeg": 5311
+    "quadSource": "trovati dal modello di stanza: controllali",
+    "tSeg": 5377
    },
    "stale": true
   },
@@ -709,7 +715,8 @@
    "sc": {
     "ok": true,
     "corner": 0.5,
-    "dW": -0.05,
+    "bothVisible": false,
+    "dW": null,
     "dH": 0,
     "dHc": 0,
     "dPitch": 0.2,
@@ -719,10 +726,10 @@
       "type": "door",
       "found": true,
       "wallOk": true,
-      "dT": -0.04,
+      "dT": -0.05,
       "dSill": 0,
-      "dH": 0.02,
-      "dW": -0.01
+      "dH": 0.01,
+      "dW": 0.03
      },
      {
       "type": "window",
@@ -749,7 +756,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5943
+    "tSeg": 5854
    },
    "stale": true
   },
@@ -823,8 +830,9 @@
    },
    "sc": {
     "ok": true,
-    "corner": 23.3,
-    "dW": -1.81,
+    "corner": 10.6,
+    "bothVisible": false,
+    "dW": null,
     "dH": 0,
     "dHc": -0.01,
     "dPitch": 6.6,
@@ -869,7 +877,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "da posizionare",
-    "tSeg": 4927
+    "tSeg": 4759
    },
    "stale": true
   },
@@ -938,9 +946,10 @@
    "sc": {
     "ok": true,
     "corner": 0.4,
+    "bothVisible": true,
     "dW": 0.01,
     "dH": 0,
-    "dHc": 0,
+    "dHc": -0.01,
     "dPitch": 0.2,
     "dFov": 0,
     "ops": [
@@ -952,18 +961,18 @@
       "type": "window",
       "found": true,
       "wallOk": true,
-      "dT": -0.08,
-      "dSill": 0.57,
-      "dH": -0.56,
-      "dW": -0.21
+      "dT": -0.04,
+      "dSill": 0.03,
+      "dH": -0.02,
+      "dW": -0.13
      },
      {
       "type": "window",
       "found": true,
       "wallOk": true,
-      "dT": 0.02,
-      "dSill": 0.58,
-      "dH": -0.54,
+      "dT": 0.03,
+      "dSill": 0.24,
+      "dH": -0.22,
       "dW": -0.01
      }
     ],
@@ -987,7 +996,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5687
+    "tSeg": 5606
    },
    "stale": true
   },
@@ -1062,7 +1071,8 @@
    "sc": {
     "ok": true,
     "corner": 0.3,
-    "dW": -0.02,
+    "bothVisible": true,
+    "dW": -0.01,
     "dH": 0,
     "dHc": -0.02,
     "dPitch": 0.2,
@@ -1074,14 +1084,14 @@
       "wallOk": true,
       "dT": 0.01,
       "dSill": 0,
-      "dH": 0,
+      "dH": 0.02,
       "dW": 0.01
      },
      {
       "type": "window",
       "found": true,
       "wallOk": false,
-      "dT": -0.46,
+      "dT": -0.47,
       "dSill": 0.06,
       "dH": 0.07,
       "dW": -0.85
@@ -1116,7 +1126,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5278
+    "tSeg": 5168
    },
    "stale": true
   },
@@ -1190,11 +1200,12 @@
    },
    "sc": {
     "ok": true,
-    "corner": 19.4,
-    "dW": -0.42,
+    "corner": 5.3,
+    "bothVisible": false,
+    "dW": null,
     "dH": 0,
-    "dHc": -0.02,
-    "dPitch": -2.8,
+    "dHc": 0.27,
+    "dPitch": 0.4,
     "dFov": 0,
     "ops": [
      {
@@ -1205,10 +1216,10 @@
       "type": "window",
       "found": true,
       "wallOk": true,
-      "dT": 0.5,
-      "dSill": -0.01,
-      "dH": -0.21,
-      "dW": -0.17
+      "dT": -0.35,
+      "dSill": -0.1,
+      "dH": 0.25,
+      "dW": 1.16
      },
      {
       "type": "window",
@@ -1238,8 +1249,8 @@
    },
    "r": {
     "segState": "ok",
-    "quadSource": "da posizionare",
-    "tSeg": 4878
+    "quadSource": "trovati dal modello di stanza: controllali",
+    "tSeg": 4897
    },
    "stale": true
   },
@@ -1301,11 +1312,12 @@
    },
    "sc": {
     "ok": true,
-    "corner": 8.3,
-    "dW": -0.75,
+    "corner": 0.5,
+    "bothVisible": false,
+    "dW": null,
     "dH": 0,
-    "dHc": -0.02,
-    "dPitch": 0.4,
+    "dHc": -0.03,
+    "dPitch": 0.5,
     "dFov": 0,
     "ops": [
      {
@@ -1316,10 +1328,10 @@
       "type": "window",
       "found": true,
       "wallOk": false,
-      "dT": 0.7,
+      "dT": 1.29,
       "dSill": -0.13,
-      "dH": -0.06,
-      "dW": 0.03
+      "dH": -0.05,
+      "dW": 0.05
      },
      {
       "type": "window",
@@ -1337,12 +1349,12 @@
       "found": false
      }
     ],
-    "extraObjs": 3
+    "extraObjs": 4
    },
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5295
+    "tSeg": 5318
    },
    "stale": true
   }
