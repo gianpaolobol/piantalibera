@@ -7,7 +7,12 @@ from PIL import Image
 from moge.model.v2 import MoGeModel
 
 DIR, OUT = sys.argv[1], sys.argv[2]
-H, W, TOK = int(os.environ.get("MOGE_H", 384)), int(os.environ.get("MOGE_W", 512)), int(os.environ.get("MOGE_TOK", 1800))
+# ingresso uguale alla griglia di patch (14 px) del numero di token scelto: il ridimensionamento interno è un'identità
+TOK = int(os.environ.get("MOGE_TOK", 1200)); BH, BW = round((TOK / (4 / 3)) ** .5), round((TOK * 4 / 3) ** .5); H, W = BH * 14, BW * 14
+import torch.nn.functional as F
+_interp = F.interpolate
+def _no_aa(*a, **k): k.pop("antialias", None); return _interp(*a, **k)   # l'antialias non esiste in ONNX
+F.interpolate = _no_aa
 os.makedirs(OUT, exist_ok=True)
 m = MoGeModel.from_pretrained("Ruicheng/moge-2-vits-normal").eval()
 
