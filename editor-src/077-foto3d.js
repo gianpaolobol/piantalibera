@@ -184,14 +184,14 @@ function f3ApplySeg(){
   if (sg.alts?.length && F3.quadSource !== "posizionati da te"){
     const keep = F3.quad, keepO = {...F3.opts}, dq = sg.depth?.quad;
     sg.quad = sg.alts.find(q => { F3.quad = {fl:q.fl, fr:q.fr, cl:q.cl, cr:q.cr}; F3.quadOpen = q === sg.box || q === dq ? {l:q.openL, r:q.openR} : null;
-      if (q === dq && !F3.opts.userRef){ F3.opts.refKind = "cam"; F3.opts.refVal = +sg.depth.G.h.toFixed(2); F3.opts.ceil = q.ceiling; }
-      const ok = f3Solve().ok; if (!ok) Object.assign(F3.opts, keepO); return ok; }) || null; F3.quad = keep;
+      if (q === dq){ F3.opts.pitch = sg.depth.G.pitch; F3.opts.ceil = q.ceiling; if (!F3.opts.userRef){ F3.opts.refKind = "cam"; F3.opts.refVal = +sg.depth.G.h.toFixed(2); } }
+      const ok = f3Solve().ok; if (!ok){ Object.assign(F3.opts, keepO); F3.opts.pitch = keepO.pitch ?? null; } return ok; }) || null; F3.quad = keep;
   }
   if (sg.quad && F3.quadSource !== "posizionati da te"){
     const dq = sg.depth?.quad;
     F3.quad = {fl:sg.quad.fl, fr:sg.quad.fr, cl:sg.quad.cl, cr:sg.quad.cr}; F3.quadOpen = sg.quad === sg.box || sg.quad === dq ? {l:sg.quad.openL, r:sg.quad.openR} : null;
     F3.quadSource = sg.quad === dq ? "misurati dalla profondità: controllali" : sg.quad === sg.box ? "trovati dal modello di stanza: controllali" : "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
-    if (sg.quad === dq){ if (!F3.exifFov && !F3.opts.fov) F3.fitFov = +sg.depth.hfov.toFixed(1); if (!F3.opts.userRef){ F3.opts.refKind = "cam"; F3.opts.refVal = +sg.depth.G.h.toFixed(2); } }
+    if (sg.quad === dq){ F3.opts.pitch = sg.depth.G.pitch; if (!F3.exifFov && !F3.opts.fov) F3.fitFov = +sg.depth.hfov.toFixed(1); if (!F3.opts.userRef){ F3.opts.refKind = "cam"; F3.opts.refVal = +sg.depth.G.h.toFixed(2); } }
     if (sg.box && sg.quad === sg.box && !F3.exifFov && !F3.opts.fov) F3.fitFov = sg.box.hfov;       // campo visivo stimato dalla prospettiva
   }
   const comps = segComponents(sg.m, F3.a.room_type || "");
@@ -229,7 +229,8 @@ function f3Solve(quad = F3.quad, opts = F3.opts, w = F3.w, h = F3.h, a = F3.a){
   const ceilH = (cpt, A, cam) => { const d = f3Dir(cpt[0], cpt[1], cam), hd = Math.hypot(d[0], d[2]); return 1 + Math.hypot(A[0], A[1]) / hd * d[1]; };
   let p = f3Rad(clamp(a?.camera?.pitch_deg || 0, -30, 30));
   const useCeil = opts.ceil && quad.cl && quad.cr;
-  if (useCeil){   // inclinazione: le verticali della parete devono risultare verticali
+  if (opts.pitch != null) p = f3Rad(opts.pitch);         // inclinazione misurata dalla profondità (piano del pavimento)
+  else if (useCeil){   // inclinazione: le verticali della parete devono risultare verticali
     const cost = pp => { const cam = {...cam0, p:pp}, A = floorAt(quad.fl, cam), B = floorAt(quad.fr, cam); return A && B ? ceilErr(quad.cl, A, cam) + ceilErr(quad.cr, B, cam) : Infinity; };
     let best = Infinity; for (let d = -35; d <= 35; d += .5){ const c = cost(f3Rad(d)); if (c < best){ best = c; p = f3Rad(d); } }
     for (let step = f3Rad(.25); step > 1e-4; step /= 2) for (const s of [-1, 1]){ const c = cost(p + s * step); if (c < best){ best = c; p += s * step; } }
@@ -559,7 +560,7 @@ function f3PointerDown(e){
 }
 function f3PointerMove(e){
   if (!f3Drag) return; e.preventDefault(); const p = f3Pt(e), lim = v => clamp(v, -.11, 1.11);
-  if (f3Drag.kind === "h"){ F3.quad[f3Drag.k] = [lim(p[0]), lim(p[1])]; F3.quadSource = "posizionati da te"; F3.quadOpen = null; }
+  if (f3Drag.kind === "h"){ F3.quad[f3Drag.k] = [lim(p[0]), lim(p[1])]; F3.quadSource = "posizionati da te"; F3.quadOpen = null; F3.opts.pitch = null; }
   else if (f3Drag.kind === "rs"){ const b = F3.items[f3Drag.i].box;
     if (f3Drag.c === "tl"){ b[0] = clamp(p[0], 0, b[2] - .01); b[1] = clamp(p[1], 0, b[3] - .01); } else { b[2] = clamp(p[0], b[0] + .01, 1); b[3] = clamp(p[1], b[1] + .01, 1); } }
   else { const b0 = f3Drag.b0, dx = clamp(p[0] - f3Drag.p0[0], -b0[0], 1 - b0[2]), dy = clamp(p[1] - f3Drag.p0[1], -b0[1], 1 - b0[3]); F3.items[f3Drag.i].box = [b0[0] + dx, b0[1] + dy, b0[2] + dx, b0[3] + dy]; }
