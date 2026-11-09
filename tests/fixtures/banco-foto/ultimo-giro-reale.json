@@ -1,5 +1,5 @@
 {
- "when": "2026-11-09T17:13:46.326Z",
+ "when": "2026-11-09T17:25:46.916Z",
  "fovNoto": true,
  "sum": {
   "scene": 12,
@@ -17,9 +17,9 @@
   "altezza_ap_err_m": 0.12,
   "larghezza_ap_err_m": 0.42,
   "aperture_in_piu": 3,
-  "arredi_trovati": "16/31",
-  "arredi_pos_err_m": 0.34,
-  "arredi_in_piu": 34,
+  "arredi_trovati": "20/31",
+  "arredi_pos_err_m": 0.35,
+  "arredi_in_piu": 30,
   "neurons_spesi": 0
  },
  "rows": [
@@ -129,7 +129,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 10147
+    "tSeg": 10101
    },
    "stale": false
   },
@@ -241,15 +241,16 @@
      },
      {
       "cat": "lampadario",
-      "found": false
+      "found": true,
+      "d": 0.49
      }
     ],
-    "extraObjs": 7
+    "extraObjs": 6
    },
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7681
+    "tSeg": 7535
    },
    "stale": false
   },
@@ -359,7 +360,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7336
+    "tSeg": 7387
    },
    "stale": false
   },
@@ -475,7 +476,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 8112
+    "tSeg": 7947
    },
    "stale": false
   },
@@ -577,7 +578,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7919
+    "tSeg": 7544
    },
    "stale": false
   },
@@ -696,7 +697,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7391
+    "tSeg": 7181
    },
    "stale": false
   },
@@ -809,7 +810,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7602
+    "tSeg": 7388
    },
    "stale": false
   },
@@ -921,7 +922,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7455
+    "tSeg": 6918
    },
    "stale": false
   },
@@ -1031,15 +1032,16 @@
      },
      {
       "cat": "lampadario",
-      "found": false
+      "found": true,
+      "d": 0.86
      }
     ],
-    "extraObjs": 2
+    "extraObjs": 1
    },
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7090
+    "tSeg": 7284
    },
    "stale": false
   },
@@ -1152,15 +1154,16 @@
      },
      {
       "cat": "lampadario",
-      "found": false
+      "found": true,
+      "d": 0.14
      }
     ],
-    "extraObjs": 6
+    "extraObjs": 5
    },
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7014
+    "tSeg": 7195
    },
    "stale": false
   },
@@ -1271,15 +1274,16 @@
      },
      {
       "cat": "lampadario",
-      "found": false
+      "found": true,
+      "d": 0.17
      }
     ],
-    "extraObjs": 2
+    "extraObjs": 1
    },
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7305
+    "tSeg": 7312
    },
    "stale": false
   },
@@ -1381,7 +1385,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7453
+    "tSeg": 7554
    },
    "stale": false
   }
