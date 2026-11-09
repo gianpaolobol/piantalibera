@@ -1,5 +1,5 @@
 {
- "when": "2026-11-09T15:15:09.130Z",
+ "when": "2026-11-09T15:24:39.512Z",
  "fovNoto": true,
  "sum": {
   "scene": 12,
@@ -17,9 +17,9 @@
   "altezza_ap_err_m": 0.14,
   "larghezza_ap_err_m": 0.25,
   "aperture_in_piu": 3,
-  "arredi_trovati": "15/31",
-  "arredi_pos_err_m": 0.51,
-  "arredi_in_piu": 44,
+  "arredi_trovati": "16/31",
+  "arredi_pos_err_m": 0.48,
+  "arredi_in_piu": 43,
   "neurons_spesi": 0
  },
  "rows": [
@@ -129,7 +129,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 6854
+    "tSeg": 10296
    },
    "stale": false
   },
@@ -250,7 +250,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 4276
+    "tSeg": 7311
    },
    "stale": false
   },
@@ -360,7 +360,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 4493
+    "tSeg": 7250
    },
    "stale": false
   },
@@ -476,7 +476,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 4716
+    "tSeg": 7937
    },
    "stale": false
   },
@@ -578,7 +578,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 4719
+    "tSeg": 7589
    },
    "stale": false
   },
@@ -684,7 +684,7 @@
      {
       "cat": "letto_matrimoniale",
       "found": true,
-      "d": 0.78
+      "d": 0.32
      },
      {
       "cat": "comodino",
@@ -696,7 +696,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 4411
+    "tSeg": 7285
    },
    "stale": false
   },
@@ -793,7 +793,7 @@
      {
       "cat": "letto_matrimoniale",
       "found": true,
-      "d": 0.2
+      "d": 0.22
      },
      {
       "cat": "comodino",
@@ -809,7 +809,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 4576
+    "tSeg": 7210
    },
    "stale": false
   },
@@ -913,7 +913,7 @@
      {
       "cat": "poltrona",
       "found": true,
-      "d": 0.7
+      "d": 0.66
      }
     ],
     "extraObjs": 5
@@ -921,7 +921,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 4337
+    "tSeg": 7500
    },
    "stale": false
   },
@@ -1022,7 +1022,7 @@
      {
       "cat": "letto_matrimoniale",
       "found": true,
-      "d": 0.1
+      "d": 0.09
      },
      {
       "cat": "comodino",
@@ -1038,7 +1038,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 4436
+    "tSeg": 6873
    },
    "stale": false
   },
@@ -1159,7 +1159,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 4406
+    "tSeg": 7215
    },
    "stale": false
   },
@@ -1263,7 +1263,7 @@
      {
       "cat": "letto_matrimoniale",
       "found": true,
-      "d": 1.08
+      "d": 0.56
      },
      {
       "cat": "comodino",
@@ -1279,7 +1279,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 4174
+    "tSeg": 7027
    },
    "stale": false
   },
@@ -1368,19 +1368,20 @@
     "objs": [
      {
       "cat": "letto_matrimoniale",
-      "found": false
+      "found": true,
+      "d": 1.07
      },
      {
       "cat": "comodino",
       "found": false
      }
     ],
-    "extraObjs": 4
+    "extraObjs": 3
    },
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 4672
+    "tSeg": 7087
    },
    "stale": false
   }
