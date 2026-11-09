@@ -37,6 +37,7 @@ from onnxruntime.quantization import quantize_dynamic, QuantType
 q8 = f32.replace(".onnx", "-q8.onnx")
 quantize_dynamic(f32, q8, weight_type=QuantType.QUInt8); print("q8", os.path.getsize(q8) // 2**20, "MB")
 
+if os.environ.get("SOLO_ESPORTA"): sys.exit(0)
 import onnxruntime as ort
 names = json.load(open(f"{DIR}/_nomi.txt")); FLOOR = names.index("floor") + 1
 keys = sorted(os.path.basename(p)[:-5] for p in glob.glob(f"{DIR}/nyu_*.json"))[:12]

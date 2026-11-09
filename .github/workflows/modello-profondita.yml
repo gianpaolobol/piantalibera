@@ -1,0 +1,28 @@
+# Esporta MoGe-2 ViT-S (Microsoft, MIT) in ONNX e lo pubblica nella release «modelli-v1»: il deploy lo scarica e lo
+# serve dal sito in parti da meno di 25 MiB (public/modelli/). Si lancia a mano quando cambia il modello.
+name: Modello di profondità
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  esporta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Esporta in ONNX
+        run: |
+          pip install --quiet torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install --quiet "git+https://github.com/microsoft/MoGe.git" onnx onnxconverter-common onnxruntime
+          mkdir -p ~/vuota && echo '[]' > ~/vuota/_nomi.txt
+          SOLO_ESPORTA=1 python3 scripts/esporta-moge.py ~/vuota ~/moge-onnx
+          ls -la ~/moge-onnx
+      - name: Pubblica nella release modelli-v1
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh release view modelli-v1 >/dev/null 2>&1 || gh release create modelli-v1 --title "Modelli per il dispositivo" --notes "MoGe-2 ViT-S (normali) in ONNX, ingresso 560×420, 1200 token. Licenza MIT (Microsoft Research). Servito dal sito in parti."
+          gh release upload modelli-v1 ~/moge-onnx/*.onnx --clobber
