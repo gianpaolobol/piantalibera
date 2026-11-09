@@ -111,7 +111,7 @@ export function segComponents(m, roomType = "") {
   const { w, h, lab, names } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && /cucin|kitchen/i.test(roomType)) c = "cucina"; return c && c[0] !== "@" ? c : null; });
   // «fuori»: solo classi di esterni (cielo, verde, edifici…) viste attraverso il vetro. Nelle foto vere la segmentazione
   // include già nel vetro il paesaggio; allargare ad altre classi allungava le finestre sopra letti e mobili (banco 9/11)
-  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n)), other = names.map(n => !OUTSIDE.has(n) && !SEG_CAT[n] && !NOT_OPENING.has(n));
+  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n));
   for (let i = 0; i < w * h; i++) {
     const c = lab[i] === 255 ? null : catOf[lab[i]]; if (!c || seen[i]) continue;
     let qh = 0, qt = 0, n = 0, x0 = w, y0 = h, x1 = 0, y1 = 0; Q[qt++] = i; seen[i] = 1;
@@ -120,11 +120,10 @@ export function segComponents(m, roomType = "") {
       for (const k of [j - 1, j + 1, j - w, j + w]) { if (k < 0 || k >= w * h || seen[k] || (k === j - 1 && x === 0) || (k === j + 1 && x === w - 1)) continue; const l = lab[k];
         if (l !== 255 && catOf[l] === c) { seen[k] = 1; Q[qt++] = k; } } }
     if (grow) {   // secondo passo: dal vetro verso ciò che si vede fuori, entro un intorno del vetro (non dentro la parete)
-      const bw = x1 - x0 + 1, bh = y1 - y0 + 1, gx0 = x0 - bw * .25, gx1 = x1 + bw * .25, gy0 = y0 - bh * .6, gy1 = y1 + bh * 1.2, x0g = x0, x1g = x1;
+      const bw = x1 - x0 + 1, bh = y1 - y0 + 1, gx0 = x0 - bw * .25, gx1 = x1 + bw * .25, gy0 = y0 - bh * .6, gy1 = y1 + bh * 1.2;
       for (let q = 0; q < qt; q++) { const j = Q[q], x = j % w, y = (j / w) | 0;
         for (const k of [j - 1, j + 1, j - w, j + w]) { if (k < 0 || k >= w * h || seen[k] || (k === j - 1 && x === 0) || (k === j + 1 && x === w - 1)) continue; const kx = k % w, ky = (k / w) | 0, l = lab[k];
-          // classi di esterni nell'intorno; le altre (né struttura né arredo: un paesaggio piatto) solo in colonna col vetro
-          if (l !== 255 && (outside[l] && kx >= gx0 && kx <= gx1 || other[l] && kx >= x0g && kx <= x1g) && ky >= gy0 && ky <= gy1) { seen[k] = 1; Q[qt++] = k; n++; if (kx < x0) x0 = kx; if (kx > x1) x1 = kx; if (ky < y0) y0 = ky; if (ky > y1) y1 = ky; } } }
+          if (l !== 255 && outside[l] && kx >= gx0 && kx <= gx1 && ky >= gy0 && ky <= gy1) { seen[k] = 1; Q[qt++] = k; n++; if (kx < x0) x0 = kx; if (kx > x1) x1 = kx; if (ky < y0) y0 = ky; if (ky > y1) y1 = ky; } } }
     }
     if (n < minA) continue;
     // pavimento subito sotto il bordo inferiore: per distinguere una finestra da una portafinestra
