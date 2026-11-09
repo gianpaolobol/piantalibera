@@ -1,25 +1,25 @@
 {
- "when": "2026-11-09T14:47:27.288Z",
+ "when": "2026-11-09T14:50:56.463Z",
  "fovNoto": true,
  "sum": {
   "scene": 12,
   "risolte": 11,
-  "spigoli_err_pct": 2.2,
-  "spigoli_mediana_pct": 0.5,
-  "larghezza_err_m": 0.25,
+  "spigoli_err_pct": 2.1,
+  "spigoli_mediana_pct": 0.6,
+  "larghezza_err_m": 0.11,
   "spigoli_misurati": 11,
   "altezza_foto_err_m": 0.06,
-  "inclinazione_err": 1,
-  "aperture_trovate": "15/28",
-  "muro_giusto": "13/15",
-  "pos_lungo_muro_err_m": 0.31,
-  "davanzale_err_m": 0.11,
-  "altezza_ap_err_m": 0.09,
-  "larghezza_ap_err_m": 0.19,
-  "aperture_in_piu": 1,
-  "arredi_trovati": "6/38",
-  "arredi_pos_err_m": 0.65,
-  "arredi_in_piu": 14,
+  "inclinazione_err": 1.1,
+  "aperture_trovate": "14/15",
+  "muro_giusto": "14/14",
+  "pos_lungo_muro_err_m": 0.25,
+  "davanzale_err_m": 0.12,
+  "altezza_ap_err_m": 0.07,
+  "larghezza_ap_err_m": 0.18,
+  "aperture_in_piu": 2,
+  "arredi_trovati": "7/29",
+  "arredi_pos_err_m": 0.68,
+  "arredi_in_piu": 13,
   "neurons_spesi": 0
  },
  "rows": [
@@ -36,7 +36,8 @@
       "t": 3.339,
       "w": 0.87,
       "h": 2.16,
-      "sill": 0
+      "sill": 0,
+      "visible": true
      },
      {
       "type": "window",
@@ -44,7 +45,8 @@
       "t": 1.391,
       "w": 1.33,
       "h": 1.22,
-      "sill": 0.95
+      "sill": 0.95,
+      "visible": true
      }
     ],
     "objects": [
@@ -52,19 +54,22 @@
       "ref": "divano3",
       "cat": "divano",
       "x": 2.3786779310181734,
-      "y": 0.52
+      "y": 0.52,
+      "visible": true
      },
      {
       "ref": "tavolino",
       "cat": "tavolino",
       "x": 2.3091534392535684,
-      "y": 1.6
+      "y": 1.6,
+      "visible": true
      },
      {
       "ref": "sospensione",
       "cat": "lampadario",
       "x": 2.665083010457456,
-      "y": 2.081768520390615
+      "y": 2.081768520390615,
+      "visible": false
      }
     ],
     "camera": {
@@ -91,7 +96,7 @@
       "type": "door",
       "found": true,
       "wallOk": true,
-      "dT": -0.13,
+      "dT": -0.14,
       "dSill": 0,
       "dH": 0.11,
       "dW": 0.15
@@ -116,10 +121,6 @@
      {
       "cat": "tavolino",
       "found": false
-     },
-     {
-      "cat": "lampadario",
-      "found": false
      }
     ],
     "extraObjs": 1
@@ -127,7 +128,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 9018
+    "tSeg": 7795
    },
    "stale": true
   },
@@ -144,7 +145,8 @@
       "t": 1.504,
       "w": 0.92,
       "h": 2.08,
-      "sill": 0
+      "sill": 0,
+      "visible": true
      },
      {
       "type": "window",
@@ -152,7 +154,8 @@
       "t": 2.84,
       "w": 0.93,
       "h": 1.26,
-      "sill": 1.05
+      "sill": 1.05,
+      "visible": true
      }
     ],
     "objects": [
@@ -160,25 +163,29 @@
       "ref": "tavolo6",
       "cat": "tavolo",
       "x": 1.6260850219801068,
-      "y": 2.0890679183322933
+      "y": 2.0890679183322933,
+      "visible": true
      },
      {
       "ref": "sedia",
       "cat": "sedia",
       "x": 1.1260850219801068,
-      "y": 1.4390679183322934
+      "y": 1.4390679183322934,
+      "visible": true
      },
      {
       "ref": "sedia",
       "cat": "sedia",
       "x": 2.126085021980107,
-      "y": 2.7390679183322932
+      "y": 2.7390679183322932,
+      "visible": false
      },
      {
       "ref": "sospensione",
       "cat": "lampadario",
       "x": 1.6510678595211357,
-      "y": 1.7392067015194332
+      "y": 1.7392067015194332,
+      "visible": true
      }
     ],
     "camera": {
@@ -193,12 +200,12 @@
    },
    "sc": {
     "ok": true,
-    "corner": 1.3,
+    "corner": 2.1,
     "bothVisible": true,
-    "dW": -0.15,
+    "dW": -0.18,
     "dH": 0,
-    "dHc": -0.04,
-    "dPitch": 1.3,
+    "dHc": -0.15,
+    "dPitch": 3.3,
     "dFov": 0,
     "ops": [
      {
@@ -207,17 +214,17 @@
       "wallOk": true,
       "dT": -0.06,
       "dSill": 0,
-      "dH": 0.04,
-      "dW": 0.03
+      "dH": 0.07,
+      "dW": 0
      },
      {
       "type": "window",
       "found": true,
       "wallOk": true,
-      "dT": -0.07,
-      "dSill": 0.03,
-      "dH": -0.01,
-      "dW": -0.04
+      "dT": -0.11,
+      "dSill": 0.09,
+      "dH": -0.06,
+      "dW": -0.06
      }
     ],
     "extraOps": 0,
@@ -225,11 +232,7 @@
      {
       "cat": "tavolo",
       "found": true,
-      "d": 1
-     },
-     {
-      "cat": "sedia",
-      "found": false
+      "d": 1.14
      },
      {
       "cat": "sedia",
@@ -245,7 +248,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 4984
+    "tSeg": 5279
    },
    "stale": true
   },
@@ -262,7 +265,8 @@
       "t": 2.94,
       "w": 0.94,
       "h": 2.15,
-      "sill": 0
+      "sill": 0,
+      "visible": true
      },
      {
       "type": "window",
@@ -270,7 +274,8 @@
       "t": 2.305,
       "w": 1.59,
       "h": 1.43,
-      "sill": 0.81
+      "sill": 0.81,
+      "visible": true
      },
      {
       "type": "window",
@@ -278,7 +283,8 @@
       "t": 2.36,
       "w": 0.92,
       "h": 1.41,
-      "sill": 0.89
+      "sill": 0.89,
+      "visible": false
      }
     ],
     "objects": [
@@ -286,13 +292,15 @@
       "ref": "letto2",
       "cat": "letto_matrimoniale",
       "x": 2.5625730208680033,
-      "y": 1.1
+      "y": 1.1,
+      "visible": true
      },
      {
       "ref": "comodino",
       "cat": "comodino",
       "x": 1.615,
-      "y": 0.25
+      "y": 0.25,
+      "visible": true
      }
     ],
     "camera": {
@@ -310,7 +318,9 @@
     "err": "gli spigoli in alto devono stare sopra la fotocamera: alzali sul soffitto"
    },
    "r": {
-    "tSeg": 5204
+    "segState": "ok",
+    "quadSource": "trovati dalla segmentazione: controllali",
+    "tSeg": 5365
    },
    "stale": true
   },
@@ -327,7 +337,8 @@
       "t": 3.068,
       "w": 0.81,
       "h": 2.23,
-      "sill": 0
+      "sill": 0,
+      "visible": false
      },
      {
       "type": "window",
@@ -335,7 +346,8 @@
       "t": 1.826,
       "w": 1.07,
       "h": 1.42,
-      "sill": 0.92
+      "sill": 0.92,
+      "visible": true
      }
     ],
     "objects": [
@@ -343,25 +355,29 @@
       "ref": "divano3",
       "cat": "divano",
       "x": 2.6775535454973576,
-      "y": 0.52
+      "y": 0.52,
+      "visible": true
      },
      {
       "ref": "tavolino",
       "cat": "tavolino",
       "x": 2.8778488582000135,
-      "y": 1.6
+      "y": 1.6,
+      "visible": true
      },
      {
       "ref": "vaso_verde",
       "cat": "pianta",
       "x": 5.3999999999999995,
-      "y": 0.45
+      "y": 0.45,
+      "visible": true
      },
      {
       "ref": "sospensione",
       "cat": "lampadario",
       "x": 2.783089247625321,
-      "y": 2.9403826004196887
+      "y": 2.9403826004196887,
+      "visible": true
      }
     ],
     "camera": {
@@ -376,25 +392,21 @@
    },
    "sc": {
     "ok": true,
-    "corner": 1,
+    "corner": 0.9,
     "bothVisible": false,
     "dW": null,
     "dH": 0,
-    "dHc": -0.03,
-    "dPitch": 0.5,
+    "dHc": 0.06,
+    "dPitch": -0.3,
     "dFov": 0,
     "ops": [
-     {
-      "type": "door",
-      "found": false
-     },
      {
       "type": "window",
       "found": true,
       "wallOk": true,
-      "dT": -0.07,
-      "dSill": 0.01,
-      "dH": 0.02,
+      "dT": -0.06,
+      "dSill": 0.02,
+      "dH": 0.01,
       "dW": -0.02
      }
     ],
@@ -402,7 +414,8 @@
     "objs": [
      {
       "cat": "divano",
-      "found": false
+      "found": true,
+      "d": 0.73
      },
      {
       "cat": "tavolino",
@@ -423,7 +436,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 6086
+    "tSeg": 6365
    },
    "stale": true
   },
@@ -440,7 +453,8 @@
       "t": 2.986,
       "w": 0.93,
       "h": 2.23,
-      "sill": 0
+      "sill": 0,
+      "visible": false
      },
      {
       "type": "window",
@@ -448,7 +462,8 @@
       "t": 2.028,
       "w": 1.46,
       "h": 1.47,
-      "sill": 0.91
+      "sill": 0.91,
+      "visible": true
      }
     ],
     "objects": [
@@ -456,25 +471,29 @@
       "ref": "tavolo6",
       "cat": "tavolo",
       "x": 1.6755520333722234,
-      "y": 2.2749435974820513
+      "y": 2.2749435974820513,
+      "visible": false
      },
      {
       "ref": "sedia",
       "cat": "sedia",
       "x": 1.1755520333722234,
-      "y": 1.6249435974820514
+      "y": 1.6249435974820514,
+      "visible": false
      },
      {
       "ref": "sedia",
       "cat": "sedia",
       "x": 2.1755520333722234,
-      "y": 2.9249435974820512
+      "y": 2.9249435974820512,
+      "visible": false
      },
      {
       "ref": "madia",
       "cat": "madia",
       "x": 2.209241464100778,
-      "y": 0.25
+      "y": 0.25,
+      "visible": true
      }
     ],
     "camera": {
@@ -489,42 +508,26 @@
    },
    "sc": {
     "ok": true,
-    "corner": 0.4,
+    "corner": 0.6,
     "bothVisible": false,
     "dW": null,
     "dH": 0,
-    "dHc": -0.06,
-    "dPitch": 0.9,
+    "dHc": 0,
+    "dPitch": 0.3,
     "dFov": 0,
     "ops": [
-     {
-      "type": "door",
-      "found": false
-     },
      {
       "type": "window",
       "found": true,
       "wallOk": true,
-      "dT": 2.13,
-      "dSill": -0.03,
+      "dT": 2.15,
+      "dSill": -0.02,
       "dH": 0.08,
       "dW": 0.05
      }
     ],
     "extraOps": 0,
     "objs": [
-     {
-      "cat": "tavolo",
-      "found": false
-     },
-     {
-      "cat": "sedia",
-      "found": false
-     },
-     {
-      "cat": "sedia",
-      "found": false
-     },
      {
       "cat": "madia",
       "found": false
@@ -535,7 +538,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5059
+    "tSeg": 5225
    },
    "stale": true
   },
@@ -552,7 +555,8 @@
       "t": 4.14,
       "w": 0.89,
       "h": 2.17,
-      "sill": 0
+      "sill": 0,
+      "visible": false
      },
      {
       "type": "window",
@@ -560,7 +564,8 @@
       "t": 5.002,
       "w": 1.03,
       "h": 1.24,
-      "sill": 1.04
+      "sill": 1.04,
+      "visible": true
      },
      {
       "type": "window",
@@ -568,7 +573,8 @@
       "t": 3.418,
       "w": 1.42,
       "h": 1.48,
-      "sill": 0.94
+      "sill": 0.94,
+      "visible": true
      }
     ],
     "objects": [
@@ -576,19 +582,22 @@
       "ref": "letto2",
       "cat": "letto_matrimoniale",
       "x": 3.2963605809863656,
-      "y": 1.1
+      "y": 1.1,
+      "visible": true
      },
      {
       "ref": "comodino",
       "cat": "comodino",
       "x": 1.76,
-      "y": 0.25
+      "y": 0.25,
+      "visible": true
      },
      {
       "ref": "armadio2",
       "cat": "armadio",
       "x": 5.56,
-      "y": 2.5442245265468957
+      "y": 2.5442245265468957,
+      "visible": false
      }
     ],
     "camera": {
@@ -603,35 +612,31 @@
    },
    "sc": {
     "ok": true,
-    "corner": 3.5,
+    "corner": 1.3,
     "bothVisible": true,
-    "dW": -0.81,
+    "dW": 0.26,
     "dH": 0,
-    "dHc": 0.16,
-    "dPitch": 0,
+    "dHc": -0.06,
+    "dPitch": 0.1,
     "dFov": 0,
     "ops": [
      {
-      "type": "door",
-      "found": false
+      "type": "window",
+      "found": true,
+      "wallOk": true,
+      "dT": 0.25,
+      "dSill": -0.11,
+      "dH": 0.14,
+      "dW": 0.08
      },
      {
       "type": "window",
       "found": true,
       "wallOk": true,
-      "dT": -0.66,
-      "dSill": 0.2,
-      "dH": -0.12,
-      "dW": -0.11
-     },
-     {
-      "type": "window",
-      "found": true,
-      "wallOk": true,
-      "dT": -0.47,
-      "dSill": 0.38,
-      "dH": -0.31,
-      "dW": -0.16
+      "dT": 0.15,
+      "dSill": 0.07,
+      "dH": -0.05,
+      "dW": 0.1
      }
     ],
     "extraOps": 0,
@@ -643,10 +648,6 @@
      {
       "cat": "comodino",
       "found": false
-     },
-     {
-      "cat": "armadio",
-      "found": false
      }
     ],
     "extraObjs": 0
@@ -654,7 +655,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5377
+    "tSeg": 5640
    },
    "stale": true
   },
@@ -671,7 +672,8 @@
       "t": 3.462,
       "w": 0.81,
       "h": 2.18,
-      "sill": 0
+      "sill": 0,
+      "visible": true
      },
      {
       "type": "window",
@@ -679,7 +681,8 @@
       "t": 1.752,
       "w": 1.47,
       "h": 1.24,
-      "sill": 0.94
+      "sill": 0.94,
+      "visible": true
      }
     ],
     "objects": [
@@ -687,19 +690,22 @@
       "ref": "letto2",
       "cat": "letto_matrimoniale",
       "x": 2.82535783899948,
-      "y": 1.1
+      "y": 1.1,
+      "visible": true
      },
      {
       "ref": "comodino",
       "cat": "comodino",
       "x": 1.3,
-      "y": 0.25
+      "y": 0.25,
+      "visible": true
      },
      {
       "ref": "sospensione",
       "cat": "lampadario",
       "x": 2.7507391014602036,
-      "y": 3.0385098265949635
+      "y": 3.0385098265949635,
+      "visible": true
      }
     ],
     "camera": {
@@ -718,18 +724,18 @@
     "bothVisible": false,
     "dW": null,
     "dH": 0,
-    "dHc": 0,
-    "dPitch": 0.2,
+    "dHc": -0.01,
+    "dPitch": 0.3,
     "dFov": 0,
     "ops": [
      {
       "type": "door",
       "found": true,
       "wallOk": true,
-      "dT": -0.05,
+      "dT": -0.06,
       "dSill": 0,
       "dH": 0.01,
-      "dW": 0.03
+      "dW": -0.01
      },
      {
       "type": "window",
@@ -756,7 +762,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5854
+    "tSeg": 6257
    },
    "stale": true
   },
@@ -773,7 +779,8 @@
       "t": 3.463,
       "w": 0.93,
       "h": 2.21,
-      "sill": 0
+      "sill": 0,
+      "visible": false
      },
      {
       "type": "window",
@@ -781,7 +788,8 @@
       "t": 1.59,
       "w": 1.23,
       "h": 1.41,
-      "sill": 0.95
+      "sill": 0.95,
+      "visible": false
      },
      {
       "type": "window",
@@ -789,7 +797,8 @@
       "t": 1.643,
       "w": 1.6,
       "h": 1.21,
-      "sill": 0.98
+      "sill": 0.98,
+      "visible": false
      }
     ],
     "objects": [
@@ -797,25 +806,29 @@
       "ref": "divano3",
       "cat": "divano",
       "x": 3.0564539637044073,
-      "y": 0.52
+      "y": 0.52,
+      "visible": true
      },
      {
       "ref": "tavolino",
       "cat": "tavolino",
       "x": 3.1190611432865265,
-      "y": 1.6
+      "y": 1.6,
+      "visible": true
      },
      {
       "ref": "poltrona",
       "cat": "poltrona",
       "x": 0.7524178931489587,
-      "y": 2.2033687505871056
+      "y": 2.2033687505871056,
+      "visible": true
      },
      {
       "ref": "vaso_verde",
       "cat": "pianta",
       "x": 5.33,
-      "y": 0.45
+      "y": 0.45,
+      "visible": false
      }
     ],
     "camera": {
@@ -837,20 +850,7 @@
     "dHc": -0.01,
     "dPitch": 6.6,
     "dFov": 0,
-    "ops": [
-     {
-      "type": "door",
-      "found": false
-     },
-     {
-      "type": "window",
-      "found": false
-     },
-     {
-      "type": "window",
-      "found": false
-     }
-    ],
+    "ops": [],
     "extraOps": 0,
     "objs": [
      {
@@ -866,10 +866,6 @@
       "cat": "poltrona",
       "found": true,
       "d": 0.95
-     },
-     {
-      "cat": "pianta",
-      "found": false
      }
     ],
     "extraObjs": 2
@@ -877,7 +873,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "da posizionare",
-    "tSeg": 4759
+    "tSeg": 4896
    },
    "stale": true
   },
@@ -894,7 +890,8 @@
       "t": 2.13,
       "w": 0.94,
       "h": 2.17,
-      "sill": 0
+      "sill": 0,
+      "visible": false
      },
      {
       "type": "window",
@@ -902,7 +899,8 @@
       "t": 1.634,
       "w": 1.27,
       "h": 1.24,
-      "sill": 0.93
+      "sill": 0.93,
+      "visible": true
      },
      {
       "type": "window",
@@ -910,7 +908,8 @@
       "t": 3.149,
       "w": 1.13,
       "h": 1.35,
-      "sill": 0.84
+      "sill": 0.84,
+      "visible": true
      }
     ],
     "objects": [
@@ -918,19 +917,22 @@
       "ref": "letto2",
       "cat": "letto_matrimoniale",
       "x": 2.4462521282117815,
-      "y": 1.1
+      "y": 1.1,
+      "visible": true
      },
      {
       "ref": "comodino",
       "cat": "comodino",
       "x": 0.8150000000000002,
-      "y": 0.25
+      "y": 0.25,
+      "visible": true
      },
      {
       "ref": "sospensione",
       "cat": "lampadario",
       "x": 2.0794418531563132,
-      "y": 2.2756382316409143
+      "y": 2.2756382316409143,
+      "visible": true
      }
     ],
     "camera": {
@@ -950,29 +952,25 @@
     "dW": 0.01,
     "dH": 0,
     "dHc": -0.01,
-    "dPitch": 0.2,
+    "dPitch": 0.3,
     "dFov": 0,
     "ops": [
      {
-      "type": "door",
-      "found": false
-     },
-     {
       "type": "window",
       "found": true,
       "wallOk": true,
-      "dT": -0.04,
+      "dT": -0.1,
       "dSill": 0.03,
       "dH": -0.02,
-      "dW": -0.13
+      "dW": -0.25
      },
      {
       "type": "window",
       "found": true,
       "wallOk": true,
-      "dT": 0.03,
-      "dSill": 0.24,
-      "dH": -0.22,
+      "dT": 0.04,
+      "dSill": 0,
+      "dH": 0.05,
       "dW": -0.01
      }
     ],
@@ -996,7 +994,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5606
+    "tSeg": 6036
    },
    "stale": true
   },
@@ -1013,7 +1011,8 @@
       "t": 3.854,
       "w": 0.8,
       "h": 2.17,
-      "sill": 0
+      "sill": 0,
+      "visible": true
      },
      {
       "type": "window",
@@ -1021,7 +1020,8 @@
       "t": 2.422,
       "w": 1.26,
       "h": 1.2,
-      "sill": 0.86
+      "sill": 0.86,
+      "visible": false
      },
      {
       "type": "window",
@@ -1029,7 +1029,8 @@
       "t": 2.214,
       "w": 1.01,
       "h": 1.25,
-      "sill": 0.93
+      "sill": 0.93,
+      "visible": false
      }
     ],
     "objects": [
@@ -1037,25 +1038,29 @@
       "ref": "tavolo6",
       "cat": "tavolo",
       "x": 2.2486622805520895,
-      "y": 3.6509864094527438
+      "y": 3.6509864094527438,
+      "visible": true
      },
      {
       "ref": "sedia",
       "cat": "sedia",
       "x": 1.7486622805520895,
-      "y": 3.000986409452744
+      "y": 3.000986409452744,
+      "visible": true
      },
      {
       "ref": "sedia",
       "cat": "sedia",
       "x": 2.7486622805520895,
-      "y": 4.300986409452744
+      "y": 4.300986409452744,
+      "visible": false
      },
      {
       "ref": "sospensione",
       "cat": "lampadario",
       "x": 2.2909628261160107,
-      "y": 2.679185434563551
+      "y": 2.679185434563551,
+      "visible": true
      }
     ],
     "camera": {
@@ -1070,47 +1075,30 @@
    },
    "sc": {
     "ok": true,
-    "corner": 0.3,
+    "corner": 0.4,
     "bothVisible": true,
-    "dW": -0.01,
+    "dW": 0,
     "dH": 0,
-    "dHc": -0.02,
-    "dPitch": 0.2,
+    "dHc": 0,
+    "dPitch": 0,
     "dFov": 0,
     "ops": [
      {
       "type": "door",
       "found": true,
       "wallOk": true,
-      "dT": 0.01,
+      "dT": 0,
       "dSill": 0,
-      "dH": 0.02,
+      "dH": 0,
       "dW": 0.01
-     },
-     {
-      "type": "window",
-      "found": true,
-      "wallOk": false,
-      "dT": -0.47,
-      "dSill": 0.06,
-      "dH": 0.07,
-      "dW": -0.85
-     },
-     {
-      "type": "window",
-      "found": false
      }
     ],
-    "extraOps": 0,
+    "extraOps": 1,
     "objs": [
      {
       "cat": "tavolo",
       "found": true,
-      "d": 1.17
-     },
-     {
-      "cat": "sedia",
-      "found": false
+      "d": 1.15
      },
      {
       "cat": "sedia",
@@ -1126,7 +1114,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5168
+    "tSeg": 5237
    },
    "stale": true
   },
@@ -1143,7 +1131,8 @@
       "t": 2.672,
       "w": 0.9,
       "h": 2.23,
-      "sill": 0
+      "sill": 0,
+      "visible": false
      },
      {
       "type": "window",
@@ -1151,7 +1140,8 @@
       "t": 1.559,
       "w": 0.93,
       "h": 1.44,
-      "sill": 0.83
+      "sill": 0.83,
+      "visible": true
      },
      {
       "type": "window",
@@ -1159,7 +1149,8 @@
       "t": 1.635,
       "w": 0.92,
       "h": 1.25,
-      "sill": 0.87
+      "sill": 0.87,
+      "visible": false
      }
     ],
     "objects": [
@@ -1167,25 +1158,29 @@
       "ref": "letto2",
       "cat": "letto_matrimoniale",
       "x": 1.8493572448566558,
-      "y": 1.1
+      "y": 1.1,
+      "visible": true
      },
      {
       "ref": "comodino",
       "cat": "comodino",
       "x": 0.9800000000000002,
-      "y": 0.25
+      "y": 0.25,
+      "visible": true
      },
      {
       "ref": "armadio2",
       "cat": "armadio",
       "x": 4,
-      "y": 2.3525348470034078
+      "y": 2.3525348470034078,
+      "visible": false
      },
      {
       "ref": "sospensione",
       "cat": "lampadario",
       "x": 1.8897653270699086,
-      "y": 2.1391294158413077
+      "y": 2.1391294158413077,
+      "visible": true
      }
     ],
     "camera": {
@@ -1200,30 +1195,22 @@
    },
    "sc": {
     "ok": true,
-    "corner": 5.3,
+    "corner": 5.2,
     "bothVisible": false,
     "dW": null,
     "dH": 0,
-    "dHc": 0.27,
-    "dPitch": 0.4,
+    "dHc": 0.28,
+    "dPitch": 0.3,
     "dFov": 0,
     "ops": [
-     {
-      "type": "door",
-      "found": false
-     },
      {
       "type": "window",
       "found": true,
       "wallOk": true,
-      "dT": -0.35,
-      "dSill": -0.1,
-      "dH": 0.25,
-      "dW": 1.16
-     },
-     {
-      "type": "window",
-      "found": false
+      "dT": -0.2,
+      "dSill": -0.81,
+      "dH": 0.24,
+      "dW": 1.69
      }
     ],
     "extraOps": 0,
@@ -1237,20 +1224,16 @@
       "found": false
      },
      {
-      "cat": "armadio",
-      "found": false
-     },
-     {
       "cat": "lampadario",
       "found": false
      }
     ],
-    "extraObjs": 2
+    "extraObjs": 1
    },
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 4897
+    "tSeg": 5248
    },
    "stale": true
   },
@@ -1267,7 +1250,8 @@
       "t": 3.456,
       "w": 0.86,
       "h": 2.23,
-      "sill": 0
+      "sill": 0,
+      "visible": false
      },
      {
       "type": "window",
@@ -1275,7 +1259,8 @@
       "t": 2.117,
       "w": 1.1,
       "h": 1.3,
-      "sill": 1.01
+      "sill": 1.01,
+      "visible": false
      },
      {
       "type": "window",
@@ -1283,7 +1268,8 @@
       "t": 3.546,
       "w": 1.15,
       "h": 1.25,
-      "sill": 0.87
+      "sill": 0.87,
+      "visible": true
      }
     ],
     "objects": [
@@ -1291,13 +1277,15 @@
       "ref": "letto2",
       "cat": "letto_matrimoniale",
       "x": 2.6654664906021206,
-      "y": 1.1
+      "y": 1.1,
+      "visible": true
      },
      {
       "ref": "comodino",
       "cat": "comodino",
       "x": 1.4949999999999999,
-      "y": 0.25
+      "y": 0.25,
+      "visible": true
      }
     ],
     "camera": {
@@ -1317,25 +1305,17 @@
     "dW": null,
     "dH": 0,
     "dHc": -0.03,
-    "dPitch": 0.5,
+    "dPitch": 0.6,
     "dFov": 0,
     "ops": [
      {
-      "type": "door",
-      "found": false
-     },
-     {
       "type": "window",
       "found": true,
-      "wallOk": false,
-      "dT": 1.29,
-      "dSill": -0.13,
-      "dH": -0.05,
-      "dW": 0.05
-     },
-     {
-      "type": "window",
-      "found": false
+      "wallOk": true,
+      "dT": -0.14,
+      "dSill": 0.01,
+      "dH": 0,
+      "dW": -0.02
      }
     ],
     "extraOps": 0,
@@ -1354,7 +1334,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5318
+    "tSeg": 5722
    },
    "stale": true
   }
