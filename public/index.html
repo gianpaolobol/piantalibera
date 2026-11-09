@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AG4qM5G0p0HVc8PkEEYlFQuZ1TIgOQ+ZEEJyHHKtyxQ=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-1eZi4J172GLGm985+M873tOAsy7HAuWo83m80cM3q5M=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4171,7 +4171,7 @@ function segComponents(m, roomType = "") {
   const { w, h, lab, names } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && /cucin|kitchen/i.test(roomType)) c = "cucina"; return c && c[0] !== "@" ? c : null; });
   // «fuori»: solo classi di esterni (cielo, verde, edifici…) viste attraverso il vetro. Nelle foto vere la segmentazione
   // include già nel vetro il paesaggio; allargare ad altre classi allungava le finestre sopra letti e mobili (banco 9/11)
-  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n));
+  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n)), other = names.map(n => !OUTSIDE.has(n) && !SEG_CAT[n] && !NOT_OPENING.has(n));
   for (let i = 0; i < w * h; i++) {
     const c = lab[i] === 255 ? null : catOf[lab[i]]; if (!c || seen[i]) continue;
     let qh = 0, qt = 0, n = 0, x0 = w, y0 = h, x1 = 0, y1 = 0; Q[qt++] = i; seen[i] = 1;
@@ -4180,10 +4180,11 @@ function segComponents(m, roomType = "") {
       for (const k of [j - 1, j + 1, j - w, j + w]) { if (k < 0 || k >= w * h || seen[k] || (k === j - 1 && x === 0) || (k === j + 1 && x === w - 1)) continue; const l = lab[k];
         if (l !== 255 && catOf[l] === c) { seen[k] = 1; Q[qt++] = k; } } }
     if (grow) {   // secondo passo: dal vetro verso ciò che si vede fuori, entro un intorno del vetro (non dentro la parete)
-      const bw = x1 - x0 + 1, bh = y1 - y0 + 1, gx0 = x0 - bw * .25, gx1 = x1 + bw * .25, gy0 = y0 - bh * .6, gy1 = y1 + bh * 1.2;
+      const bw = x1 - x0 + 1, bh = y1 - y0 + 1, gx0 = x0 - bw * .25, gx1 = x1 + bw * .25, gy0 = y0 - bh * .6, gy1 = y1 + bh * 1.2, x0g = x0, x1g = x1;
       for (let q = 0; q < qt; q++) { const j = Q[q], x = j % w, y = (j / w) | 0;
         for (const k of [j - 1, j + 1, j - w, j + w]) { if (k < 0 || k >= w * h || seen[k] || (k === j - 1 && x === 0) || (k === j + 1 && x === w - 1)) continue; const kx = k % w, ky = (k / w) | 0, l = lab[k];
-          if (l !== 255 && outside[l] && kx >= gx0 && kx <= gx1 && ky >= gy0 && ky <= gy1) { seen[k] = 1; Q[qt++] = k; n++; if (kx < x0) x0 = kx; if (kx > x1) x1 = kx; if (ky < y0) y0 = ky; if (ky > y1) y1 = ky; } } }
+          // classi di esterni nell'intorno; le altre (né struttura né arredo: un paesaggio piatto) solo in colonna col vetro
+          if (l !== 255 && (outside[l] && kx >= gx0 && kx <= gx1 || other[l] && kx >= x0g && kx <= x1g) && ky >= gy0 && ky <= gy1) { seen[k] = 1; Q[qt++] = k; n++; if (kx < x0) x0 = kx; if (kx > x1) x1 = kx; if (ky < y0) y0 = ky; if (ky > y1) y1 = ky; } } }
     }
     if (n < minA) continue;
     // pavimento subito sotto il bordo inferiore: per distinguere una finestra da una portafinestra
