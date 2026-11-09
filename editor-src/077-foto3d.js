@@ -117,7 +117,7 @@ async function f3Segment(){
       // spigoli: modello di stanza adattato alle giunzioni (robusto agli arredi); in subordine la spezzata
       const box = fitRoomBox(m, {hfov:F3.opts.fov || F3.exifFov || null, aspect:F3.h / F3.w}), poly = wallCorners(m);
       let depth = null;
-      if (F3_DEPTH.on !== false) try { const D = await f3DepthRun(F3.thumb || F3.img); if (F3.seg !== job) return; depth = {...D, ...f3DepthGeometry(D, m)}; } catch(e){ console.warn("profondità:", e); depth = {err:String(e?.message || e)}; }
+      if (F3_DEPTH.on !== false) try { job.phase = "profondita"; if (F3.open) f3RenderModal(); const D = await f3DepthRun(F3.thumb || F3.img); if (F3.seg !== job) return; depth = {...D, ...f3DepthGeometry(D, m)}; } catch(e){ console.warn("profondità:", e); depth = {err:String(e?.message || e)}; }
       const alts = [depth?.quad || null, box && box.conf >= .35 ? box : null, poly && poly.conf >= .6 ? poly : null].filter(Boolean);
       Object.assign(job, {state:"ok", m, quad:alts[0] || null, alts, box, depth, labels:segs.map(x => x.label)});
     } catch(e){ console.warn("segmentazione:", e); if (F3.seg === job) Object.assign(job, {state:"err", err:String(e?.message || e)}); }
@@ -196,7 +196,8 @@ function f3ApplySeg(){
   }
   const comps = segComponents(sg.m, F3.a.room_type || "");
   F3.items = mergeSegmentation(F3.items, comps, F3.quad).map((it, i) => ({...it, id:i, on: it.on !== false && !it.doubt && !F3_CATS[it.category]?.skip && it.category !== "persona" /* le persone non fanno parte della stanza: in elenco, spente */, label: it.label || F3_CATS[it.category]?.n || ""}));
-  F3.segNote = `Segmentazione: ${comps.filter(c => /porta|finestra/.test(c.category)).length} aperture e ${comps.filter(c => !/porta|finestra/.test(c.category)).length} arredi trovati nella foto${sg.quad ? "; spigoli proposti" : ""}.`;
+  const dg = sg.depth?.G;
+  F3.segNote = (sg.quad && sg.quad === sg.depth?.quad ? `Profondità: fotocamera a ${fmt(dg.h, 2)} m, inclinazione ${fmt(dg.pitch, 1)}°, misure dalla foto senza riferimenti. ` : "") + `Segmentazione: ${comps.filter(c => /porta|finestra/.test(c.category)).length} aperture e ${comps.filter(c => !/porta|finestra/.test(c.category)).length} arredi trovati nella foto${sg.quad ? "; spigoli proposti" : ""}.`;
 }
 function f3Accept(j){
   const a = j.analysis; F3.a = a; F3.meta = {model:j.model, detect:j.detect_model, mock:!!j.mock, ms:j.duration_ms, neurons:j.neurons_measured ?? j.neurons_estimated, remaining:j.remaining_today};
@@ -516,7 +517,7 @@ function f3ReviewHTML(){
     <div class="f3list">${list || `<p class="note">Nessun elemento riconosciuto.</p>`}</div>
     <div class="btns"><select id="f3AddCat" class="inp" aria-label="Categoria da aggiungere"><option value="">＋ Aggiungi un elemento…</option>${Object.entries(F3_CATS).filter(([, v]) => !v.skip).map(([k, v]) => `<option value="${k}">${esc(v.n)}</option>`).join("")}</select></div>
     <div class="btns f3m-go"><button class="btn primary" id="f3Build" ${s.ok ? "" : "disabled"}>${F3.report ? "Crea un'altra copia" : "Crea il modello 3D"}</button><button class="btn" id="f3Cancel">Chiudi</button></div>
-    <p class="note">${F3.seg?.state === "run" ? "Segmentazione nel dispositivo in corso: spigoli e riquadri si aggiorneranno da soli…" : F3.seg?.state === "ok" ? esc(F3.segNote || "") : F3.seg?.state === "err" ? "Segmentazione nel dispositivo non disponibile: spigoli e riquadri vengono solo dall'analisi AI." : ""}</p>
+    <p class="note">${F3.seg?.state === "run" ? (F3.seg.phase === "profondita" ? "Misuro la stanza nel dispositivo (la prima volta si scarica il modello di profondità, ~42 MB)…" : "Segmentazione nel dispositivo in corso: spigoli e riquadri si aggiorneranno da soli…") : F3.seg?.state === "ok" ? esc(F3.segNote || "") : F3.seg?.state === "err" ? "Segmentazione nel dispositivo non disponibile: spigoli e riquadri vengono solo dall'analisi AI." : ""}</p>
     ${F3.err ? `<p class="note warn" role="alert">${esc(F3.err)}</p>` : ""}
     <p class="note">${meta.mock ? "Risposta di prova del server locale. " : ""}${meta.model ? `Analisi: ${esc(meta.model.replace(/^@cf\//, ""))}${meta.detect ? " + " + esc(meta.detect.replace(/^@cf\//, "")) : ""}` : ""}${meta.ms ? ` in ${fmt(meta.ms / 1000, 0)} s` : ""}${meta.remaining != null ? ` · analisi rimaste oggi: ${meta.remaining}` : ""}.</p></div></div>`;
 }
