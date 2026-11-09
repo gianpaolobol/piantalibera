@@ -41,7 +41,7 @@ def frame(depth, lab):
         if best is None or inl.sum() > best[2].sum(): best = (n, d, inl)
     n, d, inl = best
     if inl.mean() < .6: return None
-    R = Q[inl]; c = R.mean(0); n = np.linalg.svd(R - c)[2][-1]; d = -n @ c
+    R = Q[inl]; c = R.mean(0); n = np.linalg.svd(R - c, full_matrices=False)[2][-1]; d = -n @ c
     if d < 0: n, d = -n, -d                                     # normale verso la fotocamera (in su)
     up = n; fw = np.array([0, 0, 1.]) - up[2] * up; fw /= np.linalg.norm(fw)
     rt = np.cross(up, fw)                                       # destra (X in su, Z avanti: terna sinistrorsa del Kinect)
@@ -69,7 +69,7 @@ for i in order:
             if ok.sum() < 300: continue
             Q = P[ok]; Rr, Ff, Hh = Q @ rt, Q @ fw, Q @ up + h
             ys, xs = np.nonzero(m)
-            ax = np.stack([Rr - Rr.mean(), Ff - Ff.mean()], 1); e = np.linalg.svd(ax, full_matrices=False)[2][0]
+            ax = np.stack([Rr - Rr.mean(), Ff - Ff.mean()], 1); e = np.linalg.eigh(ax.T @ ax)[1][:, -1]
             proj = ax @ e
             objs.append({"cat": cat, "name": nm, "px": int(m.sum()),
                          "box": [round((xs.min() - X0) / (X1 - X0), 4), round((ys.min() - Y0) / (Y1 - Y0), 4), round((xs.max() + 1 - X0) / (X1 - X0), 4), round((ys.max() + 1 - Y0) / (Y1 - Y0), 4)],
@@ -81,8 +81,13 @@ for i in order:
     img = np.transpose(f["images"][i], (2, 1, 0))[Y0:Y1, X0:X1]
     key = f"nyu_{i:04d}"
     Image.fromarray(img).save(f"{OUT}/{key}.jpg", quality=92)
+    # per le sonde: profondità vera (mm), etichette e istanze, ritagliate come la foto
+    Image.fromarray(np.clip(depth[Y0:Y1, X0:X1] * 1000, 0, 65535).astype(np.uint16)).save(f"{OUT}/{key}_d.png")
+    Image.fromarray(lab[Y0:Y1, X0:X1].astype(np.uint16)).save(f"{OUT}/{key}_l.png")
+    Image.fromarray(inst[Y0:Y1, X0:X1].astype(np.uint16)).save(f"{OUT}/{key}_i.png")
     gt = {"key": key, "scene": scenes[i], "W": X1 - X0, "H": Y1 - Y0, "hfov": round(float(np.degrees(2 * np.arctan((X1 - X0) / 2 / FX))), 2),
           "cam_h": round(float(h), 3), "pitch": round(float(pitch), 2), "roll": round(float(roll), 2), "objects": objs}
     json.dump(gt, open(f"{OUT}/{key}.json", "w"))
     picked.append(key)
+json.dump(names, open(f"{OUT}/_nomi.txt", "w"))
 print(f"{len(picked)} foto estratte")
