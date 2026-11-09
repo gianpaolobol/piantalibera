@@ -24,6 +24,9 @@ const F3_CATS = {
   lampadario:{n:"Lampadario", ref:"sospensione", w:.44, d:.44, mount:"ceiling", light:true}, plafoniera:{n:"Plafoniera", ref:"plafoniera", w:.4, d:.4, mount:"ceiling", light:true}, faretto:{n:"Faretto", ref:"faretto", w:.1, d:.1, mount:"ceiling", light:true},
   applique:{n:"Applique", ref:"applique", w:.2, d:.15, mount:"wall", light:true}, scala:{n:"Scala", ref:"scala_dritta", w:1, d:3}, altro:{n:"Altro (non creato)", skip:true},
 };
+/* quota del bordo superiore visibile (piano del tavolo, testiera del letto, schienale): serve quando la base non si vede */
+const F3_TOP = {tavolo:.75, tavolo_tondo:.75, tavolino:.4, tavolino_tondo:.4, scrivania:.75, isola:.9, madia:.8, cassettiera:.85, comodino:.55, letto_matrimoniale:1, letto_singolo:1, divano:.85, poltrona:.8};
+const F3_WALLISH = new Set(["divano", "divano_angolare", "letto_matrimoniale", "letto_singolo", "armadio", "libreria", "madia", "cassettiera", "mobile_tv", "cucina", "comodino", "scrivania", "frigorifero", "lavabo", "wc", "bidet", "vasca"]);
 const F3_FLOOR = {parquet:"parquet", laminato:"parquet", piastrelle:"gres", resina:"cemento", cemento:"cemento", marmo:"marmo", pietra:"pietra", cotto:"gres", moquette:"tappeto", altro:"parquet"};
 const F3_REF = [["ceil", "Altezza del soffitto"], ["width", "Larghezza della parete di fondo"], ["cam", "Altezza della fotocamera da terra"]];
 const F3 = {img:null, thumb:null, w:0, h:0, name:"", exifFov:null, a:null, quad:null, items:[], sel:-1, busy:false, err:"", cfg:null, cfgErr:"", ts:{widget:null, token:""},
@@ -62,7 +65,7 @@ async function f3LoadFile(file){
   const big = draw(1280, .86), small = draw(640, .8);
   if (Math.min(big.w, big.h) < 256) throw new Error("foto troppo piccola: serve almeno 256 px sul lato corto");
   const landscape = big.w >= big.h;
-  Object.assign(F3, {img:big.url, thumb:small.url, w:big.w, h:big.h, name:file.name, a:null, quad:null, items:[], sel:-1, err:"", report:null, meta:null, seg:null,
+  Object.assign(F3, {img:big.url, thumb:small.url, w:big.w, h:big.h, name:file.name, a:null, quad:null, items:[], sel:-1, err:"", report:null, meta:null, seg:null, fitFov:null,
     exifFov: f35 ? +(2 * Math.atan((landscape ? 18 : 12) / f35) * 180 / Math.PI).toFixed(1) : null});
   F3.opts = {refKind:"ceil", refVal:2.7, fov:null, depth:null, ceil:true};
 }
@@ -111,7 +114,10 @@ async function f3Segment(){
       const segs = await f3SegPipe(await f3SegPipe.RawImage.fromURL(F3.thumb || F3.img));
       if (F3.seg !== job) return;
       const m = labelMap(segs, 320);
-      Object.assign(job, {state:"ok", m, quad:wallCorners(m), labels:segs.map(x => x.label)});
+      // spigoli: modello di stanza adattato alle giunzioni (robusto agli arredi); in subordine la spezzata
+      const box = fitRoomBox(m, {hfov:F3.opts.fov || F3.exifFov || null, aspect:F3.h / F3.w}), poly = wallCorners(m);
+      const alts = [box && box.conf >= .35 ? box : null, poly && poly.conf >= .6 ? poly : null].filter(Boolean);
+      Object.assign(job, {state:"ok", m, quad:alts[0] || null, alts, box, labels:segs.map(x => x.label)});
     } catch(e){ console.warn("segmentazione:", e); if (F3.seg === job) Object.assign(job, {state:"err", err:String(e?.message || e)}); }
     if (F3.seg === job && F3.a) { f3ApplySeg(); if (F3.open) f3RenderModal(); }
   })();
@@ -120,11 +126,16 @@ async function f3Segment(){
 /* applica la segmentazione all'analisi: spigoli (se l'utente non li ha già spostati) e riquadri */
 function f3ApplySeg(){
   const sg = F3.seg; if (!sg || sg.state !== "ok" || !F3.a || sg.applied) return; sg.applied = true;
-  if (sg.quad && sg.quad.conf >= .6 && F3.quadSource !== "posizionati da te"){
-    F3.quad = {fl:sg.quad.fl, fr:sg.quad.fr, cl:sg.quad.cl, cr:sg.quad.cr}; F3.quadSource = "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
+  // prima proposta che dà una geometria possibile (spigoli alti sopra l'orizzonte, fotocamera davanti alla parete)
+  if (sg.alts?.length && F3.quadSource !== "posizionati da te"){
+    const keep = F3.quad; sg.quad = sg.alts.find(q => { F3.quad = {fl:q.fl, fr:q.fr, cl:q.cl, cr:q.cr}; F3.quadOpen = q === sg.box ? {l:q.openL, r:q.openR} : null; return f3Solve().ok; }) || null; F3.quad = keep;
+  }
+  if (sg.quad && F3.quadSource !== "posizionati da te"){
+    F3.quad = {fl:sg.quad.fl, fr:sg.quad.fr, cl:sg.quad.cl, cr:sg.quad.cr}; F3.quadOpen = sg.quad === sg.box ? {l:sg.box.openL, r:sg.box.openR} : null; F3.quadSource = sg.quad === sg.box ? "trovati dal modello di stanza: controllali" : "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
+    if (sg.box && sg.quad === sg.box && !F3.exifFov && !F3.opts.fov) F3.fitFov = sg.box.hfov;       // campo visivo stimato dalla prospettiva
   }
   const comps = segComponents(sg.m, F3.a.room_type || "");
-  F3.items = mergeSegmentation(F3.items, comps, F3.quad).map((it, i) => ({...it, id:i, on: it.on !== false && !it.doubt && !F3_CATS[it.category]?.skip, label: it.label || F3_CATS[it.category]?.n || ""}));
+  F3.items = mergeSegmentation(F3.items, comps, F3.quad).map((it, i) => ({...it, id:i, on: it.on !== false && !it.doubt && !F3_CATS[it.category]?.skip && it.category !== "persona" /* le persone non fanno parte della stanza: in elenco, spente */, label: it.label || F3_CATS[it.category]?.n || ""}));
   F3.segNote = `Segmentazione: ${comps.filter(c => /porta|finestra/.test(c.category)).length} aperture e ${comps.filter(c => !/porta|finestra/.test(c.category)).length} arredi trovati nella foto${sg.quad ? "; spigoli proposti" : ""}.`;
 }
 function f3Accept(j){
@@ -135,13 +146,15 @@ function f3Accept(j){
   F3.opts.ceil = bw ? bw.ceiling_visible !== false : true;
   F3.opts.refVal = a.room?.height_m && a.room.height_m > 2.2 && a.room.height_m < 4.5 ? +a.room.height_m.toFixed(2) : 2.7;
   F3.items = (a.items || []).map((it, i) => ({...it, id:i, on:!F3_CATS[it.category]?.skip}));
-  F3.sel = -1; F3.report = null; F3.segNote = "";
+  F3.sel = -1; F3.report = null; F3.segNote = ""; F3.quadOpen = null;
   if (F3.seg?.state === "ok"){ F3.seg.applied = false; f3ApplySeg(); }
 }
 
 /* ---------- geometria ---------- */
 const f3Rad = d => d * Math.PI / 180;
-function f3Fov(){ return F3.opts.fov || F3.exifFov || F3.a?.camera?.hfov_deg || 65; }
+/* campo visivo orizzontale: scelto dall'utente, dall'EXIF, stimato dalla prospettiva, dal modello; altrimenti quello
+   tipico della fotocamera principale di un telefono (26 mm equivalenti: ~69° in orizzontale, ~50° in verticale) */
+function f3Fov(){ return F3.opts.fov || F3.exifFov || F3.fitFov || (F3.w && F3.h > F3.w ? 50 : F3.a?.camera?.hfov_deg || 69); }
 /* raggio della fotocamera per un punto della foto (u,v ∈ 0..1): X destra, Y su, la fotocamera guarda verso −Z */
 function f3Dir(u, v, cam){
   const x = u - .5, y = -(v - .5) * cam.r, cp = Math.cos(cam.p), sp = Math.sin(cam.p);
@@ -178,8 +191,14 @@ function f3Solve(quad = F3.quad, opts = F3.opts, w = F3.w, h = F3.h, a = F3.a){
   const c = toPlanV([-A[0], -A[1]]);
   if (c[1] < .3) return {ok:false, err:"la fotocamera risulta dietro la parete di fondo: controlla gli spigoli"};
   const D = Math.max(+(opts.depth || 0), c[1] + .4, 1.5);
+  // spigolo della parete di fondo fuori dalla foto: la larghezza vista è un minimo; si completa con la stima del
+  // modello (o 0,6 m) mantenendo fermo lo spigolo visibile, così aperture e arredi restano alla distanza giusta
+  const outL = !!F3.quadOpen?.l, outR = !!F3.quadOpen?.r;
+  let shift = 0, Wv = W;
+  if ((outL || outR) && !opts.widthFixed){ const est = Math.max(W + .6, +(a?.room?.width_m || 0)); const extra = Math.min(est - W, 1.2);
+    if (outL && !outR){ shift = extra; Wv = W + extra; } else if (outR && !outL) Wv = W + extra; else { shift = extra / 2; Wv = W + extra; } }
   const ray = (u, v) => { const d = f3Dir(u, v, cam), hp = toPlanV([d[0], d[2]]); return [hp[0], hp[1], d[1]]; };
-  return {ok:true, cam, p, hc, H, W, D, depthAuto:+(c[1] + .4).toFixed(2), c, ray, right:toPlanV([1, 0]), useCeil};
+  return {ok:true, cam, p, hc, H, W:Wv, Wseen:W, D, depthAuto:+(c[1] + .4).toFixed(2), c:[c[0] + shift, c[1]], ray, right:toPlanV([1, 0]), useCeil, partial:outL || outR};
 }
 /* intersezioni in pianta: x lungo la parete di fondo, y verso la fotocamera, quota da terra */
 const f3Floor = (s, u, v) => { const d = s.ray(u, v); if (d[2] >= -1e-6) return null; const t = -s.hc / d[2]; return [s.c[0] + t * d[0], s.c[1] + t * d[1]]; };
@@ -204,9 +223,9 @@ function f3WallAt(s, u, v){
 const f3Ang = f => { let t = Math.atan2(-f[0], f[1]) * 180 / Math.PI; return ((t % 360) + 360) % 360; };
 /* posizioni in pianta di aperture e oggetti (dati puri: servono all'anteprima e alla creazione) */
 function f3Layout(s, items = F3.items){
-  const out = {openings:[], objects:[], skipped:[]};
+  const out = {openings:[], objects:[], skipped:[]}, hasBed = items.some(i => i.on && /^letto/.test(i.category));
   for (const it of items){
-    if (!it.on) continue; const C = F3_CATS[it.category] || F3_CATS.altro; if (C.skip){ out.skipped.push(it); continue; }
+    if (!it.on) continue; let C = F3_CATS[it.category] || F3_CATS.altro, cat = it.category; if (C.skip){ out.skipped.push(it); continue; }
     const [x0, y0, x1, y1] = it.box, uc = (x0 + x1) / 2, vc = (y0 + y1) / 2;
     if (C.kind === "door" || C.kind === "window"){
       const hit = f3WallAt(s, uc, vc), L = f3OnWall(s, hit.wall, x0, vc), R = f3OnWall(s, hit.wall, x1, vc), T = f3OnWall(s, hit.wall, uc, y0), Bt = f3OnWall(s, hit.wall, uc, y1);
@@ -214,29 +233,70 @@ function f3Layout(s, items = F3.items){
       const len = hit.wall === "back" ? s.W : s.D, w = clamp(Math.abs(R.s - L.s), C.kind === "door" ? .6 : .4, Math.min(len - .1, 4)), t = clamp((L.s + R.s) / 2, w / 2 + .05, len - w / 2 - .05);
       let sill = C.kind === "door" ? 0 : clamp(Bt ? Bt.z : .9, 0, 1.6), top = clamp(T.z, sill + .4, s.H - .05);
       if (C.kind === "door") top = clamp(top, 1.9, Math.min(s.H - .05, 2.8));
+      // davanzale coperto da un arredo (testiera, divano): quota consueta di 90 cm se la parte vista finisce più in alto
+      else if (it.occBelow && sill > 1 && top - .9 >= .6) sill = .9;
       out.openings.push({it, wall:hit.wall, t, w, h:+(top - sill).toFixed(2), sill:+sill.toFixed(2), type:C.kind, style:C.style});
       continue;
     }
     let p, rot = 0, scale = 1, z = null;
     const hv = (() => { const d = s.ray(uc, vc), l = Math.hypot(d[0], d[1]) || 1; return [d[0] / l, d[1] / l]; })(), rl = Math.hypot(s.right[0], s.right[1]) || 1, cr = [s.right[0] / rl, s.right[1] / rl];
-    if (C.mount === "ceiling"){ p = f3Ceil(s, uc, y0) || f3Floor(s, uc, y1); }
+    if (C.mount === "ceiling"){
+      // il bordo alto della lampada spesso è il paralume, non il soffitto: si usa il fondo, appeso circa 75 cm sotto il soffitto
+      // attacco al soffitto se il riquadro lo comprende; altrimenti distanza dalla larghezza apparente del paralume
+      // (misura tipica) o, in mancanza, il fondo appeso 75 cm sotto il soffitto
+      const da = s.ray(x0, y1), db = s.ray(x1, y1), na = Math.hypot(...da), nb = Math.hypot(...db), cosA = (da[0] * db[0] + da[1] * db[1] + da[2] * db[2]) / (na * nb), ang = Math.acos(clamp(cosA, -1, 1));
+      const zB = clamp(s.H - .75, 1.8, s.H - .3), d = s.ray(uc, y1), hl = Math.hypot(d[0], d[1]) || 1;
+      const pc = f3Ceil(s, uc, y0), inRoom = pc && pc[0] > 0 && pc[0] < s.W && pc[1] > .05 && pc[1] < s.D;
+      if (inRoom) p = pc;                   // il riquadro arriva al punto di attacco: vale quello
+      else if (ang > .01 && cat === "lampadario"){ const dist = clamp((C.w || .44) / (2 * Math.tan(ang / 2)), .5, 15); p = [s.c[0] + d[0] / hl * dist, s.c[1] + d[1] / hl * dist]; }
+      else { const t = Math.abs(d[2]) > 1e-4 ? (zB - s.hc) / d[2] : -1; p = t > 0 ? [s.c[0] + t * d[0], s.c[1] + t * d[1]] : (f3Ceil(s, uc, y0) || f3Floor(s, uc, y1)); } }
     else if (C.mount === "wall"){ const hit = f3WallAt(s, uc, vc); const inN = {back:[0, 1], left:[1, 0], right:[-1, 0]}[hit.wall]; p = [hit.x + inN[0] * .08, hit.y + inN[1] * .08]; rot = f3Ang(inN); z = clamp(hit.z - .1, .5, s.H - .2); }
     else {
-      p = f3Floor(s, uc, y1); if (!p){ out.skipped.push(it); continue; }
+      p = f3Floor(s, uc, y1);
+      // base tagliata dal bordo della foto (oggetto vicino alla fotocamera): si usa il bordo alto del piano, a quota nota
+      const topH = F3_TOP[cat]; let cut = false;
+      if (topH && y1 > .97){ cut = true; const d = s.ray(uc, y0); if (d[2] < -1e-4 && s.hc > topH){ const t = (topH - s.hc) / d[2], far = [s.c[0] + t * d[0], s.c[1] + t * d[1]], hl = Math.hypot(d[0], d[1]) || 1; const dep = (C.d || .6);
+        p = [far[0] - d[0] / hl * dep, far[1] - d[1] / hl * dep]; } }
+      if (!p){ out.skipped.push(it); continue; }
+      // misure reali dalla foto: larghezza alla base e altezza della sommità alla distanza dell'oggetto
+      const dist = Math.hypot(p[0] - s.c[0], p[1] - s.c[1]), rt = s.ray(uc, y0), hTop = s.hc + dist / (Math.hypot(rt[0], rt[1]) || 1) * rt[2];
+      // larghezza alla base o, se la base è fuori dalla foto, al bordo alto (quota tipica dello schienale o del piano)
+      const atZ = (u, v, zz) => { const d = s.ray(u, v); if (Math.abs(d[2]) < 1e-4) return null; const t = (zz - s.hc) / d[2]; return t > 0 ? [s.c[0] + t * d[0], s.c[1] + t * d[1]] : null; };
+      const pa0 = cut ? atZ(x0, y0, topH) : f3Floor(s, x0, y1), pb0 = cut ? atZ(x1, y0, topH) : f3Floor(s, x1, y1), wid = pa0 && pb0 ? Math.hypot(pb0[0] - pa0[0], pb0[1] - pa0[1]) : null;
+      // categoria corretta dalle misure (se l'utente non l'ha scelta): divano/poltrona, tavolo/tavolino, letto
+      if (!it.userCat && wid){
+        const sw = {divano:wid < 1.2 ? "poltrona" : null, poltrona:wid > 1.45 ? "divano" : null, tavolo:hTop < .56 ? "tavolino" : null, tavolino:hTop > .66 ? "tavolo" : null, tavolo_tondo:hTop < .56 ? "tavolino_tondo" : null,
+          letto_matrimoniale:wid < 1.25 ? "letto_singolo" : null, letto_singolo:wid > 1.45 ? "letto_matrimoniale" : null}[cat]
+          // piccolo piano basso in una camera: comodino
+          || (hasBed && /^(tavol|madia|cassettiera)/.test(cat) && wid < .7 && hTop < .75 ? "comodino" : null);
+        if (sw && F3_CATS[sw]){ cat = sw; C = F3_CATS[sw]; }
+      }
       const face = {camera:[-hv[0], -hv[1]], away:hv, left:[-cr[0], -cr[1]], right:cr}[it.facing] || [-hv[0], -hv[1]];
       const pa = f3Floor(s, x0, y1), pb = f3Floor(s, x1, y1), span = pa && pb ? Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) : null;
       const along = Math.abs(face[0] * hv[0] + face[1] * hv[1]) > .7, vis = along ? C.w : C.d, deep = along ? C.d : C.w;
-      if (span && !C.keep) scale = clamp(span / vis, C.flat ? .6 : .75, C.flat ? 1.6 : 1.35);
+      if (span && !C.keep && !cut) scale = clamp(span / vis, C.flat ? .6 : .75, C.flat ? 1.6 : 1.35);
       p = [p[0] + hv[0] * deep * scale / 2, p[1] + hv[1] * deep * scale / 2];
       rot = Math.round(f3Ang(face) / 15) * 15 % 360;
       const dd = C.d * scale / 2 + .02;
-      if (it.against === "back"){ p[1] = dd; rot = 0; } else if (it.against === "left"){ p[0] = dd; rot = 270; } else if (it.against === "right"){ p[0] = s.W - dd; rot = 90; }
+      let ag = it.against;
+      // arredi da parete vicini a un muro (schienale entro 40 cm): appoggiati e rivolti verso la stanza
+      if ((!ag || ag === "none") && F3_WALLISH.has(cat)){ const gap = {back:p[1] - dd, left:p[0] - dd, right:s.W - p[0] - dd}, k = Object.entries(gap).sort((a, b) => a[1] - b[1])[0];
+        // il letto visto dai piedi ha la testiera contro la parete di fondo anche se la base è coperta o fuori dalla foto
+        if (/^letto/.test(cat) && (it.facing || "camera") === "camera" && gap.back < 1.5) ag = "back"; else if (k[1] < .4) ag = k[0]; }
+      if (ag === "back"){ p[1] = dd; rot = 0; } else if (ag === "left"){ p[0] = dd; rot = 270; } else if (ag === "right"){ p[0] = s.W - dd; rot = 90; }
     }
     if (!p) { out.skipped.push(it); continue; }
     p = [clamp(p[0], .1, s.W - .1), clamp(p[1], .1, s.D - .1)];
     const ref = C.ref === "sagoma_uomo" && /donna|ragazza|bambina|signora|woman|girl/i.test(it.label || "") ? "sagoma_donna" : C.ref;
-    out.objects.push({it, ref, x:p[0], y:p[1], rot, scale:+scale.toFixed(2), z, light:C.light});
+    out.objects.push({it, cat, ref, x:p[0], y:p[1], rot, scale:+scale.toFixed(2), z, light:C.light});
   }
+  // stesso arredo grande riconosciuto due volte (letto spezzato in due riquadri): in pianta i centri quasi coincidono
+  const famOf = c => c.replace(/_.*/, ""), BIG3 = /^(letto|divano|tavolo|armadio|madia|libreria|cucina)/;
+  for (let i = 0; i < out.objects.length; i++) for (let j = i + 1; j < out.objects.length; j++){
+    const A = out.objects[i], B = out.objects[j]; if (A.dup || B.dup || !BIG3.test(A.cat) || famOf(A.cat) !== famOf(B.cat)) continue;
+    const CA = F3_CATS[A.cat] || {}, lim = Math.max(CA.w || 1, CA.d || 1) * .5;
+    if (Math.hypot(A.x - B.x, A.y - B.y) < lim){ const ar = o => (o.it.box[2] - o.it.box[0]) * (o.it.box[3] - o.it.box[1]) + (o.it.seg ? 1 : 0); (ar(A) >= ar(B) ? B : A).dup = true; } }
+  out.objects = out.objects.filter(o => !o.dup);
   // aperture sovrapposte sullo stesso muro: la più affidabile resta, l'altra si sposta nello spazio libero
   // più vicino o, se non c'è posto, non viene creata (accade con due riconoscimenti dello stesso vano)
   const rank = o => (o.it.seg ? 2 : 0) + (o.it.source === "rilevatore" ? 1 : 0) + (o.it.added ? 0 : .5);
@@ -395,7 +455,7 @@ function f3DrawPlan(){
   g.lineWidth = 4; g.strokeStyle = acc;
   for (const o of lay.openings){ const a = o.wall === "back" ? [o.t - o.w / 2, 0] : o.wall === "left" ? [0, s.D - o.t + o.w / 2] : [s.W, o.t - o.w / 2], b = o.wall === "back" ? [o.t + o.w / 2, 0] : o.wall === "left" ? [0, s.D - o.t - o.w / 2] : [s.W, o.t + o.w / 2]; g.beginPath(); g.moveTo(...T(a)); g.lineTo(...T(b)); g.stroke(); }
   g.fillStyle = acc; g.font = "11px sans-serif";
-  for (const o of lay.objects){ const C = F3_CATS[o.it.category], r = (o.rot) * Math.PI / 180, w = (C.w || .5) * o.scale, d = (C.d || .5) * o.scale, q = T([o.x, o.y]);
+  for (const o of lay.objects){ const C = F3_CATS[o.cat] || F3_CATS[o.it.category], r = (o.rot) * Math.PI / 180, w = (C.w || .5) * o.scale, d = (C.d || .5) * o.scale, q = T([o.x, o.y]);
     g.save(); g.translate(...q); g.rotate(r); g.globalAlpha = .25; g.fillRect(-w * k / 2, -d * k / 2, w * k, d * k); g.globalAlpha = 1; g.strokeStyle = acc; g.lineWidth = 1.5; g.strokeRect(-w * k / 2, -d * k / 2, w * k, d * k); g.restore();
     g.fillStyle = ink; g.fillText(String(o.it.id + 1), q[0] - 3, q[1] + 4); g.fillStyle = acc; }
   const cq = T(s.c), fv = f3Rad(f3Fov()) / 2, look = s.ray(.5, .5), ang = Math.atan2(look[1], look[0]);
@@ -423,7 +483,7 @@ function f3PointerDown(e){
 }
 function f3PointerMove(e){
   if (!f3Drag) return; e.preventDefault(); const p = f3Pt(e), lim = v => clamp(v, -.11, 1.11);
-  if (f3Drag.kind === "h"){ F3.quad[f3Drag.k] = [lim(p[0]), lim(p[1])]; F3.quadSource = "posizionati da te"; }
+  if (f3Drag.kind === "h"){ F3.quad[f3Drag.k] = [lim(p[0]), lim(p[1])]; F3.quadSource = "posizionati da te"; F3.quadOpen = null; }
   else if (f3Drag.kind === "rs"){ const b = F3.items[f3Drag.i].box;
     if (f3Drag.c === "tl"){ b[0] = clamp(p[0], 0, b[2] - .01); b[1] = clamp(p[1], 0, b[3] - .01); } else { b[2] = clamp(p[0], b[0] + .01, 1); b[3] = clamp(p[1], b[1] + .01, 1); } }
   else { const b0 = f3Drag.b0, dx = clamp(p[0] - f3Drag.p0[0], -b0[0], 1 - b0[2]), dy = clamp(p[1] - f3Drag.p0[1], -b0[1], 1 - b0[3]); F3.items[f3Drag.i].box = [b0[0] + dx, b0[1] + dy, b0[2] + dx, b0[3] + dy]; }
@@ -451,7 +511,7 @@ function f3Change(e){ const t = e.target, rr = () => F3.open ? f3RenderModal() :
   if (t.id === "f3Fov"){ const v = num(t.value); F3.opts.fov = v >= 20 && v <= 130 ? v : null; f3Refresh(); return; }
   if (t.id === "f3Depth"){ const v = num(t.value); F3.opts.depth = v > 0 ? clamp(v, 1, 40) : null; f3Refresh(); return; }
   if (t.dataset.f3on != null){ F3.items[+t.dataset.f3on].on = t.checked; f3Refresh(); return; }
-  if (t.dataset.f3cat != null){ const it = F3.items[+t.dataset.f3cat]; it.category = t.value; it.on = !F3_CATS[t.value]?.skip; rr(); return; }
+  if (t.dataset.f3cat != null){ const it = F3.items[+t.dataset.f3cat]; it.category = t.value; it.userCat = true; it.on = !F3_CATS[t.value]?.skip; rr(); return; }
   if (t.id === "f3AddCat" && t.value){ const id = F3.items.length; F3.items.push({id, category:t.value, label:F3_CATS[t.value].n, box:[.42, .45, .58, .7], w:F3_CATS[t.value].w, d:F3_CATS[t.value].d, facing:"camera", against:"none", source:"aggiunto", on:true}); F3.sel = id; rr(); return; }
 }
 PI.addEventListener("click", f3Click); PI.addEventListener("change", f3Change);

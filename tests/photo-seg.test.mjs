@@ -1,7 +1,7 @@
 // Segmentazione di «Da foto al 3D» (shared/photo-seg.js) su maschere sintetiche di una stanza nota.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { labelMap, wallCorners, segComponents, mergeSegmentation, fitPolyline } from "../shared/photo-seg.js";
+import { labelMap, wallCorners, segComponents, mergeSegmentation, fitPolyline, fitRoomBox } from "../shared/photo-seg.js";
 
 /* stanza vista dall'interno, 400×300: parete di fondo tra x=120 e x=300, soffitto a y=60 (sinistra) → 70 (destra),
    pavimento a y=220 → 230; pareti laterali che scendono/salgono verso i bordi; porta sulla parete di fondo
@@ -51,4 +51,34 @@ test("spezzata: tre tratti quando ci sono due spigoli, uno solo se la linea è d
   const P3 = [], P1 = [];
   for (let x = 0; x < 300; x += 2) { P3.push([x, x < 100 ? 50 - (100 - x) * .5 : x > 200 ? 55 - (x - 200) * .5 : 50 + (x - 100) * .05]); P1.push([x, 40 + x * .02]); }
   assert.equal(fitPolyline(P3, 300).segs.length, 3); assert.equal(fitPolyline(P1, 300).segs.length, 1);
+});
+
+/* stanza «fotografata» con una fotocamera nota: la mappa delle etichette si costruisce col raggio di ogni pixel */
+function boxMap({ hfov = 65, p = -5, yaw = 10, hc = .55, dl = 1.2, dr = .8, db = 1.6, W = 320, H = 240, occl = false }) {
+  const f = .5 / Math.tan(hfov * Math.PI / 360), r = H / W, rad = Math.PI / 180, lab = new Uint8Array(W * H);
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+    const x = (i + .5) / W - .5, y = -((j + .5) / H - .5) * r, cp = Math.cos(p * rad), sp = Math.sin(p * rad);
+    const d0 = [x, y * cp + f * sp, y * sp - f * cp], cy = Math.cos(yaw * rad), sy = Math.sin(yaw * rad), d = [d0[0] * cy + d0[2] * sy, d0[1], -d0[0] * sy + d0[2] * cy];
+    let t = Infinity, k = 0;
+    if (d[1] < 0 && -hc / d[1] < t) { t = -hc / d[1]; k = 1; } if (d[1] > 0 && (1 - hc) / d[1] < t) { t = (1 - hc) / d[1]; k = 2; }
+    const tw = Math.min(d[2] < 0 ? -db / d[2] : 1e9, d[0] < 0 ? -dl / d[0] : 1e9, d[0] > 0 ? dr / d[0] : 1e9); if (tw < t) k = 0;
+    if (occl && j > H * .55 && i > W * .2 && i < W * .8) k = 3;          // grande mobile davanti: copre pavimento e base della parete
+    lab[j * W + i] = k;
+  }
+  const names = ["wall", "floor", "ceiling", "table"];
+  return { m: labelMap(names.map((label, k) => ({ label, mask: { width: W, height: H, data: Uint8Array.from(lab, v => v === k ? 255 : 0) } })), W), f, r };
+}
+test("modello di stanza: ritrova inclinazione, rotazione, altezza della fotocamera e spigoli, anche con un mobile che copre il pavimento", () => {
+  for (const occl of [false, true]) {
+    const g = { hfov: 65, p: -5, yaw: 10, hc: .55, dl: 1.2, dr: .8, db: 1.6 }, { m } = boxMap({ ...g, occl }), fit = fitRoomBox(m, { hfov: 65 });
+    assert.ok(fit && fit.conf > .9, JSON.stringify(fit));
+    const tol = occl ? 2.5 : 1;   // con metà pavimento coperto la giunzione si vede solo ai lati
+    assert.ok(Math.abs(fit.pitch - g.p) < .6 * tol && Math.abs(fit.yaw - g.yaw) < .6 * tol && Math.abs(fit.hc - g.hc) < .02 * tol, JSON.stringify(fit));
+    assert.ok(Math.abs(fit.db / fit.dl - g.db / g.dl) < .05, JSON.stringify(fit));        // lo spigolo destro è fuori dalla foto: dr non si misura
+    assert.ok(fit.fr[0] > .97, JSON.stringify(fit));
+  }
+});
+test("modello di stanza: senza EXIF stima anche il campo visivo", () => {
+  const { m } = boxMap({ hfov: 72, p: 3, yaw: -8, hc: .5, dl: .9, dr: 1.1, db: 2 }), fit = fitRoomBox(m, {});
+  assert.ok(fit && Math.abs(fit.hfov - 72) < 5 && Math.abs(fit.pitch - 3) < 1.5, JSON.stringify(fit));
 });

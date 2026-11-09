@@ -1,0 +1,50 @@
+# Banco di prova di «Da foto al 3D»: stanze a geometria nota fotografate dall'editor, analisi AI salvate
+# in tests/fixtures/banco-foto/ (riusate: non si spendono Neurons a ogni giro), ricostruzione automatica e
+# misura degli errori. Parte sui rami feature/foto-* quando cambia il codice della ricostruzione.
+name: Banco foto 3D
+
+on:
+  workflow_dispatch:
+    inputs:
+      n: { description: "Quante scene", default: "12" }
+      rianalizza: { description: "Rifai le analisi delle foto cambiate (spende Neurons)", type: boolean, default: false }
+      reale: { description: "Anche le versioni fotorealistiche (FLUX, la prima volta ~115 Neurons a scena)", type: boolean, default: true }
+  push:
+    branches: ["feature/foto-*"]
+    paths: ["scripts/banco-foto.mjs", "shared/photo.js", "shared/photo-seg.js", "editor-src/077-foto3d.js", ".github/workflows/banco-foto.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: banco-foto-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  banco:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      RIANALIZZA: ${{ inputs.rianalizza && '1' || '0' }}
+      IMGS: "2,7,10,11"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci && npx playwright install --with-deps chromium
+      - run: node scripts/build-editor.mjs
+      - run: node scripts/banco-foto.mjs ${{ inputs.n || '12' }}
+      - name: Foto vere (modello 3D sovrapposto)
+        if: always()
+        run: FOTOVERE=1 node scripts/banco-foto.mjs 8
+      - name: Versioni fotorealistiche
+        if: always() && (github.event_name == 'push' || inputs.reale)
+        run: REALE=1 node scripts/banco-foto.mjs ${{ inputs.n || '12' }}
+      - name: Salva le analisi nuove nel ramo
+        if: always()
+        run: |
+          git config user.name "banco-foto"; git config user.email "actions@users.noreply.github.com"
+          git add tests/fixtures/banco-foto
+          git diff --cached --quiet || { git commit -m "Banco foto: analisi e risultati del giro ${GITHUB_RUN_NUMBER}"; git push; }
