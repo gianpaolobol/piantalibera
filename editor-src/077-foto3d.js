@@ -223,7 +223,7 @@ function f3WallAt(s, u, v){
 const f3Ang = f => { let t = Math.atan2(-f[0], f[1]) * 180 / Math.PI; return ((t % 360) + 360) % 360; };
 /* posizioni in pianta di aperture e oggetti (dati puri: servono all'anteprima e alla creazione) */
 function f3Layout(s, items = F3.items){
-  const out = {openings:[], objects:[], skipped:[]};
+  const out = {openings:[], objects:[], skipped:[]}, hasBed = items.some(i => i.on && /^letto/.test(i.category));
   for (const it of items){
     if (!it.on) continue; let C = F3_CATS[it.category] || F3_CATS.altro, cat = it.category; if (C.skip){ out.skipped.push(it); continue; }
     const [x0, y0, x1, y1] = it.box, uc = (x0 + x1) / 2, vc = (y0 + y1) / 2;
@@ -240,7 +240,10 @@ function f3Layout(s, items = F3.items){
     }
     let p, rot = 0, scale = 1, z = null;
     const hv = (() => { const d = s.ray(uc, vc), l = Math.hypot(d[0], d[1]) || 1; return [d[0] / l, d[1] / l]; })(), rl = Math.hypot(s.right[0], s.right[1]) || 1, cr = [s.right[0] / rl, s.right[1] / rl];
-    if (C.mount === "ceiling"){ p = f3Ceil(s, uc, y0) || f3Floor(s, uc, y1); }
+    if (C.mount === "ceiling"){
+      // il bordo alto della lampada spesso è il paralume, non il soffitto: si usa il fondo, appeso circa 75 cm sotto il soffitto
+      const zB = clamp(s.H - .75, 1.8, s.H - .3), d = s.ray(uc, y1), t = Math.abs(d[2]) > 1e-4 ? (zB - s.hc) / d[2] : -1;
+      p = t > 0 ? [s.c[0] + t * d[0], s.c[1] + t * d[1]] : (f3Ceil(s, uc, y0) || f3Floor(s, uc, y1)); }
     else if (C.mount === "wall"){ const hit = f3WallAt(s, uc, vc); const inN = {back:[0, 1], left:[1, 0], right:[-1, 0]}[hit.wall]; p = [hit.x + inN[0] * .08, hit.y + inN[1] * .08]; rot = f3Ang(inN); z = clamp(hit.z - .1, .5, s.H - .2); }
     else {
       p = f3Floor(s, uc, y1);
@@ -255,7 +258,9 @@ function f3Layout(s, items = F3.items){
       // categoria corretta dalle misure (se l'utente non l'ha scelta): divano/poltrona, tavolo/tavolino, letto
       if (!it.userCat && wid && !cut){
         const sw = {divano:wid < 1.2 ? "poltrona" : null, poltrona:wid > 1.45 ? "divano" : null, tavolo:hTop < .56 ? "tavolino" : null, tavolino:hTop > .66 ? "tavolo" : null, tavolo_tondo:hTop < .56 ? "tavolino_tondo" : null,
-          letto_matrimoniale:wid < 1.25 ? "letto_singolo" : null, letto_singolo:wid > 1.45 ? "letto_matrimoniale" : null}[cat];
+          letto_matrimoniale:wid < 1.25 ? "letto_singolo" : null, letto_singolo:wid > 1.45 ? "letto_matrimoniale" : null}[cat]
+          // piccolo piano basso in una camera: comodino
+          || (hasBed && /^(tavol|madia|cassettiera)/.test(cat) && wid < .7 && hTop < .75 ? "comodino" : null);
         if (sw && F3_CATS[sw]){ cat = sw; C = F3_CATS[sw]; }
       }
       const face = {camera:[-hv[0], -hv[1]], away:hv, left:[-cr[0], -cr[1]], right:cr}[it.facing] || [-hv[0], -hv[1]];
@@ -267,7 +272,9 @@ function f3Layout(s, items = F3.items){
       const dd = C.d * scale / 2 + .02;
       let ag = it.against;
       // arredi da parete vicini a un muro (schienale entro 40 cm): appoggiati e rivolti verso la stanza
-      if ((!ag || ag === "none") && F3_WALLISH.has(cat)){ const gap = {back:p[1] - dd, left:p[0] - dd, right:s.W - p[0] - dd}, k = Object.entries(gap).sort((a, b) => a[1] - b[1])[0]; if (k[1] < .4) ag = k[0]; }
+      if ((!ag || ag === "none") && F3_WALLISH.has(cat)){ const gap = {back:p[1] - dd, left:p[0] - dd, right:s.W - p[0] - dd}, k = Object.entries(gap).sort((a, b) => a[1] - b[1])[0];
+        // il letto visto dai piedi ha la testiera contro la parete di fondo anche se la base è coperta o fuori dalla foto
+        if (/^letto/.test(cat) && (it.facing || "camera") === "camera" && gap.back < 1.5) ag = "back"; else if (k[1] < .4) ag = k[0]; }
       if (ag === "back"){ p[1] = dd; rot = 0; } else if (ag === "left"){ p[0] = dd; rot = 270; } else if (ag === "right"){ p[0] = s.W - dd; rot = 90; }
     }
     if (!p) { out.skipped.push(it); continue; }
