@@ -1,0 +1,24 @@
+{
+ "when": "2026-11-09T14:21:19.099Z",
+ "fovNoto": true,
+ "sum": {
+  "scene": 0,
+  "risolte": 0,
+  "spigoli_err_pct": null,
+  "larghezza_err_m": null,
+  "altezza_foto_err_m": null,
+  "inclinazione_err": null,
+  "aperture_trovate": "0/0",
+  "muro_giusto": "0/0",
+  "pos_lungo_muro_err_m": null,
+  "davanzale_err_m": null,
+  "altezza_ap_err_m": null,
+  "larghezza_ap_err_m": null,
+  "aperture_in_piu": 0,
+  "arredi_trovati": "0/0",
+  "arredi_pos_err_m": null,
+  "arredi_in_piu": 0,
+  "neurons_spesi": 0
+ },
+ "rows": []
+}
