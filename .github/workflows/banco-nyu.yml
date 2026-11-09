@@ -9,7 +9,7 @@ on:
       n: { description: "Quante foto", default: "80" }
   push:
     branches: ["feature/foto-*"]
-    paths: ["scripts/banco-nyu.mjs", "scripts/nyu-estrai.py", "shared/photo.js", "shared/photo-seg.js", "shared/photo-depth.js", "editor-src/077-foto3d.js", ".github/workflows/banco-nyu.yml"]
+    paths: ["scripts/banco-nyu.mjs", "scripts/nyu-estrai.py", "shared/photo.js", "shared/photo-seg.js", "shared/photo-depth.js", "editor-src/077-foto3d.js", "scripts/sonda-moge.mjs", ".github/workflows/banco-nyu.yml"]
 
 permissions:
   contents: read
@@ -42,3 +42,7 @@ jobs:
       - run: npm ci && npx playwright install --with-deps chromium
       - run: node scripts/build-editor.mjs
       - run: node scripts/banco-nyu.mjs ~/nyu-sub ${{ inputs.n || '80' }}
+      - name: Sonda MoGe-2 (profondità metrica nel dispositivo)
+        if: always()
+        continue-on-error: true
+        run: npm i --no-save onnxruntime-node sharp && node scripts/sonda-moge.mjs ~/nyu-sub 6
