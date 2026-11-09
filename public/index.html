@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-vBcOa6duQEeRA4QMMWmI3OOFsCksKdSH/lOHHsq9+MM=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oOKOpAk/+169Fz9av3jM5oQ1284mcrOwxRTs84c5I/s=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4624,10 +4624,10 @@ async function f3Segment(){
 }
 /* ---------- geometria metrica nel dispositivo (MoGe-2 ViT-S, Microsoft, MIT; shared/photo-depth.js) ----------
    Una rete stima per ogni pixel il punto 3D in metri: pavimento, pareti, soffitto, altezza della fotocamera e
-   posizione degli arredi senza misure dell'utente. Modello ONNX (~70 MB in fp16) servito dal sito in parti da 20 MB,
+   posizione degli arredi senza misure dell'utente. Modello ONNX (42 MB, int8) servito dal sito in due parti,
    eseguito con onnxruntime-web (WebGPU se c'è, altrimenti WebAssembly); scaricato una volta e conservato in cache. */
 const F3_ORT = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/";
-const F3_DEPTH = {base:"modelli/moge2-vits-560x420-fp16.onnx", parts:4, w:560, h:420};
+const F3_DEPTH = {base:"modelli/moge2-vits-560x420-q8.onnx", parts:2, w:560, h:420};
 let f3DepthSes = null;
 async function f3DepthModel(){
   const urls = Array.from({length:F3_DEPTH.parts}, (_, i) => `${F3_DEPTH.base}.part${i}`), bufs = [];
