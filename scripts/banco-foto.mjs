@@ -64,8 +64,13 @@ const SHOT = async function (cfg) {
   // verità a terra proiettata: spigoli della parete di fondo e riquadri delle aperture
   const pr = (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(camera); return [+((v.x + 1) / 2).toFixed(4), +((1 - v.y) / 2).toFixed(4)]; };
   const g = cfg.gt, quad = { fl: pr(0, 0, 0), fr: pr(g.W, 0, 0), cl: pr(0, g.H, 0), cr: pr(g.W, g.H, 0) };
+  // visibilità: centro dell'elemento davanti alla fotocamera e dentro la foto
+  const inView = (x, y, z) => { const v = new THREE.Vector3(x, y, z).applyMatrix4(camera.matrixWorldInverse); if (v.z > -.2) return false; const q = pr(x, y, z); return q[0] > .02 && q[0] < .98 && q[1] > .02 && q[1] < .98; };
+  const wp = (o, s) => o.wall === "back" ? [s, 0] : o.wall === "left" ? [0, g.D - s] : [g.W, s];
+  for (const o of g.openings) { const [x, z] = wp(o, o.t); o.visible = inView(x, o.sill + o.h / 2, z); }
+  for (const o of g.objects) o.visible = inView(o.x, o.cat === "lampadario" ? g.H - .4 : .4, o.y);
   renderer.setPixelRatio(old.pr); renderer.setSize(old.size.x, old.size.y, false); camera.aspect = old.aspect; camera.fov = old.fov; camera.updateProjectionMatrix();
-  return { url, quad };
+  return { url, quad, gt: g };
 };
 /* ricostruzione automatica (nella pagina) */
 const RECON = async function ({ photo, W, H, analysis, gt, fovKnown }) {
@@ -73,7 +78,7 @@ const RECON = async function ({ photo, W, H, analysis, gt, fovKnown }) {
   F3.opts = { refKind: "ceil", refVal: gt.H, fov: null, depth: null, ceil: true };
   const t0 = performance.now(); await f3Segment(); const tSeg = performance.now() - t0;
   f3Accept({ analysis: JSON.parse(JSON.stringify(analysis)) }); F3.opts.refVal = gt.H; F3.opts.refKind = "ceil";
-  const s = f3Solve(); if (!s.ok) return { ok: false, err: s.err, quad: F3.quad, seg: F3.seg?.state, tSeg };
+  const s = f3Solve(); if (!s.ok) return { ok: false, err: s.err, quad: F3.quad, segState: F3.seg?.state, quadSource: F3.quadSource, box: F3.seg?.box ? { conf: F3.seg.box.conf, pitch: F3.seg.box.pitch, quad: [F3.seg.box.fl, F3.seg.box.fr, F3.seg.box.cl, F3.seg.box.cr] } : null, tSeg };
   const lay = f3Layout(s);
   return { ok: true, tSeg, box: F3.seg?.box ? { conf: F3.seg.box.conf, resid: F3.seg.box.resid, pitch: F3.seg.box.pitch, hfov: F3.seg.box.hfov } : null, quad: F3.quad, quadSource: F3.quadSource, segState: F3.seg?.state, W: s.W, D: s.D, Hh: s.H, hc: s.hc, pitch: s.p * 180 / Math.PI, cam: s.c, fov: f3Fov(),
     openings: lay.openings.map(o => ({ type: o.type, wall: o.wall, t: o.t, w: o.w, h: o.h, sill: o.sill })),
@@ -91,7 +96,7 @@ function score(gt, r, quadGt) {
   out.bothVisible = vis("fl") && vis("fr"); out.dW = out.bothVisible ? +(r.W - gt.W).toFixed(2) : null; out.dH = +(r.Hh - gt.H).toFixed(2); out.dHc = +(r.hc - gt.camera.h).toFixed(2); out.dPitch = +(r.pitch - gt.camera.pitch).toFixed(1); out.dFov = +(r.fov - gt.camera.hfov).toFixed(0);
   // aperture: stessa tipologia (porta/finestra) e stesso muro; errori di posizione lungo il muro, davanzale, altezza, larghezza
   const used = new Set(); out.ops = [];
-  for (const g of gt.openings) {
+  for (const g of gt.openings.filter(o => o.visible)) {
     let best = null; r.openings.forEach((o, i) => { if (used.has(i) || o.type !== g.type) return; const d = (o.wall === g.wall ? 0 : 5) + Math.abs(o.t - g.t); if (!best || d < best.d) best = { d, i, o }; });
     if (!best) { out.ops.push({ type: g.type, found: false }); continue; }
     used.add(best.i); const o = best.o;
@@ -100,7 +105,7 @@ function score(gt, r, quadGt) {
   out.extraOps = r.openings.length - used.size;
   // arredi: stessa famiglia, il più vicino entro 1,2 m
   const usedO = new Set(); out.objs = [];
-  for (const g of gt.objects) {
+  for (const g of gt.objects.filter(o => o.visible)) {
     let best = null; r.objects.forEach((o, i) => { if (usedO.has(i) || FAM(o.cat) !== FAM(g.cat)) return; const d = Math.hypot(o.x - g.x, o.y - g.y); if (!best || d < best.d) best = { d, i }; });
     if (best && best.d < 1.2) { usedO.add(best.i); out.objs.push({ cat: g.cat, found: true, d: +best.d.toFixed(2) }); } else out.objs.push({ cat: g.cat, found: false });
   }
@@ -123,7 +128,7 @@ let neurons = 0;
 for (let i = 0; i < N; i++) {
   const seed = 100 + i, file = `${DIR}/scena-${seed}.json`;
   const cfg = await page.evaluate(`(() => { try { return (${GEN})(${seed}); } catch (e) { return { err: e.stack }; } })()`); if (cfg.err) { console.log("generatore:", cfg.err); break; }
-  const shot = await page.evaluate(`(${SHOT})(${JSON.stringify(cfg)})`);
+  const shot = await page.evaluate(`(${SHOT})(${JSON.stringify(cfg)})`); cfg.gt = shot.gt;
   if (process.env.SALVA_FOTO) await page.evaluate(([n, d]) => window.__salva(n, d), [`scena-${seed}`, shot.url]);
   const hash = createHash("sha256").update(shot.url).digest("hex").slice(0, 16);
   let fx = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : null;

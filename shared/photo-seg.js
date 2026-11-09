@@ -237,13 +237,16 @@ export function fitRoomBox(m, { hfov = null, aspect = null, evalAt = null } = {}
     }
     return { x: simp[0], s: val[0] };
   };
-  let best = null;
-  for (const p0 of [-6, 2]) for (const y0 of [-14, 0, 14]) for (const db0 of [1.2, 2.4]) {
+  // più partenze (inclinazione, rotazione, distanza); si tengono le migliori e si rifiniscono
+  const cands = [];
+  for (const p0 of [-12, -5, 2, 8]) for (const y0 of [-14, 0, 14]) for (const db0 of [1.2, 2.4]) {
     const x0 = [p0 * rad, y0 * rad, Math.atan(.52 / db0), Math.atan(.48 / db0), Math.atan(.9 / db0), Math.atan(.9 / db0)], st = [4 * rad, 6 * rad, 5 * rad, 5 * rad, 10 * rad, 10 * rad];
     if (fitFov) { x0.push(65); st.push(8); }
-    const r1 = nm(x0, st, 160); if (!best || r1.s > best.s) best = r1;
+    cands.push(nm(x0, st, 140));
   }
-  for (let k = 0; k < 3; k++) best = nm(best.x, best.x.map((v, i) => [1 * rad, 1.5 * rad, 1 * rad, 1 * rad, 2 * rad, 2 * rad, 2][i]));
+  cands.sort((a, b) => b.s - a.s);
+  let best = null;
+  for (const c of cands.slice(0, 3)) { let r1 = c; for (let k = 0; k < 2; k++) r1 = nm(r1.x, r1.x.map((v, i) => [1 * rad, 1.5 * rad, 1 * rad, 1 * rad, 2 * rad, 2 * rad, 2][i])); if (!best || r1.s > best.s) best = r1; }
   const G = geo(best.x), f = toF(G.fov), Hc = 1 - G.hc;
   const pj = P => { const q = projectPt(P, f, r, G.p, G.yaw); return q ? q.map(v => +v.toFixed(4)) : null; };
   const quad = { fl: pj([-G.dl, -G.hc, -G.db]), fr: pj([G.dr, -G.hc, -G.db]), cl: pj([-G.dl, Hc, -G.db]), cr: pj([G.dr, Hc, -G.db]) };
