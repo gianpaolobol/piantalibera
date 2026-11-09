@@ -13,6 +13,7 @@ self.addEventListener("fetch", e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== "GET") return;
   if (url.origin === location.origin && url.pathname.includes("/api/")) return;
+  if (url.origin === location.origin && url.pathname.includes("/modelli/")) return;   // modelli grandi: li conserva l'editor (cache pl-modelli-v1)
   if (req.cache === "no-store") return;   // controllo della nuova versione: sempre dalla rete
   if (req.mode === "navigate") {
     e.respondWith(fetch(req).then(r => put(new Request(url.origin + url.pathname), r)).catch(async () => (await caches.match(url.origin + url.pathname)) || (await caches.match("./")) || Response.error()));

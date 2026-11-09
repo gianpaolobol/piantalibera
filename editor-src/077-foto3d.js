@@ -138,10 +138,10 @@ async function f3Segment(){
 }
 /* ---------- geometria metrica nel dispositivo (MoGe-2 ViT-S, Microsoft, MIT; shared/photo-depth.js) ----------
    Una rete stima per ogni pixel il punto 3D in metri: pavimento, pareti, soffitto, altezza della fotocamera e
-   posizione degli arredi senza misure dell'utente. Modello ONNX (~70 MB in fp16) servito dal sito in parti da 20 MB,
+   posizione degli arredi senza misure dell'utente. Modello ONNX (42 MB, int8) servito dal sito in due parti,
    eseguito con onnxruntime-web (WebGPU se c'è, altrimenti WebAssembly); scaricato una volta e conservato in cache. */
 const F3_ORT = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/";
-const F3_DEPTH = {base:"modelli/moge2-vits-560x420-fp16.onnx", parts:4, w:560, h:420};
+const F3_DEPTH = {base:"modelli/moge2-vits-560x420-q8.onnx", parts:2, w:560, h:420};
 let f3DepthSes = null;
 async function f3DepthModel(){
   const urls = Array.from({length:F3_DEPTH.parts}, (_, i) => `${F3_DEPTH.base}.part${i}`), bufs = [];
