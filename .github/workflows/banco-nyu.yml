@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 120
     env:
       SALTA_SONDA: ${{ github.event_name == 'push' && '1' || '' }}
-      SONDA_RIL: "1"
+      SONDA_RIL: "0"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

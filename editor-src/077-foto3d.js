@@ -104,14 +104,25 @@ async function f3Analyze(){
    SegFormer-b2 ADE20K con transformers.js: modello di ~28 MB scaricato una volta e poi in cache. Parte insieme
    all'analisi del server; se il browser non ce la fa (rete, memoria) si va avanti senza. */
 const F3_TJS = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.min.js";
-let f3SegPipe = null;
+let f3SegPipe = null, f3DetPipe = null;
+/* rilevatore di oggetti nel dispositivo: D-FINE S addestrato su Objects365 (365 classi, molti arredi; Apache 2.0).
+   Separa gli oggetti uno per uno (sedie, mobili), dove la segmentazione unisce; banco NYU: sedie 47/66, mobili 39/101 */
+const F3_DET = {model:"onnx-community/dfine_s_obj365-ONNX", dtype:"fp32", min:.45};
+const F3_O365 = {"Chair":"sedia", "Stool":"sgabello", "Couch":"divano", "Bed":"letto_matrimoniale", "Desk":"scrivania", "Dining Table":"tavolo", "Coffee Table":"tavolino",
+  "Nightstand":"comodino", "Cabinet/shelf":"madia", "Monitor/TV":"mobile_tv", "Toilet":"wc", "Sink":"lavabo", "Bathtub":"vasca", "Refrigerator":"frigorifero", "Oven":"cucina",
+  "Gas stove":"cucina", "Lamp":"lampada_terra", "Potted Plant":"pianta", "Carpet":"tappeto", "Person":"persona"};
 async function f3Segment(){
   if (F3.seg?.state === "run") return F3.seg.promise;
   const job = F3.seg = {state:"run", img:F3.img};
   job.promise = (async () => {
     try {
       if (!f3SegPipe){ const T = await import(F3_TJS); T.env.allowLocalModels = false; f3SegPipe = await T.pipeline("image-segmentation", SEG_MODEL, {dtype:"q8"}); f3SegPipe.RawImage = T.RawImage; }
-      const segs = await f3SegPipe(await f3SegPipe.RawImage.fromURL(F3.thumb || F3.img));
+      const raw = await f3SegPipe.RawImage.fromURL(F3.thumb || F3.img), segs = await f3SegPipe(raw);
+      let dets = [];
+      if (F3_DET.on !== false) try {
+        if (!f3DetPipe){ const T = await import(F3_TJS); f3DetPipe = await T.pipeline("object-detection", F3_DET.model, {dtype:F3_DET.dtype}); }
+        dets = (await f3DetPipe(raw, {threshold:F3_DET.min, percentage:true})).filter(d => F3_O365[d.label]).map(d => ({category:F3_O365[d.label], score:d.score, box:[d.box.xmin, d.box.ymin, d.box.xmax, d.box.ymax].map(v => +Math.min(1, Math.max(0, v)).toFixed(4))}));
+      } catch(e){ console.warn("rilevatore:", e); }
       if (F3.seg !== job) return;
       const m = labelMap(segs, 320);
       // spigoli: modello di stanza adattato alle giunzioni (robusto agli arredi); in subordine la spezzata
@@ -119,7 +130,7 @@ async function f3Segment(){
       let depth = null;
       if (F3_DEPTH.on !== false) try { job.phase = "profondita"; if (F3.open) f3RenderModal(); const D = await f3DepthRun(F3.thumb || F3.img); if (F3.seg !== job) return; depth = {...D, ...f3DepthGeometry(D, m)}; } catch(e){ console.warn("profondità:", e); depth = {err:String(e?.message || e)}; }
       const alts = [depth?.quad || null, box && box.conf >= .35 ? box : null, poly && poly.conf >= .6 ? poly : null].filter(Boolean);
-      Object.assign(job, {state:"ok", m, quad:alts[0] || null, alts, box, depth, labels:segs.map(x => x.label)});
+      Object.assign(job, {state:"ok", m, quad:alts[0] || null, alts, box, depth, dets, labels:segs.map(x => x.label)});
     } catch(e){ console.warn("segmentazione:", e); if (F3.seg === job) Object.assign(job, {state:"err", err:String(e?.message || e)}); }
     if (F3.seg === job && F3.a) { f3ApplySeg(); if (F3.open) f3RenderModal(); }
   })();
@@ -193,6 +204,13 @@ function f3ApplySeg(){
     F3.quadSource = sg.quad === dq ? "misurati dalla profondità: controllali" : sg.quad === sg.box ? "trovati dal modello di stanza: controllali" : "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
     if (sg.quad === dq){ F3.opts.pitch = sg.depth.G.pitch; if (!F3.exifFov && !F3.opts.fov) F3.fitFov = +sg.depth.hfov.toFixed(1); if (!F3.opts.userRef){ F3.opts.refKind = "cam"; F3.opts.refVal = +sg.depth.G.h.toFixed(2); } }
     if (sg.box && sg.quad === sg.box && !F3.exifFov && !F3.opts.fov) F3.fitFov = sg.box.hfov;       // campo visivo stimato dalla prospettiva
+  }
+  // rilevamenti nel dispositivo: un oggetto per riquadro; precisano o aggiungono quelli del modello linguistico
+  const iouB = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), iy = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])), i = ix * iy, u = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i; return u > 0 ? i / u : 0; };
+  for (const d of (sg.dets || []).sort((a, b) => b.score - a.score)){
+    const same = F3.items.find(it => FAMILY(it.category) === FAMILY(d.category) && iouB(it.box, d.box) > .5);
+    if (same){ if (!String(same.source).includes("rilevatore")){ same.box = d.box; same.source = "rilevatore"; } continue; }
+    F3.items.push({category:d.category, label:"", box:d.box, facing:"camera", against:"none", source:"rilevatore", score:d.score});
   }
   const comps = segComponents(sg.m, F3.a.room_type || "");
   F3.items = mergeSegmentation(F3.items, comps, F3.quad).map((it, i) => ({...it, id:i, on: it.on !== false && !it.doubt && !F3_CATS[it.category]?.skip && it.category !== "persona" /* le persone non fanno parte della stanza: in elenco, spente */, label: it.label || F3_CATS[it.category]?.n || ""}));

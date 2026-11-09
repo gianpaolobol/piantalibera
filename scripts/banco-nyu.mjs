@@ -24,7 +24,7 @@ const iou = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a
 
 /* ricostruzione nella pagina: posizioni riportate al riferimento della fotocamera (destra, avanti) */
 const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts }) {
-  const deep = mode === "profondita"; F3_DEPTH.on = deep; if (modello) Object.assign(F3_DEPTH, { base: modello, parts });
+  const deep = mode === "profondita"; F3_DEPTH.on = deep; F3_DET.on = deep; if (modello) Object.assign(F3_DEPTH, { base: modello, parts });
   Object.assign(F3, { img: photo, thumb: photo, w: W, h: H, name: "nyu", exifFov: hfov, seg: null, a: null, quadSource: "", fitFov: null });
   // senza profondità l'utente indica l'altezza della fotocamera; con la profondità nessuna misura
   F3.opts = deep ? { refKind: "ceil", refVal: 2.7, fov: null, depth: null, ceil: true } : { refKind: "cam", refVal: camH, fov: null, depth: null, ceil: true };
