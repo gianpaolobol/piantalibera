@@ -29,3 +29,27 @@ Le stanze sintetiche sono rese con materiali piatti, più difficili da riconosce
 CPU varia un poco da un giro all'altro (±0,1 m sulle aperture). Restano limiti: davanzale nascosto da un letto o da un
 mobile (stimato a 90 cm), spigolo fuori dalla foto senza pareti laterali (la larghezza è un minimo), foto frontali senza
 soffitto né pareti laterali (spigoli da posizionare a mano), arredi coperti da altri.
+
+## Foto vere con misure vere (NYU Depth V2) — dal 10/11/2026
+
+Workflow `.github/workflows/banco-nyu.yml`: 80 foto di interni veri (case, uffici, cucine, camere, aule) del dataset
+NYU Depth V2, con la profondità misurata da un Kinect e le etichette di ogni oggetto (`scripts/nyu-estrai.py`: piano
+del pavimento, altezza e inclinazione della fotocamera, posizione in pianta, quote e larghezza di porte, finestre e
+arredi). Gratuito e senza limiti: usa solo i modelli nel dispositivo, nessuna chiamata a Workers AI. Il dataset resta
+nella cache di GitHub Actions (licenza per la ricerca), non nel repository. `scripts/banco-nyu.mjs` ricostruisce con il
+codice vero dell'editor e misura; sonde: `scripts/sonda-moge.py` (MoGe-2 in PyTorch), `scripts/sonda-rilevatore.mjs`.
+
+| Su 80 foto vere | Prima (segmentazione + modello di stanza, **con** l'altezza della fotocamera data) | Ora (profondità + rilevatore, **nessuna misura**) |
+|---|---|---|
+| Inclinazione della fotocamera | 13,2° | 2,2° |
+| Altezza della fotocamera | (data) | ±0,12 m |
+| Oggetti riconosciuti (riquadro, famiglia giusta) | 234 / 401 | 253 / 401 |
+| Oggetti collocati entro 1,5 m | 76 / 386 | 253 / 401 |
+| Errore in pianta (mediana) | 0,96 m (27 %) | 0,41 m (17 %) |
+| Larghezza delle aperture | 1,56 m | 0,26 m |
+| Davanzale delle finestre | 0,73 m | 0,11 m |
+| Sommità delle aperture | 1,02 m | 0,10 m |
+
+Per famiglia (ora): sedie 52/69 riconosciute, errore 0,35 m; letti 18/21, 0,41 m; mobili 72/120, 0,47 m; finestre
+27/34, 0,49 m; comodini 6/6; porte 9/27 (le porte aperte restano il punto debole). MoGe-2 da solo, con i contorni veri
+degli oggetti, colloca a 0,22 m: il margine che resta è soprattutto nel riconoscimento e nei contorni.

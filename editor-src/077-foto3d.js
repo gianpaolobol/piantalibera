@@ -349,7 +349,7 @@ function f3Layout(s, items = F3.items){
       // con la profondità: fronte dell'oggetto dai suoi punti 3D; altrimenti appoggio della base sul pavimento
       const o3 = f3Obj3d(s, it, cat); o3v = o3?.center;
       // piani orizzontali visti dall'alto (letti, tavoli): la mediana dei punti visti è già il centro
-      const topSeen = o3 && /^(letto|tavol|scrivania|isola|comodino)/.test(cat);
+      const topSeen = o3 && /^(letto|tavol|scrivania|isola)/.test(cat);
       p = o3 ? (topSeen ? o3.center : o3.front) : f3Floor(s, uc, y1);
       // base tagliata dal bordo della foto (oggetto vicino alla fotocamera): si usa il bordo alto del piano, a quota nota
       const topH = F3_TOP[cat]; let cut = false;
