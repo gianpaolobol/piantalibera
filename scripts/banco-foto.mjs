@@ -99,6 +99,28 @@ const RECON = async function ({ photo, W, H, analysis, gt, fovKnown }) {
     objects: lay.objects.map(o => ({ cat: o.it.category, x: o.x, y: o.y })), items: F3.items.map(i => ({ cat: i.category, on: i.on, src: i.source, box: i.box })) };
 };
 
+/* ---------- foto vere: ricostruzione completa e sovrapposizione del modello 3D alla foto (nella pagina) ---------- */
+const BUILD = async function ({ photo, W, H, analysis }) {
+  P = { name: "Foto", version: SCHEMA_VERSION, materials: {}, sky: { kind: "asset", id: "giorno" }, sun: { az: 200, el: 35 }, levels: [{ id: "L0", name: "Piano terra", elev: 0, height: 2.7, slab: .25, roof: { type: "none", pitch: 0, overhang: 0, mat: "tegole" }, underlay: null }], walls: [], openings: [], rooms: [], objects: [], dims: [], cameras: [] };
+  S.level = "L0"; setSel([]); S.show3d = "below"; refresh();
+  Object.assign(F3, { img: photo, thumb: photo, w: W, h: H, name: "foto", exifFov: null, seg: null, a: null, quadSource: "", fitFov: null, open: false });
+  F3.opts = { refKind: "ceil", refVal: 2.7, fov: null, depth: null, ceil: true };
+  await f3Segment(); f3Accept({ analysis: JSON.parse(JSON.stringify(analysis)) });
+  const s = f3Solve(); if (!s.ok) return { ok: false, err: s.err, quad: F3.quad };
+  f3Build(); for (const o of P.objects) if (LIBMAP[o.ref]?.load && !TPL[o.ref]) await loadTpl(o.ref);
+  rebuild3D(); await new Promise(r => setTimeout(r, 900));
+  const cam = P.cameras[P.cameras.length - 1], cw = 640, ch = Math.round(640 * H / W);
+  const old = { pr: renderer.getPixelRatio(), size: renderer.getSize(new THREE.Vector2()), fov: camera.fov, aspect: camera.aspect };
+  renderer.setPixelRatio(1); renderer.setSize(cw, ch, false); camera.aspect = cw / ch; camera.fov = cam.fov; camera.position.fromArray(cam.pos); camera.up.set(0, 1, 0); camera.lookAt(new THREE.Vector3().fromArray(cam.target)); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+  drawFrame(false); const model = c3d.toDataURL("image/png");
+  renderer.setPixelRatio(old.pr); renderer.setSize(old.size.x, old.size.y, false); camera.aspect = old.aspect; camera.fov = old.fov; camera.updateProjectionMatrix();
+  const img = await new Promise(ok => { const a = new Image(), b = new Image(); let n = 0; const done = () => { if (++n < 2) return; const c = document.createElement("canvas"); c.width = cw * 2 + 8; c.height = ch; const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, ch);
+      g.drawImage(a, 0, 0, cw, ch); g.globalAlpha = .45; g.drawImage(b, 0, 0, cw, ch); g.globalAlpha = 1; g.drawImage(b, cw + 8, 0, cw, ch);
+      g.strokeStyle = "#18f"; g.lineWidth = 2; g.beginPath(); ["fl", "fr", "cr", "cl"].forEach((k, i) => { const x = F3.quad[k][0] * cw, y = F3.quad[k][1] * ch; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); g.stroke();
+      ok(c.toDataURL("image/jpeg", .72)); }; a.onload = b.onload = done; a.src = photo; b.src = model; });
+  return { ok: true, img, quadSource: F3.quadSource, fov: f3Fov(), W: s.W, D: s.D, hc: s.hc, pitch: s.p * 180 / Math.PI, report: F3.report?.title, items: F3.items.map(i => i.category + (i.on ? "" : "?") + "/" + i.source) };
+};
+
 /* ---------- misura ---------- */
 const FAM = c => ({ divano: "sedute", divano_angolare: "sedute", poltrona: "sedute", pouf: "sedute", sedia: "sedie", sedia_ufficio: "sedie", sgabello: "sedie", letto_matrimoniale: "letto", letto_singolo: "letto", tavolo: "tavolo", tavolo_tondo: "tavolo", scrivania: "tavolo", tavolino: "tavolino", tavolino_tondo: "tavolino", madia: "contenitori", cassettiera: "contenitori", armadio: "contenitori", libreria: "contenitori", comodino: "comodino", lampadario: "lampada", plafoniera: "lampada", pianta: "pianta" }[c] || c);
 function score(gt, r, quadGt) {
@@ -139,6 +161,27 @@ await page.goto("http://127.0.0.1:8798/?nosw"); await page.waitForFunction(() =>
 await page.evaluate(() => { $('#viewSeg [data-v="3d"]')?.click(); });
 const rows = [];
 let neurons = 0;
+if (process.env.FOTOVERE === "1") {
+  const UA = { "User-Agent": "PiantaLiberaDiagnosi/1.0 (https://github.com/gianpaolobol/piantalibera)" }, list = [];
+  for (const c of ["Category:Living_rooms_in_the_United_States", "Category:Bedrooms_in_the_United_States", "Category:Kitchens_in_the_United_States", "Category:Dining_rooms_in_the_United_States"]) {
+    const j = await (await fetch(`https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=categorymembers&gcmtitle=${encodeURIComponent(c)}&gcmtype=file&gcmlimit=60&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=1024`, { headers: UA })).json();
+    const fs = Object.values(j.query?.pages || {}).filter(p => p.imageinfo?.[0]?.mime === "image/jpeg" && p.imageinfo[0].width > p.imageinfo[0].height * 1.2).sort((a, b) => a.title.localeCompare(b.title));
+    for (const k of [2, 7]) if (fs[k]) list.push(fs[k]);
+  }
+  mkdirSync(`${DIR}/vere`, { recursive: true });
+  for (const f of list.slice(0, N)) {
+    const buf = Buffer.from(await (await fetch(f.imageinfo[0].thumburl, { headers: UA })).arrayBuffer()), photo = "data:image/jpeg;base64," + buf.toString("base64");
+    const W = f.imageinfo[0].thumbwidth, H = f.imageinfo[0].thumbheight, key = createHash("sha256").update(f.title).digest("hex").slice(0, 12), file = `${DIR}/vere/${key}.json`;
+    let fx = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : null;
+    if (!fx) { if (!TOK) continue; const an = await analyze(photo, W, H); neurons += an.neurons || 0; fx = { title: f.title, page: f.imageinfo[0].descriptionurl, raw: an.raw, det: an.det }; writeFileSync(file, JSON.stringify(fx)); }
+    let analysis; try { analysis = normalizeAnalysis(fx.raw, fx.det, W, H); } catch { continue; }
+    const r = await page.evaluate(`(${BUILD})(${JSON.stringify({ photo, W, H, analysis })})`);
+    console.log(`\n## ${f.title} ${f.imageinfo[0].descriptionurl}\n${JSON.stringify({ ...r, img: undefined })}`);
+    if (r.img) console.log(`===IMG=== vera_${key}\n${r.img.split(",")[1]}\n===FINE===`);
+  }
+  console.log(`\nNeurons spesi: ${Math.round(neurons)}`);
+  await browser.close(); srv.kill(); process.exit(0);
+}
 for (let i = 0; i < N; i++) {
   const seed = 100 + i, file = `${DIR}/scena-${seed}${REALE ? "-reale" : ""}.json`;
   const cfg = await page.evaluate(`(() => { try { return (${GEN})(${seed}); } catch (e) { return { err: e.stack }; } })()`); if (cfg.err) { console.log("generatore:", cfg.err); break; }

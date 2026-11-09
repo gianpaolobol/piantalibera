@@ -109,8 +109,8 @@ export function wallCorners(m) {
 export function segComponents(m, roomType = "") {
   if (!m) return [];
   const { w, h, lab, names } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && /cucin|kitchen/i.test(roomType)) c = "cucina"; return c && c[0] !== "@" ? c : null; });
-  // «fuori»: classi esterne e quelle che non sono né struttura né arredo (dipinti, schermi…) visti nel vano
-  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n) || (!SEG_CAT[n] && !NOT_OPENING.has(n)));
+  // «fuori»: solo classi di esterni (cielo, verde, edifici…), viste attraverso il vetro
+  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n));
   for (let i = 0; i < w * h; i++) {
     const c = lab[i] === 255 ? null : catOf[lab[i]]; if (!c || seen[i]) continue;
     let qh = 0, qt = 0, n = 0, x0 = w, y0 = h, x1 = 0, y1 = 0; Q[qt++] = i; seen[i] = 1;
@@ -147,19 +147,28 @@ const near = (a, b) => Math.max(iou(a, b), inside(a, b) || inside(b, a) ? .2 : 0
 
 /** Unisce elementi dell'analisi e componenti della segmentazione. items: quelli di normalizeAnalysis. */
 export function mergeSegmentation(items, comps, quad = null) {
-  const out = items.map(it => ({ ...it })), used = new Set();
+  const out = items.map(it => ({ ...it })), used = new Set(), left = [];
+  const take = (it, c) => { if (!(String(it.source).startsWith("rilevatore") && iou(it.box, c.box) > .5)) it.box = c.box;   // i riquadri del rilevatore (istanze) restano se coincidono già
+    it.source = String(it.source).startsWith("rilevatore") ? "rilevatore+segmentazione" : "segmentazione"; it.seg = true; };
+  // 1) stessa famiglia (porta↔porta, sedia↔sedia…)
   for (const c of comps) {
-    const fam = FAMILY(c.category);
-    let best = 0, bi = -1;
+    const fam = FAMILY(c.category); let best = 0, bi = -1;
     out.forEach((it, i) => { if (used.has(i) || FAMILY(it.category) !== fam) return; const v = near(it.box, c.box); if (v > best) { best = v; bi = i; } });
-    if (bi >= 0 && best >= .08) {
-      used.add(bi); const it = out[bi];
-      // i riquadri del rilevatore (istanze) restano se coincidono già; altrimenti vince la maschera
-      if (!(it.source === "rilevatore" && iou(it.box, c.box) > .5)) it.box = c.box;
-      it.source = it.source === "rilevatore" ? "rilevatore+segmentazione" : "segmentazione"; it.seg = true;
-      continue;
-    }
-    // non trovato dal modello: si aggiunge se è un'apertura o un arredo abbastanza grande
+    if (bi >= 0 && best >= .08) { used.add(bi); take(out[bi], c); } else left.push(c);
+  }
+  // 2) famiglie che la segmentazione confonde (un letto visto come tavolo, un divano come poltrona…): se il riquadro
+  //    coincide bene vale la categoria del modello linguistico con il contorno della maschera
+  const CONF = [["letto", "tavolo", "sedute", "contenitori"], ["sedute", "sedie"], ["contenitori", "cucina", "tavolo", "tavolino"], ["tavolo", "tavolino"], ["lampada", "pianta"]];
+  const confusable = (a, b) => CONF.some(g => g.includes(a) && g.includes(b));
+  const rest = [];
+  for (const c of left) {
+    const fam = FAMILY(c.category); let best = 0, bi = -1;
+    out.forEach((it, i) => { if (used.has(i) || FAMILY(it.category) === "apertura" || fam === "apertura" || !confusable(FAMILY(it.category), fam)) return; const v = iou(it.box, c.box); if (v > best) { best = v; bi = i; } });
+    if (bi >= 0 && best >= .3) { used.add(bi); take(out[bi], c); } else rest.push(c);
+  }
+  // 3) non trovati dal modello: si aggiungono se aperture o arredi abbastanza grandi
+  for (const c of rest) {
+    const fam = FAMILY(c.category);
     if (fam === "apertura" || c.area > .006) {
       let cat = c.category; const C = (out.find(o => o.category === cat) || {});
       if (cat === "finestra" && c.onFloor) cat = "portafinestra";   // vetrata fino a terra (pavimento subito sotto)

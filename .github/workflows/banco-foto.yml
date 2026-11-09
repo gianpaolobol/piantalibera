@@ -35,6 +35,9 @@ jobs:
       - run: npm ci && npx playwright install --with-deps chromium
       - run: node scripts/build-editor.mjs
       - run: node scripts/banco-foto.mjs ${{ inputs.n || '12' }}
+      - name: Foto vere (modello 3D sovrapposto)
+        if: always()
+        run: FOTOVERE=1 node scripts/banco-foto.mjs 8
       - name: Versioni fotorealistiche
         if: always() && (github.event_name == 'push' || inputs.reale)
         run: REALE=1 node scripts/banco-foto.mjs ${{ inputs.n || '12' }}
