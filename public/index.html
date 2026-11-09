@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-vlt6PFMln0lDc/jNLPQt+i/8JKB1bgRt5VFoNQwdUPo=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-D5X7CmOU1+6jkLeaSPBg1aiF1riRgGUbr1u4RT7KPpg=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4365,6 +4365,7 @@ const F3_CATS = {
   lampadario:{n:"Lampadario", ref:"sospensione", w:.44, d:.44, mount:"ceiling", light:true}, plafoniera:{n:"Plafoniera", ref:"plafoniera", w:.4, d:.4, mount:"ceiling", light:true}, faretto:{n:"Faretto", ref:"faretto", w:.1, d:.1, mount:"ceiling", light:true},
   applique:{n:"Applique", ref:"applique", w:.2, d:.15, mount:"wall", light:true}, scala:{n:"Scala", ref:"scala_dritta", w:1, d:3}, altro:{n:"Altro (non creato)", skip:true},
 };
+const F3_WALLISH = new Set(["divano", "divano_angolare", "letto_matrimoniale", "letto_singolo", "armadio", "libreria", "madia", "cassettiera", "mobile_tv", "cucina", "comodino", "scrivania", "frigorifero", "lavabo", "wc", "bidet", "vasca"]);
 const F3_FLOOR = {parquet:"parquet", laminato:"parquet", piastrelle:"gres", resina:"cemento", cemento:"cemento", marmo:"marmo", pietra:"pietra", cotto:"gres", moquette:"tappeto", altro:"parquet"};
 const F3_REF = [["ceil", "Altezza del soffitto"], ["width", "Larghezza della parete di fondo"], ["cam", "Altezza della fotocamera da terra"]];
 const F3 = {img:null, thumb:null, w:0, h:0, name:"", exifFov:null, a:null, quad:null, items:[], sel:-1, busy:false, err:"", cfg:null, cfgErr:"", ts:{widget:null, token:""},
@@ -4563,7 +4564,7 @@ const f3Ang = f => { let t = Math.atan2(-f[0], f[1]) * 180 / Math.PI; return ((t
 function f3Layout(s, items = F3.items){
   const out = {openings:[], objects:[], skipped:[]};
   for (const it of items){
-    if (!it.on) continue; const C = F3_CATS[it.category] || F3_CATS.altro; if (C.skip){ out.skipped.push(it); continue; }
+    if (!it.on) continue; let C = F3_CATS[it.category] || F3_CATS.altro, cat = it.category; if (C.skip){ out.skipped.push(it); continue; }
     const [x0, y0, x1, y1] = it.box, uc = (x0 + x1) / 2, vc = (y0 + y1) / 2;
     if (C.kind === "door" || C.kind === "window"){
       const hit = f3WallAt(s, uc, vc), L = f3OnWall(s, hit.wall, x0, vc), R = f3OnWall(s, hit.wall, x1, vc), T = f3OnWall(s, hit.wall, uc, y0), Bt = f3OnWall(s, hit.wall, uc, y1);
@@ -4580,6 +4581,15 @@ function f3Layout(s, items = F3.items){
     else if (C.mount === "wall"){ const hit = f3WallAt(s, uc, vc); const inN = {back:[0, 1], left:[1, 0], right:[-1, 0]}[hit.wall]; p = [hit.x + inN[0] * .08, hit.y + inN[1] * .08]; rot = f3Ang(inN); z = clamp(hit.z - .1, .5, s.H - .2); }
     else {
       p = f3Floor(s, uc, y1); if (!p){ out.skipped.push(it); continue; }
+      // misure reali dalla foto: larghezza alla base e altezza della sommità alla distanza dell'oggetto
+      const dist = Math.hypot(p[0] - s.c[0], p[1] - s.c[1]), rt = s.ray(uc, y0), hTop = s.hc + dist / (Math.hypot(rt[0], rt[1]) || 1) * rt[2];
+      const pa0 = f3Floor(s, x0, y1), pb0 = f3Floor(s, x1, y1), wid = pa0 && pb0 ? Math.hypot(pb0[0] - pa0[0], pb0[1] - pa0[1]) : null;
+      // categoria corretta dalle misure (se l'utente non l'ha scelta): divano/poltrona, tavolo/tavolino, letto
+      if (!it.userCat && wid){
+        const sw = {divano:wid < 1.2 ? "poltrona" : null, poltrona:wid > 1.45 ? "divano" : null, tavolo:hTop < .56 ? "tavolino" : null, tavolino:hTop > .66 ? "tavolo" : null, tavolo_tondo:hTop < .56 ? "tavolino_tondo" : null,
+          letto_matrimoniale:wid < 1.25 ? "letto_singolo" : null, letto_singolo:wid > 1.45 ? "letto_matrimoniale" : null}[cat];
+        if (sw && F3_CATS[sw]){ cat = sw; C = F3_CATS[sw]; }
+      }
       const face = {camera:[-hv[0], -hv[1]], away:hv, left:[-cr[0], -cr[1]], right:cr}[it.facing] || [-hv[0], -hv[1]];
       const pa = f3Floor(s, x0, y1), pb = f3Floor(s, x1, y1), span = pa && pb ? Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) : null;
       const along = Math.abs(face[0] * hv[0] + face[1] * hv[1]) > .7, vis = along ? C.w : C.d, deep = along ? C.d : C.w;
@@ -4587,12 +4597,15 @@ function f3Layout(s, items = F3.items){
       p = [p[0] + hv[0] * deep * scale / 2, p[1] + hv[1] * deep * scale / 2];
       rot = Math.round(f3Ang(face) / 15) * 15 % 360;
       const dd = C.d * scale / 2 + .02;
-      if (it.against === "back"){ p[1] = dd; rot = 0; } else if (it.against === "left"){ p[0] = dd; rot = 270; } else if (it.against === "right"){ p[0] = s.W - dd; rot = 90; }
+      let ag = it.against;
+      // arredi da parete vicini a un muro (schienale entro 40 cm): appoggiati e rivolti verso la stanza
+      if ((!ag || ag === "none") && F3_WALLISH.has(cat)){ const gap = {back:p[1] - dd, left:p[0] - dd, right:s.W - p[0] - dd}, k = Object.entries(gap).sort((a, b) => a[1] - b[1])[0]; if (k[1] < .4) ag = k[0]; }
+      if (ag === "back"){ p[1] = dd; rot = 0; } else if (ag === "left"){ p[0] = dd; rot = 270; } else if (ag === "right"){ p[0] = s.W - dd; rot = 90; }
     }
     if (!p) { out.skipped.push(it); continue; }
     p = [clamp(p[0], .1, s.W - .1), clamp(p[1], .1, s.D - .1)];
     const ref = C.ref === "sagoma_uomo" && /donna|ragazza|bambina|signora|woman|girl/i.test(it.label || "") ? "sagoma_donna" : C.ref;
-    out.objects.push({it, ref, x:p[0], y:p[1], rot, scale:+scale.toFixed(2), z, light:C.light});
+    out.objects.push({it, cat, ref, x:p[0], y:p[1], rot, scale:+scale.toFixed(2), z, light:C.light});
   }
   // aperture sovrapposte sullo stesso muro: la più affidabile resta, l'altra si sposta nello spazio libero
   // più vicino o, se non c'è posto, non viene creata (accade con due riconoscimenti dello stesso vano)
@@ -4752,7 +4765,7 @@ function f3DrawPlan(){
   g.lineWidth = 4; g.strokeStyle = acc;
   for (const o of lay.openings){ const a = o.wall === "back" ? [o.t - o.w / 2, 0] : o.wall === "left" ? [0, s.D - o.t + o.w / 2] : [s.W, o.t - o.w / 2], b = o.wall === "back" ? [o.t + o.w / 2, 0] : o.wall === "left" ? [0, s.D - o.t - o.w / 2] : [s.W, o.t + o.w / 2]; g.beginPath(); g.moveTo(...T(a)); g.lineTo(...T(b)); g.stroke(); }
   g.fillStyle = acc; g.font = "11px sans-serif";
-  for (const o of lay.objects){ const C = F3_CATS[o.it.category], r = (o.rot) * Math.PI / 180, w = (C.w || .5) * o.scale, d = (C.d || .5) * o.scale, q = T([o.x, o.y]);
+  for (const o of lay.objects){ const C = F3_CATS[o.cat] || F3_CATS[o.it.category], r = (o.rot) * Math.PI / 180, w = (C.w || .5) * o.scale, d = (C.d || .5) * o.scale, q = T([o.x, o.y]);
     g.save(); g.translate(...q); g.rotate(r); g.globalAlpha = .25; g.fillRect(-w * k / 2, -d * k / 2, w * k, d * k); g.globalAlpha = 1; g.strokeStyle = acc; g.lineWidth = 1.5; g.strokeRect(-w * k / 2, -d * k / 2, w * k, d * k); g.restore();
     g.fillStyle = ink; g.fillText(String(o.it.id + 1), q[0] - 3, q[1] + 4); g.fillStyle = acc; }
   const cq = T(s.c), fv = f3Rad(f3Fov()) / 2, look = s.ray(.5, .5), ang = Math.atan2(look[1], look[0]);
@@ -4808,7 +4821,7 @@ function f3Change(e){ const t = e.target, rr = () => F3.open ? f3RenderModal() :
   if (t.id === "f3Fov"){ const v = num(t.value); F3.opts.fov = v >= 20 && v <= 130 ? v : null; f3Refresh(); return; }
   if (t.id === "f3Depth"){ const v = num(t.value); F3.opts.depth = v > 0 ? clamp(v, 1, 40) : null; f3Refresh(); return; }
   if (t.dataset.f3on != null){ F3.items[+t.dataset.f3on].on = t.checked; f3Refresh(); return; }
-  if (t.dataset.f3cat != null){ const it = F3.items[+t.dataset.f3cat]; it.category = t.value; it.on = !F3_CATS[t.value]?.skip; rr(); return; }
+  if (t.dataset.f3cat != null){ const it = F3.items[+t.dataset.f3cat]; it.category = t.value; it.userCat = true; it.on = !F3_CATS[t.value]?.skip; rr(); return; }
   if (t.id === "f3AddCat" && t.value){ const id = F3.items.length; F3.items.push({id, category:t.value, label:F3_CATS[t.value].n, box:[.42, .45, .58, .7], w:F3_CATS[t.value].w, d:F3_CATS[t.value].d, facing:"camera", against:"none", source:"aggiunto", on:true}); F3.sel = id; rr(); return; }
 }
 PI.addEventListener("click", f3Click); PI.addEventListener("change", f3Change);

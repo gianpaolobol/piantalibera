@@ -96,7 +96,7 @@ const RECON = async function ({ photo, W, H, analysis, gt, fovKnown }) {
   const lay = f3Layout(s);
   return { ok: true, tSeg, box: F3.seg?.box ? { conf: F3.seg.box.conf, resid: F3.seg.box.resid, pitch: F3.seg.box.pitch, hfov: F3.seg.box.hfov } : null, quad: F3.quad, quadSource: F3.quadSource, segState: F3.seg?.state, W: s.W, D: s.D, Hh: s.H, hc: s.hc, pitch: s.p * 180 / Math.PI, cam: s.c, fov: f3Fov(),
     openings: lay.openings.map(o => ({ type: o.type, wall: o.wall, t: o.t, w: o.w, h: o.h, sill: o.sill })),
-    objects: lay.objects.map(o => ({ cat: o.it.category, x: o.x, y: o.y })), items: F3.items.map(i => ({ cat: i.category, on: i.on, src: i.source, box: i.box })) };
+    objects: lay.objects.map(o => ({ cat: o.cat || o.it.category, x: o.x, y: o.y })), items: F3.items.map(i => ({ cat: i.category, on: i.on, src: i.source, box: i.box })) };
 };
 
 /* ---------- foto vere: ricostruzione completa e sovrapposizione del modello 3D alla foto (nella pagina) ---------- */
