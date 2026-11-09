@@ -38,7 +38,7 @@ const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts })
   const opC = o => o.wall === "back" ? [o.t, 0] : o.wall === "left" ? [0, s.D - o.t] : [s.W, o.t];
   return { ok: true, ...dinfo, hc: s.hc, segState: F3.seg?.state, quadSource: F3.quadSource, pitch: +(s.p * 180 / Math.PI).toFixed(2), W: s.W, D: s.D, Hh: s.H, items,
     openings: lay.openings.map(o => ({ cat: o.it.category, ...rel(...opC(o)), w: o.w, zmin: o.sill, zmax: +(o.sill + o.h).toFixed(2), box: o.it.box })),
-    objects: lay.objects.map(o => ({ cat: o.cat || o.it.category, ...rel(o.x, o.y), box: o.it.box })) };
+    objects: lay.objects.map(o => ({ cat: o.cat || o.it.category, ...rel(o.x, o.y), vis: o.vis ? rel(...o.vis) : null, box: o.it.box })) };
 };
 
 /* ---------- misura ---------- */
@@ -59,7 +59,8 @@ function score(gt, r) {
     let best = null; all.forEach((o, i) => { if (usedP.has(i) || FAM(o.cat) !== FAM(g.cat)) return; const d = Math.hypot(o.r - g.r, o.f - g.f); if (!best || d < best.d) best = { d, i, o }; });
     if (!best || best.d > 1.5) { out.pos.push({ fam: FAM(g.cat), found: false }); continue; }
     usedP.add(best.i); const o = best.o, dist = Math.hypot(g.r, g.f);
-    out.pos.push({ fam: FAM(g.cat), found: true, d: +best.d.toFixed(2), rel: +(best.d / dist).toFixed(3), dr: +(o.r - g.r).toFixed(2), df: +(o.f - g.f).toFixed(2) });
+    const dv = o.vis ? Math.hypot(o.vis.r - g.r, o.vis.f - g.f) : best.d;
+    out.pos.push({ fam: FAM(g.cat), found: true, dv: +dv.toFixed(2), d: +best.d.toFixed(2), rel: +(best.d / dist).toFixed(3), dr: +(o.r - g.r).toFixed(2), df: +(o.f - g.f).toFixed(2) });
     if (/porta|finestra/.test(FAM(g.cat)) && !g.cut) out.ops.push({ fam: FAM(g.cat), dw: +(o.w - g.w).toFixed(2), dzmin: FAM(g.cat) === "finestra" ? +(o.zmin - g.zmin).toFixed(2) : null, dzmax: +(o.zmax - g.zmax).toFixed(2) });
   }
   return out;
@@ -97,7 +98,7 @@ const perFam = Object.fromEntries(fams.map(f => { const a = rec.filter(x => x.fa
 const found = pos.filter(x => x.found);
 const sum = { modo: MODE, foto: rows.length, risolte: rows.filter(r => r.ok).length, inclinazione_err: mean(abs(rows.filter(r => r.ok).map(r => r.dPitch))), altezza_fotocamera_err_m: mean(abs(rows.filter(r => r.ok).map(r => r.dHc))),
   riconoscimento: `${rec.filter(x => x.hit).length}/${rec.length}`, falsi_positivi: rows.reduce((s, r) => s + r.falsi, 0),
-  collocati: `${found.length}/${pos.length}`, errore_pianta_mediana_m: med(found.map(x => x.d)), errore_pianta_relativo_mediana: med(found.map(x => x.rel)),
+  collocati: `${found.length}/${pos.length}`, errore_pianta_mediana_m: med(found.map(x => x.d)), errore_pianta_relativo_mediana: med(found.map(x => x.rel)), errore_parte_visibile_mediana_m: med(found.map(x => x.dv)),
   errore_laterale_m: mean(abs(found.map(x => x.dr))), errore_profondita_m: mean(abs(found.map(x => x.df))),
   aperture_larghezza_m: mean(abs(ops.map(x => x.dw))), finestre_davanzale_m: mean(abs(ops.filter(x => x.dzmin != null).map(x => x.dzmin))), aperture_sommita_m: mean(abs(ops.map(x => x.dzmax))),
   tempo_medio_s: mean(rows.map(r => r.ms / 1000)), famiglie: perFam };

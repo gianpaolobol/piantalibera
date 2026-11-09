@@ -311,7 +311,7 @@ function f3Layout(s, items = F3.items){
       out.openings.push({it, wall:hit.wall, t, w, h:+(top - sill).toFixed(2), sill:+sill.toFixed(2), type:C.kind, style:C.style});
       continue;
     }
-    let p, rot = 0, scale = 1, z = null;
+    let p, rot = 0, scale = 1, z = null, o3v = null;
     const hv = (() => { const d = s.ray(uc, vc), l = Math.hypot(d[0], d[1]) || 1; return [d[0] / l, d[1] / l]; })(), rl = Math.hypot(s.right[0], s.right[1]) || 1, cr = [s.right[0] / rl, s.right[1] / rl];
     if (C.mount === "ceiling"){
       // il bordo alto della lampada spesso è il paralume, non il soffitto: si usa il fondo, appeso circa 75 cm sotto il soffitto
@@ -328,7 +328,7 @@ function f3Layout(s, items = F3.items){
     else if (C.mount === "wall"){ const hit = f3WallAt(s, uc, vc); const inN = {back:[0, 1], left:[1, 0], right:[-1, 0]}[hit.wall]; p = [hit.x + inN[0] * .08, hit.y + inN[1] * .08]; rot = f3Ang(inN); z = clamp(hit.z - .1, .5, s.H - .2); }
     else {
       // con la profondità: fronte dell'oggetto dai suoi punti 3D; altrimenti appoggio della base sul pavimento
-      const o3 = f3Obj3d(s, it, cat);
+      const o3 = f3Obj3d(s, it, cat); o3v = o3?.center;
       p = o3 ? o3.front : f3Floor(s, uc, y1);
       // base tagliata dal bordo della foto (oggetto vicino alla fotocamera): si usa il bordo alto del piano, a quota nota
       const topH = F3_TOP[cat]; let cut = false;
@@ -365,7 +365,7 @@ function f3Layout(s, items = F3.items){
     if (!p) { out.skipped.push(it); continue; }
     p = [clamp(p[0], .1, s.W - .1), clamp(p[1], .1, s.D - .1)];
     const ref = C.ref === "sagoma_uomo" && /donna|ragazza|bambina|signora|woman|girl/i.test(it.label || "") ? "sagoma_donna" : C.ref;
-    out.objects.push({it, cat, ref, x:p[0], y:p[1], rot, scale:+scale.toFixed(2), z, light:C.light});
+    out.objects.push({it, cat, ref, x:p[0], y:p[1], rot, scale:+scale.toFixed(2), z, light:C.light, vis:o3v || null});
   }
   // stesso arredo grande riconosciuto due volte (letto spezzato in due riquadri): in pianta i centri quasi coincidono
   const famOf = c => c.replace(/_.*/, ""), BIG3 = /^(letto|divano|tavolo|armadio|madia|libreria|cucina)/;
