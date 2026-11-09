@@ -1,0 +1,44 @@
+# Banco su foto vere con misure vere (NYU Depth V2, profondità Kinect ed etichette): gratuito e illimitato, perché
+# usa solo i modelli che girano nel dispositivo (nessuna chiamata a Workers AI). Il sottoinsieme estratto resta
+# nella cache di GitHub Actions: non entra nel repository.
+name: Banco foto vere (NYU)
+
+on:
+  workflow_dispatch:
+    inputs:
+      n: { description: "Quante foto", default: "80" }
+  push:
+    branches: ["feature/foto-*"]
+    paths: ["scripts/banco-nyu.mjs", "scripts/nyu-estrai.py", "shared/photo.js", "shared/photo-seg.js", "shared/photo-depth.js", "editor-src/077-foto3d.js", ".github/workflows/banco-nyu.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: banco-nyu-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  banco:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/nyu-sub
+          key: nyu-sub-${{ hashFiles('scripts/nyu-estrai.py') }}
+      - name: Scarica NYU Depth V2 ed estrai le foto con le misure vere
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          pip install --quiet h5py numpy pillow
+          curl -sSfL --retry 3 -o ~/nyu.mat http://horatio.cs.nyu.edu/mit/silberman/nyu_depth_v2/nyu_depth_v2_labeled.mat
+          ls -la ~/nyu.mat
+          python3 scripts/nyu-estrai.py ~/nyu.mat ~/nyu-sub 120
+          rm ~/nyu.mat
+      - run: npm ci && npx playwright install --with-deps chromium
+      - run: node scripts/build-editor.mjs
+      - run: node scripts/banco-nyu.mjs ~/nyu-sub ${{ inputs.n || '80' }}
