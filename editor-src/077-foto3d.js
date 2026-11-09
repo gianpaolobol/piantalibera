@@ -348,7 +348,9 @@ function f3Layout(s, items = F3.items){
     else {
       // con la profondità: fronte dell'oggetto dai suoi punti 3D; altrimenti appoggio della base sul pavimento
       const o3 = f3Obj3d(s, it, cat); o3v = o3?.center;
-      p = o3 ? o3.front : f3Floor(s, uc, y1);
+      // piani orizzontali visti dall'alto (letti, tavoli): la mediana dei punti visti è già il centro
+      const topSeen = o3 && /^(letto|tavol|scrivania|isola|comodino)/.test(cat);
+      p = o3 ? (topSeen ? o3.center : o3.front) : f3Floor(s, uc, y1);
       // base tagliata dal bordo della foto (oggetto vicino alla fotocamera): si usa il bordo alto del piano, a quota nota
       const topH = F3_TOP[cat]; let cut = false;
       if (topH && y1 > .97 && !o3){ cut = true; const d = s.ray(uc, y0); if (d[2] < -1e-4 && s.hc > topH){ const t = (topH - s.hc) / d[2], far = [s.c[0] + t * d[0], s.c[1] + t * d[1]], hl = Math.hypot(d[0], d[1]) || 1; const dep = (C.d || .6);
@@ -371,7 +373,7 @@ function f3Layout(s, items = F3.items){
       const pa = f3Floor(s, x0, y1), pb = f3Floor(s, x1, y1), span = o3 ? o3.wid : pa && pb ? Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) : null;
       const along = Math.abs(face[0] * hv[0] + face[1] * hv[1]) > .7, vis = along ? C.w : C.d, deep = along ? C.d : C.w;
       if (span && !C.keep && !cut) scale = clamp(span / vis, C.flat ? .6 : .75, C.flat ? 1.6 : 1.35);
-      p = [p[0] + hv[0] * deep * scale / 2, p[1] + hv[1] * deep * scale / 2];
+      if (!topSeen) p = [p[0] + hv[0] * deep * scale / 2, p[1] + hv[1] * deep * scale / 2];
       rot = Math.round(f3Ang(face) / 15) * 15 % 360;
       const dd = C.d * scale / 2 + .02;
       let ag = it.against;
