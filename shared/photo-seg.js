@@ -127,8 +127,10 @@ export function segComponents(m, roomType = "") {
     }
     if (n < minA) continue;
     // pavimento subito sotto il bordo inferiore: per distinguere una finestra da una portafinestra
-    let fl = 0, tot = 0; for (let x = x0; x <= x1; x++) for (let y = y1 + 1; y <= Math.min(h - 1, y1 + Math.max(2, h * .03)); y++) { tot++; if (floorIds.has(lab[y * w + x])) fl++; }
-    out.push({ category: c, label: names[lab[i]], box: [x0 / w, y0 / h, (x1 + 1) / w, (y1 + 1) / h].map(v => +v.toFixed(4)), area: +(n / (w * h)).toFixed(4), fill: +(n / ((x1 - x0 + 1) * (y1 - y0 + 1))).toFixed(2), onFloor: tot ? fl / tot > .3 : false });
+    let fl = 0, tot = 0, fur = 0; for (let x = x0; x <= x1; x++) for (let y = y1 + 1; y <= Math.min(h - 1, y1 + Math.max(2, h * .03)); y++) { tot++; const l = lab[y * w + x]; if (floorIds.has(l)) fl++; else if (l !== 255 && catOf[l] && !OPEN.includes(catOf[l])) fur++; }
+    // arredo subito sotto la finestra (testiera, divano, mobile): il davanzale è nascosto
+    const occBelow = grow && tot ? fur / tot > .5 : false;
+    out.push({ occBelow, category: c, label: names[lab[i]], box: [x0 / w, y0 / h, (x1 + 1) / w, (y1 + 1) / h].map(v => +v.toFixed(4)), area: +(n / (w * h)).toFixed(4), fill: +(n / ((x1 - x0 + 1) * (y1 - y0 + 1))).toFixed(2), onFloor: tot ? fl / tot > .3 : false });
   }
   // un'apertura tagliata in due da un arredo davanti (o da una traversa): si ricompone
   const op = c => OPEN.includes(c.category);
@@ -149,7 +151,7 @@ const near = (a, b) => Math.max(iou(a, b), inside(a, b) || inside(b, a) ? .2 : 0
 /** Unisce elementi dell'analisi e componenti della segmentazione. items: quelli di normalizeAnalysis. */
 export function mergeSegmentation(items, comps, quad = null) {
   const out = items.map(it => ({ ...it })), used = new Set(), left = [];
-  const take = (it, c) => { if (!(String(it.source).startsWith("rilevatore") && iou(it.box, c.box) > .5)) it.box = c.box;   // i riquadri del rilevatore (istanze) restano se coincidono già
+  const take = (it, c) => { if (c.occBelow) it.occBelow = true; if (!(String(it.source).startsWith("rilevatore") && iou(it.box, c.box) > .5)) it.box = c.box;   // i riquadri del rilevatore (istanze) restano se coincidono già
     it.source = String(it.source).startsWith("rilevatore") ? "rilevatore+segmentazione" : "segmentazione"; it.seg = true; };
   // 1) stessa famiglia (porta↔porta, sedia↔sedia…)
   for (const c of comps) {
@@ -173,7 +175,7 @@ export function mergeSegmentation(items, comps, quad = null) {
     if (fam === "apertura" || c.area > .006) {
       let cat = c.category; const C = (out.find(o => o.category === cat) || {});
       if (cat === "finestra" && c.onFloor) cat = "portafinestra";   // vetrata fino a terra (pavimento subito sotto)
-      out.push({ category: cat, label: "", box: c.box, w: C.w, d: C.d, h: C.h, facing: "camera", against: "none", source: "segmentazione", seg: true, added: true });
+      out.push({ category: cat, label: "", box: c.box, occBelow: c.occBelow || undefined, w: C.w, d: C.d, h: C.h, facing: "camera", against: "none", source: "segmentazione", seg: true, added: true });
       used.add(out.length - 1);
     }
   }
@@ -182,9 +184,17 @@ export function mergeSegmentation(items, comps, quad = null) {
   if (comps.length) out.forEach(it => { if (!it.seg && !String(it.source).includes("rilevatore")) it.doubt = true; });
   // doppioni tra aperture: due elementi sullo stesso riquadro → resta il primo
   const trust = o => (o.seg ? 2 : 0) + (String(o.source).includes("rilevatore") ? 1 : 0) - (o.doubt ? 1 : 0);
+  // doppioni tra arredi: stesso tipo con un riquadro quasi tutto dentro l'altro (letto a baldacchino visto intero
+  // dalla segmentazione e solo in parte dal rilevatore) → uno solo
+  const area = b => (b[2] - b[0]) * (b[3] - b[1]);
+  const within = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), iy = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])); return ix * iy / Math.max(1e-6, Math.min(area(a), area(b))); };
+  const BIG = new Set(["letto", "tavolo", "sedute", "contenitori", "cucina"]);
   for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++) {
-    const A = out[i], B = out[j]; if (A.dup || B.dup || FAMILY(A.category) !== FAMILY(B.category) || iou(A.box, B.box) <= .55) continue;
-    (trust(B) > trust(A) ? A : B).dup = true;            // resta il più affidabile (confermato dalla foto)
+    const A = out[i], B = out[j]; if (A.dup || B.dup || FAMILY(A.category) !== FAMILY(B.category)) continue;
+    const big = BIG.has(FAMILY(A.category)) && A.category === B.category && within(A.box, B.box) > .8;
+    if (iou(A.box, B.box) <= .55 && !big) continue;
+    const ta = trust(A), tb = trust(B), keepB = tb > ta || (tb === ta && area(B.box) > area(A.box));
+    (keepB ? A : B).dup = true;            // resta il più affidabile (confermato dalla foto), a parità il più grande
   }
   return out.filter(it => !it.dup);
 }

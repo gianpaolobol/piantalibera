@@ -135,7 +135,7 @@ function f3ApplySeg(){
     if (sg.box && sg.quad === sg.box && !F3.exifFov && !F3.opts.fov) F3.fitFov = sg.box.hfov;       // campo visivo stimato dalla prospettiva
   }
   const comps = segComponents(sg.m, F3.a.room_type || "");
-  F3.items = mergeSegmentation(F3.items, comps, F3.quad).map((it, i) => ({...it, id:i, on: it.on !== false && !it.doubt && !F3_CATS[it.category]?.skip, label: it.label || F3_CATS[it.category]?.n || ""}));
+  F3.items = mergeSegmentation(F3.items, comps, F3.quad).map((it, i) => ({...it, id:i, on: it.on !== false && !it.doubt && !F3_CATS[it.category]?.skip && it.category !== "persona" /* le persone non fanno parte della stanza: in elenco, spente */, label: it.label || F3_CATS[it.category]?.n || ""}));
   F3.segNote = `Segmentazione: ${comps.filter(c => /porta|finestra/.test(c.category)).length} aperture e ${comps.filter(c => !/porta|finestra/.test(c.category)).length} arredi trovati nella foto${sg.quad ? "; spigoli proposti" : ""}.`;
 }
 function f3Accept(j){
@@ -233,6 +233,8 @@ function f3Layout(s, items = F3.items){
       const len = hit.wall === "back" ? s.W : s.D, w = clamp(Math.abs(R.s - L.s), C.kind === "door" ? .6 : .4, Math.min(len - .1, 4)), t = clamp((L.s + R.s) / 2, w / 2 + .05, len - w / 2 - .05);
       let sill = C.kind === "door" ? 0 : clamp(Bt ? Bt.z : .9, 0, 1.6), top = clamp(T.z, sill + .4, s.H - .05);
       if (C.kind === "door") top = clamp(top, 1.9, Math.min(s.H - .05, 2.8));
+      // davanzale coperto da un arredo (testiera, divano): quota consueta di 90 cm se la parte vista finisce più in alto
+      else if (it.occBelow && sill > 1 && top - .9 >= .6) sill = .9;
       out.openings.push({it, wall:hit.wall, t, w, h:+(top - sill).toFixed(2), sill:+sill.toFixed(2), type:C.kind, style:C.style});
       continue;
     }
