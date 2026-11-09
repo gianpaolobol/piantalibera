@@ -244,9 +244,11 @@ export function fitRoomBox(m, { hfov = null, aspect = null, evalAt = null } = {}
     return out;     // [soffitto, pavimento]
   };
   const dseg = (P, A, B) => { const vx = B[0] - A[0], vy = (B[1] - A[1]) * r, wx = P[0] - A[0], wy = (P[1] - A[1]) * r, L = vx * vx + vy * vy, t = L > 0 ? Math.max(0, Math.min(1, (wx * vx + wy * vy) / L)) : 0; return Math.hypot(wx - t * vx, wy - t * vy); };
-  const cost = (pts, poly) => { let s = 0; for (const P of pts) { let best = .08; for (let i = 0; i < poly.length - 1; i++) { const A = poly[i], B = poly[i + 1]; if (!A || !B) continue; const d = dseg(P, A, B); if (d < best) best = d; } s += best; } return s / Math.max(1, pts.length); };
+  const dist = (P, poly) => { let best = .04; for (let i = 0; i < poly.length - 1; i++) { const A = poly[i], B = poly[i + 1]; if (!A || !B) continue; const d = dseg(P, A, B); if (d < best) best = d; } return best; };
+  const cost = (pts, poly) => { let s = 0; for (const P of pts) s += dist(P, poly); return s / Math.max(1, pts.length); };
   const valid = q => { const [p, yaw, af, ac, bl, br, fov] = q; return !(Math.abs(p) > .7 || Math.abs(yaw) > .9 || af < .03 || ac < .03 || af > 1.45 || ac > 1.45 || bl < .02 || br < .02 || bl > 1.52 || br > 1.52 || (fitFov && (fov < 40 || fov > 95))); };
-  const score = q => { if (!valid(q)) return -1; const G = geo(q), [ce, fe] = edges(G);
+  // stanza fisicamente plausibile: fotocamera tra il 20 e l'85 % dell'altezza, parete di fondo ad almeno mezza altezza
+  const score = q => { if (!valid(q)) return -1; const G = geo(q); if (G.hc < .2 || G.hc > .85 || G.db < .5) return -1; const [ce, fe] = edges(G);
     return -(cost(top, ce) * top.length + cost(bot, fe) * bot.length) / (top.length + bot.length) - .0002 * (Math.log(G.dl) + Math.log(G.dr)) - (fewFloor ? .05 : .002) * (G.hc - .54) ** 2; };
   if (evalAt) return score(evalAt);
   const nm = (x0, steps, iters = 260) => {
@@ -277,11 +279,13 @@ export function fitRoomBox(m, { hfov = null, aspect = null, evalAt = null } = {}
   const pj = P => { const q = projectPt(P, f, r, G.p, G.yaw); return q ? q.map(v => +v.toFixed(4)) : null; };
   const quad = { fl: pj([-G.dl, -G.hc, -G.db]), fr: pj([G.dr, -G.hc, -G.db]), cl: pj([-G.dl, Hc, -G.db]), cr: pj([G.dr, Hc, -G.db]) };
   if (Object.values(quad).some(q => !q)) return null;
-  // affidabilità: distanza media residua delle giunzioni (in frazioni della larghezza) → 1 se < 0,4 %, 0 se ≥ 3 %
-  const resid = -best.s, conf = Math.max(0, Math.min(1, (.03 - resid) / .026));
+  // affidabilità: quota di punti di giunzione che cadono sugli spigoli della scatola (entro l'1 % della larghezza).
+  // Robusta agli sbagli della segmentazione (un pavimento chiaro preso per soffitto, un mobile scambiato per parete)
+  const [ceB, feB] = edges(G), inl = (top.filter(P => dist(P, ceB) < .01).length + bot.filter(P => dist(P, feB) < .01).length) / (top.length + bot.length);
+  const resid = -best.s, conf = Math.max(0, Math.min(1, (inl - .45) / .35));
   // pareti laterali viste? (punti di giunzione oltre lo spigolo): se no, la larghezza della parete di fondo è solo un minimo
   const pts = top.concat(bot), openL = !pts.some(p => p[0] < Math.min(quad.fl[0], quad.cl[0]) - .02), openR = !pts.some(p => p[0] > Math.max(quad.fr[0], quad.cr[0]) + .02);
-  return { ...quad, openL, openR, ceiling: top.length > 15, conf: +conf.toFixed(3), resid: +resid.toFixed(4), pitch: +(G.p / rad).toFixed(2), yaw: +(G.yaw / rad).toFixed(2), hc: +G.hc.toFixed(3), dl: +G.dl.toFixed(3), dr: +G.dr.toFixed(3), db: +G.db.toFixed(3), hfov: +G.fov.toFixed(1), points: top.length + bot.length, source: "modello di stanza" };
+  return { ...quad, openL, openR, ceiling: top.length > 15, conf: +conf.toFixed(3), resid: +resid.toFixed(4), inliers: +inl.toFixed(3), pitch: +(G.p / rad).toFixed(2), yaw: +(G.yaw / rad).toFixed(2), hc: +G.hc.toFixed(3), dl: +G.dl.toFixed(3), dr: +G.dr.toFixed(3), db: +G.db.toFixed(3), hfov: +G.fov.toFixed(1), points: top.length + bot.length, source: "modello di stanza" };
 }
 
 /* le finestre si vedono «attraverso»: il vetro (windowpane) più quello che sta fuori (cielo, alberi, prato,
