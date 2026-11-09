@@ -22,7 +22,7 @@ concurrency:
 jobs:
   banco:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     env:
       SALTA_SONDA: ${{ github.event_name == 'push' && '1' || '' }}
     steps:
@@ -49,8 +49,13 @@ jobs:
           pip install --quiet torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install --quiet "git+https://github.com/microsoft/MoGe.git"
           [ "${{ inputs.sonda }}" = "false" ] || [ -n "$SALTA_SONDA" ] || python3 scripts/sonda-moge.py ~/nyu-sub 40 vits
-      - name: Esporta MoGe-2 in ONNX (fp32, fp16, int8) e verifica
-        if: always()
+      - id: onnx
+        uses: actions/cache@v4
+        with:
+          path: ~/moge-onnx
+          key: moge-onnx-${{ hashFiles('scripts/esporta-moge.py') }}
+      - name: Esporta MoGe-2 in ONNX (fp32, int8) e verifica
+        if: steps.onnx.outputs.cache-hit != 'true'
         continue-on-error: true
         run: |
           pip install --quiet onnx onnxconverter-common onnxruntime

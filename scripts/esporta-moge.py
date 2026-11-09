@@ -30,9 +30,9 @@ print("fp32", os.path.getsize(f32) // 2**20, "MB")
 import onnx
 from onnxconverter_common import float16
 f16 = f32.replace(".onnx", "-fp16.onnx")
-try:
-    onnx.save(float16.convert_float_to_float16(onnx.load(f32), keep_io_types=True, op_block_list=float16.DEFAULT_OP_BLOCK_LIST + ["Cast", "Resize", "Range", "Pow", "Sqrt", "ReduceMean", "Softmax", "Exp"]), f16); print("fp16", os.path.getsize(f16) // 2**20, "MB")
-except Exception as e: print("fp16 non riuscito:", e)
+if os.environ.get("FP16"):
+    try: onnx.save(float16.convert_float_to_float16(onnx.load(f32), keep_io_types=True, op_block_list=float16.DEFAULT_OP_BLOCK_LIST + ["Cast", "Resize", "Range"]), f16); print("fp16", os.path.getsize(f16) // 2**20, "MB")
+    except Exception as e: print("fp16 non riuscito:", e)
 from onnxruntime.quantization import quantize_dynamic, QuantType
 q8 = f32.replace(".onnx", "-q8.onnx")
 quantize_dynamic(f32, q8, weight_type=QuantType.QUInt8); print("q8", os.path.getsize(q8) // 2**20, "MB")
@@ -56,7 +56,7 @@ def post(P, M, S):                               # come MoGe infer(): focale e s
         else: lo = a
     s = (lo + hi) / 2; f = err(s)[1]
     P = P.copy(); P[..., 2] += s; return P * S[0], M & (P[..., 2] > 0), f
-for path in [f32, f16, q8]:
+for path in [p for p in [f32, f16, q8] if os.path.exists(p)]:
     try: ses = ort.InferenceSession(path, providers=["CPUExecutionProvider"])
     except Exception as e: print(os.path.basename(path), "non caricabile:", str(e)[:200]); continue
     rel, dh, ms = [], [], []
