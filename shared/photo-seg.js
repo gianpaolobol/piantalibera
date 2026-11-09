@@ -109,14 +109,15 @@ export function wallCorners(m) {
 export function segComponents(m, roomType = "") {
   if (!m) return [];
   const { w, h, lab, names } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && /cucin|kitchen/i.test(roomType)) c = "cucina"; return c && c[0] !== "@" ? c : null; });
-  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n));
+  // «fuori»: classi esterne e quelle che non sono né struttura né arredo (dipinti, schermi…) visti nel vano
+  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n) || (!SEG_CAT[n] && !NOT_OPENING.has(n)));
   for (let i = 0; i < w * h; i++) {
     const c = lab[i] === 255 ? null : catOf[lab[i]]; if (!c || seen[i]) continue;
     let qh = 0, qt = 0, n = 0, x0 = w, y0 = h, x1 = 0, y1 = 0; Q[qt++] = i; seen[i] = 1;
     const grow = c === "finestra" || c === "portafinestra";      // il vano comprende quello che si vede fuori
     while (qh < qt) { const j = Q[qh++], x = j % w, y = (j / w) | 0; n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
       for (const k of [j - 1, j + 1, j - w, j + w]) { if (k < 0 || k >= w * h || seen[k] || (k === j - 1 && x === 0) || (k === j + 1 && x === w - 1)) continue; const l = lab[k];
-        if (l !== 255 && (catOf[l] === c || (grow && outside[l]))) { seen[k] = 1; Q[qt++] = k; } } }
+        if (l !== 255 && (catOf[l] === c || (grow && outside[l] && Math.abs((k % w) - (i % w)) < w * .35 && Math.abs(((k / w) | 0) - ((i / w) | 0)) < h * .45))) { seen[k] = 1; Q[qt++] = k; } } }
     if (n < minA) continue;
     // pavimento subito sotto il bordo inferiore: per distinguere una finestra da una portafinestra
     let fl = 0, tot = 0; for (let x = x0; x <= x1; x++) for (let y = y1 + 1; y <= Math.min(h - 1, y1 + Math.max(2, h * .03)); y++) { tot++; if (floorIds.has(lab[y * w + x])) fl++; }
@@ -200,7 +201,8 @@ export function fitRoomBox(m, { hfov = null, aspect = null, evalAt = null } = {}
     for (let y = h - 3; y >= 1; y--) if (C.has(at(x, y)) && W.has(at(x, y + 1)) && W.has(at(x, y + 2))) { top.push([(x + .5) / w, (y + 1) / h]); break; }
     for (let y = 2; y < h - 1; y++) if (F.has(at(x, y)) && W.has(at(x, y - 1)) && W.has(at(x, y - 2))) { bot.push([(x + .5) / w, y / h]); break; }
   }
-  if (top.length + bot.length < 30 || bot.length < 8) return null;
+  if (top.length + bot.length < 24 || (bot.length < 4 && top.length < 30)) return null;
+  const fewFloor = bot.length < 12;   // pavimento coperto (letto, mobili): l'altezza della fotocamera si appoggia a un valore tipico
   const fitFov = !hfov, toF = deg => .5 / Math.tan(deg * Math.PI / 360), rad = Math.PI / 180;
   const geo = q => { const [p, yaw, af, ac, bl, br, fov] = q, ta = Math.tan(af), tc = Math.tan(ac), db = 1 / (ta + tc); return { p, yaw, hc: ta * db, db, dl: db * Math.tan(bl), dr: db * Math.tan(br), fov: fitFov ? fov : hfov }; };
   /* spigoli proiettati della scatola: per soffitto e pavimento, polilinea parete sinistra → fondo → parete destra */
@@ -218,7 +220,8 @@ export function fitRoomBox(m, { hfov = null, aspect = null, evalAt = null } = {}
   const dseg = (P, A, B) => { const vx = B[0] - A[0], vy = (B[1] - A[1]) * r, wx = P[0] - A[0], wy = (P[1] - A[1]) * r, L = vx * vx + vy * vy, t = L > 0 ? Math.max(0, Math.min(1, (wx * vx + wy * vy) / L)) : 0; return Math.hypot(wx - t * vx, wy - t * vy); };
   const cost = (pts, poly) => { let s = 0; for (const P of pts) { let best = .08; for (let i = 0; i < poly.length - 1; i++) { const A = poly[i], B = poly[i + 1]; if (!A || !B) continue; const d = dseg(P, A, B); if (d < best) best = d; } s += best; } return s / Math.max(1, pts.length); };
   const valid = q => { const [p, yaw, af, ac, bl, br, fov] = q; return !(Math.abs(p) > .7 || Math.abs(yaw) > .9 || af < .03 || ac < .03 || af > 1.45 || ac > 1.45 || bl < .02 || br < .02 || bl > 1.52 || br > 1.52 || (fitFov && (fov < 40 || fov > 95))); };
-  const score = q => { if (!valid(q)) return -1; const G = geo(q), [ce, fe] = edges(G); return -(cost(top, ce) * top.length + cost(bot, fe) * bot.length) / (top.length + bot.length) - .0002 * (Math.log(G.dl) + Math.log(G.dr)); };
+  const score = q => { if (!valid(q)) return -1; const G = geo(q), [ce, fe] = edges(G);
+    return -(cost(top, ce) * top.length + cost(bot, fe) * bot.length) / (top.length + bot.length) - .0002 * (Math.log(G.dl) + Math.log(G.dr)) - (fewFloor ? .05 : .002) * (G.hc - .54) ** 2; };
   if (evalAt) return score(evalAt);
   const nm = (x0, steps, iters = 260) => {
     const n = x0.length; let simp = [x0.slice()]; for (let i = 0; i < n; i++) { const x = x0.slice(); x[i] += steps[i]; simp.push(x); }
@@ -247,9 +250,12 @@ export function fitRoomBox(m, { hfov = null, aspect = null, evalAt = null } = {}
   if (Object.values(quad).some(q => !q)) return null;
   // affidabilità: distanza media residua delle giunzioni (in frazioni della larghezza) → 1 se < 0,4 %, 0 se ≥ 3 %
   const resid = -best.s, conf = Math.max(0, Math.min(1, (.03 - resid) / .026));
-  return { ...quad, ceiling: top.length > 15, conf: +conf.toFixed(3), resid: +resid.toFixed(4), pitch: +(G.p / rad).toFixed(2), yaw: +(G.yaw / rad).toFixed(2), hc: +G.hc.toFixed(3), dl: +G.dl.toFixed(3), dr: +G.dr.toFixed(3), db: +G.db.toFixed(3), hfov: +G.fov.toFixed(1), points: top.length + bot.length, source: "modello di stanza" };
+  // pareti laterali viste? (punti di giunzione oltre lo spigolo): se no, la larghezza della parete di fondo è solo un minimo
+  const pts = top.concat(bot), openL = !pts.some(p => p[0] < Math.min(quad.fl[0], quad.cl[0]) - .02), openR = !pts.some(p => p[0] > Math.max(quad.fr[0], quad.cr[0]) + .02);
+  return { ...quad, openL, openR, ceiling: top.length > 15, conf: +conf.toFixed(3), resid: +resid.toFixed(4), pitch: +(G.p / rad).toFixed(2), yaw: +(G.yaw / rad).toFixed(2), hc: +G.hc.toFixed(3), dl: +G.dl.toFixed(3), dr: +G.dr.toFixed(3), db: +G.db.toFixed(3), hfov: +G.fov.toFixed(1), points: top.length + bot.length, source: "modello di stanza" };
 }
 
 /* le finestre si vedono «attraverso»: il vetro (windowpane) più quello che sta fuori (cielo, alberi, prato,
    edifici…) racchiuso dalla parete forma il vano; senza questo il vano risulta basso e corto */
+export const NOT_OPENING = new Set(["curtain", "blind", "cushion", "pillow", "box", "base", "column", "mirror", "fireplace", "radiator", "railing", "bannister", "towel", "apparel", "bag", "basket", "book", "bottle", "vase", "clock", "plate", "glass", "tray", "pot", "food"]);
 export const OUTSIDE = new Set(["sky", "tree", "grass", "building", "house", "mountain", "field", "road", "sidewalk", "earth", "water", "sea", "palm", "fence", "car", "skyscraper", "hill", "land", "path", "awning", "streetlight", "pole"]);

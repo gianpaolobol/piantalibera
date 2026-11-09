@@ -85,8 +85,10 @@ const FAM = c => ({ divano: "sedute", divano_angolare: "sedute", poltrona: "sedu
 function score(gt, r, quadGt) {
   const out = { ok: r.ok };
   if (!r.ok) return { ...out, err: r.err };
-  const qd = ["fl", "fr", "cl", "cr"].map(k => Math.hypot(r.quad[k][0] - quadGt[k][0], (r.quad[k][1] - quadGt[k][1]) * .75)); out.corner = +(qd.reduce((a, b) => a + b) / 4 * 100).toFixed(1);   // % della larghezza della foto
-  out.dW = +(r.W - gt.W).toFixed(2); out.dH = +(r.Hh - gt.H).toFixed(2); out.dHc = +(r.hc - gt.camera.h).toFixed(2); out.dPitch = +(r.pitch - gt.camera.pitch).toFixed(1); out.dFov = +(r.fov - gt.camera.hfov).toFixed(0);
+  // spigoli: solo quelli che nella foto si vedono (gli altri non sono misurabili); larghezza solo se si vedono entrambi
+  const vis = k => quadGt[k][0] >= 0 && quadGt[k][0] <= 1 && quadGt[k][1] >= 0 && quadGt[k][1] <= 1, ks = ["fl", "fr", "cl", "cr"].filter(vis);
+  const qd = ks.map(k => Math.hypot(r.quad[k][0] - quadGt[k][0], (r.quad[k][1] - quadGt[k][1]) * .75)); out.corner = qd.length ? +(qd.reduce((a, b) => a + b) / qd.length * 100).toFixed(1) : null;
+  out.bothVisible = vis("fl") && vis("fr"); out.dW = out.bothVisible ? +(r.W - gt.W).toFixed(2) : null; out.dH = +(r.Hh - gt.H).toFixed(2); out.dHc = +(r.hc - gt.camera.h).toFixed(2); out.dPitch = +(r.pitch - gt.camera.pitch).toFixed(1); out.dFov = +(r.fov - gt.camera.hfov).toFixed(0);
   // aperture: stessa tipologia (porta/finestra) e stesso muro; errori di posizione lungo il muro, davanzale, altezza, larghezza
   const used = new Set(); out.ops = [];
   for (const g of gt.openings) {
@@ -147,7 +149,7 @@ for (let i = 0; i < N; i++) {
 /* riepilogo */
 const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN, abs = a => a.map(Math.abs), ok = rows.filter(r => r.sc.ok);
 const ops = ok.flatMap(r => r.sc.ops), found = ops.filter(o => o.found), objs = ok.flatMap(r => r.sc.objs), fo = objs.filter(o => o.found);
-const sum = { scene: rows.length, risolte: ok.length, spigoli_err_pct: +mean(ok.map(r => r.sc.corner)).toFixed(1), larghezza_err_m: +mean(abs(ok.map(r => r.sc.dW))).toFixed(2), altezza_foto_err_m: +mean(abs(ok.map(r => r.sc.dHc))).toFixed(2), inclinazione_err: +mean(abs(ok.map(r => r.sc.dPitch))).toFixed(1),
+const sum = { scene: rows.length, risolte: ok.length, spigoli_err_pct: +mean(ok.filter(r => r.sc.corner != null).map(r => r.sc.corner)).toFixed(1), spigoli_mediana_pct: (a => a.sort((x, y) => x - y)[a.length >> 1])(ok.filter(r => r.sc.corner != null).map(r => r.sc.corner)), larghezza_err_m: +mean(abs(ok.filter(r => r.sc.dW != null).map(r => r.sc.dW))).toFixed(2), spigoli_misurati: ok.filter(r => r.sc.corner != null).length, altezza_foto_err_m: +mean(abs(ok.map(r => r.sc.dHc))).toFixed(2), inclinazione_err: +mean(abs(ok.map(r => r.sc.dPitch))).toFixed(1),
   aperture_trovate: `${found.length}/${ops.length}`, muro_giusto: `${found.filter(o => o.wallOk).length}/${found.length}`, pos_lungo_muro_err_m: +mean(abs(found.filter(o => o.wallOk).map(o => o.dT))).toFixed(2), davanzale_err_m: +mean(abs(found.filter(o => o.type === "window").map(o => o.dSill))).toFixed(2),
   altezza_ap_err_m: +mean(abs(found.map(o => o.dH))).toFixed(2), larghezza_ap_err_m: +mean(abs(found.map(o => o.dW))).toFixed(2), aperture_in_piu: ok.reduce((s, r) => s + r.sc.extraOps, 0),
   arredi_trovati: `${fo.length}/${objs.length}`, arredi_pos_err_m: +mean(fo.map(o => o.d)).toFixed(2), arredi_in_piu: ok.reduce((s, r) => s + r.sc.extraObjs, 0), neurons_spesi: Math.round(neurons) };

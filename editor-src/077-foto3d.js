@@ -124,7 +124,7 @@ async function f3Segment(){
 function f3ApplySeg(){
   const sg = F3.seg; if (!sg || sg.state !== "ok" || !F3.a || sg.applied) return; sg.applied = true;
   if (sg.quad && F3.quadSource !== "posizionati da te"){
-    F3.quad = {fl:sg.quad.fl, fr:sg.quad.fr, cl:sg.quad.cl, cr:sg.quad.cr}; F3.quadSource = sg.quad === sg.box ? "trovati dal modello di stanza: controllali" : "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
+    F3.quad = {fl:sg.quad.fl, fr:sg.quad.fr, cl:sg.quad.cl, cr:sg.quad.cr}; F3.quadOpen = sg.quad === sg.box ? {l:sg.box.openL, r:sg.box.openR} : null; F3.quadSource = sg.quad === sg.box ? "trovati dal modello di stanza: controllali" : "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
     if (sg.box && sg.quad === sg.box && !F3.exifFov && !F3.opts.fov) F3.fitFov = sg.box.hfov;       // campo visivo stimato dalla prospettiva
   }
   const comps = segComponents(sg.m, F3.a.room_type || "");
@@ -139,7 +139,7 @@ function f3Accept(j){
   F3.opts.ceil = bw ? bw.ceiling_visible !== false : true;
   F3.opts.refVal = a.room?.height_m && a.room.height_m > 2.2 && a.room.height_m < 4.5 ? +a.room.height_m.toFixed(2) : 2.7;
   F3.items = (a.items || []).map((it, i) => ({...it, id:i, on:!F3_CATS[it.category]?.skip}));
-  F3.sel = -1; F3.report = null; F3.segNote = "";
+  F3.sel = -1; F3.report = null; F3.segNote = ""; F3.quadOpen = null;
   if (F3.seg?.state === "ok"){ F3.seg.applied = false; f3ApplySeg(); }
 }
 
@@ -184,8 +184,14 @@ function f3Solve(quad = F3.quad, opts = F3.opts, w = F3.w, h = F3.h, a = F3.a){
   const c = toPlanV([-A[0], -A[1]]);
   if (c[1] < .3) return {ok:false, err:"la fotocamera risulta dietro la parete di fondo: controlla gli spigoli"};
   const D = Math.max(+(opts.depth || 0), c[1] + .4, 1.5);
+  // spigolo della parete di fondo fuori dalla foto: la larghezza vista è un minimo; si completa con la stima del
+  // modello (o 0,6 m) mantenendo fermo lo spigolo visibile, così aperture e arredi restano alla distanza giusta
+  const outL = !!F3.quadOpen?.l, outR = !!F3.quadOpen?.r;
+  let shift = 0, Wv = W;
+  if ((outL || outR) && !opts.widthFixed){ const est = Math.max(W + .6, +(a?.room?.width_m || 0)); const extra = Math.min(est - W, 4);
+    if (outL && !outR){ shift = extra; Wv = W + extra; } else if (outR && !outL) Wv = W + extra; else { shift = extra / 2; Wv = W + extra; } }
   const ray = (u, v) => { const d = f3Dir(u, v, cam), hp = toPlanV([d[0], d[2]]); return [hp[0], hp[1], d[1]]; };
-  return {ok:true, cam, p, hc, H, W, D, depthAuto:+(c[1] + .4).toFixed(2), c, ray, right:toPlanV([1, 0]), useCeil};
+  return {ok:true, cam, p, hc, H, W:Wv, Wseen:W, D, depthAuto:+(c[1] + .4).toFixed(2), c:[c[0] + shift, c[1]], ray, right:toPlanV([1, 0]), useCeil, partial:outL || outR};
 }
 /* intersezioni in pianta: x lungo la parete di fondo, y verso la fotocamera, quota da terra */
 const f3Floor = (s, u, v) => { const d = s.ray(u, v); if (d[2] >= -1e-6) return null; const t = -s.hc / d[2]; return [s.c[0] + t * d[0], s.c[1] + t * d[1]]; };
@@ -429,7 +435,7 @@ function f3PointerDown(e){
 }
 function f3PointerMove(e){
   if (!f3Drag) return; e.preventDefault(); const p = f3Pt(e), lim = v => clamp(v, -.11, 1.11);
-  if (f3Drag.kind === "h"){ F3.quad[f3Drag.k] = [lim(p[0]), lim(p[1])]; F3.quadSource = "posizionati da te"; }
+  if (f3Drag.kind === "h"){ F3.quad[f3Drag.k] = [lim(p[0]), lim(p[1])]; F3.quadSource = "posizionati da te"; F3.quadOpen = null; }
   else if (f3Drag.kind === "rs"){ const b = F3.items[f3Drag.i].box;
     if (f3Drag.c === "tl"){ b[0] = clamp(p[0], 0, b[2] - .01); b[1] = clamp(p[1], 0, b[3] - .01); } else { b[2] = clamp(p[0], b[0] + .01, 1); b[3] = clamp(p[1], b[1] + .01, 1); } }
   else { const b0 = f3Drag.b0, dx = clamp(p[0] - f3Drag.p0[0], -b0[0], 1 - b0[2]), dy = clamp(p[1] - f3Drag.p0[1], -b0[1], 1 - b0[3]); F3.items[f3Drag.i].box = [b0[0] + dx, b0[1] + dy, b0[2] + dx, b0[3] + dy]; }
