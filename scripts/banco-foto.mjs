@@ -69,13 +69,13 @@ const SHOT = async function (cfg) {
 };
 /* ricostruzione automatica (nella pagina) */
 const RECON = async function ({ photo, W, H, analysis, gt, fovKnown }) {
-  Object.assign(F3, { img: photo, thumb: photo, w: W, h: H, name: "banco", exifFov: fovKnown ? gt.camera.hfov : null, seg: null, a: null, quadSource: "" });
+  Object.assign(F3, { img: photo, thumb: photo, w: W, h: H, name: "banco", exifFov: fovKnown ? gt.camera.hfov : null, seg: null, a: null, quadSource: "", fitFov: null });
   F3.opts = { refKind: "ceil", refVal: gt.H, fov: null, depth: null, ceil: true };
   const t0 = performance.now(); await f3Segment(); const tSeg = performance.now() - t0;
   f3Accept({ analysis: JSON.parse(JSON.stringify(analysis)) }); F3.opts.refVal = gt.H; F3.opts.refKind = "ceil";
   const s = f3Solve(); if (!s.ok) return { ok: false, err: s.err, quad: F3.quad, seg: F3.seg?.state, tSeg };
   const lay = f3Layout(s);
-  return { ok: true, tSeg, quad: F3.quad, quadSource: F3.quadSource, segState: F3.seg?.state, W: s.W, D: s.D, Hh: s.H, hc: s.hc, pitch: s.p * 180 / Math.PI, cam: s.c, fov: f3Fov(),
+  return { ok: true, tSeg, box: F3.seg?.box ? { conf: F3.seg.box.conf, resid: F3.seg.box.resid, pitch: F3.seg.box.pitch, hfov: F3.seg.box.hfov } : null, quad: F3.quad, quadSource: F3.quadSource, segState: F3.seg?.state, W: s.W, D: s.D, Hh: s.H, hc: s.hc, pitch: s.p * 180 / Math.PI, cam: s.c, fov: f3Fov(),
     openings: lay.openings.map(o => ({ type: o.type, wall: o.wall, t: o.t, w: o.w, h: o.h, sill: o.sill })),
     objects: lay.objects.map(o => ({ cat: o.it.category, x: o.x, y: o.y })), items: F3.items.map(i => ({ cat: i.category, on: i.on, src: i.source, box: i.box })) };
 };
@@ -134,7 +134,7 @@ for (let i = 0; i < N; i++) {
   const r = await page.evaluate(`(${RECON})(${JSON.stringify({ photo: shot.url, W: cfg.W, H: cfg.H, analysis, gt: cfg.gt, fovKnown: FOV_NOTO })})`);
   const sc = score(cfg.gt, r, shot.quad); rows.push({ seed, gt: cfg.gt, sc, r: { segState: r.segState, quadSource: r.quadSource, tSeg: Math.round(r.tSeg || 0) }, stale: fx.hash !== hash });
   console.log(`\n## scena ${seed} (${cfg.gt.kind}, ${cfg.gt.W}×${cfg.gt.D}×${cfg.gt.H} m, fotocamera h ${cfg.gt.camera.h} incl ${cfg.gt.camera.pitch}° rot ${cfg.gt.camera.yaw}° fov ${cfg.gt.camera.hfov}°)${fx.hash !== hash ? " [analisi di una foto precedente]" : ""}`);
-  console.log(JSON.stringify(sc)); console.log(`seg ${r.segState} ${Math.round(r.tSeg || 0)} ms · spigoli: ${r.quadSource} · elementi: ${(r.items || []).map(x => x.cat + (x.on ? "" : "?") + "/" + x.src).join(", ")}`);
+  console.log(JSON.stringify(sc)); console.log(`seg ${r.segState} ${Math.round(r.tSeg || 0)} ms · modello stanza ${JSON.stringify(r.box)} · spigoli: ${r.quadSource} · elementi: ${(r.items || []).map(x => x.cat + (x.on ? "" : "?") + "/" + x.src).join(", ")}`);
   if (IMGS.includes(i)) {
     const img = await page.evaluate(({ url, q, gq, items }) => new Promise(ok => { const im = new Image(); im.onload = () => { const c = document.createElement("canvas"); c.width = 640; c.height = 480; const g = c.getContext("2d"); g.drawImage(im, 0, 0, 640, 480);
       const poly = (Q, col) => { g.strokeStyle = col; g.lineWidth = 3; g.beginPath(); ["fl", "fr", "cr", "cl"].forEach((k, i) => { const x = Q[k][0] * 640, y = Q[k][1] * 480; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); g.stroke(); };

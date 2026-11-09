@@ -62,7 +62,7 @@ async function f3LoadFile(file){
   const big = draw(1280, .86), small = draw(640, .8);
   if (Math.min(big.w, big.h) < 256) throw new Error("foto troppo piccola: serve almeno 256 px sul lato corto");
   const landscape = big.w >= big.h;
-  Object.assign(F3, {img:big.url, thumb:small.url, w:big.w, h:big.h, name:file.name, a:null, quad:null, items:[], sel:-1, err:"", report:null, meta:null, seg:null,
+  Object.assign(F3, {img:big.url, thumb:small.url, w:big.w, h:big.h, name:file.name, a:null, quad:null, items:[], sel:-1, err:"", report:null, meta:null, seg:null, fitFov:null,
     exifFov: f35 ? +(2 * Math.atan((landscape ? 18 : 12) / f35) * 180 / Math.PI).toFixed(1) : null});
   F3.opts = {refKind:"ceil", refVal:2.7, fov:null, depth:null, ceil:true};
 }
@@ -111,7 +111,10 @@ async function f3Segment(){
       const segs = await f3SegPipe(await f3SegPipe.RawImage.fromURL(F3.thumb || F3.img));
       if (F3.seg !== job) return;
       const m = labelMap(segs, 320);
-      Object.assign(job, {state:"ok", m, quad:wallCorners(m), labels:segs.map(x => x.label)});
+      // spigoli: modello di stanza adattato alle giunzioni (robusto agli arredi); in subordine la spezzata
+      const box = fitRoomBox(m, {hfov:F3.opts.fov || F3.exifFov || null, aspect:F3.h / F3.w}), poly = wallCorners(m);
+      const quad = box && box.conf >= .5 ? box : poly && poly.conf >= .6 ? poly : null;
+      Object.assign(job, {state:"ok", m, quad, box, labels:segs.map(x => x.label)});
     } catch(e){ console.warn("segmentazione:", e); if (F3.seg === job) Object.assign(job, {state:"err", err:String(e?.message || e)}); }
     if (F3.seg === job && F3.a) { f3ApplySeg(); if (F3.open) f3RenderModal(); }
   })();
@@ -120,8 +123,9 @@ async function f3Segment(){
 /* applica la segmentazione all'analisi: spigoli (se l'utente non li ha già spostati) e riquadri */
 function f3ApplySeg(){
   const sg = F3.seg; if (!sg || sg.state !== "ok" || !F3.a || sg.applied) return; sg.applied = true;
-  if (sg.quad && sg.quad.conf >= .6 && F3.quadSource !== "posizionati da te"){
-    F3.quad = {fl:sg.quad.fl, fr:sg.quad.fr, cl:sg.quad.cl, cr:sg.quad.cr}; F3.quadSource = "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
+  if (sg.quad && F3.quadSource !== "posizionati da te"){
+    F3.quad = {fl:sg.quad.fl, fr:sg.quad.fr, cl:sg.quad.cl, cr:sg.quad.cr}; F3.quadSource = sg.quad === sg.box ? "trovati dal modello di stanza: controllali" : "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
+    if (sg.box && sg.quad === sg.box && !F3.exifFov && !F3.opts.fov) F3.fitFov = sg.box.hfov;       // campo visivo stimato dalla prospettiva
   }
   const comps = segComponents(sg.m, F3.a.room_type || "");
   F3.items = mergeSegmentation(F3.items, comps, F3.quad).map((it, i) => ({...it, id:i, on: it.on !== false && !it.doubt && !F3_CATS[it.category]?.skip, label: it.label || F3_CATS[it.category]?.n || ""}));
@@ -141,7 +145,9 @@ function f3Accept(j){
 
 /* ---------- geometria ---------- */
 const f3Rad = d => d * Math.PI / 180;
-function f3Fov(){ return F3.opts.fov || F3.exifFov || F3.a?.camera?.hfov_deg || 65; }
+/* campo visivo orizzontale: scelto dall'utente, dall'EXIF, stimato dalla prospettiva, dal modello; altrimenti quello
+   tipico della fotocamera principale di un telefono (26 mm equivalenti: ~69° in orizzontale, ~50° in verticale) */
+function f3Fov(){ return F3.opts.fov || F3.exifFov || F3.fitFov || (F3.w && F3.h > F3.w ? 50 : F3.a?.camera?.hfov_deg || 69); }
 /* raggio della fotocamera per un punto della foto (u,v ∈ 0..1): X destra, Y su, la fotocamera guarda verso −Z */
 function f3Dir(u, v, cam){
   const x = u - .5, y = -(v - .5) * cam.r, cp = Math.cos(cam.p), sp = Math.sin(cam.p);

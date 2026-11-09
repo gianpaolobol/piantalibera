@@ -109,12 +109,14 @@ export function wallCorners(m) {
 export function segComponents(m, roomType = "") {
   if (!m) return [];
   const { w, h, lab, names } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && /cucin|kitchen/i.test(roomType)) c = "cucina"; return c && c[0] !== "@" ? c : null; });
-  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor");
+  const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n));
   for (let i = 0; i < w * h; i++) {
     const c = lab[i] === 255 ? null : catOf[lab[i]]; if (!c || seen[i]) continue;
     let qh = 0, qt = 0, n = 0, x0 = w, y0 = h, x1 = 0, y1 = 0; Q[qt++] = i; seen[i] = 1;
+    const grow = c === "finestra" || c === "portafinestra";      // il vano comprende quello che si vede fuori
     while (qh < qt) { const j = Q[qh++], x = j % w, y = (j / w) | 0; n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
-      for (const k of [j - 1, j + 1, j - w, j + w]) { if (k < 0 || k >= w * h || seen[k] || (k === j - 1 && x === 0) || (k === j + 1 && x === w - 1)) continue; const l = lab[k]; if (l !== 255 && catOf[l] === c) { seen[k] = 1; Q[qt++] = k; } } }
+      for (const k of [j - 1, j + 1, j - w, j + w]) { if (k < 0 || k >= w * h || seen[k] || (k === j - 1 && x === 0) || (k === j + 1 && x === w - 1)) continue; const l = lab[k];
+        if (l !== 255 && (catOf[l] === c || (grow && outside[l]))) { seen[k] = 1; Q[qt++] = k; } } }
     if (n < minA) continue;
     // pavimento subito sotto il bordo inferiore: per distinguere una finestra da una portafinestra
     let fl = 0, tot = 0; for (let x = x0; x <= x1; x++) for (let y = y1 + 1; y <= Math.min(h - 1, y1 + Math.max(2, h * .03)); y++) { tot++; if (floorIds.has(lab[y * w + x])) fl++; }
@@ -169,3 +171,85 @@ export function mergeSegmentation(items, comps, quad = null) {
   }
   return out.filter(it => !it.dup);
 }
+
+/* ---------- modello di stanza adattato alle maschere ----------
+   Stanza a scatola vista dall'interno: fotocamera nell'origine (y in su, guarda verso −z, inclinazione p,
+   rotazione ψ, nessun rollio), soffitto a y = 1 − hc e pavimento a y = −hc (unità: altezza della stanza),
+   pareti a x = −dl, x = +dr, z = −db. Per ogni pixel campione si traccia il raggio e si vede che cosa colpisce
+   per primo (soffitto, parete o pavimento); il punteggio è la concordanza con la segmentazione sui pixel
+   etichettati come soffitto, pareti o pavimento (arredi, persone, porte e finestre sono ignorati). Si cerca
+   il massimo con Nelder-Mead da più partenze. Restituisce spigoli della parete di fondo (anche fuori dalla
+   foto), inclinazione, rotazione, altezza relativa della fotocamera, distanze dalle pareti e punteggio. */
+function rayDir(u, v, f, r, p, yaw) {
+  const x = u - .5, y = -(v - .5) * r, cp = Math.cos(p), sp = Math.sin(p);
+  const d = [x, y * cp + f * sp, y * sp - f * cp], cy = Math.cos(yaw), sy = Math.sin(yaw);
+  return [d[0] * cy + d[2] * sy, d[1], -d[0] * sy + d[2] * cy];
+}
+function projectPt(P, f, r, p, yaw) {
+  const cy = Math.cos(yaw), sy = Math.sin(yaw), x = P[0] * cy - P[2] * sy, z = P[0] * sy + P[2] * cy, y = P[1];
+  const cp = Math.cos(p), sp = Math.sin(p), a = x, b = y * cp + z * sp, g = y * sp - z * cp;
+  if (g <= 1e-6) return null;
+  return [.5 + a * f / g, .5 - (b * f / g) / r];
+}
+export function fitRoomBox(m, { hfov = null, aspect = null, evalAt = null } = {}) {
+  if (!m) return null;
+  const { w, h, lab } = m, W = idsOf(m, "@wall"), F = idsOf(m, "@floor"), C = idsOf(m, "@ceiling"), r = aspect || h / w, at = (x, y) => lab[y * w + x];
+  // punti di giunzione visibili (come in wallCorners): soffitto↔parete e parete↔pavimento, coordinate 0..1
+  const top = [], bot = [];
+  for (let x = 0; x < w; x += 2) {
+    for (let y = h - 3; y >= 1; y--) if (C.has(at(x, y)) && W.has(at(x, y + 1)) && W.has(at(x, y + 2))) { top.push([(x + .5) / w, (y + 1) / h]); break; }
+    for (let y = 2; y < h - 1; y++) if (F.has(at(x, y)) && W.has(at(x, y - 1)) && W.has(at(x, y - 2))) { bot.push([(x + .5) / w, y / h]); break; }
+  }
+  if (top.length + bot.length < 30 || bot.length < 8) return null;
+  const fitFov = !hfov, toF = deg => .5 / Math.tan(deg * Math.PI / 360), rad = Math.PI / 180;
+  const geo = q => { const [p, yaw, af, ac, bl, br, fov] = q, ta = Math.tan(af), tc = Math.tan(ac), db = 1 / (ta + tc); return { p, yaw, hc: ta * db, db, dl: db * Math.tan(bl), dr: db * Math.tan(br), fov: fitFov ? fov : hfov }; };
+  /* spigoli proiettati della scatola: per soffitto e pavimento, polilinea parete sinistra → fondo → parete destra */
+  const edges = G => {
+    const f = toF(G.fov), out = [];
+    for (const y of [1 - G.hc, -G.hc]) {
+      const pts = [];
+      for (let k = 0; k <= 12; k++) pts.push([-G.dl, y, 3 - (3 + G.db) * k / 12]);      // parete sinistra, dalla fotocamera verso il fondo
+      for (let k = 1; k <= 12; k++) pts.push([-G.dl + (G.dl + G.dr) * k / 12, y, -G.db]);
+      for (let k = 1; k <= 12; k++) pts.push([G.dr, y, -G.db + (3 + G.db) * k / 12]);
+      out.push(pts.map(P => projectPt(P, f, r, G.p, G.yaw)));
+    }
+    return out;     // [soffitto, pavimento]
+  };
+  const dseg = (P, A, B) => { const vx = B[0] - A[0], vy = (B[1] - A[1]) * r, wx = P[0] - A[0], wy = (P[1] - A[1]) * r, L = vx * vx + vy * vy, t = L > 0 ? Math.max(0, Math.min(1, (wx * vx + wy * vy) / L)) : 0; return Math.hypot(wx - t * vx, wy - t * vy); };
+  const cost = (pts, poly) => { let s = 0; for (const P of pts) { let best = .08; for (let i = 0; i < poly.length - 1; i++) { const A = poly[i], B = poly[i + 1]; if (!A || !B) continue; const d = dseg(P, A, B); if (d < best) best = d; } s += best; } return s / Math.max(1, pts.length); };
+  const valid = q => { const [p, yaw, af, ac, bl, br, fov] = q; return !(Math.abs(p) > .7 || Math.abs(yaw) > .9 || af < .03 || ac < .03 || af > 1.45 || ac > 1.45 || bl < .02 || br < .02 || bl > 1.52 || br > 1.52 || (fitFov && (fov < 40 || fov > 95))); };
+  const score = q => { if (!valid(q)) return -1; const G = geo(q), [ce, fe] = edges(G); return -(cost(top, ce) * top.length + cost(bot, fe) * bot.length) / (top.length + bot.length) - .0002 * (Math.log(G.dl) + Math.log(G.dr)); };
+  if (evalAt) return score(evalAt);
+  const nm = (x0, steps, iters = 260) => {
+    const n = x0.length; let simp = [x0.slice()]; for (let i = 0; i < n; i++) { const x = x0.slice(); x[i] += steps[i]; simp.push(x); }
+    let val = simp.map(score);
+    for (let it = 0; it < iters; it++) {
+      const ord = val.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]); simp = ord.map(o => simp[o[1]]); val = ord.map(o => o[0]);
+      const c = Array(n).fill(0); for (let i = 0; i < n; i++) for (let k = 0; k < n; k++) c[k] += simp[i][k] / n;
+      const wst = simp[n], refl = c.map((v, k) => v + (v - wst[k])), fr = score(refl);
+      if (fr > val[0]) { const exp = c.map((v, k) => v + 2 * (v - wst[k])), fe = score(exp); if (fe > fr) { simp[n] = exp; val[n] = fe; } else { simp[n] = refl; val[n] = fr; } }
+      else if (fr > val[n - 1]) { simp[n] = refl; val[n] = fr; }
+      else { const con = c.map((v, k) => v + .5 * (wst[k] - v)), fc = score(con); if (fc > val[n]) { simp[n] = con; val[n] = fc; } else for (let i = 1; i <= n; i++) { simp[i] = simp[i].map((v, k) => simp[0][k] + .5 * (v - simp[0][k])); val[i] = score(simp[i]); } }
+      if (Math.abs(val[0] - val[n]) < 1e-7 && it > 40) break;
+    }
+    return { x: simp[0], s: val[0] };
+  };
+  let best = null;
+  for (const p0 of [-6, 2]) for (const y0 of [-14, 0, 14]) for (const db0 of [1.2, 2.4]) {
+    const x0 = [p0 * rad, y0 * rad, Math.atan(.52 / db0), Math.atan(.48 / db0), Math.atan(.9 / db0), Math.atan(.9 / db0)], st = [4 * rad, 6 * rad, 5 * rad, 5 * rad, 10 * rad, 10 * rad];
+    if (fitFov) { x0.push(65); st.push(8); }
+    const r1 = nm(x0, st, 160); if (!best || r1.s > best.s) best = r1;
+  }
+  for (let k = 0; k < 3; k++) best = nm(best.x, best.x.map((v, i) => [1 * rad, 1.5 * rad, 1 * rad, 1 * rad, 2 * rad, 2 * rad, 2][i]));
+  const G = geo(best.x), f = toF(G.fov), Hc = 1 - G.hc;
+  const pj = P => { const q = projectPt(P, f, r, G.p, G.yaw); return q ? q.map(v => +v.toFixed(4)) : null; };
+  const quad = { fl: pj([-G.dl, -G.hc, -G.db]), fr: pj([G.dr, -G.hc, -G.db]), cl: pj([-G.dl, Hc, -G.db]), cr: pj([G.dr, Hc, -G.db]) };
+  if (Object.values(quad).some(q => !q)) return null;
+  // affidabilità: distanza media residua delle giunzioni (in frazioni della larghezza) → 1 se < 0,4 %, 0 se ≥ 3 %
+  const resid = -best.s, conf = Math.max(0, Math.min(1, (.03 - resid) / .026));
+  return { ...quad, ceiling: top.length > 15, conf: +conf.toFixed(3), resid: +resid.toFixed(4), pitch: +(G.p / rad).toFixed(2), yaw: +(G.yaw / rad).toFixed(2), hc: +G.hc.toFixed(3), dl: +G.dl.toFixed(3), dr: +G.dr.toFixed(3), db: +G.db.toFixed(3), hfov: +G.fov.toFixed(1), points: top.length + bot.length, source: "modello di stanza" };
+}
+
+/* le finestre si vedono «attraverso»: il vetro (windowpane) più quello che sta fuori (cielo, alberi, prato,
+   edifici…) racchiuso dalla parete forma il vano; senza questo il vano risulta basso e corto */
+export const OUTSIDE = new Set(["sky", "tree", "grass", "building", "house", "mountain", "field", "road", "sidewalk", "earth", "water", "sea", "palm", "fence", "car", "skyscraper", "hill", "land", "path", "awning", "streetlight", "pole"]);
