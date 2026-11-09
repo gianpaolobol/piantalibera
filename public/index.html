@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-GItUZqIwZ0HU2BCr9OuD+PK0yC7aCfJxuRn79eTYaUg=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-OETtnqOkGJn77+7M9rjuvQZfxfiwXCSlNAt9d1jNJYY=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4190,7 +4190,9 @@ function segComponents(m, roomType = "") {
     let fl = 0, tot = 0, fur = 0; for (let x = x0; x <= x1; x++) for (let y = y1 + 1; y <= Math.min(h - 1, y1 + Math.max(2, h * .03)); y++) { tot++; const l = lab[y * w + x]; if (floorIds.has(l)) fl++; else if (l !== 255 && catOf[l] && !OPEN.includes(catOf[l])) fur++; }
     // arredo subito sotto la finestra (testiera, divano, mobile): il davanzale è nascosto
     const occBelow = grow && tot ? fur / tot > .5 : false;
-    out.push({ occBelow, category: c, label: names[lab[i]], box: [x0 / w, y0 / h, (x1 + 1) / w, (y1 + 1) / h].map(v => +v.toFixed(4)), area: +(n / (w * h)).toFixed(4), fill: +(n / ((x1 - x0 + 1) * (y1 - y0 + 1))).toFixed(2), onFloor: tot ? fl / tot > .3 : false });
+    // lampada con la base sopra l'orizzonte: non può stare a terra (la fotocamera è più alta del pavimento) → a sospensione
+    const cc = c === "lampada_terra" && (y1 + 1) / h < .46 ? "lampadario" : c;
+    out.push({ occBelow, category: cc, label: names[lab[i]], box: [x0 / w, y0 / h, (x1 + 1) / w, (y1 + 1) / h].map(v => +v.toFixed(4)), area: +(n / (w * h)).toFixed(4), fill: +(n / ((x1 - x0 + 1) * (y1 - y0 + 1))).toFixed(2), onFloor: tot ? fl / tot > .3 : false });
   }
   // un'apertura tagliata in due da un arredo davanti (o da una traversa): si ricompone
   const op = c => OPEN.includes(c.category);
@@ -4232,7 +4234,7 @@ function mergeSegmentation(items, comps, quad = null) {
   // 3) non trovati dal modello: si aggiungono se aperture o arredi abbastanza grandi
   for (const c of rest) {
     const fam = FAMILY(c.category);
-    if (fam === "apertura" || c.area > .006) {
+    if (fam === "apertura" || c.area > (fam === "lampada" ? .002 : .006)) {   // le lampade sono piccole nella foto
       let cat = c.category; const C = (out.find(o => o.category === cat) || {});
       if (cat === "finestra" && c.onFloor) cat = "portafinestra";   // vetrata fino a terra (pavimento subito sotto)
       out.push({ category: cat, label: "", box: c.box, occBelow: c.occBelow || undefined, w: C.w, d: C.d, h: C.h, facing: "camera", against: "none", source: "segmentazione", seg: true, added: true });
@@ -4383,8 +4385,8 @@ const F3_CATS = {
   lampadario:{n:"Lampadario", ref:"sospensione", w:.44, d:.44, mount:"ceiling", light:true}, plafoniera:{n:"Plafoniera", ref:"plafoniera", w:.4, d:.4, mount:"ceiling", light:true}, faretto:{n:"Faretto", ref:"faretto", w:.1, d:.1, mount:"ceiling", light:true},
   applique:{n:"Applique", ref:"applique", w:.2, d:.15, mount:"wall", light:true}, scala:{n:"Scala", ref:"scala_dritta", w:1, d:3}, altro:{n:"Altro (non creato)", skip:true},
 };
-/* quota del bordo superiore visibile (piano del tavolo, materasso, schienale): serve quando la base non si vede */
-const F3_TOP = {tavolo:.75, tavolo_tondo:.75, tavolino:.4, tavolino_tondo:.4, scrivania:.75, isola:.9, madia:.8, cassettiera:.85, comodino:.55, letto_matrimoniale:.55, letto_singolo:.55, divano:.85, poltrona:.8};
+/* quota del bordo superiore visibile (piano del tavolo, testiera del letto, schienale): serve quando la base non si vede */
+const F3_TOP = {tavolo:.75, tavolo_tondo:.75, tavolino:.4, tavolino_tondo:.4, scrivania:.75, isola:.9, madia:.8, cassettiera:.85, comodino:.55, letto_matrimoniale:1, letto_singolo:1, divano:.85, poltrona:.8};
 const F3_WALLISH = new Set(["divano", "divano_angolare", "letto_matrimoniale", "letto_singolo", "armadio", "libreria", "madia", "cassettiera", "mobile_tv", "cucina", "comodino", "scrivania", "frigorifero", "lavabo", "wc", "bidet", "vasca"]);
 const F3_FLOOR = {parquet:"parquet", laminato:"parquet", piastrelle:"gres", resina:"cemento", cemento:"cemento", marmo:"marmo", pietra:"pietra", cotto:"gres", moquette:"tappeto", altro:"parquet"};
 const F3_REF = [["ceil", "Altezza del soffitto"], ["width", "Larghezza della parete di fondo"], ["cam", "Altezza della fotocamera da terra"]];
@@ -4475,7 +4477,7 @@ async function f3Segment(){
       const m = labelMap(segs, 320);
       // spigoli: modello di stanza adattato alle giunzioni (robusto agli arredi); in subordine la spezzata
       const box = fitRoomBox(m, {hfov:F3.opts.fov || F3.exifFov || null, aspect:F3.h / F3.w}), poly = wallCorners(m);
-      const alts = [box && box.conf >= .5 ? box : null, poly && poly.conf >= .6 ? poly : null].filter(Boolean);
+      const alts = [box && box.conf >= .35 ? box : null, poly && poly.conf >= .6 ? poly : null].filter(Boolean);
       Object.assign(job, {state:"ok", m, quad:alts[0] || null, alts, box, labels:segs.map(x => x.label)});
     } catch(e){ console.warn("segmentazione:", e); if (F3.seg === job) Object.assign(job, {state:"err", err:String(e?.message || e)}); }
     if (F3.seg === job && F3.a) { f3ApplySeg(); if (F3.open) f3RenderModal(); }
@@ -4604,15 +4606,15 @@ function f3Layout(s, items = F3.items){
     else {
       p = f3Floor(s, uc, y1);
       // base tagliata dal bordo della foto (oggetto vicino alla fotocamera): si usa il bordo alto del piano, a quota nota
-      const topH = F3_TOP[cat];
-      if (topH && y1 > .97){ const d = s.ray(uc, y0); if (d[2] < -1e-4 && s.hc > topH){ const t = (topH - s.hc) / d[2], far = [s.c[0] + t * d[0], s.c[1] + t * d[1]], hl = Math.hypot(d[0], d[1]) || 1; const dep = (C.d || .6);
+      const topH = F3_TOP[cat]; let cut = false;
+      if (topH && y1 > .97){ cut = true; const d = s.ray(uc, y0); if (d[2] < -1e-4 && s.hc > topH){ const t = (topH - s.hc) / d[2], far = [s.c[0] + t * d[0], s.c[1] + t * d[1]], hl = Math.hypot(d[0], d[1]) || 1; const dep = (C.d || .6);
         p = [far[0] - d[0] / hl * dep, far[1] - d[1] / hl * dep]; } }
       if (!p){ out.skipped.push(it); continue; }
       // misure reali dalla foto: larghezza alla base e altezza della sommità alla distanza dell'oggetto
       const dist = Math.hypot(p[0] - s.c[0], p[1] - s.c[1]), rt = s.ray(uc, y0), hTop = s.hc + dist / (Math.hypot(rt[0], rt[1]) || 1) * rt[2];
       const pa0 = f3Floor(s, x0, y1), pb0 = f3Floor(s, x1, y1), wid = pa0 && pb0 ? Math.hypot(pb0[0] - pa0[0], pb0[1] - pa0[1]) : null;
       // categoria corretta dalle misure (se l'utente non l'ha scelta): divano/poltrona, tavolo/tavolino, letto
-      if (!it.userCat && wid){
+      if (!it.userCat && wid && !cut){
         const sw = {divano:wid < 1.2 ? "poltrona" : null, poltrona:wid > 1.45 ? "divano" : null, tavolo:hTop < .56 ? "tavolino" : null, tavolino:hTop > .66 ? "tavolo" : null, tavolo_tondo:hTop < .56 ? "tavolino_tondo" : null,
           letto_matrimoniale:wid < 1.25 ? "letto_singolo" : null, letto_singolo:wid > 1.45 ? "letto_matrimoniale" : null}[cat];
         if (sw && F3_CATS[sw]){ cat = sw; C = F3_CATS[sw]; }
@@ -4620,7 +4622,7 @@ function f3Layout(s, items = F3.items){
       const face = {camera:[-hv[0], -hv[1]], away:hv, left:[-cr[0], -cr[1]], right:cr}[it.facing] || [-hv[0], -hv[1]];
       const pa = f3Floor(s, x0, y1), pb = f3Floor(s, x1, y1), span = pa && pb ? Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) : null;
       const along = Math.abs(face[0] * hv[0] + face[1] * hv[1]) > .7, vis = along ? C.w : C.d, deep = along ? C.d : C.w;
-      if (span && !C.keep) scale = clamp(span / vis, C.flat ? .6 : .75, C.flat ? 1.6 : 1.35);
+      if (span && !C.keep && !cut) scale = clamp(span / vis, C.flat ? .6 : .75, C.flat ? 1.6 : 1.35);
       p = [p[0] + hv[0] * deep * scale / 2, p[1] + hv[1] * deep * scale / 2];
       rot = Math.round(f3Ang(face) / 15) * 15 % 360;
       const dd = C.d * scale / 2 + .02;

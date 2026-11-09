@@ -130,7 +130,9 @@ export function segComponents(m, roomType = "") {
     let fl = 0, tot = 0, fur = 0; for (let x = x0; x <= x1; x++) for (let y = y1 + 1; y <= Math.min(h - 1, y1 + Math.max(2, h * .03)); y++) { tot++; const l = lab[y * w + x]; if (floorIds.has(l)) fl++; else if (l !== 255 && catOf[l] && !OPEN.includes(catOf[l])) fur++; }
     // arredo subito sotto la finestra (testiera, divano, mobile): il davanzale è nascosto
     const occBelow = grow && tot ? fur / tot > .5 : false;
-    out.push({ occBelow, category: c, label: names[lab[i]], box: [x0 / w, y0 / h, (x1 + 1) / w, (y1 + 1) / h].map(v => +v.toFixed(4)), area: +(n / (w * h)).toFixed(4), fill: +(n / ((x1 - x0 + 1) * (y1 - y0 + 1))).toFixed(2), onFloor: tot ? fl / tot > .3 : false });
+    // lampada con la base sopra l'orizzonte: non può stare a terra (la fotocamera è più alta del pavimento) → a sospensione
+    const cc = c === "lampada_terra" && (y1 + 1) / h < .46 ? "lampadario" : c;
+    out.push({ occBelow, category: cc, label: names[lab[i]], box: [x0 / w, y0 / h, (x1 + 1) / w, (y1 + 1) / h].map(v => +v.toFixed(4)), area: +(n / (w * h)).toFixed(4), fill: +(n / ((x1 - x0 + 1) * (y1 - y0 + 1))).toFixed(2), onFloor: tot ? fl / tot > .3 : false });
   }
   // un'apertura tagliata in due da un arredo davanti (o da una traversa): si ricompone
   const op = c => OPEN.includes(c.category);
@@ -172,7 +174,7 @@ export function mergeSegmentation(items, comps, quad = null) {
   // 3) non trovati dal modello: si aggiungono se aperture o arredi abbastanza grandi
   for (const c of rest) {
     const fam = FAMILY(c.category);
-    if (fam === "apertura" || c.area > .006) {
+    if (fam === "apertura" || c.area > (fam === "lampada" ? .002 : .006)) {   // le lampade sono piccole nella foto
       let cat = c.category; const C = (out.find(o => o.category === cat) || {});
       if (cat === "finestra" && c.onFloor) cat = "portafinestra";   // vetrata fino a terra (pavimento subito sotto)
       out.push({ category: cat, label: "", box: c.box, occBelow: c.occBelow || undefined, w: C.w, d: C.d, h: C.h, facing: "camera", against: "none", source: "segmentazione", seg: true, added: true });

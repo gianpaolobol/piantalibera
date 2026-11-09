@@ -24,8 +24,8 @@ const F3_CATS = {
   lampadario:{n:"Lampadario", ref:"sospensione", w:.44, d:.44, mount:"ceiling", light:true}, plafoniera:{n:"Plafoniera", ref:"plafoniera", w:.4, d:.4, mount:"ceiling", light:true}, faretto:{n:"Faretto", ref:"faretto", w:.1, d:.1, mount:"ceiling", light:true},
   applique:{n:"Applique", ref:"applique", w:.2, d:.15, mount:"wall", light:true}, scala:{n:"Scala", ref:"scala_dritta", w:1, d:3}, altro:{n:"Altro (non creato)", skip:true},
 };
-/* quota del bordo superiore visibile (piano del tavolo, materasso, schienale): serve quando la base non si vede */
-const F3_TOP = {tavolo:.75, tavolo_tondo:.75, tavolino:.4, tavolino_tondo:.4, scrivania:.75, isola:.9, madia:.8, cassettiera:.85, comodino:.55, letto_matrimoniale:.55, letto_singolo:.55, divano:.85, poltrona:.8};
+/* quota del bordo superiore visibile (piano del tavolo, testiera del letto, schienale): serve quando la base non si vede */
+const F3_TOP = {tavolo:.75, tavolo_tondo:.75, tavolino:.4, tavolino_tondo:.4, scrivania:.75, isola:.9, madia:.8, cassettiera:.85, comodino:.55, letto_matrimoniale:1, letto_singolo:1, divano:.85, poltrona:.8};
 const F3_WALLISH = new Set(["divano", "divano_angolare", "letto_matrimoniale", "letto_singolo", "armadio", "libreria", "madia", "cassettiera", "mobile_tv", "cucina", "comodino", "scrivania", "frigorifero", "lavabo", "wc", "bidet", "vasca"]);
 const F3_FLOOR = {parquet:"parquet", laminato:"parquet", piastrelle:"gres", resina:"cemento", cemento:"cemento", marmo:"marmo", pietra:"pietra", cotto:"gres", moquette:"tappeto", altro:"parquet"};
 const F3_REF = [["ceil", "Altezza del soffitto"], ["width", "Larghezza della parete di fondo"], ["cam", "Altezza della fotocamera da terra"]];
@@ -116,7 +116,7 @@ async function f3Segment(){
       const m = labelMap(segs, 320);
       // spigoli: modello di stanza adattato alle giunzioni (robusto agli arredi); in subordine la spezzata
       const box = fitRoomBox(m, {hfov:F3.opts.fov || F3.exifFov || null, aspect:F3.h / F3.w}), poly = wallCorners(m);
-      const alts = [box && box.conf >= .5 ? box : null, poly && poly.conf >= .6 ? poly : null].filter(Boolean);
+      const alts = [box && box.conf >= .35 ? box : null, poly && poly.conf >= .6 ? poly : null].filter(Boolean);
       Object.assign(job, {state:"ok", m, quad:alts[0] || null, alts, box, labels:segs.map(x => x.label)});
     } catch(e){ console.warn("segmentazione:", e); if (F3.seg === job) Object.assign(job, {state:"err", err:String(e?.message || e)}); }
     if (F3.seg === job && F3.a) { f3ApplySeg(); if (F3.open) f3RenderModal(); }
@@ -245,15 +245,15 @@ function f3Layout(s, items = F3.items){
     else {
       p = f3Floor(s, uc, y1);
       // base tagliata dal bordo della foto (oggetto vicino alla fotocamera): si usa il bordo alto del piano, a quota nota
-      const topH = F3_TOP[cat];
-      if (topH && y1 > .97){ const d = s.ray(uc, y0); if (d[2] < -1e-4 && s.hc > topH){ const t = (topH - s.hc) / d[2], far = [s.c[0] + t * d[0], s.c[1] + t * d[1]], hl = Math.hypot(d[0], d[1]) || 1; const dep = (C.d || .6);
+      const topH = F3_TOP[cat]; let cut = false;
+      if (topH && y1 > .97){ cut = true; const d = s.ray(uc, y0); if (d[2] < -1e-4 && s.hc > topH){ const t = (topH - s.hc) / d[2], far = [s.c[0] + t * d[0], s.c[1] + t * d[1]], hl = Math.hypot(d[0], d[1]) || 1; const dep = (C.d || .6);
         p = [far[0] - d[0] / hl * dep, far[1] - d[1] / hl * dep]; } }
       if (!p){ out.skipped.push(it); continue; }
       // misure reali dalla foto: larghezza alla base e altezza della sommità alla distanza dell'oggetto
       const dist = Math.hypot(p[0] - s.c[0], p[1] - s.c[1]), rt = s.ray(uc, y0), hTop = s.hc + dist / (Math.hypot(rt[0], rt[1]) || 1) * rt[2];
       const pa0 = f3Floor(s, x0, y1), pb0 = f3Floor(s, x1, y1), wid = pa0 && pb0 ? Math.hypot(pb0[0] - pa0[0], pb0[1] - pa0[1]) : null;
       // categoria corretta dalle misure (se l'utente non l'ha scelta): divano/poltrona, tavolo/tavolino, letto
-      if (!it.userCat && wid){
+      if (!it.userCat && wid && !cut){
         const sw = {divano:wid < 1.2 ? "poltrona" : null, poltrona:wid > 1.45 ? "divano" : null, tavolo:hTop < .56 ? "tavolino" : null, tavolino:hTop > .66 ? "tavolo" : null, tavolo_tondo:hTop < .56 ? "tavolino_tondo" : null,
           letto_matrimoniale:wid < 1.25 ? "letto_singolo" : null, letto_singolo:wid > 1.45 ? "letto_matrimoniale" : null}[cat];
         if (sw && F3_CATS[sw]){ cat = sw; C = F3_CATS[sw]; }
@@ -261,7 +261,7 @@ function f3Layout(s, items = F3.items){
       const face = {camera:[-hv[0], -hv[1]], away:hv, left:[-cr[0], -cr[1]], right:cr}[it.facing] || [-hv[0], -hv[1]];
       const pa = f3Floor(s, x0, y1), pb = f3Floor(s, x1, y1), span = pa && pb ? Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) : null;
       const along = Math.abs(face[0] * hv[0] + face[1] * hv[1]) > .7, vis = along ? C.w : C.d, deep = along ? C.d : C.w;
-      if (span && !C.keep) scale = clamp(span / vis, C.flat ? .6 : .75, C.flat ? 1.6 : 1.35);
+      if (span && !C.keep && !cut) scale = clamp(span / vis, C.flat ? .6 : .75, C.flat ? 1.6 : 1.35);
       p = [p[0] + hv[0] * deep * scale / 2, p[1] + hv[1] * deep * scale / 2];
       rot = Math.round(f3Ang(face) / 15) * 15 % 360;
       const dd = C.d * scale / 2 + .02;
