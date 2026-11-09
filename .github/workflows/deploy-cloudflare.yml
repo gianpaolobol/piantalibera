@@ -100,6 +100,12 @@ jobs:
           echo "::add-mask::$secret"
           echo "sitekey=$key" >> "$GITHUB_OUTPUT"
           echo "TS_SECRET=$secret" >> "$GITHUB_ENV"
+      - name: Modello di profondità per il dispositivo (release modelli-v1, in parti da meno di 25 MiB)
+        continue-on-error: true
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh release download modelli-v1 -p "moge2-vits-560x420-q8.onnx" -D /tmp/modelli --clobber
+          python3 scripts/dividi-modello.py /tmp/modelli/moge2-vits-560x420-q8.onnx 2 public/modelli
       - name: Pubblica il Worker
         if: steps.pre.outputs.ok == '1'
         run: $WRANGLER deploy --config worker/wrangler.toml --var "TURNSTILE_SITE_KEY:${{ steps.ts.outputs.sitekey }}"

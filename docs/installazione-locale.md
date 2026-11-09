@@ -128,7 +128,7 @@ Dalla scheda **Esporta → Condividi con il cliente** il server locale crea link
 
 ### Da foto al 3D in locale
 
-Il server locale non ha un modello con visione: **Importa → Da foto al 3D** risponde sempre con la stessa analisi di prova (un soggiorno con porta, finestra, divano e lampada), utile per provare calibrazione e creazione anche senza internet. Con `PHOTO_FIXTURE=percorso/analisi.json` usa un'altra risposta, nello stesso formato del modello (vedi `shared/photo.js`). L'analisi vera è quella del sito pubblicato.
+Il server locale non ha un modello con visione: **Importa → Da foto al 3D** risponde sempre con la stessa analisi di prova (un soggiorno con porta, finestra, divano e lampada), utile per provare calibrazione e creazione anche senza internet. Con `PHOTO_FIXTURE=percorso/analisi.json` usa un'altra risposta, nello stesso formato del modello (vedi `shared/photo.js`). L'analisi vera è quella del sito pubblicato. La misura con la profondità (MoGe-2) serve il modello da `public/modelli/`, che non è nel repository: il deploy lo scarica dalla release `modelli-v1`; in locale, senza quei file, si usa il modello di stanza dalla segmentazione (per provarla: scarica `moge2-vits-560x420-q8.onnx` dalla release e dividilo con `python3 scripts/dividi-modello.py moge2-vits-560x420-q8.onnx 2 public/modelli`).
 
 ### Su telefono e tablet
 

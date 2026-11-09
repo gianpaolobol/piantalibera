@@ -104,39 +104,118 @@ async function f3Analyze(){
    SegFormer-b2 ADE20K con transformers.js: modello di ~28 MB scaricato una volta e poi in cache. Parte insieme
    all'analisi del server; se il browser non ce la fa (rete, memoria) si va avanti senza. */
 const F3_TJS = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.min.js";
-let f3SegPipe = null;
+let f3SegPipe = null, f3DetPipe = null;
+/* rilevatore di oggetti nel dispositivo: D-FINE S addestrato su Objects365 (365 classi, molti arredi; Apache 2.0).
+   Separa gli oggetti uno per uno (sedie, mobili), dove la segmentazione unisce; banco NYU: sedie 47/66, mobili 39/101 */
+const F3_DET = {model:"onnx-community/dfine_s_obj365-ONNX", dtype:"fp32", min:.45};
+const F3_O365 = {"Chair":"sedia", "Stool":"sgabello", "Couch":"divano", "Bed":"letto_matrimoniale", "Desk":"scrivania", "Dining Table":"tavolo", "Coffee Table":"tavolino",
+  "Nightstand":"comodino", "Cabinet/shelf":"madia", "Monitor/TV":"mobile_tv", "Toilet":"wc", "Sink":"lavabo", "Bathtub":"vasca", "Refrigerator":"frigorifero", "Oven":"cucina",
+  "Gas stove":"cucina", "Lamp":"lampada_terra", "Potted Plant":"pianta", "Carpet":"tappeto", "Person":"persona"};
 async function f3Segment(){
   if (F3.seg?.state === "run") return F3.seg.promise;
   const job = F3.seg = {state:"run", img:F3.img};
   job.promise = (async () => {
     try {
       if (!f3SegPipe){ const T = await import(F3_TJS); T.env.allowLocalModels = false; f3SegPipe = await T.pipeline("image-segmentation", SEG_MODEL, {dtype:"q8"}); f3SegPipe.RawImage = T.RawImage; }
-      const segs = await f3SegPipe(await f3SegPipe.RawImage.fromURL(F3.thumb || F3.img));
+      const raw = await f3SegPipe.RawImage.fromURL(F3.thumb || F3.img), segs = await f3SegPipe(raw);
+      let dets = [];
+      if (F3_DET.on !== false) try {
+        if (!f3DetPipe){ const T = await import(F3_TJS); f3DetPipe = await T.pipeline("object-detection", F3_DET.model, {dtype:F3_DET.dtype}); }
+        dets = (await f3DetPipe(raw, {threshold:F3_DET.min, percentage:true})).filter(d => F3_O365[d.label]).map(d => ({category:F3_O365[d.label], score:d.score, box:[d.box.xmin, d.box.ymin, d.box.xmax, d.box.ymax].map(v => +Math.min(1, Math.max(0, v)).toFixed(4))}));
+      } catch(e){ console.warn("rilevatore:", e); }
       if (F3.seg !== job) return;
       const m = labelMap(segs, 320);
       // spigoli: modello di stanza adattato alle giunzioni (robusto agli arredi); in subordine la spezzata
       const box = fitRoomBox(m, {hfov:F3.opts.fov || F3.exifFov || null, aspect:F3.h / F3.w}), poly = wallCorners(m);
-      const alts = [box && box.conf >= .35 ? box : null, poly && poly.conf >= .6 ? poly : null].filter(Boolean);
-      Object.assign(job, {state:"ok", m, quad:alts[0] || null, alts, box, labels:segs.map(x => x.label)});
+      let depth = null;
+      if (F3_DEPTH.on !== false) try { job.phase = "profondita"; if (F3.open) f3RenderModal(); const D = await f3DepthRun(F3.thumb || F3.img); if (F3.seg !== job) return; depth = {...D, ...f3DepthGeometry(D, m)}; } catch(e){ console.warn("profondità:", e); depth = {err:String(e?.message || e)}; }
+      const alts = [depth?.quad || null, box && box.conf >= .35 ? box : null, poly && poly.conf >= .6 ? poly : null].filter(Boolean);
+      Object.assign(job, {state:"ok", m, quad:alts[0] || null, alts, box, depth, dets, labels:segs.map(x => x.label)});
     } catch(e){ console.warn("segmentazione:", e); if (F3.seg === job) Object.assign(job, {state:"err", err:String(e?.message || e)}); }
     if (F3.seg === job && F3.a) { f3ApplySeg(); if (F3.open) f3RenderModal(); }
   })();
   return job.promise;
+}
+/* ---------- geometria metrica nel dispositivo (MoGe-2 ViT-S, Microsoft, MIT; shared/photo-depth.js) ----------
+   Una rete stima per ogni pixel il punto 3D in metri: pavimento, pareti, soffitto, altezza della fotocamera e
+   posizione degli arredi senza misure dell'utente. Modello ONNX (~70 MB in fp16) servito dal sito in parti da 20 MB,
+   eseguito con onnxruntime-web (WebGPU se c'è, altrimenti WebAssembly); scaricato una volta e conservato in cache. */
+const F3_ORT = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/";
+const F3_DEPTH = {base:"modelli/moge2-vits-560x420-fp16.onnx", parts:4, w:560, h:420};
+let f3DepthSes = null;
+async function f3DepthModel(){
+  const urls = Array.from({length:F3_DEPTH.parts}, (_, i) => `${F3_DEPTH.base}.part${i}`), bufs = [];
+  let cache = null; try { cache = await caches.open("pl-modelli-v1"); } catch(e){}
+  for (const u of urls){ let r = cache && await cache.match(u).catch(() => null);
+    if (!r){ r = await fetch(u); if (!r.ok) throw new Error("modello di profondità non disponibile (" + r.status + ")"); try { await cache?.put(u, r.clone()); } catch(e){} }
+    bufs.push(new Uint8Array(await r.arrayBuffer())); }
+  const all = new Uint8Array(bufs.reduce((n, b) => n + b.length, 0)); let o = 0; for (const b of bufs){ all.set(b, o); o += b.length; } return all;
+}
+async function f3DepthRun(url){
+  if (!f3DepthSes){ const ort = await import(F3_ORT + "ort.webgpu.min.mjs"); ort.env.wasm.wasmPaths = F3_ORT;
+    const model = await f3DepthModel(), eps = navigator.gpu ? ["webgpu", "wasm"] : ["wasm"];
+    try { f3DepthSes = await ort.InferenceSession.create(model, {executionProviders:eps}); } catch(e){ f3DepthSes = await ort.InferenceSession.create(model, {executionProviders:["wasm"]}); }
+    f3DepthSes.ort = ort; }
+  const img = await new Promise((ok, ko) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ko(new Error("foto non leggibile")); im.src = url; });
+  const iw = img.naturalWidth, ih = img.naturalHeight, rot = ih > iw, MW = F3_DEPTH.w, MH = F3_DEPTH.h;
+  // le foto verticali si ruotano di 90° (il modello è a 4:3 orizzontale); bande grigie per mantenere le proporzioni
+  const sw = rot ? ih : iw, sh = rot ? iw : ih, k = Math.min(MW / sw, MH / sh), cw = sw * k, ch = sh * k, ox = (MW - cw) / 2, oy = (MH - ch) / 2;
+  const cv = document.createElement("canvas"); cv.width = MW; cv.height = MH; const g = cv.getContext("2d", {willReadFrequently:true}); g.fillStyle = "#808080"; g.fillRect(0, 0, MW, MH);
+  g.save(); g.translate(ox, oy); if (rot){ g.translate(0, ch); g.rotate(-Math.PI / 2); g.drawImage(img, 0, 0, ch, cw); } else g.drawImage(img, 0, 0, cw, ch); g.restore();
+  const px = g.getImageData(0, 0, MW, MH).data, x = new Float32Array(3 * MW * MH);
+  for (let i = 0; i < MW * MH; i++) for (let c = 0; c < 3; c++) x[c * MW * MH + i] = px[i * 4 + c] / 255;
+  const ort = f3DepthSes.ort, out = await f3DepthSes.run({image:new ort.Tensor("float32", x, [1, 3, MH, MW])});
+  const Pm = Float32Array.from(out.points.data), Nm = out.normal.data, Mm = Float32Array.from(out.mask.data);
+  for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) if (i < ox || i >= ox + cw || j < oy || j >= oy + ch) Mm[j * MW + i] = 0;    // bande
+  const cam = dpRecover(Pm, Mm, MW, MH, out.metric_scale.data[0]); if (!cam) throw new Error("profondità non ricostruita");
+  // griglia della foto originale (lato lungo 192 punti): punti e normali riportati nel riferimento della foto
+  const w2 = iw >= ih ? 192 : Math.round(192 * iw / ih), h2 = iw >= ih ? Math.round(192 * ih / iw) : 192, P = new Float32Array(w2 * h2 * 3), N = new Float32Array(w2 * h2 * 3), M = new Float32Array(w2 * h2);
+  for (let j = 0; j < h2; j++) for (let i = 0; i < w2; i++){
+    const u = (i + .5) / w2, v = (j + .5) / h2, su = rot ? v : u, sv = rot ? 1 - u : v;      // nella foto ruotata
+    const mi = Math.min(MW - 1, Math.floor(ox + su * cw)), mj = Math.min(MH - 1, Math.floor(oy + sv * ch)), q = mj * MW + mi, k2 = j * w2 + i;
+    const a = [Pm[3 * q], Pm[3 * q + 1], Pm[3 * q + 2]], b = [Nm[3 * q], Nm[3 * q + 1], Nm[3 * q + 2]];
+    // ruotata di 90° in senso antiorario: x = −y', y = x'
+    P.set(rot ? [-a[1], a[0], a[2]] : a, 3 * k2); N.set(rot ? [-b[1], b[0], b[2]] : b, 3 * k2); M[k2] = Mm[q];
+  }
+  const fxS = cam.fx * MW / cw, fyS = cam.fy * MH / ch, fx = rot ? fyS : fxS, fy = rot ? fxS : fyS;
+  return {P, N, M, w:w2, h:h2, fx, fy, hfov:2 * Math.atan(.5 / fx) * 180 / Math.PI};
+}
+/* dalla profondità: verso l'alto, altezza della fotocamera, stanza a scatola e spigoli della parete di fondo */
+function f3DepthGeometry(D, m){
+  const ids = {floor:idsOf(m, "@floor"), ceiling:idsOf(m, "@ceiling"), wall:idsOf(m, "@wall")};
+  const G = dpGravity(D.P, D.M, D.w, D.h, m, ids); if (!G || !G.h) return {G};
+  const R = dpRoom(D.P, D.N, D.M, D.w, D.h, m, ids, G); if (!R) return {G};
+  const q = dpQuad(G, R, {fx:D.fx, fy:D.fy}, D.w / D.h); if (!q) return {G, R};
+  return {G, R, quad:{...q, source:"profondità", conf:1}};
 }
 /* applica la segmentazione all'analisi: spigoli (se l'utente non li ha già spostati) e riquadri */
 function f3ApplySeg(){
   const sg = F3.seg; if (!sg || sg.state !== "ok" || !F3.a || sg.applied) return; sg.applied = true;
   // prima proposta che dà una geometria possibile (spigoli alti sopra l'orizzonte, fotocamera davanti alla parete)
   if (sg.alts?.length && F3.quadSource !== "posizionati da te"){
-    const keep = F3.quad; sg.quad = sg.alts.find(q => { F3.quad = {fl:q.fl, fr:q.fr, cl:q.cl, cr:q.cr}; F3.quadOpen = q === sg.box ? {l:q.openL, r:q.openR} : null; return f3Solve().ok; }) || null; F3.quad = keep;
+    const keep = F3.quad, keepO = {...F3.opts}, dq = sg.depth?.quad;
+    sg.quad = sg.alts.find(q => { F3.quad = {fl:q.fl, fr:q.fr, cl:q.cl, cr:q.cr}; F3.quadOpen = q === sg.box || q === dq ? {l:q.openL, r:q.openR} : null;
+      if (q === dq){ F3.opts.pitch = sg.depth.G.pitch; F3.opts.ceil = q.ceiling; if (!F3.opts.userRef){ F3.opts.refKind = "cam"; F3.opts.refVal = +sg.depth.G.h.toFixed(2); } }
+      const ok = f3Solve().ok; if (!ok){ Object.assign(F3.opts, keepO); F3.opts.pitch = keepO.pitch ?? null; } return ok; }) || null; F3.quad = keep;
   }
   if (sg.quad && F3.quadSource !== "posizionati da te"){
-    F3.quad = {fl:sg.quad.fl, fr:sg.quad.fr, cl:sg.quad.cl, cr:sg.quad.cr}; F3.quadOpen = sg.quad === sg.box ? {l:sg.box.openL, r:sg.box.openR} : null; F3.quadSource = sg.quad === sg.box ? "trovati dal modello di stanza: controllali" : "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
+    const dq = sg.depth?.quad;
+    F3.quad = {fl:sg.quad.fl, fr:sg.quad.fr, cl:sg.quad.cl, cr:sg.quad.cr}; F3.quadOpen = sg.quad === sg.box || sg.quad === dq ? {l:sg.quad.openL, r:sg.quad.openR} : null;
+    F3.quadSource = sg.quad === dq ? "misurati dalla profondità: controllali" : sg.quad === sg.box ? "trovati dal modello di stanza: controllali" : "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
+    if (sg.quad === dq){ F3.opts.pitch = sg.depth.G.pitch; if (!F3.exifFov && !F3.opts.fov) F3.fitFov = +sg.depth.hfov.toFixed(1); if (!F3.opts.userRef){ F3.opts.refKind = "cam"; F3.opts.refVal = +sg.depth.G.h.toFixed(2); } }
     if (sg.box && sg.quad === sg.box && !F3.exifFov && !F3.opts.fov) F3.fitFov = sg.box.hfov;       // campo visivo stimato dalla prospettiva
+  }
+  // rilevamenti nel dispositivo: un oggetto per riquadro; precisano o aggiungono quelli del modello linguistico
+  const iouB = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), iy = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])), i = ix * iy, u = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i; return u > 0 ? i / u : 0; };
+  for (const d of (sg.dets || []).sort((a, b) => b.score - a.score)){
+    const same = F3.items.find(it => FAMILY(it.category) === FAMILY(d.category) && iouB(it.box, d.box) > .5);
+    if (same){ if (!String(same.source).includes("rilevatore")){ same.box = d.box; same.source = "rilevatore"; } continue; }
+    F3.items.push({category:d.category, label:"", box:d.box, facing:"camera", against:"none", source:"rilevatore", score:d.score});
   }
   const comps = segComponents(sg.m, F3.a.room_type || "");
   F3.items = mergeSegmentation(F3.items, comps, F3.quad).map((it, i) => ({...it, id:i, on: it.on !== false && !it.doubt && !F3_CATS[it.category]?.skip && it.category !== "persona" /* le persone non fanno parte della stanza: in elenco, spente */, label: it.label || F3_CATS[it.category]?.n || ""}));
-  F3.segNote = `Segmentazione: ${comps.filter(c => /porta|finestra/.test(c.category)).length} aperture e ${comps.filter(c => !/porta|finestra/.test(c.category)).length} arredi trovati nella foto${sg.quad ? "; spigoli proposti" : ""}.`;
+  const dg = sg.depth?.G;
+  F3.segNote = (sg.quad && sg.quad === sg.depth?.quad ? `Profondità: fotocamera a ${fmt(dg.h, 2)} m, inclinazione ${fmt(dg.pitch, 1)}°, misure dalla foto senza riferimenti. ` : "") + `Segmentazione: ${comps.filter(c => /porta|finestra/.test(c.category)).length} aperture e ${comps.filter(c => !/porta|finestra/.test(c.category)).length} arredi trovati nella foto${sg.quad ? "; spigoli proposti" : ""}.`;
 }
 function f3Accept(j){
   const a = j.analysis; F3.a = a; F3.meta = {model:j.model, detect:j.detect_model, mock:!!j.mock, ms:j.duration_ms, neurons:j.neurons_measured ?? j.neurons_estimated, remaining:j.remaining_today};
@@ -169,7 +248,8 @@ function f3Solve(quad = F3.quad, opts = F3.opts, w = F3.w, h = F3.h, a = F3.a){
   const ceilH = (cpt, A, cam) => { const d = f3Dir(cpt[0], cpt[1], cam), hd = Math.hypot(d[0], d[2]); return 1 + Math.hypot(A[0], A[1]) / hd * d[1]; };
   let p = f3Rad(clamp(a?.camera?.pitch_deg || 0, -30, 30));
   const useCeil = opts.ceil && quad.cl && quad.cr;
-  if (useCeil){   // inclinazione: le verticali della parete devono risultare verticali
+  if (opts.pitch != null) p = f3Rad(opts.pitch);         // inclinazione misurata dalla profondità (piano del pavimento)
+  else if (useCeil){   // inclinazione: le verticali della parete devono risultare verticali
     const cost = pp => { const cam = {...cam0, p:pp}, A = floorAt(quad.fl, cam), B = floorAt(quad.fr, cam); return A && B ? ceilErr(quad.cl, A, cam) + ceilErr(quad.cr, B, cam) : Infinity; };
     let best = Infinity; for (let d = -35; d <= 35; d += .5){ const c = cost(f3Rad(d)); if (c < best){ best = c; p = f3Rad(d); } }
     for (let step = f3Rad(.25); step > 1e-4; step /= 2) for (const s of [-1, 1]){ const c = cost(p + s * step); if (c < best){ best = c; p += s * step; } }
@@ -221,6 +301,18 @@ function f3WallAt(s, u, v){
   return best || {wall:"back", ...f3OnWall(s, "back", u, v)};
 }
 const f3Ang = f => { let t = Math.atan2(-f[0], f[1]) * 180 / Math.PI; return ((t % 360) + 360) % 360; };
+/* posizione di un arredo dai punti 3D della profondità (pixel del riquadro con le etichette della sua famiglia);
+   riportata nella pianta dell'editor con la sua scala (altezza della fotocamera) */
+function f3Obj3d(s, it, cat){
+  const sg = F3.seg, D = sg?.depth, G = D?.G; if (!G?.h || !sg.m || !D.P) return null;
+  const m = sg.m, fam = FAMILY(cat), struct = c => c && c[0] === "@";
+  let ids = new Set(m.names.map((n, i) => { const c = SEG_CAT[n]; return c && !struct(c) && FAMILY(c) === fam ? i : -1; }).filter(i => i >= 0));
+  if (!ids.size) ids = new Set(m.names.map((n, i) => { const c = SEG_CAT[n]; return !struct(c) && !OPEN.includes(c) && !OUTSIDE.has(n) ? i : -1; }).filter(i => i >= 0));
+  const o = dpObject(D.P, D.M, D.w, D.h, m, ids, it.box, G); if (!o || o.n < 15) return null;
+  const k = s.hc / G.h, f0 = s.ray(.5, .5), fl = Math.hypot(f0[0], f0[1]) || 1, fw = [f0[0] / fl, f0[1] / fl], rl = Math.hypot(s.right[0], s.right[1]) || 1, rt = [s.right[0] / rl, s.right[1] / rl];
+  const at = (r, f) => [s.c[0] + k * (r * rt[0] + f * fw[0]), s.c[1] + k * (r * rt[1] + f * fw[1])];
+  return {front:at((o.rmin + o.rmax) / 2, o.fmin), center:at(o.r, o.f), wid:(o.rmax - o.rmin) * k, hTop:o.zmax * k, zmin:o.zmin * k};
+}
 /* posizioni in pianta di aperture e oggetti (dati puri: servono all'anteprima e alla creazione) */
 function f3Layout(s, items = F3.items){
   const out = {openings:[], objects:[], skipped:[]}, hasBed = items.some(i => i.on && /^letto/.test(i.category));
@@ -238,7 +330,7 @@ function f3Layout(s, items = F3.items){
       out.openings.push({it, wall:hit.wall, t, w, h:+(top - sill).toFixed(2), sill:+sill.toFixed(2), type:C.kind, style:C.style});
       continue;
     }
-    let p, rot = 0, scale = 1, z = null;
+    let p, rot = 0, scale = 1, z = null, o3v = null;
     const hv = (() => { const d = s.ray(uc, vc), l = Math.hypot(d[0], d[1]) || 1; return [d[0] / l, d[1] / l]; })(), rl = Math.hypot(s.right[0], s.right[1]) || 1, cr = [s.right[0] / rl, s.right[1] / rl];
     if (C.mount === "ceiling"){
       // il bordo alto della lampada spesso è il paralume, non il soffitto: si usa il fondo, appeso circa 75 cm sotto il soffitto
@@ -247,22 +339,28 @@ function f3Layout(s, items = F3.items){
       const da = s.ray(x0, y1), db = s.ray(x1, y1), na = Math.hypot(...da), nb = Math.hypot(...db), cosA = (da[0] * db[0] + da[1] * db[1] + da[2] * db[2]) / (na * nb), ang = Math.acos(clamp(cosA, -1, 1));
       const zB = clamp(s.H - .75, 1.8, s.H - .3), d = s.ray(uc, y1), hl = Math.hypot(d[0], d[1]) || 1;
       const pc = f3Ceil(s, uc, y0), inRoom = pc && pc[0] > 0 && pc[0] < s.W && pc[1] > .05 && pc[1] < s.D;
-      if (inRoom) p = pc;                   // il riquadro arriva al punto di attacco: vale quello
+      const o3 = f3Obj3d(s, it, cat);
+      if (o3) p = o3.center;                // punti 3D della lampada
+      else if (inRoom) p = pc;              // il riquadro arriva al punto di attacco: vale quello
       else if (ang > .01 && cat === "lampadario"){ const dist = clamp((C.w || .44) / (2 * Math.tan(ang / 2)), .5, 15); p = [s.c[0] + d[0] / hl * dist, s.c[1] + d[1] / hl * dist]; }
       else { const t = Math.abs(d[2]) > 1e-4 ? (zB - s.hc) / d[2] : -1; p = t > 0 ? [s.c[0] + t * d[0], s.c[1] + t * d[1]] : (f3Ceil(s, uc, y0) || f3Floor(s, uc, y1)); } }
     else if (C.mount === "wall"){ const hit = f3WallAt(s, uc, vc); const inN = {back:[0, 1], left:[1, 0], right:[-1, 0]}[hit.wall]; p = [hit.x + inN[0] * .08, hit.y + inN[1] * .08]; rot = f3Ang(inN); z = clamp(hit.z - .1, .5, s.H - .2); }
     else {
-      p = f3Floor(s, uc, y1);
+      // con la profondità: fronte dell'oggetto dai suoi punti 3D; altrimenti appoggio della base sul pavimento
+      const o3 = f3Obj3d(s, it, cat); o3v = o3?.center;
+      // piani orizzontali visti dall'alto (letti, tavoli): la mediana dei punti visti è già il centro
+      const topSeen = o3 && /^(letto|tavol|scrivania|isola)/.test(cat);
+      p = o3 ? (topSeen ? o3.center : o3.front) : f3Floor(s, uc, y1);
       // base tagliata dal bordo della foto (oggetto vicino alla fotocamera): si usa il bordo alto del piano, a quota nota
       const topH = F3_TOP[cat]; let cut = false;
-      if (topH && y1 > .97){ cut = true; const d = s.ray(uc, y0); if (d[2] < -1e-4 && s.hc > topH){ const t = (topH - s.hc) / d[2], far = [s.c[0] + t * d[0], s.c[1] + t * d[1]], hl = Math.hypot(d[0], d[1]) || 1; const dep = (C.d || .6);
+      if (topH && y1 > .97 && !o3){ cut = true; const d = s.ray(uc, y0); if (d[2] < -1e-4 && s.hc > topH){ const t = (topH - s.hc) / d[2], far = [s.c[0] + t * d[0], s.c[1] + t * d[1]], hl = Math.hypot(d[0], d[1]) || 1; const dep = (C.d || .6);
         p = [far[0] - d[0] / hl * dep, far[1] - d[1] / hl * dep]; } }
       if (!p){ out.skipped.push(it); continue; }
       // misure reali dalla foto: larghezza alla base e altezza della sommità alla distanza dell'oggetto
-      const dist = Math.hypot(p[0] - s.c[0], p[1] - s.c[1]), rt = s.ray(uc, y0), hTop = s.hc + dist / (Math.hypot(rt[0], rt[1]) || 1) * rt[2];
+      const dist = Math.hypot(p[0] - s.c[0], p[1] - s.c[1]), rt = s.ray(uc, y0), hTop = o3 ? o3.hTop : s.hc + dist / (Math.hypot(rt[0], rt[1]) || 1) * rt[2];
       // larghezza alla base o, se la base è fuori dalla foto, al bordo alto (quota tipica dello schienale o del piano)
       const atZ = (u, v, zz) => { const d = s.ray(u, v); if (Math.abs(d[2]) < 1e-4) return null; const t = (zz - s.hc) / d[2]; return t > 0 ? [s.c[0] + t * d[0], s.c[1] + t * d[1]] : null; };
-      const pa0 = cut ? atZ(x0, y0, topH) : f3Floor(s, x0, y1), pb0 = cut ? atZ(x1, y0, topH) : f3Floor(s, x1, y1), wid = pa0 && pb0 ? Math.hypot(pb0[0] - pa0[0], pb0[1] - pa0[1]) : null;
+      const pa0 = cut ? atZ(x0, y0, topH) : f3Floor(s, x0, y1), pb0 = cut ? atZ(x1, y0, topH) : f3Floor(s, x1, y1), wid = o3 ? o3.wid : pa0 && pb0 ? Math.hypot(pb0[0] - pa0[0], pb0[1] - pa0[1]) : null;
       // categoria corretta dalle misure (se l'utente non l'ha scelta): divano/poltrona, tavolo/tavolino, letto
       if (!it.userCat && wid){
         const sw = {divano:wid < 1.2 ? "poltrona" : null, poltrona:wid > 1.45 ? "divano" : null, tavolo:hTop < .56 ? "tavolino" : null, tavolino:hTop > .66 ? "tavolo" : null, tavolo_tondo:hTop < .56 ? "tavolino_tondo" : null,
@@ -272,10 +370,10 @@ function f3Layout(s, items = F3.items){
         if (sw && F3_CATS[sw]){ cat = sw; C = F3_CATS[sw]; }
       }
       const face = {camera:[-hv[0], -hv[1]], away:hv, left:[-cr[0], -cr[1]], right:cr}[it.facing] || [-hv[0], -hv[1]];
-      const pa = f3Floor(s, x0, y1), pb = f3Floor(s, x1, y1), span = pa && pb ? Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) : null;
+      const pa = f3Floor(s, x0, y1), pb = f3Floor(s, x1, y1), span = o3 ? o3.wid : pa && pb ? Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) : null;
       const along = Math.abs(face[0] * hv[0] + face[1] * hv[1]) > .7, vis = along ? C.w : C.d, deep = along ? C.d : C.w;
       if (span && !C.keep && !cut) scale = clamp(span / vis, C.flat ? .6 : .75, C.flat ? 1.6 : 1.35);
-      p = [p[0] + hv[0] * deep * scale / 2, p[1] + hv[1] * deep * scale / 2];
+      if (!topSeen) p = [p[0] + hv[0] * deep * scale / 2, p[1] + hv[1] * deep * scale / 2];
       rot = Math.round(f3Ang(face) / 15) * 15 % 360;
       const dd = C.d * scale / 2 + .02;
       let ag = it.against;
@@ -288,7 +386,7 @@ function f3Layout(s, items = F3.items){
     if (!p) { out.skipped.push(it); continue; }
     p = [clamp(p[0], .1, s.W - .1), clamp(p[1], .1, s.D - .1)];
     const ref = C.ref === "sagoma_uomo" && /donna|ragazza|bambina|signora|woman|girl/i.test(it.label || "") ? "sagoma_donna" : C.ref;
-    out.objects.push({it, cat, ref, x:p[0], y:p[1], rot, scale:+scale.toFixed(2), z, light:C.light});
+    out.objects.push({it, cat, ref, x:p[0], y:p[1], rot, scale:+scale.toFixed(2), z, light:C.light, vis:o3v || null});
   }
   // stesso arredo grande riconosciuto due volte (letto spezzato in due riquadri): in pianta i centri quasi coincidono
   const famOf = c => c.replace(/_.*/, ""), BIG3 = /^(letto|divano|tavolo|armadio|madia|libreria|cucina)/;
@@ -439,7 +537,7 @@ function f3ReviewHTML(){
     <div class="f3list">${list || `<p class="note">Nessun elemento riconosciuto.</p>`}</div>
     <div class="btns"><select id="f3AddCat" class="inp" aria-label="Categoria da aggiungere"><option value="">＋ Aggiungi un elemento…</option>${Object.entries(F3_CATS).filter(([, v]) => !v.skip).map(([k, v]) => `<option value="${k}">${esc(v.n)}</option>`).join("")}</select></div>
     <div class="btns f3m-go"><button class="btn primary" id="f3Build" ${s.ok ? "" : "disabled"}>${F3.report ? "Crea un'altra copia" : "Crea il modello 3D"}</button><button class="btn" id="f3Cancel">Chiudi</button></div>
-    <p class="note">${F3.seg?.state === "run" ? "Segmentazione nel dispositivo in corso: spigoli e riquadri si aggiorneranno da soli…" : F3.seg?.state === "ok" ? esc(F3.segNote || "") : F3.seg?.state === "err" ? "Segmentazione nel dispositivo non disponibile: spigoli e riquadri vengono solo dall'analisi AI." : ""}</p>
+    <p class="note">${F3.seg?.state === "run" ? (F3.seg.phase === "profondita" ? "Misuro la stanza nel dispositivo (la prima volta si scarica il modello di profondità, ~42 MB)…" : "Segmentazione nel dispositivo in corso: spigoli e riquadri si aggiorneranno da soli…") : F3.seg?.state === "ok" ? esc(F3.segNote || "") : F3.seg?.state === "err" ? "Segmentazione nel dispositivo non disponibile: spigoli e riquadri vengono solo dall'analisi AI." : ""}</p>
     ${F3.err ? `<p class="note warn" role="alert">${esc(F3.err)}</p>` : ""}
     <p class="note">${meta.mock ? "Risposta di prova del server locale. " : ""}${meta.model ? `Analisi: ${esc(meta.model.replace(/^@cf\//, ""))}${meta.detect ? " + " + esc(meta.detect.replace(/^@cf\//, "")) : ""}` : ""}${meta.ms ? ` in ${fmt(meta.ms / 1000, 0)} s` : ""}${meta.remaining != null ? ` · analisi rimaste oggi: ${meta.remaining}` : ""}.</p></div></div>`;
 }
@@ -483,7 +581,7 @@ function f3PointerDown(e){
 }
 function f3PointerMove(e){
   if (!f3Drag) return; e.preventDefault(); const p = f3Pt(e), lim = v => clamp(v, -.11, 1.11);
-  if (f3Drag.kind === "h"){ F3.quad[f3Drag.k] = [lim(p[0]), lim(p[1])]; F3.quadSource = "posizionati da te"; F3.quadOpen = null; }
+  if (f3Drag.kind === "h"){ F3.quad[f3Drag.k] = [lim(p[0]), lim(p[1])]; F3.quadSource = "posizionati da te"; F3.quadOpen = null; F3.opts.pitch = null; }
   else if (f3Drag.kind === "rs"){ const b = F3.items[f3Drag.i].box;
     if (f3Drag.c === "tl"){ b[0] = clamp(p[0], 0, b[2] - .01); b[1] = clamp(p[1], 0, b[3] - .01); } else { b[2] = clamp(p[0], b[0] + .01, 1); b[3] = clamp(p[1], b[1] + .01, 1); } }
   else { const b0 = f3Drag.b0, dx = clamp(p[0] - f3Drag.p0[0], -b0[0], 1 - b0[2]), dy = clamp(p[1] - f3Drag.p0[1], -b0[1], 1 - b0[3]); F3.items[f3Drag.i].box = [b0[0] + dx, b0[1] + dy, b0[2] + dx, b0[3] + dy]; }
@@ -505,9 +603,9 @@ function f3Click(e){ const b = e.target.closest("button"); if (!b) return;
 function f3Change(e){ const t = e.target, rr = () => F3.open ? f3RenderModal() : renderImport();
   if (t.id === "f3Consent"){ f3Consent = t.checked; try { localStorage.setItem(F3_CONSENT_KEY, f3Consent ? "1" : "0"); } catch(_){} if (f3Consent) F3.err = ""; return; }
   if (t.id === "f3Ceil"){ F3.opts.ceil = t.checked; if (!t.checked && F3.opts.refKind === "ceil") F3.opts.refVal = F3.opts.refVal || 2.7; rr(); return; }
-  if (t.id === "f3RefKind"){ F3.opts.refKind = t.value; F3.opts.refVal = {ceil:F3.a?.room?.height_m || 2.7, width:F3.a?.room?.width_m || 4, cam:1.5}[t.value]; rr(); return; }
+  if (t.id === "f3RefKind"){ F3.opts.userRef = true; F3.opts.refKind = t.value; F3.opts.refVal = {ceil:F3.a?.room?.height_m || 2.7, width:F3.a?.room?.width_m || 4, cam:1.5}[t.value]; rr(); return; }
   // campi numerici: si aggiornano foto, riassunto e anteprima, non i campi (rifarli mentre perdono il fuoco è vietato)
-  if (t.id === "f3RefVal"){ const v = num(t.value); if (v > .2 && v < 50) F3.opts.refVal = v; f3Refresh(); return; }
+  if (t.id === "f3RefVal"){ const v = num(t.value); if (v > .2 && v < 50){ F3.opts.refVal = v; F3.opts.userRef = true; } f3Refresh(); return; }
   if (t.id === "f3Fov"){ const v = num(t.value); F3.opts.fov = v >= 20 && v <= 130 ? v : null; f3Refresh(); return; }
   if (t.id === "f3Depth"){ const v = num(t.value); F3.opts.depth = v > 0 ? clamp(v, 1, 40) : null; f3Refresh(); return; }
   if (t.dataset.f3on != null){ F3.items[+t.dataset.f3on].on = t.checked; f3Refresh(); return; }

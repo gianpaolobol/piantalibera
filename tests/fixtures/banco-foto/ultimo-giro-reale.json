@@ -1,5 +1,5 @@
 {
- "when": "2026-11-09T17:39:55.866Z",
+ "when": "2026-11-09T22:59:30.278Z",
  "fovNoto": true,
  "sum": {
   "scene": 12,
@@ -17,9 +17,9 @@
   "altezza_ap_err_m": 0.12,
   "larghezza_ap_err_m": 0.42,
   "aperture_in_piu": 3,
-  "arredi_trovati": "20/31",
-  "arredi_pos_err_m": 0.35,
-  "arredi_in_piu": 30,
+  "arredi_trovati": "19/31",
+  "arredi_pos_err_m": 0.36,
+  "arredi_in_piu": 35,
   "neurons_spesi": 0
  },
  "rows": [
@@ -124,12 +124,12 @@
       "d": 0.24
      }
     ],
-    "extraObjs": 1
+    "extraObjs": 0
    },
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 8214
+    "tSeg": 16823
    },
    "stale": false
   },
@@ -241,8 +241,7 @@
      },
      {
       "cat": "lampadario",
-      "found": true,
-      "d": 0.49
+      "found": false
      }
     ],
     "extraObjs": 6
@@ -250,7 +249,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5647
+    "tSeg": 9136
    },
    "stale": false
   },
@@ -352,7 +351,8 @@
      },
      {
       "cat": "comodino",
-      "found": false
+      "found": true,
+      "d": 0.63
      }
     ],
     "extraObjs": 2
@@ -360,7 +360,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5981
+    "tSeg": 8891
    },
    "stale": false
   },
@@ -476,7 +476,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 6414
+    "tSeg": 9642
    },
    "stale": false
   },
@@ -578,7 +578,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 6328
+    "tSeg": 9453
    },
    "stale": false
   },
@@ -689,15 +689,15 @@
      {
       "cat": "comodino",
       "found": true,
-      "d": 0.18
+      "d": 0.17
      }
     ],
-    "extraObjs": 1
+    "extraObjs": 2
    },
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5478
+    "tSeg": 8871
    },
    "stale": false
   },
@@ -798,19 +798,20 @@
      },
      {
       "cat": "comodino",
-      "found": false
+      "found": true,
+      "d": 0.02
      },
      {
       "cat": "lampadario",
       "found": false
      }
     ],
-    "extraObjs": 2
+    "extraObjs": 3
    },
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5875
+    "tSeg": 9155
    },
    "stale": false
   },
@@ -922,7 +923,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5485
+    "tSeg": 8947
    },
    "stale": false
   },
@@ -1028,20 +1029,19 @@
      {
       "cat": "comodino",
       "found": true,
-      "d": 0.12
+      "d": 0.06
      },
      {
       "cat": "lampadario",
-      "found": true,
-      "d": 0.86
+      "found": false
      }
     ],
-    "extraObjs": 1
+    "extraObjs": 3
    },
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5919
+    "tSeg": 8949
    },
    "stale": false
   },
@@ -1154,8 +1154,7 @@
      },
      {
       "cat": "lampadario",
-      "found": true,
-      "d": 0.14
+      "found": false
      }
     ],
     "extraObjs": 5
@@ -1163,7 +1162,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5730
+    "tSeg": 8789
    },
    "stale": false
   },
@@ -1270,20 +1269,20 @@
      },
      {
       "cat": "comodino",
-      "found": false
+      "found": true,
+      "d": 0.88
      },
      {
       "cat": "lampadario",
-      "found": true,
-      "d": 0.17
+      "found": false
      }
     ],
-    "extraObjs": 1
+    "extraObjs": 2
    },
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 5691
+    "tSeg": 8916
    },
    "stale": false
   },
@@ -1380,12 +1379,12 @@
       "found": false
      }
     ],
-    "extraObjs": 1
+    "extraObjs": 2
    },
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 6346
+    "tSeg": 9528
    },
    "stale": false
   }
