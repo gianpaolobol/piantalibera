@@ -12,3 +12,4 @@ playwright-report/
 .wrangler/
 .dev.vars
 scripts/tmp/
+public/modelli/

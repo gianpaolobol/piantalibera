@@ -89,15 +89,15 @@ export function dpRoom(P, N, M, w2, h2, m, ids, G) {
   let bi = 0, bv = -1; for (let i = 0; i < 90; i++) { const v = hist[(i + 89) % 90] + 2 * hist[i] + hist[(i + 1) % 90]; if (v > bv) { bv = v; bi = i; } }
   const th = -(bi + .5 - 45) * Math.PI / 180;       // rotazione (−45°..45°) che porta la parete di fondo di fronte
   const rot = ([r, f]) => [r * Math.cos(th) - f * Math.sin(th), r * Math.sin(th) + f * Math.cos(th)];
-  const back = [], left = [], right = [];
-  W.forEach((p, i) => { const q = rot(p), nn = rot(NW[i]), ln = Math.hypot(...nn); if (nn[1] / ln < -.8) back.push(q[1]); else if (nn[0] / ln > .8) left.push(q[0]); else if (nn[0] / ln < -.8) right.push(q[0]); });
+  const back = [], backR = [], left = [], right = [];
+  W.forEach((p, i) => { const q = rot(p), nn = rot(NW[i]), ln = Math.hypot(...nn); if (nn[1] / ln < -.8) { back.push(q[1]); backR.push(q[0]); } else if (nn[0] / ln > .8) left.push(q[0]); else if (nn[0] / ln < -.8) right.push(q[0]); });
   // piano dominante per famiglia: il picco dell'istogramma a 5 cm (più muri paralleli: il più numeroso)
   const peak = (a, sign) => { if (a.length < 25) return null; const lo = dpPct(a, .02), hi = dpPct(a, .98), nb = Math.max(1, Math.ceil((hi - lo) / .05)), hb = new Float64Array(nb + 1);
     for (const v of a) hb[Math.max(0, Math.min(nb, Math.floor((v - lo) / .05)))]++; let b = 0; for (let i = 0; i <= nb; i++) if (hb[i] > hb[b] || (hb[i] === hb[b] && sign * i > sign * b)) b = i;
     const c = lo + (b + .5) * .05, near = a.filter(v => Math.abs(v - c) < .12); return { v: dpPct(near, .5), n: near.length }; };
   const B = peak(back, 1), L = peak(left, -1), R = peak(right, 1);
   const ceil = C.length > 80 ? dpPct(C, .5) : null;
-  return { th: th * 180 / Math.PI, db: B && B.v > .3 ? B.v : null, dl: L && L.v < -.1 ? -L.v : null, dr: R && R.v > .1 ? R.v : null, H: ceil && ceil > 1.8 && ceil < 6 ? ceil : null, nWall: W.length, nBack: back.length };
+  return { th: th * 180 / Math.PI, seenL: backR.length ? -dpPct(backR, .01) : 1, seenR: backR.length ? dpPct(backR, .99) : 1, db: B && B.v > .3 ? B.v : null, dl: L && L.v < -.1 ? -L.v : null, dr: R && R.v > .1 ? R.v : null, H: ceil && ceil > 1.8 && ceil < 6 ? ceil : null, nWall: W.length, nBack: back.length };
 }
 
 /** Spigoli della parete di fondo (0..1 sulla foto) proiettando la scatola con la fotocamera stimata. Se una parete
@@ -106,7 +106,7 @@ export function dpQuad(G, R, cam, aspect, seen) {
   const th = R.th * Math.PI / 180, unrot = (r, f) => [r * Math.cos(-th) - f * Math.sin(-th), r * Math.sin(-th) + f * Math.cos(-th)];
   const H = R.H || 2.7, h = G.h;
   const proj = (r, f, z) => { const [rr, ff] = unrot(r, f), X = [0, 1, 2].map(i => rr * G.rt[i] + ff * G.fw[i] + (z - h) * G.up[i]); if (X[2] <= 1e-3) return null; return [.5 + cam.fx * X[0] / X[2], .5 + cam.fy * X[1] / X[2]]; };
-  const dl = R.dl ?? seen.dl, dr = R.dr ?? seen.dr, db = R.db;
+  const dl = R.dl ?? (seen?.dl ?? R.seenL), dr = R.dr ?? (seen?.dr ?? R.seenR), db = R.db; if (db == null) return null;
   const q = { fl: proj(-dl, db, 0), fr: proj(dr, db, 0), cl: proj(-dl, db, H), cr: proj(dr, db, H) };
   if (Object.values(q).some(v => !v)) return null;
   return { ...q, openL: R.dl == null, openR: R.dr == null, ceiling: R.H != null, H, hc: h / H };

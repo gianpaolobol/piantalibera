@@ -23,17 +23,20 @@ const FAM = c => ({ porta: "porta", porta_scorrevole: "porta", finestra: "finest
 const iou = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), iy = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])), i = ix * iy, u = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i; return u > 0 ? i / u : 0; };
 
 /* ricostruzione nella pagina: posizioni riportate al riferimento della fotocamera (destra, avanti) */
-const RECON = async function ({ photo, W, H, hfov, camH }) {
+const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts }) {
+  const deep = mode === "profondita"; F3_DEPTH.on = deep; if (modello) Object.assign(F3_DEPTH, { base: modello, parts });
   Object.assign(F3, { img: photo, thumb: photo, w: W, h: H, name: "nyu", exifFov: hfov, seg: null, a: null, quadSource: "", fitFov: null });
-  F3.opts = { refKind: "cam", refVal: camH, fov: null, depth: null, ceil: true };
-  await f3Segment();
-  f3Accept({ analysis: { items: [], room: {}, back_wall: null } }); F3.opts.refKind = "cam"; F3.opts.refVal = camH;
+  // senza profondità l'utente indica l'altezza della fotocamera; con la profondità nessuna misura
+  F3.opts = deep ? { refKind: "ceil", refVal: 2.7, fov: null, depth: null, ceil: true } : { refKind: "cam", refVal: camH, fov: null, depth: null, ceil: true };
+  const t0 = performance.now(); await f3Segment(); const tSeg = performance.now() - t0;
+  f3Accept({ analysis: { items: [], room: {}, back_wall: null } }); if (!deep){ F3.opts.refKind = "cam"; F3.opts.refVal = camH; }
+  const dinfo = { tSeg: Math.round(tSeg), depth: F3.seg?.depth ? { err: F3.seg.depth.err, h: F3.seg.depth.G?.h, pitch: F3.seg.depth.G?.pitch, hfov: F3.seg.depth.hfov, room: F3.seg.depth.R ? { db: F3.seg.depth.R.db, dl: F3.seg.depth.R.dl, dr: F3.seg.depth.R.dr, H: F3.seg.depth.R.H } : null } : null, ref: F3.opts.refKind + " " + F3.opts.refVal };
   const items = F3.items.map(i => ({ cat: i.category, on: i.on, src: i.source, box: i.box }));
-  const s = f3Solve(); if (!s.ok) return { ok: false, err: s.err, items, segState: F3.seg?.state, quadSource: F3.quadSource };
+  const s = f3Solve(); if (!s.ok) return { ok: false, err: s.err, items, segState: F3.seg?.state, quadSource: F3.quadSource, ...dinfo };
   const lay = f3Layout(s), fw0 = s.ray(.5, .5), fl = Math.hypot(fw0[0], fw0[1]) || 1, fw = [fw0[0] / fl, fw0[1] / fl], rl = Math.hypot(s.right[0], s.right[1]) || 1, rt = [s.right[0] / rl, s.right[1] / rl];
   const rel = (x, y) => { const d = [x - s.c[0], y - s.c[1]]; return { r: +(d[0] * rt[0] + d[1] * rt[1]).toFixed(3), f: +(d[0] * fw[0] + d[1] * fw[1]).toFixed(3) }; };
   const opC = o => o.wall === "back" ? [o.t, 0] : o.wall === "left" ? [0, s.D - o.t] : [s.W, o.t];
-  return { ok: true, segState: F3.seg?.state, quadSource: F3.quadSource, pitch: +(s.p * 180 / Math.PI).toFixed(2), W: s.W, D: s.D, Hh: s.H, items,
+  return { ok: true, ...dinfo, hc: s.hc, segState: F3.seg?.state, quadSource: F3.quadSource, pitch: +(s.p * 180 / Math.PI).toFixed(2), W: s.W, D: s.D, Hh: s.H, items,
     openings: lay.openings.map(o => ({ cat: o.it.category, ...rel(...opC(o)), w: o.w, zmin: o.sill, zmax: +(o.sill + o.h).toFixed(2), box: o.it.box })),
     objects: lay.objects.map(o => ({ cat: o.cat || o.it.category, ...rel(o.x, o.y), box: o.it.box })) };
 };
@@ -73,9 +76,9 @@ await page.goto("http://127.0.0.1:8799/?nosw"); await page.waitForFunction(() =>
 const keys = readdirSync(DIR).filter(f => f.endsWith(".json")).map(f => f.slice(0, -5)).sort().slice(0, N), rows = [];
 for (const [k, key] of keys.entries()) {
   const gt = JSON.parse(readFileSync(join(DIR, key + ".json"), "utf8")), photo = "data:image/jpeg;base64," + readFileSync(join(DIR, key + ".jpg")).toString("base64");
-  const t0 = Date.now(), r = await page.evaluate(`(${RECON})(${JSON.stringify({ photo, W: gt.W, H: gt.H, hfov: gt.hfov, camH: gt.cam_h })})`);
-  const sc = score(gt, r); sc.ms = Date.now() - t0; rows.push(sc);
-  console.log(`## ${key} ${gt.scene} · h ${gt.cam_h} incl ${gt.pitch} roll ${gt.roll} · ${r.ok ? "ok" : "NO " + r.err} · spigoli ${r.quadSource} · incl ${r.pitch}`);
+  const t0 = Date.now(), r = await page.evaluate(`(${RECON})(${JSON.stringify({ photo, W: gt.W, H: gt.H, hfov: gt.hfov, camH: gt.cam_h, mode: MODE, modello: process.env.MODELLO, parts: Number(process.env.PARTI || 0) || undefined })})`);
+  const sc = score(gt, r); sc.ms = Date.now() - t0; sc.dHc = r.ok ? +(r.hc - gt.cam_h).toFixed(3) : null; rows.push(sc);
+  console.log(`## ${key} ${gt.scene} · h ${gt.cam_h} incl ${gt.pitch} roll ${gt.roll} · ${r.ok ? "ok" : "NO " + r.err} · spigoli ${r.quadSource} · incl ${r.pitch} · h ${r.hc?.toFixed?.(2)} · ${r.tSeg} ms${r.depth ? " · profondità " + JSON.stringify(r.depth) : ""}`);
   console.log(`   veri: ${gt.objects.filter(o => FAM(o.cat) && o.px >= 2500).map(o => `${o.cat}@${o.r.toFixed(1)},${o.f.toFixed(1)}`).join(" ")}`);
   if (r.ok) console.log(`   trovati: ${[...r.openings, ...r.objects].map(o => `${o.cat}@${o.r.toFixed(1)},${o.f.toFixed(1)}`).join(" ")}`);
   if (k < IMGS) {
@@ -92,7 +95,7 @@ const mean = a => a.length ? +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(
 const rec = rows.flatMap(r => r.rec), pos = rows.flatMap(r => r.pos), ops = rows.flatMap(r => r.ops), fams = [...new Set(rec.map(x => x.fam))].sort();
 const perFam = Object.fromEntries(fams.map(f => { const a = rec.filter(x => x.fam === f), p = pos.filter(x => x.fam === f && x.found); return [f, `${a.filter(x => x.hit).length}/${a.length} riconosciuti, ${p.length} collocati, errore ${med(p.map(x => x.d)) ?? "-"} m`]; }));
 const found = pos.filter(x => x.found);
-const sum = { modo: MODE, foto: rows.length, risolte: rows.filter(r => r.ok).length, inclinazione_err: mean(abs(rows.filter(r => r.ok).map(r => r.dPitch))),
+const sum = { modo: MODE, foto: rows.length, risolte: rows.filter(r => r.ok).length, inclinazione_err: mean(abs(rows.filter(r => r.ok).map(r => r.dPitch))), altezza_fotocamera_err_m: mean(abs(rows.filter(r => r.ok).map(r => r.dHc))),
   riconoscimento: `${rec.filter(x => x.hit).length}/${rec.length}`, falsi_positivi: rows.reduce((s, r) => s + r.falsi, 0),
   collocati: `${found.length}/${pos.length}`, errore_pianta_mediana_m: med(found.map(x => x.d)), errore_pianta_relativo_mediana: med(found.map(x => x.rel)),
   errore_laterale_m: mean(abs(found.map(x => x.dr))), errore_profondita_m: mean(abs(found.map(x => x.df))),

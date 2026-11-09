@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-aN6VXmb/DcPqXWqPn8noPb7RetB1Xe/oEbsHX9lgqtQ=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-HFS8lqVgsQ5e9MOxUBFgv7Ux8CpTqW4bUGxLXfUcftk=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4358,6 +4358,131 @@ function fitRoomBox(m, { hfov = null, aspect = null, evalAt = null } = {}) {
 const NOT_OPENING = new Set(["curtain", "blind", "cushion", "pillow", "blanket", "cradle", "counter", "countertop", "stairs", "step", "ottoman", "desk", "seat", "bench", "kitchen island", "television receiver", "computer", "monitor", "screen", "crt screen", "plaything", "animal", "person", "box", "base", "column", "mirror", "fireplace", "radiator", "railing", "bannister", "towel", "apparel", "bag", "basket", "book", "bottle", "vase", "clock", "plate", "glass", "tray", "pot", "food"]);
 const OUTSIDE = new Set(["sky", "tree", "grass", "building", "house", "mountain", "field", "road", "sidewalk", "earth", "water", "sea", "palm", "fence", "car", "skyscraper", "hill", "land", "path", "awning", "streetlight", "pole"]);
 
+/* ---- ../shared/photo-depth.js ---- */
+/* Geometria metrica da una sola foto (MoGe-2, Microsoft, MIT): dalla mappa dei punti 3D stimata per ogni pixel
+   (metri, coordinate della fotocamera: x a destra, y in basso, z in avanti) e dalle etichette della segmentazione
+   si ricavano il pavimento (verso l'alto e altezza della fotocamera), le pareti (orientamento e distanze), il
+   soffitto e la posizione in pianta di ogni arredo. Nessuna misura dell'utente: la scala viene dal modello.
+   Funzioni pure, usate dall'editor (077-foto3d.js) e dai test. Nomi con prefisso «dp» (diventano globali nell'editor). */
+
+const dpDot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const dpCross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const dpNorm = a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+const dpPct = (a, q) => { if (!a.length) return NaN; const s = Float64Array.from(a).sort(); return s[Math.min(s.length - 1, Math.max(0, Math.round(q * (s.length - 1))))]; };
+function dpRand(seed) { let s = seed >>> 0 || 1; return () => (s = Math.imul(s, 1664525) + 1013904223 >>> 0) / 4294967296; }
+
+/** Come MoGe infer(): la mappa affine si porta nello spazio della fotocamera trovando lo spostamento in z e la focale
+ *  (minimi quadrati sulla proiezione), poi si applica la scala metrica. P: Float32Array w*h*3 (modificato), M: maschera
+ *  0..1. Restituisce {focal (rispetto a mezza diagonale), fx, fy (rispetto a larghezza/altezza), hfov}. */
+function dpRecover(P, M, w, h, scale) {
+  const a = w / h, sx = a / Math.sqrt(1 + a * a), sy = 1 / Math.sqrt(1 + a * a), xy = [], z = [], uv = [];
+  const st = Math.max(1, Math.round(Math.min(w, h) / 64));
+  for (let j = 0; j < h; j += st) for (let i = 0; i < w; i += st) { const k = j * w + i; if (M[k] <= .5) continue;
+    xy.push(P[k * 3], P[k * 3 + 1]); z.push(P[k * 3 + 2]); uv.push(-sx * (w - 1) / w + 2 * sx * (w - 1) / w * i / (w - 1), -sy * (h - 1) / h + 2 * sy * (h - 1) / h * j / (h - 1)); }
+  const n = z.length; if (n < 20) return null;
+  const err = s => { let qq = 0, qt = 0; for (let i = 0; i < n; i++) { const d = z[i] + s; if (d <= 1e-6) return [Infinity, 1]; const qx = xy[2 * i] / d, qy = xy[2 * i + 1] / d; qq += qx * qx + qy * qy; qt += qx * uv[2 * i] + qy * uv[2 * i + 1]; }
+    const f = qt / qq; let e = 0; for (let i = 0; i < n; i++) { const d = z[i] + s, ex = f * xy[2 * i] / d - uv[2 * i], ey = f * xy[2 * i + 1] / d - uv[2 * i + 1]; e += ex * ex + ey * ey; } return [e, f]; };
+  let zmin = Infinity, zmax = -Infinity; for (const v of z) { if (v < zmin) zmin = v; if (v > zmax) zmax = v; }
+  let lo = -zmin + 1e-4, hi = Math.max(zmax, 1) * 6 + 5;
+  for (let it = 0; it < 80; it++) { const x1 = lo + (hi - lo) * .382, x2 = lo + (hi - lo) * .618; if (err(x1)[0] < err(x2)[0]) hi = x2; else lo = x1; }
+  const shift = (lo + hi) / 2, focal = err(shift)[1];
+  for (let k = 0; k < w * h; k++) { P[k * 3 + 2] += shift; for (let c = 0; c < 3; c++) P[k * 3 + c] *= scale; }
+  const fx = focal / 2 * Math.sqrt(1 + a * a) / a, fy = focal / 2 * Math.sqrt(1 + a * a);
+  return { focal, fx, fy, hfov: 2 * Math.atan(.5 / fx) * 180 / Math.PI, shift };
+}
+
+/* piano robusto (RANSAC + rifinitura sui punti buoni) */
+function dpPlane(Q, tol, rnd) {
+  const n0 = Q.length / 3; if (n0 < 30) return null;
+  const p = i => [Q[3 * i], Q[3 * i + 1], Q[3 * i + 2]];
+  let best = null;
+  for (let it = 0; it < 120; it++) {
+    const a = p(Math.floor(rnd() * n0)), b = p(Math.floor(rnd() * n0)), c = p(Math.floor(rnd() * n0));
+    const nn = dpCross([b[0] - a[0], b[1] - a[1], b[2] - a[2]], [c[0] - a[0], c[1] - a[1], c[2] - a[2]]), l = Math.hypot(...nn); if (l < 1e-9) continue;
+    const n = nn.map(v => v / l), d = -dpDot(n, a); let cnt = 0;
+    for (let i = 0; i < n0; i += 2) if (Math.abs(Q[3 * i] * n[0] + Q[3 * i + 1] * n[1] + Q[3 * i + 2] * n[2] + d) < tol) cnt++;
+    if (!best || cnt > best.cnt) best = { n, d, cnt };
+  }
+  if (!best) return null;
+  // rifinitura: minimi quadrati sugli inlier (autovettore minore della covarianza, per iterazione di potenza inversa semplice)
+  let c = [0, 0, 0], k = 0; const inl = [];
+  for (let i = 0; i < n0; i++) if (Math.abs(dpDot(best.n, p(i)) + best.d) < tol) { inl.push(i); c[0] += Q[3 * i]; c[1] += Q[3 * i + 1]; c[2] += Q[3 * i + 2]; k++; }
+  c = c.map(v => v / k); const C = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  for (const i of inl) { const q = p(i).map((v, j) => v - c[j]); for (let r = 0; r < 3; r++) for (let s = 0; s < 3; s++) C[r][s] += q[r] * q[s]; }
+  let n = best.n;   // iterazione inversa: risolve C x = n ripetutamente
+  const solve = (A, b) => { const m = A.map((r, i) => [...r, b[i]]); for (let i = 0; i < 3; i++) { let piv = i; for (let r = i + 1; r < 3; r++) if (Math.abs(m[r][i]) > Math.abs(m[piv][i])) piv = r; [m[i], m[piv]] = [m[piv], m[i]]; if (Math.abs(m[i][i]) < 1e-12) return null; for (let r = 0; r < 3; r++) if (r !== i) { const f = m[r][i] / m[i][i]; for (let s = i; s < 4; s++) m[r][s] -= f * m[i][s]; } } return m.map((r, i) => r[3] / r[i]); };
+  for (let it = 0; it < 6; it++) { const x = solve(C.map((r, i) => r.map((v, j) => v + (i === j ? 1e-9 : 0))), n); if (!x) break; n = dpNorm(x); }
+  return { n, d: -dpDot(n, c), frac: k / n0 };
+}
+
+/** Riferimento allineato alla gravità. m: mappa delle etichette (labelMap) con w×h proprie; P: punti w2×h2.
+ *  Restituisce {up, fw, rt, h (altezza della fotocamera), pitch, roll} o null. */
+function dpGravity(P, M, w2, h2, m, ids) {
+  const rnd = dpRand(7), take = set => { const Q = []; for (let j = 0; j < h2; j += 2) for (let i = 0; i < w2; i += 2) { const k = j * w2 + i; if (M[k] <= .5) continue;
+    const l = m.lab[Math.min(m.h - 1, Math.floor((j + .5) * m.h / h2)) * m.w + Math.min(m.w - 1, Math.floor((i + .5) * m.w / w2))]; if (set.has(l)) Q.push(P[3 * k], P[3 * k + 1], P[3 * k + 2]); } return Q; };
+  let up = null, h = null, src = "";
+  const F = take(ids.floor);
+  if (F.length / 3 > 150) { const dist = dpPct(F.filter((_, i) => i % 3 === 2), .5), pl = dpPlane(F, Math.max(.02, .012 * dist), rnd);
+    if (pl && pl.frac > .5) { let { n, d } = pl; if (d < 0) { n = n.map(v => -v); d = -d; } up = n; h = d; src = "pavimento"; } }
+  if (!up) { const Cq = take(ids.ceiling);
+    if (Cq.length / 3 > 150) { const pl = dpPlane(Cq, .04, rnd); if (pl && pl.frac > .5) { let { n, d } = pl; if (d < 0) { n = n.map(v => -v); d = -d; } up = n.map(v => -v); src = "soffitto"; } } }
+  if (!up) return null;
+  if (up[1] > 0) up = up.map(v => -v);                           // in su = y negativa (OpenCV)
+  const z = [0, 0, 1], fw = dpNorm(z.map((v, i) => v - up[2] * up[i])); let rt = dpCross(fw, up); if (rt[0] < 0) rt = rt.map(v => -v);
+  const pitch = Math.asin(Math.max(-1, Math.min(1, up[2]))) * 180 / Math.PI, roll = Math.atan2(up[0], -up[1]) * 180 / Math.PI;
+  return { up, fw, rt, h, pitch, roll, src };
+}
+
+/** Stanza a scatola dalle pareti: orientamento dominante dalle normali (modulo 90°), distanze delle pareti di fondo,
+ *  sinistra e destra dai punti, altezza dal soffitto. Coordinate in pianta: r a destra, f in avanti (fotocamera in 0). */
+function dpRoom(P, N, M, w2, h2, m, ids, G) {
+  const toG = k => { const q = [P[3 * k], P[3 * k + 1], P[3 * k + 2]]; return [dpDot(q, G.rt), dpDot(q, G.fw), dpDot(q, G.up) + (G.h ?? 0)]; };
+  const W = [], NW = [], C = [];
+  for (let j = 0; j < h2; j += 2) for (let i = 0; i < w2; i += 2) { const k = j * w2 + i; if (M[k] <= .5) continue;
+    const l = m.lab[Math.min(m.h - 1, Math.floor((j + .5) * m.h / h2)) * m.w + Math.min(m.w - 1, Math.floor((i + .5) * m.w / w2))];
+    if (ids.wall.has(l)) { let nq = [N[3 * k], N[3 * k + 1], N[3 * k + 2]]; if (nq[0] * P[3 * k] + nq[1] * P[3 * k + 1] + nq[2] * P[3 * k + 2] > 0) nq = nq.map(v => -v);   // verso la fotocamera
+      const nr = dpDot(nq, G.rt), nf = dpDot(nq, G.fw), nu = dpDot(nq, G.up); if (Math.abs(nu) < .35 && Math.hypot(nr, nf) > .5) { W.push(toG(k)); NW.push([nr, nf]); } }
+    else if (ids.ceiling.has(l)) C.push(toG(k)[2]); }
+  if (W.length < 60) return null;
+  // orientamento dominante (istogramma pesato degli angoli delle normali, modulo 90°)
+  const hist = new Float64Array(90);
+  for (const [nr, nf] of NW) { let a = Math.atan2(nr, -nf) * 180 / Math.PI; a = ((a % 90) + 135) % 90; hist[Math.floor(a) % 90] += 1; }
+  let bi = 0, bv = -1; for (let i = 0; i < 90; i++) { const v = hist[(i + 89) % 90] + 2 * hist[i] + hist[(i + 1) % 90]; if (v > bv) { bv = v; bi = i; } }
+  const th = -(bi + .5 - 45) * Math.PI / 180;       // rotazione (−45°..45°) che porta la parete di fondo di fronte
+  const rot = ([r, f]) => [r * Math.cos(th) - f * Math.sin(th), r * Math.sin(th) + f * Math.cos(th)];
+  const back = [], backR = [], left = [], right = [];
+  W.forEach((p, i) => { const q = rot(p), nn = rot(NW[i]), ln = Math.hypot(...nn); if (nn[1] / ln < -.8) { back.push(q[1]); backR.push(q[0]); } else if (nn[0] / ln > .8) left.push(q[0]); else if (nn[0] / ln < -.8) right.push(q[0]); });
+  // piano dominante per famiglia: il picco dell'istogramma a 5 cm (più muri paralleli: il più numeroso)
+  const peak = (a, sign) => { if (a.length < 25) return null; const lo = dpPct(a, .02), hi = dpPct(a, .98), nb = Math.max(1, Math.ceil((hi - lo) / .05)), hb = new Float64Array(nb + 1);
+    for (const v of a) hb[Math.max(0, Math.min(nb, Math.floor((v - lo) / .05)))]++; let b = 0; for (let i = 0; i <= nb; i++) if (hb[i] > hb[b] || (hb[i] === hb[b] && sign * i > sign * b)) b = i;
+    const c = lo + (b + .5) * .05, near = a.filter(v => Math.abs(v - c) < .12); return { v: dpPct(near, .5), n: near.length }; };
+  const B = peak(back, 1), L = peak(left, -1), R = peak(right, 1);
+  const ceil = C.length > 80 ? dpPct(C, .5) : null;
+  return { th: th * 180 / Math.PI, seenL: backR.length ? -dpPct(backR, .01) : 1, seenR: backR.length ? dpPct(backR, .99) : 1, db: B && B.v > .3 ? B.v : null, dl: L && L.v < -.1 ? -L.v : null, dr: R && R.v > .1 ? R.v : null, H: ceil && ceil > 1.8 && ceil < 6 ? ceil : null, nWall: W.length, nBack: back.length };
+}
+
+/** Spigoli della parete di fondo (0..1 sulla foto) proiettando la scatola con la fotocamera stimata. Se una parete
+ *  laterale non si vede, lo spigolo si mette appena fuori dal bordo visibile della parete di fondo (larghezza minima). */
+function dpQuad(G, R, cam, aspect, seen) {
+  const th = R.th * Math.PI / 180, unrot = (r, f) => [r * Math.cos(-th) - f * Math.sin(-th), r * Math.sin(-th) + f * Math.cos(-th)];
+  const H = R.H || 2.7, h = G.h;
+  const proj = (r, f, z) => { const [rr, ff] = unrot(r, f), X = [0, 1, 2].map(i => rr * G.rt[i] + ff * G.fw[i] + (z - h) * G.up[i]); if (X[2] <= 1e-3) return null; return [.5 + cam.fx * X[0] / X[2], .5 + cam.fy * X[1] / X[2]]; };
+  const dl = R.dl ?? (seen?.dl ?? R.seenL), dr = R.dr ?? (seen?.dr ?? R.seenR), db = R.db; if (db == null) return null;
+  const q = { fl: proj(-dl, db, 0), fr: proj(dr, db, 0), cl: proj(-dl, db, H), cr: proj(dr, db, H) };
+  if (Object.values(q).some(v => !v)) return null;
+  return { ...q, openL: R.dl == null, openR: R.dr == null, ceiling: R.H != null, H, hc: h / H };
+}
+
+/** Posizione in pianta (r, f), estensioni e quote di un oggetto: punti dentro il riquadro con le etichette indicate. */
+function dpObject(P, M, w2, h2, m, labelIds, box, G) {
+  const r = [], f = [], z = []; const [x0, y0, x1, y1] = box;
+  for (let j = Math.floor(y0 * h2); j < Math.ceil(y1 * h2); j++) for (let i = Math.floor(x0 * w2); i < Math.ceil(x1 * w2); i++) { const k = j * w2 + i; if (k < 0 || k >= w2 * h2 || M[k] <= .5) continue;
+    const l = m.lab[Math.min(m.h - 1, Math.floor((j + .5) * m.h / h2)) * m.w + Math.min(m.w - 1, Math.floor((i + .5) * m.w / w2))]; if (labelIds && !labelIds.has(l)) continue;
+    const q = [P[3 * k], P[3 * k + 1], P[3 * k + 2]]; r.push(dpDot(q, G.rt)); f.push(dpDot(q, G.fw)); z.push(dpDot(q, G.up) + G.h); }
+  if (r.length < 12) return null;
+  return { r: dpPct(r, .5), f: dpPct(f, .5), rmin: dpPct(r, .05), rmax: dpPct(r, .95), fmin: dpPct(f, .08), fmax: dpPct(f, .92), zmin: dpPct(z, .03), zmax: dpPct(z, .97), n: r.length };
+}
+
 /* ---- 077-foto3d.js ---- */
 /* ============================================================
    Da foto al 3D — scheda Importa
@@ -4477,22 +4602,82 @@ async function f3Segment(){
       const m = labelMap(segs, 320);
       // spigoli: modello di stanza adattato alle giunzioni (robusto agli arredi); in subordine la spezzata
       const box = fitRoomBox(m, {hfov:F3.opts.fov || F3.exifFov || null, aspect:F3.h / F3.w}), poly = wallCorners(m);
-      const alts = [box && box.conf >= .35 ? box : null, poly && poly.conf >= .6 ? poly : null].filter(Boolean);
-      Object.assign(job, {state:"ok", m, quad:alts[0] || null, alts, box, labels:segs.map(x => x.label)});
+      let depth = null;
+      if (F3_DEPTH.on !== false) try { const D = await f3DepthRun(F3.thumb || F3.img); if (F3.seg !== job) return; depth = {...D, ...f3DepthGeometry(D, m)}; } catch(e){ console.warn("profondità:", e); depth = {err:String(e?.message || e)}; }
+      const alts = [depth?.quad || null, box && box.conf >= .35 ? box : null, poly && poly.conf >= .6 ? poly : null].filter(Boolean);
+      Object.assign(job, {state:"ok", m, quad:alts[0] || null, alts, box, depth, labels:segs.map(x => x.label)});
     } catch(e){ console.warn("segmentazione:", e); if (F3.seg === job) Object.assign(job, {state:"err", err:String(e?.message || e)}); }
     if (F3.seg === job && F3.a) { f3ApplySeg(); if (F3.open) f3RenderModal(); }
   })();
   return job.promise;
+}
+/* ---------- geometria metrica nel dispositivo (MoGe-2 ViT-S, Microsoft, MIT; shared/photo-depth.js) ----------
+   Una rete stima per ogni pixel il punto 3D in metri: pavimento, pareti, soffitto, altezza della fotocamera e
+   posizione degli arredi senza misure dell'utente. Modello ONNX (~70 MB in fp16) servito dal sito in parti da 20 MB,
+   eseguito con onnxruntime-web (WebGPU se c'è, altrimenti WebAssembly); scaricato una volta e conservato in cache. */
+const F3_ORT = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/";
+const F3_DEPTH = {base:"modelli/moge2-vits-560x420-fp16.onnx", parts:4, w:560, h:420};
+let f3DepthSes = null;
+async function f3DepthModel(){
+  const urls = Array.from({length:F3_DEPTH.parts}, (_, i) => `${F3_DEPTH.base}.part${i}`), bufs = [];
+  let cache = null; try { cache = await caches.open("pl-modelli-v1"); } catch(e){}
+  for (const u of urls){ let r = cache && await cache.match(u).catch(() => null);
+    if (!r){ r = await fetch(u); if (!r.ok) throw new Error("modello di profondità non disponibile (" + r.status + ")"); try { await cache?.put(u, r.clone()); } catch(e){} }
+    bufs.push(new Uint8Array(await r.arrayBuffer())); }
+  const all = new Uint8Array(bufs.reduce((n, b) => n + b.length, 0)); let o = 0; for (const b of bufs){ all.set(b, o); o += b.length; } return all;
+}
+async function f3DepthRun(url){
+  if (!f3DepthSes){ const ort = await import(F3_ORT + "ort.webgpu.min.mjs"); ort.env.wasm.wasmPaths = F3_ORT;
+    const model = await f3DepthModel(), eps = navigator.gpu ? ["webgpu", "wasm"] : ["wasm"];
+    try { f3DepthSes = await ort.InferenceSession.create(model, {executionProviders:eps}); } catch(e){ f3DepthSes = await ort.InferenceSession.create(model, {executionProviders:["wasm"]}); }
+    f3DepthSes.ort = ort; }
+  const img = await new Promise((ok, ko) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ko(new Error("foto non leggibile")); im.src = url; });
+  const iw = img.naturalWidth, ih = img.naturalHeight, rot = ih > iw, MW = F3_DEPTH.w, MH = F3_DEPTH.h;
+  // le foto verticali si ruotano di 90° (il modello è a 4:3 orizzontale); bande grigie per mantenere le proporzioni
+  const sw = rot ? ih : iw, sh = rot ? iw : ih, k = Math.min(MW / sw, MH / sh), cw = sw * k, ch = sh * k, ox = (MW - cw) / 2, oy = (MH - ch) / 2;
+  const cv = document.createElement("canvas"); cv.width = MW; cv.height = MH; const g = cv.getContext("2d", {willReadFrequently:true}); g.fillStyle = "#808080"; g.fillRect(0, 0, MW, MH);
+  g.save(); g.translate(ox, oy); if (rot){ g.translate(0, ch); g.rotate(-Math.PI / 2); g.drawImage(img, 0, 0, ch, cw); } else g.drawImage(img, 0, 0, cw, ch); g.restore();
+  const px = g.getImageData(0, 0, MW, MH).data, x = new Float32Array(3 * MW * MH);
+  for (let i = 0; i < MW * MH; i++) for (let c = 0; c < 3; c++) x[c * MW * MH + i] = px[i * 4 + c] / 255;
+  const ort = f3DepthSes.ort, out = await f3DepthSes.run({image:new ort.Tensor("float32", x, [1, 3, MH, MW])});
+  const Pm = Float32Array.from(out.points.data), Nm = out.normal.data, Mm = Float32Array.from(out.mask.data);
+  for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) if (i < ox || i >= ox + cw || j < oy || j >= oy + ch) Mm[j * MW + i] = 0;    // bande
+  const cam = dpRecover(Pm, Mm, MW, MH, out.metric_scale.data[0]); if (!cam) throw new Error("profondità non ricostruita");
+  // griglia della foto originale (lato lungo 192 punti): punti e normali riportati nel riferimento della foto
+  const w2 = iw >= ih ? 192 : Math.round(192 * iw / ih), h2 = iw >= ih ? Math.round(192 * ih / iw) : 192, P = new Float32Array(w2 * h2 * 3), N = new Float32Array(w2 * h2 * 3), M = new Float32Array(w2 * h2);
+  for (let j = 0; j < h2; j++) for (let i = 0; i < w2; i++){
+    const u = (i + .5) / w2, v = (j + .5) / h2, su = rot ? v : u, sv = rot ? 1 - u : v;      // nella foto ruotata
+    const mi = Math.min(MW - 1, Math.floor(ox + su * cw)), mj = Math.min(MH - 1, Math.floor(oy + sv * ch)), q = mj * MW + mi, k2 = j * w2 + i;
+    const a = [Pm[3 * q], Pm[3 * q + 1], Pm[3 * q + 2]], b = [Nm[3 * q], Nm[3 * q + 1], Nm[3 * q + 2]];
+    // ruotata di 90° in senso antiorario: x = −y', y = x'
+    P.set(rot ? [-a[1], a[0], a[2]] : a, 3 * k2); N.set(rot ? [-b[1], b[0], b[2]] : b, 3 * k2); M[k2] = Mm[q];
+  }
+  const fxS = cam.fx * MW / cw, fyS = cam.fy * MH / ch, fx = rot ? fyS : fxS, fy = rot ? fxS : fyS;
+  return {P, N, M, w:w2, h:h2, fx, fy, hfov:2 * Math.atan(.5 / fx) * 180 / Math.PI};
+}
+/* dalla profondità: verso l'alto, altezza della fotocamera, stanza a scatola e spigoli della parete di fondo */
+function f3DepthGeometry(D, m){
+  const ids = {floor:idsOf(m, "@floor"), ceiling:idsOf(m, "@ceiling"), wall:idsOf(m, "@wall")};
+  const G = dpGravity(D.P, D.M, D.w, D.h, m, ids); if (!G || !G.h) return {G};
+  const R = dpRoom(D.P, D.N, D.M, D.w, D.h, m, ids, G); if (!R) return {G};
+  const q = dpQuad(G, R, {fx:D.fx, fy:D.fy}, D.w / D.h); if (!q) return {G, R};
+  return {G, R, quad:{...q, source:"profondità", conf:1}};
 }
 /* applica la segmentazione all'analisi: spigoli (se l'utente non li ha già spostati) e riquadri */
 function f3ApplySeg(){
   const sg = F3.seg; if (!sg || sg.state !== "ok" || !F3.a || sg.applied) return; sg.applied = true;
   // prima proposta che dà una geometria possibile (spigoli alti sopra l'orizzonte, fotocamera davanti alla parete)
   if (sg.alts?.length && F3.quadSource !== "posizionati da te"){
-    const keep = F3.quad; sg.quad = sg.alts.find(q => { F3.quad = {fl:q.fl, fr:q.fr, cl:q.cl, cr:q.cr}; F3.quadOpen = q === sg.box ? {l:q.openL, r:q.openR} : null; return f3Solve().ok; }) || null; F3.quad = keep;
+    const keep = F3.quad, keepO = {...F3.opts}, dq = sg.depth?.quad;
+    sg.quad = sg.alts.find(q => { F3.quad = {fl:q.fl, fr:q.fr, cl:q.cl, cr:q.cr}; F3.quadOpen = q === sg.box || q === dq ? {l:q.openL, r:q.openR} : null;
+      if (q === dq && !F3.opts.userRef){ F3.opts.refKind = "cam"; F3.opts.refVal = +sg.depth.G.h.toFixed(2); F3.opts.ceil = q.ceiling; }
+      const ok = f3Solve().ok; if (!ok) Object.assign(F3.opts, keepO); return ok; }) || null; F3.quad = keep;
   }
   if (sg.quad && F3.quadSource !== "posizionati da te"){
-    F3.quad = {fl:sg.quad.fl, fr:sg.quad.fr, cl:sg.quad.cl, cr:sg.quad.cr}; F3.quadOpen = sg.quad === sg.box ? {l:sg.box.openL, r:sg.box.openR} : null; F3.quadSource = sg.quad === sg.box ? "trovati dal modello di stanza: controllali" : "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
+    const dq = sg.depth?.quad;
+    F3.quad = {fl:sg.quad.fl, fr:sg.quad.fr, cl:sg.quad.cl, cr:sg.quad.cr}; F3.quadOpen = sg.quad === sg.box || sg.quad === dq ? {l:sg.quad.openL, r:sg.quad.openR} : null;
+    F3.quadSource = sg.quad === dq ? "misurati dalla profondità: controllali" : sg.quad === sg.box ? "trovati dal modello di stanza: controllali" : "trovati dalla segmentazione: controllali"; F3.opts.ceil = sg.quad.ceiling;
+    if (sg.quad === dq){ if (!F3.exifFov && !F3.opts.fov) F3.fitFov = +sg.depth.hfov.toFixed(1); if (!F3.opts.userRef){ F3.opts.refKind = "cam"; F3.opts.refVal = +sg.depth.G.h.toFixed(2); } }
     if (sg.box && sg.quad === sg.box && !F3.exifFov && !F3.opts.fov) F3.fitFov = sg.box.hfov;       // campo visivo stimato dalla prospettiva
   }
   const comps = segComponents(sg.m, F3.a.room_type || "");
@@ -4582,6 +4767,18 @@ function f3WallAt(s, u, v){
   return best || {wall:"back", ...f3OnWall(s, "back", u, v)};
 }
 const f3Ang = f => { let t = Math.atan2(-f[0], f[1]) * 180 / Math.PI; return ((t % 360) + 360) % 360; };
+/* posizione di un arredo dai punti 3D della profondità (pixel del riquadro con le etichette della sua famiglia);
+   riportata nella pianta dell'editor con la sua scala (altezza della fotocamera) */
+function f3Obj3d(s, it, cat){
+  const sg = F3.seg, D = sg?.depth, G = D?.G; if (!G?.h || !sg.m || !D.P) return null;
+  const m = sg.m, fam = FAMILY(cat), struct = c => c && c[0] === "@";
+  let ids = new Set(m.names.map((n, i) => { const c = SEG_CAT[n]; return c && !struct(c) && FAMILY(c) === fam ? i : -1; }).filter(i => i >= 0));
+  if (!ids.size) ids = new Set(m.names.map((n, i) => { const c = SEG_CAT[n]; return !struct(c) && !OPEN.includes(c) && !OUTSIDE.has(n) ? i : -1; }).filter(i => i >= 0));
+  const o = dpObject(D.P, D.M, D.w, D.h, m, ids, it.box, G); if (!o || o.n < 15) return null;
+  const k = s.hc / G.h, f0 = s.ray(.5, .5), fl = Math.hypot(f0[0], f0[1]) || 1, fw = [f0[0] / fl, f0[1] / fl], rl = Math.hypot(s.right[0], s.right[1]) || 1, rt = [s.right[0] / rl, s.right[1] / rl];
+  const at = (r, f) => [s.c[0] + k * (r * rt[0] + f * fw[0]), s.c[1] + k * (r * rt[1] + f * fw[1])];
+  return {front:at((o.rmin + o.rmax) / 2, o.fmin), center:at(o.r, o.f), wid:(o.rmax - o.rmin) * k, hTop:o.zmax * k, zmin:o.zmin * k};
+}
 /* posizioni in pianta di aperture e oggetti (dati puri: servono all'anteprima e alla creazione) */
 function f3Layout(s, items = F3.items){
   const out = {openings:[], objects:[], skipped:[]}, hasBed = items.some(i => i.on && /^letto/.test(i.category));
@@ -4608,22 +4805,26 @@ function f3Layout(s, items = F3.items){
       const da = s.ray(x0, y1), db = s.ray(x1, y1), na = Math.hypot(...da), nb = Math.hypot(...db), cosA = (da[0] * db[0] + da[1] * db[1] + da[2] * db[2]) / (na * nb), ang = Math.acos(clamp(cosA, -1, 1));
       const zB = clamp(s.H - .75, 1.8, s.H - .3), d = s.ray(uc, y1), hl = Math.hypot(d[0], d[1]) || 1;
       const pc = f3Ceil(s, uc, y0), inRoom = pc && pc[0] > 0 && pc[0] < s.W && pc[1] > .05 && pc[1] < s.D;
-      if (inRoom) p = pc;                   // il riquadro arriva al punto di attacco: vale quello
+      const o3 = f3Obj3d(s, it, cat);
+      if (o3) p = o3.center;                // punti 3D della lampada
+      else if (inRoom) p = pc;              // il riquadro arriva al punto di attacco: vale quello
       else if (ang > .01 && cat === "lampadario"){ const dist = clamp((C.w || .44) / (2 * Math.tan(ang / 2)), .5, 15); p = [s.c[0] + d[0] / hl * dist, s.c[1] + d[1] / hl * dist]; }
       else { const t = Math.abs(d[2]) > 1e-4 ? (zB - s.hc) / d[2] : -1; p = t > 0 ? [s.c[0] + t * d[0], s.c[1] + t * d[1]] : (f3Ceil(s, uc, y0) || f3Floor(s, uc, y1)); } }
     else if (C.mount === "wall"){ const hit = f3WallAt(s, uc, vc); const inN = {back:[0, 1], left:[1, 0], right:[-1, 0]}[hit.wall]; p = [hit.x + inN[0] * .08, hit.y + inN[1] * .08]; rot = f3Ang(inN); z = clamp(hit.z - .1, .5, s.H - .2); }
     else {
-      p = f3Floor(s, uc, y1);
+      // con la profondità: fronte dell'oggetto dai suoi punti 3D; altrimenti appoggio della base sul pavimento
+      const o3 = f3Obj3d(s, it, cat);
+      p = o3 ? o3.front : f3Floor(s, uc, y1);
       // base tagliata dal bordo della foto (oggetto vicino alla fotocamera): si usa il bordo alto del piano, a quota nota
       const topH = F3_TOP[cat]; let cut = false;
-      if (topH && y1 > .97){ cut = true; const d = s.ray(uc, y0); if (d[2] < -1e-4 && s.hc > topH){ const t = (topH - s.hc) / d[2], far = [s.c[0] + t * d[0], s.c[1] + t * d[1]], hl = Math.hypot(d[0], d[1]) || 1; const dep = (C.d || .6);
+      if (topH && y1 > .97 && !o3){ cut = true; const d = s.ray(uc, y0); if (d[2] < -1e-4 && s.hc > topH){ const t = (topH - s.hc) / d[2], far = [s.c[0] + t * d[0], s.c[1] + t * d[1]], hl = Math.hypot(d[0], d[1]) || 1; const dep = (C.d || .6);
         p = [far[0] - d[0] / hl * dep, far[1] - d[1] / hl * dep]; } }
       if (!p){ out.skipped.push(it); continue; }
       // misure reali dalla foto: larghezza alla base e altezza della sommità alla distanza dell'oggetto
-      const dist = Math.hypot(p[0] - s.c[0], p[1] - s.c[1]), rt = s.ray(uc, y0), hTop = s.hc + dist / (Math.hypot(rt[0], rt[1]) || 1) * rt[2];
+      const dist = Math.hypot(p[0] - s.c[0], p[1] - s.c[1]), rt = s.ray(uc, y0), hTop = o3 ? o3.hTop : s.hc + dist / (Math.hypot(rt[0], rt[1]) || 1) * rt[2];
       // larghezza alla base o, se la base è fuori dalla foto, al bordo alto (quota tipica dello schienale o del piano)
       const atZ = (u, v, zz) => { const d = s.ray(u, v); if (Math.abs(d[2]) < 1e-4) return null; const t = (zz - s.hc) / d[2]; return t > 0 ? [s.c[0] + t * d[0], s.c[1] + t * d[1]] : null; };
-      const pa0 = cut ? atZ(x0, y0, topH) : f3Floor(s, x0, y1), pb0 = cut ? atZ(x1, y0, topH) : f3Floor(s, x1, y1), wid = pa0 && pb0 ? Math.hypot(pb0[0] - pa0[0], pb0[1] - pa0[1]) : null;
+      const pa0 = cut ? atZ(x0, y0, topH) : f3Floor(s, x0, y1), pb0 = cut ? atZ(x1, y0, topH) : f3Floor(s, x1, y1), wid = o3 ? o3.wid : pa0 && pb0 ? Math.hypot(pb0[0] - pa0[0], pb0[1] - pa0[1]) : null;
       // categoria corretta dalle misure (se l'utente non l'ha scelta): divano/poltrona, tavolo/tavolino, letto
       if (!it.userCat && wid){
         const sw = {divano:wid < 1.2 ? "poltrona" : null, poltrona:wid > 1.45 ? "divano" : null, tavolo:hTop < .56 ? "tavolino" : null, tavolino:hTop > .66 ? "tavolo" : null, tavolo_tondo:hTop < .56 ? "tavolino_tondo" : null,
@@ -4633,7 +4834,7 @@ function f3Layout(s, items = F3.items){
         if (sw && F3_CATS[sw]){ cat = sw; C = F3_CATS[sw]; }
       }
       const face = {camera:[-hv[0], -hv[1]], away:hv, left:[-cr[0], -cr[1]], right:cr}[it.facing] || [-hv[0], -hv[1]];
-      const pa = f3Floor(s, x0, y1), pb = f3Floor(s, x1, y1), span = pa && pb ? Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) : null;
+      const pa = f3Floor(s, x0, y1), pb = f3Floor(s, x1, y1), span = o3 ? o3.wid : pa && pb ? Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) : null;
       const along = Math.abs(face[0] * hv[0] + face[1] * hv[1]) > .7, vis = along ? C.w : C.d, deep = along ? C.d : C.w;
       if (span && !C.keep && !cut) scale = clamp(span / vis, C.flat ? .6 : .75, C.flat ? 1.6 : 1.35);
       p = [p[0] + hv[0] * deep * scale / 2, p[1] + hv[1] * deep * scale / 2];
@@ -4866,9 +5067,9 @@ function f3Click(e){ const b = e.target.closest("button"); if (!b) return;
 function f3Change(e){ const t = e.target, rr = () => F3.open ? f3RenderModal() : renderImport();
   if (t.id === "f3Consent"){ f3Consent = t.checked; try { localStorage.setItem(F3_CONSENT_KEY, f3Consent ? "1" : "0"); } catch(_){} if (f3Consent) F3.err = ""; return; }
   if (t.id === "f3Ceil"){ F3.opts.ceil = t.checked; if (!t.checked && F3.opts.refKind === "ceil") F3.opts.refVal = F3.opts.refVal || 2.7; rr(); return; }
-  if (t.id === "f3RefKind"){ F3.opts.refKind = t.value; F3.opts.refVal = {ceil:F3.a?.room?.height_m || 2.7, width:F3.a?.room?.width_m || 4, cam:1.5}[t.value]; rr(); return; }
+  if (t.id === "f3RefKind"){ F3.opts.userRef = true; F3.opts.refKind = t.value; F3.opts.refVal = {ceil:F3.a?.room?.height_m || 2.7, width:F3.a?.room?.width_m || 4, cam:1.5}[t.value]; rr(); return; }
   // campi numerici: si aggiornano foto, riassunto e anteprima, non i campi (rifarli mentre perdono il fuoco è vietato)
-  if (t.id === "f3RefVal"){ const v = num(t.value); if (v > .2 && v < 50) F3.opts.refVal = v; f3Refresh(); return; }
+  if (t.id === "f3RefVal"){ const v = num(t.value); if (v > .2 && v < 50){ F3.opts.refVal = v; F3.opts.userRef = true; } f3Refresh(); return; }
   if (t.id === "f3Fov"){ const v = num(t.value); F3.opts.fov = v >= 20 && v <= 130 ? v : null; f3Refresh(); return; }
   if (t.id === "f3Depth"){ const v = num(t.value); F3.opts.depth = v > 0 ? clamp(v, 1, 40) : null; f3Refresh(); return; }
   if (t.dataset.f3on != null){ F3.items[+t.dataset.f3on].on = t.checked; f3Refresh(); return; }

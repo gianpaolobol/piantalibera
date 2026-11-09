@@ -10,7 +10,7 @@ on:
       sonda: { description: "Sonda MoGe-2", type: boolean, default: true }
   push:
     branches: ["feature/foto-*"]
-    paths: ["scripts/banco-nyu.mjs", "scripts/nyu-estrai.py", "shared/photo.js", "shared/photo-seg.js", "shared/photo-depth.js", "editor-src/077-foto3d.js", "scripts/sonda-moge.py", "scripts/esporta-moge.py", ".github/workflows/banco-nyu.yml"]
+    paths: ["scripts/banco-nyu.mjs", "scripts/nyu-estrai.py", "shared/photo.js", "shared/photo-seg.js", "shared/photo-depth.js", "editor-src/077-foto3d.js", "scripts/sonda-moge.py", "scripts/esporta-moge.py", "scripts/dividi-modello.py", ".github/workflows/banco-nyu.yml"]
 
 permissions:
   contents: read
@@ -42,9 +42,6 @@ jobs:
           ls -la ~/nyu.mat
           python3 scripts/nyu-estrai.py ~/nyu.mat ~/nyu-sub 120
           rm ~/nyu.mat
-      - run: npm ci && npx playwright install --with-deps chromium
-      - run: node scripts/build-editor.mjs
-      - run: node scripts/banco-nyu.mjs ~/nyu-sub ${{ inputs.n || '80' }}
       - name: Sonda MoGe-2 (geometria metrica da una sola foto)
         if: always()
         continue-on-error: true
@@ -58,6 +55,15 @@ jobs:
         run: |
           pip install --quiet onnx onnxconverter-common onnxruntime
           python3 scripts/esporta-moge.py ~/nyu-sub ~/moge-onnx
+      - run: npm ci && npx playwright install --with-deps chromium
+      - run: node scripts/build-editor.mjs
+      - name: Banco senza profondità (altezza della fotocamera indicata)
+        run: node scripts/banco-nyu.mjs ~/nyu-sub ${{ inputs.n || '80' }}
+      - name: Banco con la profondità nel dispositivo (nessuna misura)
+        if: always()
+        run: |
+          python3 scripts/dividi-modello.py ~/moge-onnx/moge2-vits-560x420-q8.onnx 2 public/modelli
+          MODO=profondita MODELLO=modelli/moge2-vits-560x420-q8.onnx PARTI=2 node scripts/banco-nyu.mjs ~/nyu-sub ${{ inputs.n || '80' }}
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: moge-onnx, path: ~/moge-onnx, retention-days: 30, if-no-files-found: ignore }
