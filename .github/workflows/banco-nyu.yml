@@ -10,7 +10,7 @@ on:
       sonda: { description: "Sonda MoGe-2", type: boolean, default: true }
   push:
     branches: ["feature/foto-*"]
-    paths: ["scripts/banco-nyu.mjs", "scripts/nyu-estrai.py", "shared/photo.js", "shared/photo-seg.js", "shared/photo-depth.js", "editor-src/077-foto3d.js", "scripts/sonda-moge.py", "scripts/esporta-moge.py", "scripts/dividi-modello.py", ".github/workflows/banco-nyu.yml"]
+    paths: ["scripts/banco-nyu.mjs", "scripts/nyu-estrai.py", "shared/photo.js", "shared/photo-seg.js", "shared/photo-depth.js", "editor-src/077-foto3d.js", "scripts/sonda-moge.py", "scripts/esporta-moge.py", "scripts/dividi-modello.py", "scripts/sonda-rilevatore.mjs", ".github/workflows/banco-nyu.yml"]
 
 permissions:
   contents: read
@@ -25,6 +25,7 @@ jobs:
     timeout-minutes: 120
     env:
       SALTA_SONDA: ${{ github.event_name == 'push' && '1' || '' }}
+      SONDA_RIL: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -62,6 +63,10 @@ jobs:
           python3 scripts/esporta-moge.py ~/nyu-sub ~/moge-onnx
       - run: npm ci && npx playwright install --with-deps chromium
       - run: node scripts/build-editor.mjs
+      - name: Sonda rilevatori di oggetti nel dispositivo
+        if: always() && env.SONDA_RIL == '1'
+        continue-on-error: true
+        run: npm i --no-save @huggingface/transformers@3.8.1 && node scripts/sonda-rilevatore.mjs ~/nyu-sub 60
       - name: Banco senza profondità (altezza della fotocamera indicata)
         run: node scripts/banco-nyu.mjs ~/nyu-sub ${{ inputs.n || '80' }}
       - name: Banco con la profondità nel dispositivo (nessuna misura)
