@@ -34,7 +34,7 @@ for key in keys:
     lab = np.asarray(Image.open(f"{DIR}/{key}_l.png")).astype(int); ins = np.asarray(Image.open(f"{DIR}/{key}_i.png")).astype(int)
     x = torch.from_numpy(img).permute(2, 0, 1)
     t0 = time.time()
-    with torch.no_grad(): out = model.infer(x, fov_x=None)          # campo visivo stimato dalla foto
+    with torch.no_grad(): out = model.infer(x, fov_x=None, use_fp16=False)          # campo visivo stimato dalla foto
     ms = (time.time() - t0) * 1000
     P = out["points"].numpy(); D = out["depth"].numpy(); M = out["mask"].numpy() > .5
     fx = out["intrinsics"].numpy()[0, 0] * img.shape[1]; hfov = float(np.degrees(2 * np.arctan(img.shape[1] / 2 / fx)))

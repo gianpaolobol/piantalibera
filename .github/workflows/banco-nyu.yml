@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       n: { description: "Quante foto", default: "80" }
+      sonda: { description: "Sonda MoGe-2", type: boolean, default: true }
   push:
     branches: ["feature/foto-*"]
     paths: ["scripts/banco-nyu.mjs", "scripts/nyu-estrai.py", "shared/photo.js", "shared/photo-seg.js", "shared/photo-depth.js", "editor-src/077-foto3d.js", "scripts/sonda-moge.py", ".github/workflows/banco-nyu.yml"]
