@@ -92,9 +92,11 @@ const RECON = async function ({ photo, W, H, analysis, gt, fovKnown }) {
   F3.opts = { refKind: "ceil", refVal: gt.H, fov: null, depth: null, ceil: true };
   const t0 = performance.now(); await f3Segment(); const tSeg = performance.now() - t0;
   f3Accept({ analysis: JSON.parse(JSON.stringify(analysis)) }); F3.opts.refVal = gt.H; F3.opts.refKind = "ceil";
-  const s = f3Solve(); if (!s.ok) return { ok: false, err: s.err, quad: F3.quad, segState: F3.seg?.state, quadSource: F3.quadSource, box: F3.seg?.box ? { conf: F3.seg.box.conf, pitch: F3.seg.box.pitch, quad: [F3.seg.box.fl, F3.seg.box.fr, F3.seg.box.cl, F3.seg.box.cr] } : null, tSeg };
+  const mp = F3.seg?.m; let map = null;
+  if (mp) { let b = ""; for (let i = 0; i < mp.lab.length; i += 8192) b += String.fromCharCode.apply(null, mp.lab.subarray(i, i + 8192)); map = { w: mp.w, h: mp.h, names: mp.names, lab: btoa(b) }; }
+  const s = f3Solve(); if (!s.ok) return { map, ok: false, err: s.err, quad: F3.quad, segState: F3.seg?.state, quadSource: F3.quadSource, box: F3.seg?.box ? { conf: F3.seg.box.conf, pitch: F3.seg.box.pitch, quad: [F3.seg.box.fl, F3.seg.box.fr, F3.seg.box.cl, F3.seg.box.cr] } : null, tSeg };
   const lay = f3Layout(s);
-  return { ok: true, tSeg, box: F3.seg?.box ? { conf: F3.seg.box.conf, resid: F3.seg.box.resid, pitch: F3.seg.box.pitch, hfov: F3.seg.box.hfov } : null, quad: F3.quad, quadSource: F3.quadSource, segState: F3.seg?.state, W: s.W, D: s.D, Hh: s.H, hc: s.hc, pitch: s.p * 180 / Math.PI, cam: s.c, fov: f3Fov(),
+  return { ok: true, map, tSeg, box: F3.seg?.box ? { conf: F3.seg.box.conf, resid: F3.seg.box.resid, pitch: F3.seg.box.pitch, hfov: F3.seg.box.hfov } : null, quad: F3.quad, quadSource: F3.quadSource, segState: F3.seg?.state, W: s.W, D: s.D, Hh: s.H, hc: s.hc, pitch: s.p * 180 / Math.PI, cam: s.c, fov: f3Fov(),
     openings: lay.openings.map(o => ({ type: o.type, wall: o.wall, t: o.t, w: o.w, h: o.h, sill: o.sill })),
     objects: lay.objects.map(o => ({ cat: o.cat || o.it.category, x: o.x, y: o.y })), items: F3.items.map(i => ({ cat: i.category, on: i.on, src: i.source, box: i.box })) };
 };
@@ -106,7 +108,9 @@ const BUILD = async function ({ photo, W, H, analysis }) {
   Object.assign(F3, { img: photo, thumb: photo, w: W, h: H, name: "foto", exifFov: null, seg: null, a: null, quadSource: "", fitFov: null, open: false });
   F3.opts = { refKind: "ceil", refVal: 2.7, fov: null, depth: null, ceil: true };
   await f3Segment(); f3Accept({ analysis: JSON.parse(JSON.stringify(analysis)) });
-  const s = f3Solve(); if (!s.ok) return { ok: false, err: s.err, quad: F3.quad };
+  const mp = F3.seg?.m; let map = null;
+  if (mp) { let b = ""; for (let i = 0; i < mp.lab.length; i += 8192) b += String.fromCharCode.apply(null, mp.lab.subarray(i, i + 8192)); map = { w: mp.w, h: mp.h, names: mp.names, lab: btoa(b) }; }
+  const s = f3Solve(); if (!s.ok) return { map, ok: false, err: s.err, quad: F3.quad };
   f3Build(); for (const o of P.objects) if (LIBMAP[o.ref]?.load && !TPL[o.ref]) await loadTpl(o.ref);
   rebuild3D(); await new Promise(r => setTimeout(r, 900));
   const cam = P.cameras[P.cameras.length - 1], cw = 640, ch = Math.round(640 * H / W);
@@ -206,6 +210,8 @@ for (let i = 0; i < N; i++) {
   const sc = score(cfg.gt, r, shot.quad); rows.push({ seed, gt: cfg.gt, sc, r: { segState: r.segState, quadSource: r.quadSource, tSeg: Math.round(r.tSeg || 0) }, stale: fx.hash !== hash });
   console.log(`\n## scena ${seed} (${cfg.gt.kind}, ${cfg.gt.W}×${cfg.gt.D}×${cfg.gt.H} m, fotocamera h ${cfg.gt.camera.h} incl ${cfg.gt.camera.pitch}° rot ${cfg.gt.camera.yaw}° fov ${cfg.gt.camera.hfov}°)${fx.hash !== hash ? " [analisi di una foto precedente]" : ""}`);
   console.log(JSON.stringify(sc)); console.log(`seg ${r.segState} ${Math.round(r.tSeg || 0)} ms · modello stanza ${JSON.stringify(r.box)} · spigoli: ${r.quadSource} · elementi: ${(r.items || []).map(x => x.cat + (x.on ? "" : "?") + "/" + x.src).join(", ")}`);
+  // mappa delle etichette e spigoli veri: per provare il modello di stanza in locale (scripts/prova-stanza.mjs)
+  if (r.map) console.log(`===MAP=== scena_${seed}${REALE ? "_reale" : ""}\n${JSON.stringify({ ...r.map, gq: shot.quad, cam: cfg.gt.camera, fovKnown: FOV_NOTO })}\n===FINE===`);
   if (IMGS.includes(i)) {
     const img = await page.evaluate(({ url, q, gq, items }) => new Promise(ok => { const im = new Image(); im.onload = () => { const c = document.createElement("canvas"); c.width = 640; c.height = 480; const g = c.getContext("2d"); g.drawImage(im, 0, 0, 640, 480);
       const poly = (Q, col) => { g.strokeStyle = col; g.lineWidth = 3; g.beginPath(); ["fl", "fr", "cr", "cl"].forEach((k, i) => { const x = Q[k][0] * 640, y = Q[k][1] * 480; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); g.stroke(); };
