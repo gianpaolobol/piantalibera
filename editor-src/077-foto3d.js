@@ -242,8 +242,11 @@ function f3Layout(s, items = F3.items){
     const hv = (() => { const d = s.ray(uc, vc), l = Math.hypot(d[0], d[1]) || 1; return [d[0] / l, d[1] / l]; })(), rl = Math.hypot(s.right[0], s.right[1]) || 1, cr = [s.right[0] / rl, s.right[1] / rl];
     if (C.mount === "ceiling"){
       // il bordo alto della lampada spesso è il paralume, non il soffitto: si usa il fondo, appeso circa 75 cm sotto il soffitto
-      const zB = clamp(s.H - .75, 1.8, s.H - .3), d = s.ray(uc, y1), t = Math.abs(d[2]) > 1e-4 ? (zB - s.hc) / d[2] : -1;
-      p = t > 0 ? [s.c[0] + t * d[0], s.c[1] + t * d[1]] : (f3Ceil(s, uc, y0) || f3Floor(s, uc, y1)); }
+      // distanza dalla larghezza apparente del paralume (misura tipica); senza, il fondo appeso 75 cm sotto il soffitto
+      const da = s.ray(x0, y1), db = s.ray(x1, y1), na = Math.hypot(...da), nb = Math.hypot(...db), cosA = (da[0] * db[0] + da[1] * db[1] + da[2] * db[2]) / (na * nb), ang = Math.acos(clamp(cosA, -1, 1));
+      const zB = clamp(s.H - .75, 1.8, s.H - .3), d = s.ray(uc, y1), hl = Math.hypot(d[0], d[1]) || 1;
+      if (ang > .01 && cat === "lampadario"){ const dist = clamp((C.w || .44) / (2 * Math.tan(ang / 2)), .5, 15); p = [s.c[0] + d[0] / hl * dist, s.c[1] + d[1] / hl * dist]; }
+      else { const t = Math.abs(d[2]) > 1e-4 ? (zB - s.hc) / d[2] : -1; p = t > 0 ? [s.c[0] + t * d[0], s.c[1] + t * d[1]] : (f3Ceil(s, uc, y0) || f3Floor(s, uc, y1)); } }
     else if (C.mount === "wall"){ const hit = f3WallAt(s, uc, vc); const inN = {back:[0, 1], left:[1, 0], right:[-1, 0]}[hit.wall]; p = [hit.x + inN[0] * .08, hit.y + inN[1] * .08]; rot = f3Ang(inN); z = clamp(hit.z - .1, .5, s.H - .2); }
     else {
       p = f3Floor(s, uc, y1);
@@ -282,6 +285,13 @@ function f3Layout(s, items = F3.items){
     const ref = C.ref === "sagoma_uomo" && /donna|ragazza|bambina|signora|woman|girl/i.test(it.label || "") ? "sagoma_donna" : C.ref;
     out.objects.push({it, cat, ref, x:p[0], y:p[1], rot, scale:+scale.toFixed(2), z, light:C.light});
   }
+  // stesso arredo grande riconosciuto due volte (letto spezzato in due riquadri): in pianta i centri quasi coincidono
+  const famOf = c => c.replace(/_.*/, ""), BIG3 = /^(letto|divano|tavolo|armadio|madia|libreria|cucina)/;
+  for (let i = 0; i < out.objects.length; i++) for (let j = i + 1; j < out.objects.length; j++){
+    const A = out.objects[i], B = out.objects[j]; if (A.dup || B.dup || !BIG3.test(A.cat) || famOf(A.cat) !== famOf(B.cat)) continue;
+    const CA = F3_CATS[A.cat] || {}, lim = Math.max(CA.w || 1, CA.d || 1) * .5;
+    if (Math.hypot(A.x - B.x, A.y - B.y) < lim){ const ar = o => (o.it.box[2] - o.it.box[0]) * (o.it.box[3] - o.it.box[1]) + (o.it.seg ? 1 : 0); (ar(A) >= ar(B) ? B : A).dup = true; } }
+  out.objects = out.objects.filter(o => !o.dup);
   // aperture sovrapposte sullo stesso muro: la più affidabile resta, l'altra si sposta nello spazio libero
   // più vicino o, se non c'è posto, non viene creata (accade con due riconoscimenti dello stesso vano)
   const rank = o => (o.it.seg ? 2 : 0) + (o.it.source === "rilevatore" ? 1 : 0) + (o.it.added ? 0 : .5);
