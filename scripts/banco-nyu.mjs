@@ -37,6 +37,7 @@ const FAM = c => ({ porta: "porta", porta_scorrevole: "porta", finestra: "finest
   comodino: "comodino", lampada: "lampada", lampada_terra: "lampada", lampadario: "lampada", plafoniera: "lampada", applique: "lampada",
   cassettiera: "contenitori", madia: "contenitori", libreria: "contenitori", armadio: "contenitori", mobile_tv: "tv", tv: "tv",
   wc: "wc", lavabo: "lavabo", frigorifero: "frigorifero", vasca: "vasca", cucina: "cucina", piano: "cucina", isola: "cucina" }[c] || null);
+const famOk = (pred, gtCat) => FAM(pred) === FAM(gtCat) || (pred === "portafinestra" && FAM(gtCat) === "porta") || (FAM(pred) === "cucina" && FAM(gtCat) === "contenitori");   // portafinestra = anche porta; i mobili della cucina componibile = mobili (NYU li chiama cabinet)
 const iou = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), iy = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])), i = ix * iy, u = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i; return u > 0 ? i / u : 0; };
 
 /* ricostruzione nella pagina: posizioni riportate al riferimento della fotocamera (destra, avanti) */
@@ -69,7 +70,7 @@ function score(gt, r) {
   // riconoscimento: riquadro 2D della stessa famiglia
   const used = new Set();
   for (const g of gts) {
-    let best = 0, bi = -1; r.items.forEach((it, i) => { if (used.has(i) || !it.on || FAM(it.cat) !== FAM(g.cat)) return; const v = iou(it.box, g.box); if (v > best) { best = v; bi = i; } });
+    let best = 0, bi = -1; r.items.forEach((it, i) => { if (used.has(i) || !it.on || !famOk(it.cat, g.cat)) return; const v = iou(it.box, g.box); if (v > best) { best = v; bi = i; } });
     const hit = best >= .3; if (hit) used.add(bi); out.rec.push({ fam: FAM(g.cat), hit });
   }
   out.falsi = r.items.filter((it, i) => it.on && FAM(it.cat) && !used.has(i)).length;
@@ -77,7 +78,7 @@ function score(gt, r) {
   // posizione in pianta e misure
   const all = [...r.openings, ...r.objects], usedP = new Set();
   for (const g of gts) {
-    let best = null; all.forEach((o, i) => { if (usedP.has(i) || FAM(o.cat) !== FAM(g.cat)) return; const d = Math.hypot(o.r - g.r, o.f - g.f); if (!best || d < best.d) best = { d, i, o }; });
+    let best = null; all.forEach((o, i) => { if (usedP.has(i) || !famOk(o.cat, g.cat)) return; const d = Math.hypot(o.r - g.r, o.f - g.f); if (!best || d < best.d) best = { d, i, o }; });
     if (!best || best.d > 1.5) { out.pos.push({ fam: FAM(g.cat), found: false }); continue; }
     usedP.add(best.i); const o = best.o, dist = Math.hypot(g.r, g.f);
     const dv = o.vis ? Math.hypot(o.vis.r - g.r, o.vis.f - g.f) : best.d;

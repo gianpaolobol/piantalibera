@@ -12,13 +12,13 @@ export const SEG_MODEL = "Xenova/segformer-b2-finetuned-ade-512-512";
 /* etichette ADE20K → categoria di Pianta Libera (o superficie della stanza) */
 export const SEG_CAT = {
   wall: "@wall", floor: "@floor", rug: "@floor", ceiling: "@ceiling",
-  door: "porta", "screen door": "portafinestra", windowpane: "finestra",
+  door: "porta", "screen door": "porta", windowpane: "finestra",
   sofa: "divano", armchair: "poltrona", chair: "sedia", "swivel chair": "sedia_ufficio", stool: "sgabello", ottoman: "pouf",
   bed: "letto_matrimoniale", table: "tavolo", "coffee table": "tavolino", desk: "scrivania",
   cabinet: "madia", buffet: "madia", "chest of drawers": "cassettiera", wardrobe: "armadio", bookcase: "libreria", shelf: "libreria",
   lamp: "lampada_terra", chandelier: "lampadario", light: "plafoniera", sconce: "applique", "television receiver": "mobile_tv",
   plant: "pianta", flower: "pianta", person: "persona", toilet: "wc", sink: "lavabo", bathtub: "vasca", shower: "doccia",
-  refrigerator: "frigorifero", stove: "cucina", oven: "cucina", "kitchen island": "isola", stairs: "scala", stairway: "scala",
+  refrigerator: "frigorifero", stove: "cucina", oven: "cucina", dishwasher: "cucina", countertop: "cucina", counter: "cucina", "kitchen island": "isola", stairs: "scala", stairway: "scala",
 };
 const OPEN = ["porta", "portafinestra", "porta_scorrevole", "finestra"];
 const FAMILY = c => OPEN.includes(c) ? "apertura" : ({ divano: "sedute", divano_angolare: "sedute", poltrona: "sedute", sedia: "sedie", sedia_ufficio: "sedie", sgabello: "sedie", pouf: "sedute",
@@ -108,7 +108,12 @@ export function wallCorners(m) {
 /** Componenti connesse per categoria (porte, finestre, arredi): [{category, label, box 0..1, area}]. */
 export function segComponents(m, roomType = "") {
   if (!m) return [];
-  const { w, h, lab, names } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && /cucin|kitchen/i.test(roomType)) c = "cucina"; return c && c[0] !== "@" ? c : null; });
+  const names = m.names;
+  // ambiente dalle etichette presenti (oltre al tipo di stanza dell'analisi, se c'è): in cucina i mobili bassi sono
+  // la cucina componibile; in bagno il piano con il lavabo è il lavabo (banco NYU: piani e mobili di cucina mancati)
+  const has = n => names.includes(n), bath = /bagn|bath/i.test(roomType) || ["toilet", "bathtub", "shower"].some(has);
+  const kitchen = !bath && (/cucin|kitchen/i.test(roomType) || ["stove", "oven", "dishwasher", "refrigerator", "kitchen island", "microwave"].filter(has).length >= 1 && (has("countertop") || has("counter") || has("sink")));
+  const { w, h, lab } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && kitchen) c = "cucina"; if (c === "cucina" && /^counter/.test(n) && bath) c = "lavabo"; return c && c[0] !== "@" ? c : null; });
   // «fuori»: solo classi di esterni (cielo, verde, edifici…) viste attraverso il vetro. Nelle foto vere la segmentazione
   // include già nel vetro il paesaggio; allargare ad altre classi allungava le finestre sopra letti e mobili (banco 9/11)
   const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n));
