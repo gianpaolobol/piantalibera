@@ -21,7 +21,9 @@ for (const id of MODELS) {
   const seen = new Map(); let tp = 0, fp = 0, ms = 0; const per = {};
   for (const key of keys) {
     const gt = JSON.parse(readFileSync(join(DIR, key + ".json"), "utf8")), img = await RawImage.read(join(DIR, key + ".jpg"));
-    const t0 = Date.now(), out = zs ? (await det(img, ZS.map(l => /grounding/i.test(id) ? l + "." : l), { threshold: Number(process.env.SOGLIA || .3), percentage: true })).map(o => ({ ...o, label: o.label.replace(/\.$/, "") })) : await det(img, { threshold: .4, percentage: true }); ms += Date.now() - t0;
+    const t0 = Date.now(); let out;
+    try { out = zs ? (await det(img, /grounding/i.test(id) ? ZS.map(l => l + ".").join(" ") : ZS, { threshold: Number(process.env.SOGLIA || .3), percentage: true })).map(o => ({ ...o, label: String(o.label).replace(/\.$/, "").trim() })) : await det(img, { threshold: .4, percentage: true }); }
+    catch (e) { console.log(`${id}: errore (${String(e.message || e).slice(0, 200)})`); break; } ms += Date.now() - t0;
     for (const o of out) seen.set(o.label, (seen.get(o.label) || 0) + 1);
     const pred = out.map(o => ({ fam: LAB[o.label.toLowerCase()], box: [o.box.xmin, o.box.ymin, o.box.xmax, o.box.ymax] })).filter(o => o.fam), used = new Set();
     for (const g of gt.objects.filter(o => FAMG(o.cat) && o.px >= 2500)) {

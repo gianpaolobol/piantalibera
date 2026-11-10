@@ -51,6 +51,7 @@ const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts, a
   F3.opts = deep || cloud ? { refKind: "ceil", refVal: 2.7, fov: null, depth: null, ceil: true } : { refKind: "cam", refVal: camH, fov: null, depth: null, ceil: true };
   const t0 = performance.now(); if (mode !== "cloudflare") await f3Segment(); const tSeg = performance.now() - t0;
   f3Accept({ analysis: cloud ? analysis : { items: [], room: {}, back_wall: null } }); if (!deep && !cloud){ F3.opts.refKind = "cam"; F3.opts.refVal = camH; }
+  F3.dbg = null;
   const dinfo = { masks: F3.seg?.masks?.length || 0, dets: F3.seg?.dets?.length || 0, tSeg: Math.round(tSeg), depth: F3.seg?.depth ? { err: F3.seg.depth.err, h: F3.seg.depth.G?.h, pitch: F3.seg.depth.G?.pitch, hfov: F3.seg.depth.hfov, room: F3.seg.depth.R ? { db: F3.seg.depth.R.db, dl: F3.seg.depth.R.dl, dr: F3.seg.depth.R.dr, H: F3.seg.depth.R.H } : null } : null, ref: F3.opts.refKind + " " + F3.opts.refVal };
   const items = F3.items.map(i => ({ cat: i.category, on: i.on, src: i.source, box: i.box }));
   // diagnosi: etichette della segmentazione dentro un riquadro (per capire porte e cucine mancate)
@@ -60,7 +61,7 @@ const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts, a
   const lay = f3Layout(s), fw0 = s.ray(.5, .5), fl = Math.hypot(fw0[0], fw0[1]) || 1, fw = [fw0[0] / fl, fw0[1] / fl], rl = Math.hypot(s.right[0], s.right[1]) || 1, rt = [s.right[0] / rl, s.right[1] / rl];
   const rel = (x, y) => { const d = [x - s.c[0], y - s.c[1]]; return { r: +(d[0] * rt[0] + d[1] * rt[1]).toFixed(3), f: +(d[0] * fw[0] + d[1] * fw[1]).toFixed(3) }; };
   const opC = o => o.wall === "back" ? [o.t, 0] : o.wall === "left" ? [0, s.D - o.t] : [s.W, o.t];
-  return { ok: true, diag, ...dinfo, hc: s.hc, segState: F3.seg?.state, quadSource: F3.quadSource, pitch: +(s.p * 180 / Math.PI).toFixed(2), W: s.W, D: s.D, Hh: s.H, items,
+  return { ok: true, diag, ...dinfo, get dbg(){ return F3.dbg; }, hc: s.hc, segState: F3.seg?.state, quadSource: F3.quadSource, pitch: +(s.p * 180 / Math.PI).toFixed(2), W: s.W, D: s.D, Hh: s.H, items,
     openings: lay.openings.map(o => ({ cat: o.it.category, ...rel(...opC(o)), w: o.w, zmin: o.sill, zmax: +(o.sill + o.h).toFixed(2), box: o.it.box })),
     objects: lay.objects.map(o => ({ cat: o.cat || o.it.category, ...rel(o.x, o.y), vis: o.vis ? rel(...o.vis) : null, box: o.it.box })) };
 };
@@ -107,7 +108,7 @@ for (const [k, key] of keys.entries()) {
   const t0 = Date.now(), r = await page.evaluate(`(${RECON})(${JSON.stringify({ photo, W: gt.W, H: gt.H, hfov: gt.hfov, camH: gt.cam_h, mode: MODE, variants: VAR, analysis, diagBoxes: gt.objects.filter(o => /porta|cucina|piano|madia|finestra/.test(o.cat) && o.px >= 2500).map(o => ({ cat: o.cat, name: o.name, box: o.box })), modello: process.env.MODELLO, parts: Number(process.env.PARTI || 0) || undefined })})`);
   const sc = score(gt, r); sc.ms = Date.now() - t0 + cfMs; sc.dHc = r.ok ? +(r.hc - gt.cam_h).toFixed(3) : null; rows.push(sc);
   for (const d of r.diag || []) { const hit = (r.items || []).some(it => it.on && FAM(it.cat) === FAM(d.cat) && iou(it.box, d.box) >= .3); console.log(`   diag ${hit ? "OK" : "MANCA"} ${d.name}: ${d.labels} · rilevatore: ${d.dets || "-"}`); }
-  console.log(`## ${key} ${gt.scene} · h ${gt.cam_h} incl ${gt.pitch} roll ${gt.roll} · ${r.ok ? "ok" : "NO " + r.err} · spigoli ${r.quadSource} · incl ${r.pitch} · h ${r.hc?.toFixed?.(2)} · ${r.tSeg} ms · maschere ${r.masks} rilevamenti ${r.dets}${r.depth ? " · profondità " + JSON.stringify(r.depth) : ""}`);
+  console.log(`## ${key} ${gt.scene} · h ${gt.cam_h} incl ${gt.pitch} roll ${gt.roll} · ${r.ok ? "ok" : "NO " + r.err} · spigoli ${r.quadSource} · incl ${r.pitch} · h ${r.hc?.toFixed?.(2)} · ${r.tSeg} ms · maschere ${r.masks} rilevamenti ${r.dets} uso ${JSON.stringify(r.dbg)}${r.depth ? " · profondità " + JSON.stringify(r.depth) : ""}`);
   console.log(`   veri: ${gt.objects.filter(o => FAM(o.cat) && o.px >= 2500).map(o => `${o.cat}@${o.r.toFixed(1)},${o.f.toFixed(1)}`).join(" ")}`);
   if (r.ok) console.log(`   trovati: ${[...r.openings, ...r.objects].map(o => `${o.cat}@${o.r.toFixed(1)},${o.f.toFixed(1)}`).join(" ")}`);
   if (k < IMGS) {

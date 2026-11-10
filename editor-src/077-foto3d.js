@@ -378,6 +378,7 @@ function f3Obj3d(s, it, cat){
   if (!ids.size) ids = new Set(m.names.map((n, i) => { const c = SEG_CAT[n]; return !struct(c) && !OPEN.includes(c) && !OUTSIDE.has(n) ? i : -1; }).filter(i => i >= 0));
   const iouB = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), iy = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])), i = ix * iy, u = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i; return u > 0 ? i / u : 0; };
   const mk = (sg.masks || []).reduce((b, x) => { const v = iouB(x.box, it.box); return v > .7 && (!b || v > b.v) ? {v, mask:x.mask} : b; }, null);
+  F3.dbg = F3.dbg || {mk:0, ok:0, tot:0}; F3.dbg.tot++; if (mk){ F3.dbg.mk++; if (dpObject(D.P, D.M, D.w, D.h, m, ids, it.box, G, mk.mask)) F3.dbg.ok++; }
   const o = dpObject(D.P, D.M, D.w, D.h, m, ids, it.box, G, mk?.mask || null) || (mk ? dpObject(D.P, D.M, D.w, D.h, m, ids, it.box, G) : null); if (!o || o.n < 15) return null;
   const k = s.hc / G.h, f0 = s.ray(.5, .5), fl = Math.hypot(f0[0], f0[1]) || 1, fw = [f0[0] / fl, f0[1] / fl], rl = Math.hypot(s.right[0], s.right[1]) || 1, rt = [s.right[0] / rl, s.right[1] / rl];
   const at = (r, f) => [s.c[0] + k * (r * rt[0] + f * fw[0]), s.c[1] + k * (r * rt[1] + f * fw[1])];
