@@ -154,9 +154,10 @@ async function f3Masks(raw, boxes){
   const T = await import(F3_TJS);
   if (!f3SamM) f3SamM = {model:await T.SamModel.from_pretrained(F3_SAM.model, {dtype:"q8"}), proc:await T.AutoProcessor.from_pretrained(F3_SAM.model)};
   const W = raw.width, H = raw.height, out = [];
-  const inputs = await f3SamM.proc(raw, {input_boxes:[boxes.map(b => [b[0] * W, b[1] * H, b[2] * W, b[3] * H])]});
+  // il riquadro come due punti (convenzione di SAM: 2 = angolo in alto a sinistra, 3 = in basso a destra)
+  const inputs = await f3SamM.proc(raw, {input_points:[boxes.map(b => [[b[0] * W, b[1] * H], [b[2] * W, b[3] * H]])], input_labels:[boxes.map(() => [2, 3])]});
   const emb = await f3SamM.model.get_image_embeddings(inputs);
-  const res = await f3SamM.model({...emb, input_boxes:inputs.input_boxes});
+  const res = await f3SamM.model({...emb, input_points:inputs.input_points, input_labels:inputs.input_labels});
   const masks = await f3SamM.proc.post_process_masks(res.pred_masks, inputs.original_sizes, inputs.reshaped_input_sizes);
   const mk = masks[0], [, nb, nm, mh, mw] = mk.dims, sc = res.iou_scores.data, ds = 4, w = Math.ceil(mw / ds), h = Math.ceil(mh / ds);
   for (let b = 0; b < nb; b++){ let best = 0; for (let k = 1; k < nm; k++) if (sc[b * nm + k] > sc[b * nm + best]) best = k;
