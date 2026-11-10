@@ -40,7 +40,7 @@ const FAM = c => ({ porta: "porta", porta_scorrevole: "porta", finestra: "finest
 const iou = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), iy = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])), i = ix * iy, u = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i; return u > 0 ? i / u : 0; };
 
 /* ricostruzione nella pagina: posizioni riportate al riferimento della fotocamera (destra, avanti) */
-const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts, analysis }) {
+const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts, analysis, diagBoxes }) {
   const deep = mode === "profondita" || mode === "combinato", cloud = mode === "cloudflare" || mode === "combinato"; F3_DEPTH.on = deep; F3_DET.on = deep; if (modello) Object.assign(F3_DEPTH, { base: modello, parts });
   Object.assign(F3, { img: photo, thumb: photo, w: W, h: H, name: "nyu", exifFov: hfov, seg: null, a: null, quadSource: "", fitFov: null });
   // senza profondità l'utente indica l'altezza della fotocamera; con la profondità nessuna misura
@@ -50,11 +50,14 @@ const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts, a
   f3Accept({ analysis: cloud ? analysis : { items: [], room: {}, back_wall: null } }); if (!deep && !cloud){ F3.opts.refKind = "cam"; F3.opts.refVal = camH; }
   const dinfo = { tSeg: Math.round(tSeg), depth: F3.seg?.depth ? { err: F3.seg.depth.err, h: F3.seg.depth.G?.h, pitch: F3.seg.depth.G?.pitch, hfov: F3.seg.depth.hfov, room: F3.seg.depth.R ? { db: F3.seg.depth.R.db, dl: F3.seg.depth.R.dl, dr: F3.seg.depth.R.dr, H: F3.seg.depth.R.H } : null } : null, ref: F3.opts.refKind + " " + F3.opts.refVal };
   const items = F3.items.map(i => ({ cat: i.category, on: i.on, src: i.source, box: i.box }));
-  const s = f3Solve(); if (!s.ok) return { ok: false, err: s.err, items, segState: F3.seg?.state, quadSource: F3.quadSource, ...dinfo };
+  // diagnosi: etichette della segmentazione dentro un riquadro (per capire porte e cucine mancate)
+  const mp = F3.seg?.m; const labelsIn = b => { if (!mp) return null; const cnt = {}; let n = 0; for (let y = Math.floor(b[1] * mp.h); y < Math.ceil(b[3] * mp.h); y++) for (let x = Math.floor(b[0] * mp.w); x < Math.ceil(b[2] * mp.w); x++) { const l = mp.lab[y * mp.w + x]; const nm = l === 255 ? "-" : mp.names[l]; cnt[nm] = (cnt[nm] || 0) + 1; n++; } return Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${k} ${Math.round(v / n * 100)}%`).join(", "); };
+  const diag = (diagBoxes || []).map(d => ({ ...d, labels: labelsIn(d.box), dets: (F3.seg?.dets || []).filter(x => Math.max(0, Math.min(x.box[2], d.box[2]) - Math.max(x.box[0], d.box[0])) * Math.max(0, Math.min(x.box[3], d.box[3]) - Math.max(x.box[1], d.box[1])) > 0).map(x => `${x.category} ${x.score.toFixed(2)}`).join(", ") }));
+  const s = f3Solve(); if (!s.ok) return { ok: false, err: s.err, items, diag, segState: F3.seg?.state, quadSource: F3.quadSource, ...dinfo };
   const lay = f3Layout(s), fw0 = s.ray(.5, .5), fl = Math.hypot(fw0[0], fw0[1]) || 1, fw = [fw0[0] / fl, fw0[1] / fl], rl = Math.hypot(s.right[0], s.right[1]) || 1, rt = [s.right[0] / rl, s.right[1] / rl];
   const rel = (x, y) => { const d = [x - s.c[0], y - s.c[1]]; return { r: +(d[0] * rt[0] + d[1] * rt[1]).toFixed(3), f: +(d[0] * fw[0] + d[1] * fw[1]).toFixed(3) }; };
   const opC = o => o.wall === "back" ? [o.t, 0] : o.wall === "left" ? [0, s.D - o.t] : [s.W, o.t];
-  return { ok: true, ...dinfo, hc: s.hc, segState: F3.seg?.state, quadSource: F3.quadSource, pitch: +(s.p * 180 / Math.PI).toFixed(2), W: s.W, D: s.D, Hh: s.H, items,
+  return { ok: true, diag, ...dinfo, hc: s.hc, segState: F3.seg?.state, quadSource: F3.quadSource, pitch: +(s.p * 180 / Math.PI).toFixed(2), W: s.W, D: s.D, Hh: s.H, items,
     openings: lay.openings.map(o => ({ cat: o.it.category, ...rel(...opC(o)), w: o.w, zmin: o.sill, zmax: +(o.sill + o.h).toFixed(2), box: o.it.box })),
     objects: lay.objects.map(o => ({ cat: o.cat || o.it.category, ...rel(o.x, o.y), vis: o.vis ? rel(...o.vis) : null, box: o.it.box })) };
 };
@@ -97,8 +100,9 @@ for (const [k, key] of keys.entries()) {
   const gt = JSON.parse(readFileSync(join(DIR, key + ".json"), "utf8")), photo = "data:image/jpeg;base64," + readFileSync(join(DIR, key + ".jpg")).toString("base64");
   let analysis = null, cfMs = 0;
   if (MODE === "cloudflare" || MODE === "combinato") { const c = await cfAnalysis(key, photo, gt.W, gt.H); if (!c) { console.log(`## ${key}: analisi Cloudflare non disponibile`); continue; } analysis = c.a; cfMs = c.ms || 0; }
-  const t0 = Date.now(), r = await page.evaluate(`(${RECON})(${JSON.stringify({ photo, W: gt.W, H: gt.H, hfov: gt.hfov, camH: gt.cam_h, mode: MODE, analysis, modello: process.env.MODELLO, parts: Number(process.env.PARTI || 0) || undefined })})`);
+  const t0 = Date.now(), r = await page.evaluate(`(${RECON})(${JSON.stringify({ photo, W: gt.W, H: gt.H, hfov: gt.hfov, camH: gt.cam_h, mode: MODE, analysis, diagBoxes: gt.objects.filter(o => /porta|cucina|piano|madia|finestra/.test(o.cat) && o.px >= 2500).map(o => ({ cat: o.cat, name: o.name, box: o.box })), modello: process.env.MODELLO, parts: Number(process.env.PARTI || 0) || undefined })})`);
   const sc = score(gt, r); sc.ms = Date.now() - t0 + cfMs; sc.dHc = r.ok ? +(r.hc - gt.cam_h).toFixed(3) : null; rows.push(sc);
+  for (const d of r.diag || []) { const hit = (r.items || []).some(it => it.on && FAM(it.cat) === FAM(d.cat) && iou(it.box, d.box) >= .3); console.log(`   diag ${hit ? "OK" : "MANCA"} ${d.name}: ${d.labels} · rilevatore: ${d.dets || "-"}`); }
   console.log(`## ${key} ${gt.scene} · h ${gt.cam_h} incl ${gt.pitch} roll ${gt.roll} · ${r.ok ? "ok" : "NO " + r.err} · spigoli ${r.quadSource} · incl ${r.pitch} · h ${r.hc?.toFixed?.(2)} · ${r.tSeg} ms${r.depth ? " · profondità " + JSON.stringify(r.depth) : ""}`);
   console.log(`   veri: ${gt.objects.filter(o => FAM(o.cat) && o.px >= 2500).map(o => `${o.cat}@${o.r.toFixed(1)},${o.f.toFixed(1)}`).join(" ")}`);
   if (r.ok) console.log(`   trovati: ${[...r.openings, ...r.objects].map(o => `${o.cat}@${o.r.toFixed(1)},${o.f.toFixed(1)}`).join(" ")}`);
