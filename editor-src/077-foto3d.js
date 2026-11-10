@@ -96,8 +96,45 @@ async function f3Analyze(){
     if (!r.ok) throw new Error(j?.error?.message || "errore " + r.status);
     if (!j.analysis) throw new Error("risposta del servizio senza analisi");
     f3Accept(j); F3.openAfter = true;
-  } catch(e){ F3.err = "Analisi non riuscita: " + (e.message || e); }
-  finally { F3.busy = false; busy(""); F3.ts.token = ""; try { if (F3.ts.widget != null) window.turnstile?.reset(F3.ts.widget); } catch(e){} renderImport(); if (F3.openAfter){ F3.openAfter = false; f3OpenModal(); } }
+  } catch(e){ F3.err = "Analisi non riuscita: " + (e.message || e); F3.fallback = true; }
+  finally { F3.busy = false; busy(""); F3.ts.token = ""; try { if (F3.ts.widget != null) window.turnstile?.reset(F3.ts.widget); } catch(e){} renderImport(); if (F3.openAfter){ F3.openAfter = false; f3OpenModal(); }
+    // servizio non disponibile o quota esaurita: si continua nel dispositivo
+    if (F3.fallback){ F3.fallback = false; const why = F3.err; F3.err = ""; f3AnalyzeLocal(`${why.replace(/^Analisi non riuscita: /, "Servizio AI non disponibile (")}): analisi fatta nel dispositivo.`); } }
+}
+/* ---------- analisi solo nel dispositivo: nessun invio, nessuna quota ----------
+   Segmentazione, rilevatore e profondità girano nel browser; colori di pareti, pavimento e soffitto campionati dalla
+   foto sui pixel che la segmentazione assegna a ciascuna superficie. Mancano solo tipo di stanza, stile e luce. */
+async function f3AnalyzeLocal(note){
+  if (!F3.img || F3.busy) return;
+  F3.busy = true; F3.err = ""; renderImport(); busy("Analizzo la foto nel dispositivo… (la prima volta si scaricano i modelli, ~110 MB)");
+  try {
+    if (!F3.seg || F3.seg.img !== F3.img || F3.seg.state === "err") F3.seg = null;
+    if (F3.seg?.state !== "ok") await f3Segment();
+    const sg = F3.seg; if (!sg || sg.state !== "ok") throw new Error(sg?.err || "modelli nel dispositivo non disponibili");
+    const col = await f3SurfaceColors(sg.m), floorType = col.floor ? f3FloorType(col.floor) : "parquet";
+    f3Accept({analysis:{scene:"interior", room_type:"", items:[], room:{}, camera:{}, back_wall:null, materials:{floor:floorType, floor_color:col.floor || null, wall_color:col.wall || null, ceiling_color:col.ceiling || null}, lighting:{}}, model:"nel dispositivo", local:true});
+    F3.localNote = note || ""; F3.openAfter = true;
+  } catch(e){ F3.err = "Analisi nel dispositivo non riuscita: " + (e.message || e); }
+  finally { F3.busy = false; busy(""); renderImport(); if (F3.openAfter){ F3.openAfter = false; f3OpenModal(); } }
+}
+/* colore medio (mediana per canale) dei pixel di pareti, pavimento e soffitto */
+async function f3SurfaceColors(m){
+  const img = await new Promise((ok, ko) => { const im = new Image(); im.onload = () => ok(im); im.onerror = ko; im.src = F3.thumb || F3.img; });
+  const cv = document.createElement("canvas"); cv.width = m.w; cv.height = m.h; const g = cv.getContext("2d", {willReadFrequently:true}); g.drawImage(img, 0, 0, m.w, m.h);
+  const px = g.getImageData(0, 0, m.w, m.h).data, out = {};
+  for (const [k, cat] of [["wall", "@wall"], ["floor", "@floor"], ["ceiling", "@ceiling"]]){
+    const ids = idsOf(m, cat), ch = [[], [], []];
+    for (let i = 0; i < m.w * m.h; i += 2) if (ids.has(m.lab[i])) for (let c = 0; c < 3; c++) ch[c].push(px[i * 4 + c]);
+    if (ch[0].length < 200) continue;
+    const med = a => { a.sort((x, y) => x - y); return a[a.length >> 1]; };
+    out[k] = "#" + ch.map(a => med(a).toString(16).padStart(2, "0")).join("");
+  }
+  return out;
+}
+/* tipo di pavimento dal colore: legno se caldo e saturo, altrimenti piastrelle (correggibile a mano) */
+function f3FloorType(hex){
+  const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16), mx = Math.max(r, g, b), mn = Math.min(r, g, b), sat = mx ? (mx - mn) / mx : 0;
+  return r > b && sat > .22 && mx < 235 ? "parquet" : mx < 90 ? "cemento" : "piastrelle";
 }
 /* accoglie l'analisi del servizio: spigoli proposti, misure, elementi da rivedere */
 /* ---------- segmentazione nel dispositivo (shared/photo-seg.js) ----------
@@ -476,7 +513,8 @@ function f3PanelHTML(){
       <label class="chk"><input type="checkbox" id="f3Consent" ${f3Consent ? "checked" : ""}><span>Acconsento all'invio della foto a ${esc(c?.provider || "Cloudflare Workers AI")} per l'analisi. ${esc(ph?.privacy || "")}</span></label>
       ${c?.turnstile_site_key && !owner ? `<div id="f3Turnstile" class="ts"></div>` : ""}
       <p class="note">${esc(quota)}</p>`}
-      <div class="btns">${avail ? "" : `<button class="btn primary" id="f3Go" ${F3.busy ? "disabled" : ""}>${F3.busy ? "Analisi in corso…" : "Analizza la foto"}</button>`}<button class="btn" id="f3Reset">Cambia foto</button></div>`;
+      <div class="btns">${avail ? "" : `<button class="btn primary" id="f3Go" ${F3.busy ? "disabled" : ""}>${F3.busy ? "Analisi in corso…" : "Analizza la foto"}</button>`}<button class="btn${avail ? " primary" : ""}" id="f3Local" ${F3.busy ? "disabled" : ""} title="Segmentazione, oggetti e profondità calcolati nel tuo dispositivo: la foto non viene inviata, nessun limite giornaliero">Analizza nel dispositivo</button><button class="btn" id="f3Reset">Cambia foto</button></div>
+      <p class="note">«Analizza nel dispositivo» non invia la foto e non ha limiti: misure, aperture e arredi come l'analisi AI; mancano tipo di stanza, stile e luce.</p>`;
   } else {
     const st = f3Solve(), n = F3.items.filter(i => i.on).length;
     h += `<div class="f3thumb"><img src="${F3.thumb}" alt="Foto analizzata"><div><b>${esc(F3.name)}</b><br><span class="note">${F3.items.length} elementi riconosciuti, ${n} da creare${st.ok ? ` · stanza ${fmt(st.W, 2)} × ${fmt(st.D, 2)} m` : ""}</span></div></div>
@@ -537,7 +575,7 @@ function f3ReviewHTML(){
     <div class="f3list">${list || `<p class="note">Nessun elemento riconosciuto.</p>`}</div>
     <div class="btns"><select id="f3AddCat" class="inp" aria-label="Categoria da aggiungere"><option value="">＋ Aggiungi un elemento…</option>${Object.entries(F3_CATS).filter(([, v]) => !v.skip).map(([k, v]) => `<option value="${k}">${esc(v.n)}</option>`).join("")}</select></div>
     <div class="btns f3m-go"><button class="btn primary" id="f3Build" ${s.ok ? "" : "disabled"}>${F3.report ? "Crea un'altra copia" : "Crea il modello 3D"}</button><button class="btn" id="f3Cancel">Chiudi</button></div>
-    <p class="note">${F3.seg?.state === "run" ? (F3.seg.phase === "profondita" ? "Misuro la stanza nel dispositivo (la prima volta si scarica il modello di profondità, ~42 MB)…" : "Segmentazione nel dispositivo in corso: spigoli e riquadri si aggiorneranno da soli…") : F3.seg?.state === "ok" ? esc(F3.segNote || "") : F3.seg?.state === "err" ? "Segmentazione nel dispositivo non disponibile: spigoli e riquadri vengono solo dall'analisi AI." : ""}</p>
+    <p class="note">${F3.seg?.state === "run" ? (F3.seg.phase === "profondita" ? "Misuro la stanza nel dispositivo (la prima volta si scarica il modello di profondità, ~42 MB)…" : "Segmentazione nel dispositivo in corso: spigoli e riquadri si aggiorneranno da soli…") : F3.seg?.state === "ok" ? esc((F3.localNote ? F3.localNote + " " : "") + (F3.segNote || "")) : F3.seg?.state === "err" ? "Segmentazione nel dispositivo non disponibile: spigoli e riquadri vengono solo dall'analisi AI." : ""}</p>
     ${F3.err ? `<p class="note warn" role="alert">${esc(F3.err)}</p>` : ""}
     <p class="note">${meta.mock ? "Risposta di prova del server locale. " : ""}${meta.model ? `Analisi: ${esc(meta.model.replace(/^@cf\//, ""))}${meta.detect ? " + " + esc(meta.detect.replace(/^@cf\//, "")) : ""}` : ""}${meta.ms ? ` in ${fmt(meta.ms / 1000, 0)} s` : ""}${meta.remaining != null ? ` · analisi rimaste oggi: ${meta.remaining}` : ""}.</p></div></div>`;
 }
@@ -593,8 +631,9 @@ function f3SyncList(){ document.querySelectorAll("#f3Modal .f3row").forEach((r, 
 function f3Click(e){ const b = e.target.closest("button"); if (!b) return;
   if (b.id === "f3Pick") $("#fF3").click();
   else if (b.id === "f3Shoot") $("#fF3c").click();
-  else if (b.id === "f3Reset"){ Object.assign(F3, {img:null, thumb:null, a:null, quad:null, items:[], sel:-1, err:"", report:null, seg:null}); renderImport(); }
+  else if (b.id === "f3Reset"){ Object.assign(F3, {img:null, thumb:null, a:null, quad:null, items:[], sel:-1, err:"", report:null, seg:null, localNote:""}); renderImport(); }
   else if (b.id === "f3Go") f3Analyze();
+  else if (b.id === "f3Local") f3AnalyzeLocal();
   else if (b.id === "f3Open") f3OpenModal();
   else if (b.id === "f3Close" || b.id === "f3Cancel") f3CloseModal();
   else if (b.id === "f3Build") f3Build();
