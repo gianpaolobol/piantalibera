@@ -8,6 +8,7 @@ on:
     inputs:
       n: { description: "Quante foto", default: "80" }
       sonda: { description: "Sonda MoGe-2", type: boolean, default: true }
+      confronto: { description: "Confronto Cloudflare / dispositivo / combinato (spende ~90 Neurons a foto la prima volta)", type: boolean, default: false }
   push:
     branches: ["feature/foto-*"]
     paths: ["scripts/banco-nyu.mjs", "scripts/nyu-estrai.py", "shared/photo.js", "shared/photo-seg.js", "shared/photo-depth.js", "editor-src/077-foto3d.js", "scripts/sonda-moge.py", "scripts/esporta-moge.py", "scripts/dividi-modello.py", "scripts/sonda-rilevatore.mjs", ".github/workflows/banco-nyu.yml"]
@@ -68,12 +69,28 @@ jobs:
         continue-on-error: true
         run: npm i --no-save @huggingface/transformers@3.8.1 && node scripts/sonda-rilevatore.mjs ~/nyu-sub 60
       - name: Banco senza profondità (altezza della fotocamera indicata)
+        if: inputs.confronto != true
         run: node scripts/banco-nyu.mjs ~/nyu-sub ${{ inputs.n || '80' }}
       - name: Banco con la profondità nel dispositivo (nessuna misura)
         if: always()
         run: |
           python3 scripts/dividi-modello.py ~/moge-onnx/moge2-vits-560x420-q8.onnx 2 public/modelli
           MODO=profondita MODELLO=modelli/moge2-vits-560x420-q8.onnx PARTI=2 node scripts/banco-nyu.mjs ~/nyu-sub ${{ inputs.n || '80' }}
+      - name: Analisi di Cloudflare salvate (si rifanno solo le mancanti)
+        if: inputs.confronto == true
+        uses: actions/cache@v4
+        with:
+          path: ~/nyu-analisi
+          key: nyu-analisi-${{ github.run_id }}
+          restore-keys: nyu-analisi-
+      - name: "Confronto: solo Cloudflare, poi Cloudflare + dispositivo"
+        if: inputs.confronto == true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          MODO=cloudflare node scripts/banco-nyu.mjs ~/nyu-sub ${{ inputs.n || '40' }}
+          MODO=combinato MODELLO=modelli/moge2-vits-560x420-q8.onnx PARTI=2 node scripts/banco-nyu.mjs ~/nyu-sub ${{ inputs.n || '40' }}
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: moge-onnx, path: ~/moge-onnx, retention-days: 30, if-no-files-found: ignore }
