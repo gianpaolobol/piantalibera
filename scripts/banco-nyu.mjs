@@ -7,11 +7,28 @@
 // quello dell'EXIF. Uso: node scripts/banco-nyu.mjs cartella [n]
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
-import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync, writeFileSync, mkdirSync } from "node:fs";
+import { photoMessages, PHOTO_SCHEMA, extractJson, normalizeAnalysis, parseDetections } from "../shared/photo.js";
 import { join } from "node:path";
 
 const DIR = process.argv[2], N = Number(process.argv[3] || 80), IMGS = Number(process.env.IMGS || 6);
-const MODE = process.env.MODO || "base";
+const MODE = process.env.MODO || "base";   // base · profondita (solo dispositivo) · cloudflare (solo server) · combinato
+/* analisi di Cloudflare (Llama 4 Scout + DETR, la stessa chiamata di /api/foto), salvata per non rifarla */
+const ACC = process.env.CLOUDFLARE_ACCOUNT_ID, TOK = process.env.CLOUDFLARE_API_TOKEN, AN_DIR = process.env.ANALISI || join(process.env.HOME || ".", "nyu-analisi");
+const cfRun = async (model, input) => { const t0 = Date.now(), r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACC}/ai/run/${model}`, { method: "POST", headers: { Authorization: `Bearer ${TOK}`, "Content-Type": "application/json" }, body: JSON.stringify(input) }); const j = await r.json(); if (!j.success) throw new Error(JSON.stringify(j.errors).slice(0, 200)); return { ...j.result, _ms: Date.now() - t0 }; };
+let neuronsSpent = 0;
+async function cfAnalysis(key, photo, W, H) {
+  mkdirSync(AN_DIR, { recursive: true }); const f = join(AN_DIR, key + ".json");
+  if (!existsSync(f)) {
+    if (!TOK) return null;
+    const buf = Buffer.from(photo.split(",")[1], "base64");
+    const [vis, det] = await Promise.all([cfRun("@cf/meta/llama-4-scout-17b-16e-instruct", { messages: photoMessages(photo), max_tokens: 3000, temperature: .15, response_format: { type: "json_schema", json_schema: PHOTO_SCHEMA } }), cfRun("@cf/facebook/detr-resnet-50", { image: [...buf] })]);
+    neuronsSpent += vis?.usage?.neurons || 0;
+    writeFileSync(f, JSON.stringify({ raw: extractJson(vis), det, neurons: vis?.usage?.neurons, ms: Math.max(vis._ms, det._ms) }));
+  }
+  const fx = JSON.parse(readFileSync(f, "utf8"));
+  try { return { a: normalizeAnalysis(fx.raw, parseDetections(fx.det, W, H), W, H), neurons: fx.neurons, ms: fx.ms }; } catch { return null; }
+}
 
 /* famiglie per il confronto */
 const FAM = c => ({ porta: "porta", porta_scorrevole: "porta", finestra: "finestra", portafinestra: "finestra",
@@ -23,13 +40,14 @@ const FAM = c => ({ porta: "porta", porta_scorrevole: "porta", finestra: "finest
 const iou = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), iy = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])), i = ix * iy, u = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i; return u > 0 ? i / u : 0; };
 
 /* ricostruzione nella pagina: posizioni riportate al riferimento della fotocamera (destra, avanti) */
-const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts }) {
-  const deep = mode === "profondita"; F3_DEPTH.on = deep; F3_DET.on = deep; if (modello) Object.assign(F3_DEPTH, { base: modello, parts });
+const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts, analysis }) {
+  const deep = mode === "profondita" || mode === "combinato", cloud = mode === "cloudflare" || mode === "combinato"; F3_DEPTH.on = deep; F3_DET.on = deep; if (modello) Object.assign(F3_DEPTH, { base: modello, parts });
   Object.assign(F3, { img: photo, thumb: photo, w: W, h: H, name: "nyu", exifFov: hfov, seg: null, a: null, quadSource: "", fitFov: null });
   // senza profondità l'utente indica l'altezza della fotocamera; con la profondità nessuna misura
-  F3.opts = deep ? { refKind: "ceil", refVal: 2.7, fov: null, depth: null, ceil: true } : { refKind: "cam", refVal: camH, fov: null, depth: null, ceil: true };
-  const t0 = performance.now(); await f3Segment(); const tSeg = performance.now() - t0;
-  f3Accept({ analysis: { items: [], room: {}, back_wall: null } }); if (!deep){ F3.opts.refKind = "cam"; F3.opts.refVal = camH; }
+  // con Cloudflare la misura viene dall'altezza della stanza stimata dal modello (nessuna misura dell'utente)
+  F3.opts = deep || cloud ? { refKind: "ceil", refVal: 2.7, fov: null, depth: null, ceil: true } : { refKind: "cam", refVal: camH, fov: null, depth: null, ceil: true };
+  const t0 = performance.now(); if (mode !== "cloudflare") await f3Segment(); const tSeg = performance.now() - t0;
+  f3Accept({ analysis: cloud ? analysis : { items: [], room: {}, back_wall: null } }); if (!deep && !cloud){ F3.opts.refKind = "cam"; F3.opts.refVal = camH; }
   const dinfo = { tSeg: Math.round(tSeg), depth: F3.seg?.depth ? { err: F3.seg.depth.err, h: F3.seg.depth.G?.h, pitch: F3.seg.depth.G?.pitch, hfov: F3.seg.depth.hfov, room: F3.seg.depth.R ? { db: F3.seg.depth.R.db, dl: F3.seg.depth.R.dl, dr: F3.seg.depth.R.dr, H: F3.seg.depth.R.H } : null } : null, ref: F3.opts.refKind + " " + F3.opts.refVal };
   const items = F3.items.map(i => ({ cat: i.category, on: i.on, src: i.source, box: i.box }));
   const s = f3Solve(); if (!s.ok) return { ok: false, err: s.err, items, segState: F3.seg?.state, quadSource: F3.quadSource, ...dinfo };
@@ -77,8 +95,10 @@ await page.goto("http://127.0.0.1:8799/?nosw"); await page.waitForFunction(() =>
 const keys = readdirSync(DIR).filter(f => f.endsWith(".json")).map(f => f.slice(0, -5)).sort().slice(0, N), rows = [];
 for (const [k, key] of keys.entries()) {
   const gt = JSON.parse(readFileSync(join(DIR, key + ".json"), "utf8")), photo = "data:image/jpeg;base64," + readFileSync(join(DIR, key + ".jpg")).toString("base64");
-  const t0 = Date.now(), r = await page.evaluate(`(${RECON})(${JSON.stringify({ photo, W: gt.W, H: gt.H, hfov: gt.hfov, camH: gt.cam_h, mode: MODE, modello: process.env.MODELLO, parts: Number(process.env.PARTI || 0) || undefined })})`);
-  const sc = score(gt, r); sc.ms = Date.now() - t0; sc.dHc = r.ok ? +(r.hc - gt.cam_h).toFixed(3) : null; rows.push(sc);
+  let analysis = null, cfMs = 0;
+  if (MODE === "cloudflare" || MODE === "combinato") { const c = await cfAnalysis(key, photo, gt.W, gt.H); if (!c) { console.log(`## ${key}: analisi Cloudflare non disponibile`); continue; } analysis = c.a; cfMs = c.ms || 0; }
+  const t0 = Date.now(), r = await page.evaluate(`(${RECON})(${JSON.stringify({ photo, W: gt.W, H: gt.H, hfov: gt.hfov, camH: gt.cam_h, mode: MODE, analysis, modello: process.env.MODELLO, parts: Number(process.env.PARTI || 0) || undefined })})`);
+  const sc = score(gt, r); sc.ms = Date.now() - t0 + cfMs; sc.dHc = r.ok ? +(r.hc - gt.cam_h).toFixed(3) : null; rows.push(sc);
   console.log(`## ${key} ${gt.scene} · h ${gt.cam_h} incl ${gt.pitch} roll ${gt.roll} · ${r.ok ? "ok" : "NO " + r.err} · spigoli ${r.quadSource} · incl ${r.pitch} · h ${r.hc?.toFixed?.(2)} · ${r.tSeg} ms${r.depth ? " · profondità " + JSON.stringify(r.depth) : ""}`);
   console.log(`   veri: ${gt.objects.filter(o => FAM(o.cat) && o.px >= 2500).map(o => `${o.cat}@${o.r.toFixed(1)},${o.f.toFixed(1)}`).join(" ")}`);
   if (r.ok) console.log(`   trovati: ${[...r.openings, ...r.objects].map(o => `${o.cat}@${o.r.toFixed(1)},${o.f.toFixed(1)}`).join(" ")}`);
@@ -101,6 +121,6 @@ const sum = { modo: MODE, foto: rows.length, risolte: rows.filter(r => r.ok).len
   collocati: `${found.length}/${pos.length}`, errore_pianta_mediana_m: med(found.map(x => x.d)), errore_pianta_relativo_mediana: med(found.map(x => x.rel)), errore_parte_visibile_mediana_m: med(found.map(x => x.dv)),
   errore_laterale_m: mean(abs(found.map(x => x.dr))), errore_profondita_m: mean(abs(found.map(x => x.df))),
   aperture_larghezza_m: mean(abs(ops.map(x => x.dw))), finestre_davanzale_m: mean(abs(ops.filter(x => x.dzmin != null).map(x => x.dzmin))), aperture_sommita_m: mean(abs(ops.map(x => x.dzmax))),
-  tempo_medio_s: mean(rows.map(r => r.ms / 1000)), famiglie: perFam };
+  tempo_medio_s: mean(rows.map(r => r.ms / 1000)), neurons_spesi: Math.round(neuronsSpent), famiglie: perFam };
 console.log("=== RIEPILOGO " + JSON.stringify(sum, null, 1));
 await browser.close(); srv.kill();

@@ -165,3 +165,24 @@ test("aperture sovrapposte sullo stesso muro: la seconda si sposta o non viene c
   });
   expect(r.overlap).toBe(false); expect(r.n).toBe(2); expect(r.skipped.length).toBe(1);
 });
+
+test("analisi solo nel dispositivo: senza invio né consenso, colori dalla foto e bozza pronta da rivedere", async ({ page }) => {
+  const errors = await open(page);
+  const r = await page.evaluate(async () => {
+    // foto sintetica: soffitto bianco, pareti verde salvia, pavimento in legno; segmentazione già pronta
+    const W = 400, H = 300, names = ["wall", "floor", "ceiling", "windowpane"], lab = new Uint8Array(W * H);
+    const c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const k = y < 60 ? 2 : y >= 225 ? 1 : (x >= 240 && x < 285 && y >= 110 && y < 180) ? 3 : 0; lab[y * W + x] = k; }
+    g.fillStyle = "#f2f2ee"; g.fillRect(0, 0, W, 60); g.fillStyle = "#9cae8f"; g.fillRect(0, 60, W, 165); g.fillStyle = "#8a5a33"; g.fillRect(0, 225, W, 75); g.fillStyle = "#cfe6f5"; g.fillRect(240, 110, 45, 70);
+    const segs = names.map((label, k) => ({ label, mask: { width: W, height: H, data: Uint8Array.from(lab, v => v === k ? 255 : 0) } })), m = labelMap(segs, 320);
+    Object.assign(F3, { img: c.toDataURL("image/png"), thumb: null, w: 1200, h: 900, name: "locale.png", exifFov: 65, a: null });
+    F3.seg = { state: "ok", img: F3.img, m, quad: wallCorners(m), alts: [] };
+    await f3AnalyzeLocal();
+    return { model: F3.meta?.model, mat: F3.a?.materials, items: F3.items.map(i => i.category), open: !!document.querySelector("#f3Modal") };
+  });
+  expect(r.model).toBe("nel dispositivo");
+  expect(r.mat.floor).toBe("parquet");
+  expect(r.mat.wall_color.toLowerCase()).toBe("#9cae8f");
+  expect(r.items).toContain("finestra");
+  expect(errors).toEqual([]);
+});
