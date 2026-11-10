@@ -51,7 +51,7 @@ const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts, a
   F3.opts = deep || cloud ? { refKind: "ceil", refVal: 2.7, fov: null, depth: null, ceil: true } : { refKind: "cam", refVal: camH, fov: null, depth: null, ceil: true };
   const t0 = performance.now(); if (mode !== "cloudflare") await f3Segment(); const tSeg = performance.now() - t0;
   f3Accept({ analysis: cloud ? analysis : { items: [], room: {}, back_wall: null } }); if (!deep && !cloud){ F3.opts.refKind = "cam"; F3.opts.refVal = camH; }
-  const dinfo = { tSeg: Math.round(tSeg), depth: F3.seg?.depth ? { err: F3.seg.depth.err, h: F3.seg.depth.G?.h, pitch: F3.seg.depth.G?.pitch, hfov: F3.seg.depth.hfov, room: F3.seg.depth.R ? { db: F3.seg.depth.R.db, dl: F3.seg.depth.R.dl, dr: F3.seg.depth.R.dr, H: F3.seg.depth.R.H } : null } : null, ref: F3.opts.refKind + " " + F3.opts.refVal };
+  const dinfo = { masks: F3.seg?.masks?.length || 0, dets: F3.seg?.dets?.length || 0, tSeg: Math.round(tSeg), depth: F3.seg?.depth ? { err: F3.seg.depth.err, h: F3.seg.depth.G?.h, pitch: F3.seg.depth.G?.pitch, hfov: F3.seg.depth.hfov, room: F3.seg.depth.R ? { db: F3.seg.depth.R.db, dl: F3.seg.depth.R.dl, dr: F3.seg.depth.R.dr, H: F3.seg.depth.R.H } : null } : null, ref: F3.opts.refKind + " " + F3.opts.refVal };
   const items = F3.items.map(i => ({ cat: i.category, on: i.on, src: i.source, box: i.box }));
   // diagnosi: etichette della segmentazione dentro un riquadro (per capire porte e cucine mancate)
   const mp = F3.seg?.m; const labelsIn = b => { if (!mp) return null; const cnt = {}; let n = 0; for (let y = Math.floor(b[1] * mp.h); y < Math.ceil(b[3] * mp.h); y++) for (let x = Math.floor(b[0] * mp.w); x < Math.ceil(b[2] * mp.w); x++) { const l = mp.lab[y * mp.w + x]; const nm = l === 255 ? "-" : mp.names[l]; cnt[nm] = (cnt[nm] || 0) + 1; n++; } return Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${k} ${Math.round(v / n * 100)}%`).join(", "); };
@@ -96,6 +96,7 @@ await new Promise(r => setTimeout(r, 1500));
 const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
 page.on("pageerror", e => console.log("errore pagina:", e.message));
+let warned = 0; page.on("console", m => { if ((m.type() === "warning" || m.type() === "error") && warned++ < 15) console.log("console:", m.text().slice(0, 300)); });
 if (process.env.PL_LOCAL_THREE) await page.route(/cdn\.jsdelivr\.net\/npm\/three@0\.147\.0\/(.*)$/, r => { const f = join(process.env.PL_LOCAL_THREE, r.request().url().split("three@0.147.0/")[1]); return existsSync(f) ? r.fulfill({ body: readFileSync(f), contentType: "application/javascript" }) : r.abort(); });
 await page.goto("http://127.0.0.1:8799/?nosw"); await page.waitForFunction(() => typeof f3Solve === "function" && typeof P !== "undefined" && P);
 const keys = readdirSync(DIR).filter(f => f.endsWith(".json")).map(f => f.slice(0, -5)).sort().slice(0, N), rows = [];
