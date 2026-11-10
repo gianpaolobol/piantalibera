@@ -40,6 +40,10 @@ jobs:
       matrix:
         include:
           - { nome: sam, sam: "1" }
+          - { nome: owlv2-30, det2: "Xenova/owlv2-base-patch16-ensemble", det2min: "0.3" }
+          - { nome: owlv2-40, det2: "Xenova/owlv2-base-patch16-ensemble", det2min: "0.4" }
+          - { nome: b5-owlv2-35, seg: "Xenova/segformer-b5-finetuned-ade-640-640", det2: "Xenova/owlv2-base-patch16-ensemble", det2min: "0.35" }
+          - { nome: owlvit-30, det2: "Xenova/owlvit-base-patch32", det2min: "0.3" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -63,18 +67,7 @@ jobs:
           DET: ${{ matrix.det }}
           DETMIN: ${{ matrix.detmin }}
           SEG: ${{ matrix.seg }}
+          DET2: ${{ matrix.det2 }}
+          DET2MIN: ${{ matrix.det2min }}
         run: node scripts/banco-nyu.mjs nyu-sub 120 2>&1 | grep -v "^   diag" | grep -v "^   veri\|^   trovati" | tail -300
 
-  sonda:
-    needs: prepara
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      - uses: actions/download-artifact@v4
-        with: { name: nyu-sub, path: nyu-sub }
-      - name: Rilevatori a vocabolario aperto
-        env: { MODELLI: "onnx-community/grounding-dino-tiny-ONNX,Xenova/owlv2-base-patch16-ensemble" }
-        run: npm i --no-save @huggingface/transformers@3.8.1 && node scripts/sonda-rilevatore.mjs nyu-sub 60

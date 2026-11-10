@@ -146,6 +146,13 @@ let f3SegPipe = null, f3DetPipe = null;
    Separa gli oggetti uno per uno (sedie, mobili), dove la segmentazione unisce; banco NYU: sedie 47/66, mobili 39/101 */
 const F3_DET = {model:"onnx-community/dfine_s_obj365-ONNX", dtype:"fp32", min:.45, flip:false};
 const F3_SEGCFG = {model:SEG_MODEL};
+/* secondo rilevatore a vocabolario aperto (OWLv2/OWL-ViT): trova per nome anche ciò che Objects365 non ha
+   (piani di cucina, mobili da incasso, porte); banco NYU: 216/329 oggetti contro 129 di D-FINE */
+const F3_DET2 = {model:"Xenova/owlv2-base-patch16-ensemble", dtype:"q8", min:.3, on:false};
+const F3_ZS = {"door":"porta", "window":"finestra", "kitchen counter":"cucina", "cabinet":"madia", "bed":"letto_matrimoniale", "sofa":"divano", "armchair":"poltrona", "chair":"sedia", "table":"tavolo",
+  "desk":"scrivania", "coffee table":"tavolino", "nightstand":"comodino", "lamp":"lampada_terra", "toilet":"wc", "sink":"lavabo", "bathtub":"vasca", "refrigerator":"frigorifero", "stove":"cucina",
+  "television":"mobile_tv", "bookshelf":"libreria", "dresser":"cassettiera", "wardrobe":"armadio", "plant":"pianta"};
+let f3Det2Pipe = null;
 /* contorno esatto di ogni arredo (SlimSAM, Apache 2.0): dal riquadro del rilevatore alla maschera dei soli pixel
    dell'oggetto, così la posizione 3D usa i suoi punti e non lo sfondo del riquadro */
 const F3_SAM = {model:"Xenova/slimsam-77-uniform", on:false};
@@ -155,7 +162,9 @@ async function f3Masks(raw, boxes){
   if (!f3SamM) f3SamM = {model:await T.SamModel.from_pretrained(F3_SAM.model, {dtype:"q8"}), proc:await T.AutoProcessor.from_pretrained(F3_SAM.model)};
   const W = raw.width, H = raw.height, out = [];
   // il riquadro come due punti (convenzione di SAM: 2 = angolo in alto a sinistra, 3 = in basso a destra)
-  const inputs = await f3SamM.proc(raw, {input_points:[boxes.map(b => [[b[0] * W, b[1] * H], [b[2] * W, b[3] * H]])], input_labels:[boxes.map(() => [2, 3])]});
+  // tre punti positivi dentro il riquadro (centro e a un terzo dai lati): SlimSAM in ONNX accetta solo punti
+  const pts = b => [[.5, .5], [.3, .5], [.7, .5]].map(([u, v]) => [(b[0] + (b[2] - b[0]) * u) * W, (b[1] + (b[3] - b[1]) * v) * H]);
+  const inputs = await f3SamM.proc(raw, {input_points:[boxes.map(pts)], input_labels:[boxes.map(() => [1, 1, 1])]});
   const emb = await f3SamM.model.get_image_embeddings(inputs);
   const res = await f3SamM.model({...emb, input_points:inputs.input_points, input_labels:inputs.input_labels});
   const masks = await f3SamM.proc.post_process_masks(res.pred_masks, inputs.original_sizes, inputs.reshaped_input_sizes);
@@ -181,6 +190,11 @@ async function f3Segment(){
         if (!f3DetPipe){ const T = await import(F3_TJS); f3DetPipe = await T.pipeline("object-detection", F3_DET.model, {dtype:F3_DET.dtype}); }
         const conv = (list, flip) => list.filter(d => F3_O365[d.label]).map(d => ({category:F3_O365[d.label], score:d.score, box:(flip ? [1 - d.box.xmax, d.box.ymin, 1 - d.box.xmin, d.box.ymax] : [d.box.xmin, d.box.ymin, d.box.xmax, d.box.ymax]).map(v => +Math.min(1, Math.max(0, v)).toFixed(4))}));
         dets = conv(await f3DetPipe(raw, {threshold:F3_DET.min, percentage:true}), false);
+        if (F3_DET2.on){ if (!f3Det2Pipe){ const T = await import(F3_TJS); f3Det2Pipe = await T.pipeline("zero-shot-object-detection", F3_DET2.model, {dtype:F3_DET2.dtype}); }
+          const zs = (await f3Det2Pipe(raw, Object.keys(F3_ZS), {threshold:F3_DET2.min, percentage:true})).map(d => ({category:F3_ZS[d.label], score:d.score, box:[d.box.xmin, d.box.ymin, d.box.xmax, d.box.ymax].map(v => +Math.min(1, Math.max(0, v)).toFixed(4))}));
+          const iouZ = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), iy = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])), i = ix * iy, u = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i; return u > 0 ? i / u : 0; };
+          // soppressione dei doppioni: per famiglia, il riquadro col punteggio più alto
+          for (const d of zs.sort((a, b) => b.score - a.score)){ if (!d.category) continue; const same = dets.find(e => FAMILY(e.category) === FAMILY(d.category) && iouZ(e.box, d.box) > .5); if (same){ same.score = Math.max(same.score, d.score); continue; } dets.push(d); } }
         // seconda passata sulla foto specchiata: si tengono gli oggetti nuovi, quelli già visti si rafforzano
         if (F3_DET.flip){ const cv = document.createElement("canvas"); cv.width = raw.width; cv.height = raw.height; const g = cv.getContext("2d"); const im = await new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.src = F3.thumb || F3.img; }); g.translate(cv.width, 0); g.scale(-1, 1); g.drawImage(im, 0, 0, cv.width, cv.height);
           const fl = conv(await f3DetPipe(await f3SegPipe.RawImage.fromURL(cv.toDataURL("image/jpeg", .92)), {threshold:F3_DET.min, percentage:true}), true);
