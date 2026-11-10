@@ -96,7 +96,7 @@ await new Promise(r => setTimeout(r, 1500));
 const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
 page.on("pageerror", e => console.log("errore pagina:", e.message));
-let warned = 0; page.on("console", m => { if ((m.type() === "warning" || m.type() === "error") && warned++ < 15) console.log("console:", m.text().slice(0, 300)); });
+let warned = 0; page.on("console", m => { if ((m.type() === "warning" || m.type() === "error") && !/adapter|webgpu/i.test(m.text()) && warned++ < 30) console.log("console:", m.text().slice(0, 300)); });
 if (process.env.PL_LOCAL_THREE) await page.route(/cdn\.jsdelivr\.net\/npm\/three@0\.147\.0\/(.*)$/, r => { const f = join(process.env.PL_LOCAL_THREE, r.request().url().split("three@0.147.0/")[1]); return existsSync(f) ? r.fulfill({ body: readFileSync(f), contentType: "application/javascript" }) : r.abort(); });
 await page.goto("http://127.0.0.1:8799/?nosw"); await page.waitForFunction(() => typeof f3Solve === "function" && typeof P !== "undefined" && P);
 const keys = readdirSync(DIR).filter(f => f.endsWith(".json")).map(f => f.slice(0, -5)).sort().slice(0, N), rows = [];
@@ -107,7 +107,7 @@ for (const [k, key] of keys.entries()) {
   const t0 = Date.now(), r = await page.evaluate(`(${RECON})(${JSON.stringify({ photo, W: gt.W, H: gt.H, hfov: gt.hfov, camH: gt.cam_h, mode: MODE, variants: VAR, analysis, diagBoxes: gt.objects.filter(o => /porta|cucina|piano|madia|finestra/.test(o.cat) && o.px >= 2500).map(o => ({ cat: o.cat, name: o.name, box: o.box })), modello: process.env.MODELLO, parts: Number(process.env.PARTI || 0) || undefined })})`);
   const sc = score(gt, r); sc.ms = Date.now() - t0 + cfMs; sc.dHc = r.ok ? +(r.hc - gt.cam_h).toFixed(3) : null; rows.push(sc);
   for (const d of r.diag || []) { const hit = (r.items || []).some(it => it.on && FAM(it.cat) === FAM(d.cat) && iou(it.box, d.box) >= .3); console.log(`   diag ${hit ? "OK" : "MANCA"} ${d.name}: ${d.labels} · rilevatore: ${d.dets || "-"}`); }
-  console.log(`## ${key} ${gt.scene} · h ${gt.cam_h} incl ${gt.pitch} roll ${gt.roll} · ${r.ok ? "ok" : "NO " + r.err} · spigoli ${r.quadSource} · incl ${r.pitch} · h ${r.hc?.toFixed?.(2)} · ${r.tSeg} ms${r.depth ? " · profondità " + JSON.stringify(r.depth) : ""}`);
+  console.log(`## ${key} ${gt.scene} · h ${gt.cam_h} incl ${gt.pitch} roll ${gt.roll} · ${r.ok ? "ok" : "NO " + r.err} · spigoli ${r.quadSource} · incl ${r.pitch} · h ${r.hc?.toFixed?.(2)} · ${r.tSeg} ms · maschere ${r.masks} rilevamenti ${r.dets}${r.depth ? " · profondità " + JSON.stringify(r.depth) : ""}`);
   console.log(`   veri: ${gt.objects.filter(o => FAM(o.cat) && o.px >= 2500).map(o => `${o.cat}@${o.r.toFixed(1)},${o.f.toFixed(1)}`).join(" ")}`);
   if (r.ok) console.log(`   trovati: ${[...r.openings, ...r.objects].map(o => `${o.cat}@${o.r.toFixed(1)},${o.f.toFixed(1)}`).join(" ")}`);
   if (k < IMGS) {

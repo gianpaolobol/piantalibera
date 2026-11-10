@@ -39,10 +39,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { nome: attuale }
           - { nome: sam, sam: "1" }
-          - { nome: b5-soglia-30, seg: "Xenova/segformer-b5-finetuned-ade-640-640", detmin: "0.3" }
-          - { nome: b5-soglia-30-sam, seg: "Xenova/segformer-b5-finetuned-ade-640-640", detmin: "0.3", sam: "1" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
