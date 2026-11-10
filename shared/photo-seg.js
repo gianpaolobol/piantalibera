@@ -12,7 +12,7 @@ export const SEG_MODEL = "Xenova/segformer-b2-finetuned-ade-512-512";
 /* etichette ADE20K → categoria di Pianta Libera (o superficie della stanza) */
 export const SEG_CAT = {
   wall: "@wall", floor: "@floor", rug: "@floor", ceiling: "@ceiling",
-  door: "porta", "screen door": "porta", windowpane: "finestra",
+  door: "porta", "screen door": "portafinestra", windowpane: "finestra",
   sofa: "divano", armchair: "poltrona", chair: "sedia", "swivel chair": "sedia_ufficio", stool: "sgabello", ottoman: "pouf",
   bed: "letto_matrimoniale", table: "tavolo", "coffee table": "tavolino", desk: "scrivania",
   cabinet: "madia", buffet: "madia", "chest of drawers": "cassettiera", wardrobe: "armadio", bookcase: "libreria", shelf: "libreria",
@@ -113,7 +113,7 @@ export function segComponents(m, roomType = "") {
   // la cucina componibile; in bagno il piano con il lavabo è il lavabo (banco NYU: piani e mobili di cucina mancati)
   const has = n => names.includes(n), bath = /bagn|bath/i.test(roomType) || ["toilet", "bathtub", "shower"].some(has);
   const kitchen = !bath && (/cucin|kitchen/i.test(roomType) || ["stove", "oven", "dishwasher", "refrigerator", "kitchen island", "microwave"].filter(has).length >= 1 && (has("countertop") || has("counter") || has("sink")));
-  const { w, h, lab } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && kitchen) c = "cucina"; if (c === "cucina" && /^counter/.test(n) && bath) c = "lavabo"; return c && c[0] !== "@" ? c : null; });
+  const { w, h, lab } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && kitchen) c = "cucina"; if (c === "cucina" && /^counter/.test(n) && !kitchen) c = null; /* piani fuori dalla cucina: lasciati al rilevatore */ return c && c[0] !== "@" ? c : null; });
   // «fuori»: solo classi di esterni (cielo, verde, edifici…) viste attraverso il vetro. Nelle foto vere la segmentazione
   // include già nel vetro il paesaggio; allargare ad altre classi allungava le finestre sopra letti e mobili (banco 9/11)
   const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n));
