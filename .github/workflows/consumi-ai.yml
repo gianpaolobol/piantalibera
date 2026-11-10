@@ -1,0 +1,20 @@
+# Consumi di Workers AI (Neurons per giorno e modello) dalle analytics di Cloudflare: solo numeri aggregati.
+name: Consumi Workers AI
+on:
+  workflow_dispatch:
+  push:
+    branches: ["feature/foto-confronto"]
+    paths: ["scripts/consumi-ai.mjs", ".github/workflows/consumi-ai.yml"]
+permissions:
+  contents: read
+jobs:
+  consumi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node scripts/consumi-ai.mjs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
