@@ -11,8 +11,9 @@ import { readFileSync, readdirSync, existsSync, writeFileSync, mkdirSync } from 
 import { photoMessages, PHOTO_SCHEMA, extractJson, normalizeAnalysis, parseDetections } from "../shared/photo.js";
 import { join } from "node:path";
 
-const DIR = process.argv[2], N = Number(process.argv[3] || 80), IMGS = Number(process.env.IMGS || 6);
-const MODE = process.env.MODO || "base";   // base · profondita (solo dispositivo) · cloudflare (solo server) · combinato
+const DIR = process.argv[2], N = Number(process.argv[3] || 120), IMGS = Number(process.env.IMGS || 6);
+const MODE = process.env.MODO || "base";
+const VAR = { seg: process.env.SEG || null, det: process.env.DET || null, detMin: Number(process.env.DETMIN || 0) || null, detDtype: process.env.DETDTYPE || null, sam: process.env.SAM === "1", flip: process.env.FLIP === "1" };   // base · profondita (solo dispositivo) · cloudflare (solo server) · combinato
 /* analisi di Cloudflare (Llama 4 Scout + DETR, la stessa chiamata di /api/foto), salvata per non rifarla */
 const ACC = process.env.CLOUDFLARE_ACCOUNT_ID, TOK = process.env.CLOUDFLARE_API_TOKEN, AN_DIR = process.env.ANALISI || join(process.env.HOME || ".", "nyu-analisi");
 const cfRun = async (model, input) => { const t0 = Date.now(), r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACC}/ai/run/${model}`, { method: "POST", headers: { Authorization: `Bearer ${TOK}`, "Content-Type": "application/json" }, body: JSON.stringify(input) }); const j = await r.json(); if (!j.success) throw new Error(JSON.stringify(j.errors).slice(0, 200)); return { ...j.result, _ms: Date.now() - t0 }; };
@@ -41,7 +42,8 @@ const famOk = (pred, gtCat) => FAM(pred) === FAM(gtCat) || (pred === "portafines
 const iou = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), iy = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])), i = ix * iy, u = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i; return u > 0 ? i / u : 0; };
 
 /* ricostruzione nella pagina: posizioni riportate al riferimento della fotocamera (destra, avanti) */
-const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts, analysis, diagBoxes }) {
+const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts, analysis, diagBoxes, variants }) {
+  if (variants?.seg) F3_SEGCFG.model = variants.seg; if (variants?.det) F3_DET.model = variants.det; if (variants?.detMin) F3_DET.min = variants.detMin; if (variants?.detDtype) F3_DET.dtype = variants.detDtype; F3_SAM.on = !!variants?.sam; F3_DET.flip = !!variants?.flip;
   const deep = mode === "profondita" || mode === "combinato", cloud = mode === "cloudflare" || mode === "combinato"; F3_DEPTH.on = deep; F3_DET.on = deep; if (modello) Object.assign(F3_DEPTH, { base: modello, parts });
   Object.assign(F3, { img: photo, thumb: photo, w: W, h: H, name: "nyu", exifFov: hfov, seg: null, a: null, quadSource: "", fitFov: null });
   // senza profondità l'utente indica l'altezza della fotocamera; con la profondità nessuna misura
@@ -71,7 +73,7 @@ function score(gt, r) {
   const used = new Set();
   for (const g of gts) {
     let best = 0, bi = -1; r.items.forEach((it, i) => { if (used.has(i) || !it.on || !famOk(it.cat, g.cat)) return; const v = iou(it.box, g.box); if (v > best) { best = v; bi = i; } });
-    const hit = best >= .3; if (hit) used.add(bi); out.rec.push({ fam: FAM(g.cat), hit });
+    const hit = best >= .3; if (hit) used.add(bi); out.rec.push({ fam: FAM(g.cat), hit, vis: !g.cut && g.px >= 4000 });
   }
   out.falsi = r.items.filter((it, i) => it.on && FAM(it.cat) && !used.has(i)).length;
   if (!r.ok) return out;
@@ -82,7 +84,7 @@ function score(gt, r) {
     if (!best || best.d > 1.5) { out.pos.push({ fam: FAM(g.cat), found: false }); continue; }
     usedP.add(best.i); const o = best.o, dist = Math.hypot(g.r, g.f);
     const dv = o.vis ? Math.hypot(o.vis.r - g.r, o.vis.f - g.f) : best.d;
-    out.pos.push({ fam: FAM(g.cat), found: true, dv: +dv.toFixed(2), d: +best.d.toFixed(2), rel: +(best.d / dist).toFixed(3), dr: +(o.r - g.r).toFixed(2), df: +(o.f - g.f).toFixed(2) });
+    out.pos.push({ vis: !g.cut && g.px >= 4000, fam: FAM(g.cat), found: true, dv: +dv.toFixed(2), d: +best.d.toFixed(2), rel: +(best.d / dist).toFixed(3), dr: +(o.r - g.r).toFixed(2), df: +(o.f - g.f).toFixed(2) });
     if (/porta|finestra/.test(FAM(g.cat)) && !g.cut) out.ops.push({ fam: FAM(g.cat), dw: +(o.w - g.w).toFixed(2), dzmin: FAM(g.cat) === "finestra" ? +(o.zmin - g.zmin).toFixed(2) : null, dzmax: +(o.zmax - g.zmax).toFixed(2) });
   }
   return out;
@@ -101,7 +103,7 @@ for (const [k, key] of keys.entries()) {
   const gt = JSON.parse(readFileSync(join(DIR, key + ".json"), "utf8")), photo = "data:image/jpeg;base64," + readFileSync(join(DIR, key + ".jpg")).toString("base64");
   let analysis = null, cfMs = 0;
   if (MODE === "cloudflare" || MODE === "combinato") { const c = await cfAnalysis(key, photo, gt.W, gt.H); if (!c) { console.log(`## ${key}: analisi Cloudflare non disponibile`); continue; } analysis = c.a; cfMs = c.ms || 0; }
-  const t0 = Date.now(), r = await page.evaluate(`(${RECON})(${JSON.stringify({ photo, W: gt.W, H: gt.H, hfov: gt.hfov, camH: gt.cam_h, mode: MODE, analysis, diagBoxes: gt.objects.filter(o => /porta|cucina|piano|madia|finestra/.test(o.cat) && o.px >= 2500).map(o => ({ cat: o.cat, name: o.name, box: o.box })), modello: process.env.MODELLO, parts: Number(process.env.PARTI || 0) || undefined })})`);
+  const t0 = Date.now(), r = await page.evaluate(`(${RECON})(${JSON.stringify({ photo, W: gt.W, H: gt.H, hfov: gt.hfov, camH: gt.cam_h, mode: MODE, variants: VAR, analysis, diagBoxes: gt.objects.filter(o => /porta|cucina|piano|madia|finestra/.test(o.cat) && o.px >= 2500).map(o => ({ cat: o.cat, name: o.name, box: o.box })), modello: process.env.MODELLO, parts: Number(process.env.PARTI || 0) || undefined })})`);
   const sc = score(gt, r); sc.ms = Date.now() - t0 + cfMs; sc.dHc = r.ok ? +(r.hc - gt.cam_h).toFixed(3) : null; rows.push(sc);
   for (const d of r.diag || []) { const hit = (r.items || []).some(it => it.on && FAM(it.cat) === FAM(d.cat) && iou(it.box, d.box) >= .3); console.log(`   diag ${hit ? "OK" : "MANCA"} ${d.name}: ${d.labels} · rilevatore: ${d.dets || "-"}`); }
   console.log(`## ${key} ${gt.scene} · h ${gt.cam_h} incl ${gt.pitch} roll ${gt.roll} · ${r.ok ? "ok" : "NO " + r.err} · spigoli ${r.quadSource} · incl ${r.pitch} · h ${r.hc?.toFixed?.(2)} · ${r.tSeg} ms${r.depth ? " · profondità " + JSON.stringify(r.depth) : ""}`);
@@ -116,16 +118,21 @@ for (const [k, key] of keys.entries()) {
     console.log(`===IMG=== ${key}\n${img.split(",")[1]}\n===FINE===`);
   }
 }
-/* riepilogo */
+/* riepilogo: gruppo di sviluppo (si migliora guardando questo) e gruppo di verifica (mai usato per scegliere), più il totale */
+const isTest = k => [...k].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 3 === 0;
 const mean = a => a.length ? +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(3) : null, med = a => a.length ? [...a].sort((x, y) => x - y)[a.length >> 1] : null, abs = a => a.map(Math.abs);
+function summary(rows, gruppo) {
 const rec = rows.flatMap(r => r.rec), pos = rows.flatMap(r => r.pos), ops = rows.flatMap(r => r.ops), fams = [...new Set(rec.map(x => x.fam))].sort();
 const perFam = Object.fromEntries(fams.map(f => { const a = rec.filter(x => x.fam === f), p = pos.filter(x => x.fam === f && x.found); return [f, `${a.filter(x => x.hit).length}/${a.length} riconosciuti, ${p.length} collocati, errore ${med(p.map(x => x.d)) ?? "-"} m`]; }));
 const found = pos.filter(x => x.found);
-const sum = { modo: MODE, foto: rows.length, risolte: rows.filter(r => r.ok).length, inclinazione_err: mean(abs(rows.filter(r => r.ok).map(r => r.dPitch))), altezza_fotocamera_err_m: mean(abs(rows.filter(r => r.ok).map(r => r.dHc))),
+const sum = { modo: MODE, gruppo, varianti: VAR, foto: rows.length, risolte: rows.filter(r => r.ok).length, inclinazione_err: mean(abs(rows.filter(r => r.ok).map(r => r.dPitch))), altezza_fotocamera_err_m: mean(abs(rows.filter(r => r.ok).map(r => r.dHc))),
   riconoscimento: `${rec.filter(x => x.hit).length}/${rec.length}`, falsi_positivi: rows.reduce((s, r) => s + r.falsi, 0),
   collocati: `${found.length}/${pos.length}`, errore_pianta_mediana_m: med(found.map(x => x.d)), errore_pianta_relativo_mediana: med(found.map(x => x.rel)), errore_parte_visibile_mediana_m: med(found.map(x => x.dv)),
   errore_laterale_m: mean(abs(found.map(x => x.dr))), errore_profondita_m: mean(abs(found.map(x => x.df))),
   aperture_larghezza_m: mean(abs(ops.map(x => x.dw))), finestre_davanzale_m: mean(abs(ops.filter(x => x.dzmin != null).map(x => x.dzmin))), aperture_sommita_m: mean(abs(ops.map(x => x.dzmax))),
   tempo_medio_s: mean(rows.map(r => r.ms / 1000)), neurons_spesi: Math.round(neuronsSpent), famiglie: perFam };
-console.log("=== RIEPILOGO " + JSON.stringify(sum, null, 1));
+  sum.ben_visibili = `${rec.filter(x => x.vis && x.hit).length}/${rec.filter(x => x.vis).length}`; sum.ben_visibili_errore_m = med(found.filter(x => x.vis).map(x => x.d));
+  return sum;
+}
+for (const [g, rs] of [["sviluppo", rows.filter(r => !isTest(r.key))], ["verifica", rows.filter(r => isTest(r.key))], ["tutte", rows]]) console.log("=== RIEPILOGO " + JSON.stringify(summary(rs, g), null, 1));
 await browser.close(); srv.kill();

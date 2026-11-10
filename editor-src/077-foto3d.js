@@ -144,7 +144,27 @@ const F3_TJS = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dis
 let f3SegPipe = null, f3DetPipe = null;
 /* rilevatore di oggetti nel dispositivo: D-FINE S addestrato su Objects365 (365 classi, molti arredi; Apache 2.0).
    Separa gli oggetti uno per uno (sedie, mobili), dove la segmentazione unisce; banco NYU: sedie 47/66, mobili 39/101 */
-const F3_DET = {model:"onnx-community/dfine_s_obj365-ONNX", dtype:"fp32", min:.45};
+const F3_DET = {model:"onnx-community/dfine_s_obj365-ONNX", dtype:"fp32", min:.45, flip:false};
+const F3_SEGCFG = {model:SEG_MODEL};
+/* contorno esatto di ogni arredo (SlimSAM, Apache 2.0): dal riquadro del rilevatore alla maschera dei soli pixel
+   dell'oggetto, così la posizione 3D usa i suoi punti e non lo sfondo del riquadro */
+const F3_SAM = {model:"Xenova/slimsam-77-uniform", on:false};
+let f3SamM = null;
+async function f3Masks(raw, boxes){
+  const T = await import(F3_TJS);
+  if (!f3SamM) f3SamM = {model:await T.SamModel.from_pretrained(F3_SAM.model, {dtype:"q8"}), proc:await T.AutoProcessor.from_pretrained(F3_SAM.model)};
+  const W = raw.width, H = raw.height, out = [];
+  const inputs = await f3SamM.proc(raw, {input_boxes:[boxes.map(b => [b[0] * W, b[1] * H, b[2] * W, b[3] * H])]});
+  const emb = await f3SamM.model.get_image_embeddings(inputs);
+  const res = await f3SamM.model({...emb, input_boxes:inputs.input_boxes});
+  const masks = await f3SamM.proc.post_process_masks(res.pred_masks, inputs.original_sizes, inputs.reshaped_input_sizes);
+  const mk = masks[0], [, nb, nm, mh, mw] = mk.dims, sc = res.iou_scores.data, ds = 4, w = Math.ceil(mw / ds), h = Math.ceil(mh / ds);
+  for (let b = 0; b < nb; b++){ let best = 0; for (let k = 1; k < nm; k++) if (sc[b * nm + k] > sc[b * nm + best]) best = k;
+    const data = new Uint8Array(w * h), off = (b * nm + best) * mh * mw;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) data[y * w + x] = mk.data[off + Math.min(mh - 1, y * ds) * mw + Math.min(mw - 1, x * ds)] ? 1 : 0;
+    out.push({w, h, data}); }
+  return out;
+}
 const F3_O365 = {"Chair":"sedia", "Stool":"sgabello", "Couch":"divano", "Bed":"letto_matrimoniale", "Desk":"scrivania", "Dining Table":"tavolo", "Coffee Table":"tavolino",
   "Nightstand":"comodino", "Cabinet/shelf":"madia", "Monitor/TV":"mobile_tv", "Toilet":"wc", "Sink":"lavabo", "Bathtub":"vasca", "Refrigerator":"frigorifero", "Oven":"cucina",
   "Gas stove":"cucina", "Lamp":"lampada_terra", "Potted Plant":"pianta", "Carpet":"tappeto", "Person":"persona"};
@@ -153,12 +173,18 @@ async function f3Segment(){
   const job = F3.seg = {state:"run", img:F3.img};
   job.promise = (async () => {
     try {
-      if (!f3SegPipe){ const T = await import(F3_TJS); T.env.allowLocalModels = false; f3SegPipe = await T.pipeline("image-segmentation", SEG_MODEL, {dtype:"q8"}); f3SegPipe.RawImage = T.RawImage; }
+      if (!f3SegPipe){ const T = await import(F3_TJS); T.env.allowLocalModels = false; f3SegPipe = await T.pipeline("image-segmentation", F3_SEGCFG.model, {dtype:"q8"}); f3SegPipe.RawImage = T.RawImage; }
       const raw = await f3SegPipe.RawImage.fromURL(F3.thumb || F3.img), segs = await f3SegPipe(raw);
       let dets = [];
       if (F3_DET.on !== false) try {
         if (!f3DetPipe){ const T = await import(F3_TJS); f3DetPipe = await T.pipeline("object-detection", F3_DET.model, {dtype:F3_DET.dtype}); }
-        dets = (await f3DetPipe(raw, {threshold:F3_DET.min, percentage:true})).filter(d => F3_O365[d.label]).map(d => ({category:F3_O365[d.label], score:d.score, box:[d.box.xmin, d.box.ymin, d.box.xmax, d.box.ymax].map(v => +Math.min(1, Math.max(0, v)).toFixed(4))}));
+        const conv = (list, flip) => list.filter(d => F3_O365[d.label]).map(d => ({category:F3_O365[d.label], score:d.score, box:(flip ? [1 - d.box.xmax, d.box.ymin, 1 - d.box.xmin, d.box.ymax] : [d.box.xmin, d.box.ymin, d.box.xmax, d.box.ymax]).map(v => +Math.min(1, Math.max(0, v)).toFixed(4))}));
+        dets = conv(await f3DetPipe(raw, {threshold:F3_DET.min, percentage:true}), false);
+        // seconda passata sulla foto specchiata: si tengono gli oggetti nuovi, quelli già visti si rafforzano
+        if (F3_DET.flip){ const cv = document.createElement("canvas"); cv.width = raw.width; cv.height = raw.height; const g = cv.getContext("2d"); const im = await new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.src = F3.thumb || F3.img; }); g.translate(cv.width, 0); g.scale(-1, 1); g.drawImage(im, 0, 0, cv.width, cv.height);
+          const fl = conv(await f3DetPipe(await f3SegPipe.RawImage.fromURL(cv.toDataURL("image/jpeg", .92)), {threshold:F3_DET.min, percentage:true}), true);
+          const iouB = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), iy = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])), i = ix * iy, u = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i; return u > 0 ? i / u : 0; };
+          for (const d of fl){ const same = dets.find(e => e.category === d.category && iouB(e.box, d.box) > .5); if (same){ same.score = Math.max(same.score, d.score); same.box = same.box.map((v, k) => +((v + d.box[k]) / 2).toFixed(4)); } else dets.push(d); } }
       } catch(e){ console.warn("rilevatore:", e); }
       if (F3.seg !== job) return;
       const m = labelMap(segs, 320);
@@ -167,7 +193,11 @@ async function f3Segment(){
       let depth = null;
       if (F3_DEPTH.on !== false) try { job.phase = "profondita"; if (F3.open) f3RenderModal(); const D = await f3DepthRun(F3.thumb || F3.img); if (F3.seg !== job) return; depth = {...D, ...f3DepthGeometry(D, m)}; } catch(e){ console.warn("profondità:", e); depth = {err:String(e?.message || e)}; }
       const alts = [depth?.quad || null, box && box.conf >= .35 ? box : null, poly && poly.conf >= .6 ? poly : null].filter(Boolean);
-      Object.assign(job, {state:"ok", m, quad:alts[0] || null, alts, box, depth, dets, labels:segs.map(x => x.label)});
+      // maschere esatte degli arredi (rilevatore + componenti della segmentazione) per la posizione 3D
+      let masks = [];
+      if (F3_SAM.on && depth?.G) try { const bx = [...dets.map(d => d.box), ...segComponents(m, "").filter(c => !OPEN.includes(c.category)).map(c => c.box)].slice(0, 40);
+        if (bx.length){ const mk = await f3Masks(raw, bx); masks = bx.map((b, i) => ({box:b, mask:mk[i]})).filter(x => x.mask); } } catch(e){ console.warn("maschere:", e); }
+      Object.assign(job, {state:"ok", m, quad:alts[0] || null, alts, box, depth, dets, masks, labels:segs.map(x => x.label)});
     } catch(e){ console.warn("segmentazione:", e); if (F3.seg === job) Object.assign(job, {state:"err", err:String(e?.message || e)}); }
     if (F3.seg === job && F3.a) { f3ApplySeg(); if (F3.open) f3RenderModal(); }
   })();
@@ -345,7 +375,9 @@ function f3Obj3d(s, it, cat){
   const m = sg.m, fam = FAMILY(cat), struct = c => c && c[0] === "@";
   let ids = new Set(m.names.map((n, i) => { const c = SEG_CAT[n]; return c && !struct(c) && FAMILY(c) === fam ? i : -1; }).filter(i => i >= 0));
   if (!ids.size) ids = new Set(m.names.map((n, i) => { const c = SEG_CAT[n]; return !struct(c) && !OPEN.includes(c) && !OUTSIDE.has(n) ? i : -1; }).filter(i => i >= 0));
-  const o = dpObject(D.P, D.M, D.w, D.h, m, ids, it.box, G); if (!o || o.n < 15) return null;
+  const iouB = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])), iy = Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1])), i = ix * iy, u = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i; return u > 0 ? i / u : 0; };
+  const mk = (sg.masks || []).reduce((b, x) => { const v = iouB(x.box, it.box); return v > .7 && (!b || v > b.v) ? {v, mask:x.mask} : b; }, null);
+  const o = dpObject(D.P, D.M, D.w, D.h, m, ids, it.box, G, mk?.mask || null) || (mk ? dpObject(D.P, D.M, D.w, D.h, m, ids, it.box, G) : null); if (!o || o.n < 15) return null;
   const k = s.hc / G.h, f0 = s.ray(.5, .5), fl = Math.hypot(f0[0], f0[1]) || 1, fw = [f0[0] / fl, f0[1] / fl], rl = Math.hypot(s.right[0], s.right[1]) || 1, rt = [s.right[0] / rl, s.right[1] / rl];
   const at = (r, f) => [s.c[0] + k * (r * rt[0] + f * fw[0]), s.c[1] + k * (r * rt[1] + f * fw[1])];
   return {front:at((o.rmin + o.rmax) / 2, o.fmin), center:at(o.r, o.f), wid:(o.rmax - o.rmin) * k, hTop:o.zmax * k, zmin:o.zmin * k};
