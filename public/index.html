@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-FLLjPbrXqVySS23O7RiFU+6ET3oHG+zc0ixHaxeALm0=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-GyH8Jp0Vmk59ewsXhXduHHbvGudtVWnba5MHP6tusMI=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4078,7 +4078,7 @@ const SEG_CAT = {
   cabinet: "madia", buffet: "madia", "chest of drawers": "cassettiera", wardrobe: "armadio", bookcase: "libreria", shelf: "libreria",
   lamp: "lampada_terra", chandelier: "lampadario", light: "plafoniera", sconce: "applique", "television receiver": "mobile_tv",
   plant: "pianta", flower: "pianta", person: "persona", toilet: "wc", sink: "lavabo", bathtub: "vasca", shower: "doccia",
-  refrigerator: "frigorifero", stove: "cucina", oven: "cucina", "kitchen island": "isola", stairs: "scala", stairway: "scala",
+  refrigerator: "frigorifero", stove: "cucina", oven: "cucina", dishwasher: "cucina", countertop: "cucina", counter: "cucina", "kitchen island": "isola", stairs: "scala", stairway: "scala",
 };
 const OPEN = ["porta", "portafinestra", "porta_scorrevole", "finestra"];
 const FAMILY = c => OPEN.includes(c) ? "apertura" : ({ divano: "sedute", divano_angolare: "sedute", poltrona: "sedute", sedia: "sedie", sedia_ufficio: "sedie", sgabello: "sedie", pouf: "sedute",
@@ -4168,7 +4168,12 @@ function wallCorners(m) {
 /** Componenti connesse per categoria (porte, finestre, arredi): [{category, label, box 0..1, area}]. */
 function segComponents(m, roomType = "") {
   if (!m) return [];
-  const { w, h, lab, names } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && /cucin|kitchen/i.test(roomType)) c = "cucina"; return c && c[0] !== "@" ? c : null; });
+  const names = m.names;
+  // ambiente dalle etichette presenti (oltre al tipo di stanza dell'analisi, se c'è): in cucina i mobili bassi sono
+  // la cucina componibile; in bagno il piano con il lavabo è il lavabo (banco NYU: piani e mobili di cucina mancati)
+  const has = n => names.includes(n), bath = /bagn|bath/i.test(roomType) || ["toilet", "bathtub", "shower"].some(has);
+  const kitchen = !bath && (/cucin|kitchen/i.test(roomType) || ["stove", "oven", "dishwasher", "refrigerator", "kitchen island", "microwave"].filter(has).length >= 1 && (has("countertop") || has("counter") || has("sink")));
+  const { w, h, lab } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && kitchen) c = "cucina"; if (c === "cucina" && /^counter/.test(n) && !kitchen) c = null; /* piani fuori dalla cucina: lasciati al rilevatore */ return c && c[0] !== "@" ? c : null; });
   // «fuori»: solo classi di esterni (cielo, verde, edifici…) viste attraverso il vetro. Nelle foto vere la segmentazione
   // include già nel vetro il paesaggio; allargare ad altre classi allungava le finestre sopra letti e mobili (banco 9/11)
   const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n));
