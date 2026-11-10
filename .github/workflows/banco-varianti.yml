@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: ["feature/foto-iter*"]
-    paths: ["scripts/banco-nyu.mjs", "shared/photo-seg.js", "shared/photo-depth.js", "editor-src/077-foto3d.js", ".github/workflows/banco-varianti.yml"]
+    paths: ["scripts/banco-nyu.mjs", "shared/photo-seg.js", "shared/photo-depth.js", "editor-src/077-foto3d.js", "scripts/sonda-rilevatore.mjs", ".github/workflows/banco-varianti.yml"]
 
 permissions:
   contents: read
@@ -67,3 +67,17 @@ jobs:
           DETMIN: ${{ matrix.detmin }}
           SEG: ${{ matrix.seg }}
         run: node scripts/banco-nyu.mjs nyu-sub 120 2>&1 | grep -v "^   diag" | grep -v "^   veri\|^   trovati" | tail -300
+
+  sonda:
+    needs: prepara
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/download-artifact@v4
+        with: { name: nyu-sub, path: nyu-sub }
+      - name: Rilevatori a vocabolario aperto
+        env: { MODELLI: "onnx-community/grounding-dino-tiny-ONNX,Xenova/owlv2-base-patch16-ensemble" }
+        run: npm i --no-save @huggingface/transformers@3.8.1 && node scripts/sonda-rilevatore.mjs nyu-sub 60
