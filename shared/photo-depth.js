@@ -62,7 +62,8 @@ export function dpGravity(P, M, w2, h2, m, ids) {
   let up = null, h = null, src = "";
   const F = take(ids.floor);
   if (F.length / 3 > 150) { const dist = dpPct(F.filter((_, i) => i % 3 === 2), .5), pl = dpPlane(F, Math.max(.02, .012 * dist), rnd);
-    if (pl && pl.frac > .5) { let { n, d } = pl; if (d < 0) { n = n.map(v => -v); d = -d; } up = n; h = d; src = "pavimento"; } }
+    // pavimento credibile: fotocamera tra 30 cm e 3 m (un piano sbagliato, es. un tavolo preso per pavimento, dà valori assurdi)
+    if (pl && pl.frac > .5) { let { n, d } = pl; if (d < 0) { n = n.map(v => -v); d = -d; } if (d > .3 && d < 3 && Math.abs(n[1]) > .7) { up = n; h = d; src = "pavimento"; } } }
   if (!up) { const Cq = take(ids.ceiling);
     if (Cq.length / 3 > 150) { const pl = dpPlane(Cq, .04, rnd); if (pl && pl.frac > .5) { let { n, d } = pl; if (d < 0) { n = n.map(v => -v); d = -d; } up = n.map(v => -v); src = "soffitto"; } } }
   if (!up) return null;
