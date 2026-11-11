@@ -161,14 +161,13 @@ async function f3Masks(raw, boxes){
   const T = await import(F3_TJS);
   if (!f3SamM) f3SamM = {model:await T.SamModel.from_pretrained(F3_SAM.model, {dtype:"q8"}), proc:await T.AutoProcessor.from_pretrained(F3_SAM.model)};
   const W = raw.width, H = raw.height, out = [];
-  // il riquadro come due punti (convenzione di SAM: 2 = angolo in alto a sinistra, 3 = in basso a destra)
   // tre punti positivi dentro il riquadro (centro e a un terzo dai lati): SlimSAM in ONNX accetta solo punti
   const pts = b => [[.5, .5], [.3, .5], [.7, .5]].map(([u, v]) => [(b[0] + (b[2] - b[0]) * u) * W, (b[1] + (b[3] - b[1]) * v) * H]);
   const inputs = await f3SamM.proc(raw, {input_points:[boxes.map(pts)], input_labels:[boxes.map(() => [1, 1, 1])]});
   const emb = await f3SamM.model.get_image_embeddings(inputs);
   const res = await f3SamM.model({...emb, input_points:inputs.input_points, input_labels:inputs.input_labels});
   const masks = await f3SamM.proc.post_process_masks(res.pred_masks, inputs.original_sizes, inputs.reshaped_input_sizes);
-  const mk = masks[0], [, nb, nm, mh, mw] = mk.dims, sc = res.iou_scores.data, ds = 4, w = Math.ceil(mw / ds), h = Math.ceil(mh / ds);
+  const mk = masks[0], [nb, nm, mh, mw] = mk.dims.slice(-4), sc = res.iou_scores.data, ds = 4, w = Math.ceil(mw / ds), h = Math.ceil(mh / ds);
   for (let b = 0; b < nb; b++){ let best = 0; for (let k = 1; k < nm; k++) if (sc[b * nm + k] > sc[b * nm + best]) best = k;
     const data = new Uint8Array(w * h), off = (b * nm + best) * mh * mw;
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) data[y * w + x] = mk.data[off + Math.min(mh - 1, y * ds) * mw + Math.min(mw - 1, x * ds)] ? 1 : 0;

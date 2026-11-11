@@ -39,11 +39,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - { nome: attuale }
           - { nome: sam, sam: "1" }
-          - { nome: owlv2-30, det2: "Xenova/owlv2-base-patch16-ensemble", det2min: "0.3" }
-          - { nome: owlv2-40, det2: "Xenova/owlv2-base-patch16-ensemble", det2min: "0.4" }
-          - { nome: b5-owlv2-35, seg: "Xenova/segformer-b5-finetuned-ade-640-640", det2: "Xenova/owlv2-base-patch16-ensemble", det2min: "0.35" }
-          - { nome: owlvit-30, det2: "Xenova/owlvit-base-patch32", det2min: "0.3" }
+          - { nome: b5-30, seg: "Xenova/segformer-b5-finetuned-ade-640-640", detmin: "0.3" }
+          - { nome: b5-30-sam, seg: "Xenova/segformer-b5-finetuned-ade-640-640", detmin: "0.3", sam: "1" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -69,5 +68,5 @@ jobs:
           SEG: ${{ matrix.seg }}
           DET2: ${{ matrix.det2 }}
           DET2MIN: ${{ matrix.det2min }}
-        run: node scripts/banco-nyu.mjs nyu-sub 120 2>&1 | grep -v "^   diag" | grep -v "^   veri\|^   trovati" | tail -300
+        run: node scripts/banco-nyu.mjs nyu-sub 120 2>&1 | grep -v "^   diag OK" | grep -v "^   veri\|^   trovati" | tail -700
 

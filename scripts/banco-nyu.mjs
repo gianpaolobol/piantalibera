@@ -67,6 +67,7 @@ const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts, a
 };
 
 /* ---------- misura ---------- */
+const cover = (a, g) => { const ix = Math.max(0, Math.min(a[2], g[2]) - Math.max(a[0], g[0])), iy = Math.max(0, Math.min(a[3], g[3]) - Math.max(a[1], g[1])), ag = (g[2] - g[0]) * (g[3] - g[1]); return ag > 0 ? ix * iy / ag : 0; };
 function score(gt, r) {
   const out = { key: gt.key, ok: r.ok, dPitch: r.ok ? +(r.pitch - gt.pitch).toFixed(1) : null, rec: [], pos: [], ops: [] };
   const gts = gt.objects.filter(o => FAM(o.cat) && o.px >= 2500);
@@ -74,7 +75,10 @@ function score(gt, r) {
   const used = new Set();
   for (const g of gts) {
     let best = 0, bi = -1; r.items.forEach((it, i) => { if (used.has(i) || !it.on || !famOk(it.cat, g.cat)) return; const v = iou(it.box, g.box); if (v > best) { best = v; bi = i; } });
-    const hit = best >= .3; if (hit) used.add(bi); out.rec.push({ fam: FAM(g.cat), hit, vis: !g.cut && g.px >= 4000 });
+    let hit = best >= .3; if (hit) used.add(bi);
+    // piano di lavoro e fornelli fanno parte del blocco «cucina componibile»: basta che il blocco li contenga (≥ 60 %)
+    else if (FAM(g.cat) === "cucina") hit = r.items.some(it => it.on && FAM(it.cat) === "cucina" && cover(it.box, g.box) >= .6);
+    out.rec.push({ fam: FAM(g.cat), hit, vis: !g.cut && g.px >= 4000 });
   }
   out.falsi = r.items.filter((it, i) => it.on && FAM(it.cat) && !used.has(i)).length;
   if (!r.ok) return out;
