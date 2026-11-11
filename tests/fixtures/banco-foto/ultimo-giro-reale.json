@@ -1,5 +1,5 @@
 {
- "when": "2026-11-10T23:22:08.025Z",
+ "when": "2026-11-11T01:02:36.197Z",
  "fovNoto": true,
  "sum": {
   "scene": 12,
@@ -129,7 +129,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 10061
+    "tSeg": 10770
    },
    "stale": false
   },
@@ -249,7 +249,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7003
+    "tSeg": 7474
    },
    "stale": false
   },
@@ -360,7 +360,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7385
+    "tSeg": 7278
    },
    "stale": false
   },
@@ -476,7 +476,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7517
+    "tSeg": 7615
    },
    "stale": false
   },
@@ -578,7 +578,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7631
+    "tSeg": 7485
    },
    "stale": false
   },
@@ -697,7 +697,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 6741
+    "tSeg": 7261
    },
    "stale": false
   },
@@ -811,7 +811,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7200
+    "tSeg": 6844
    },
    "stale": false
   },
@@ -923,7 +923,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7337
+    "tSeg": 7073
    },
    "stale": false
   },
@@ -1041,7 +1041,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7296
+    "tSeg": 7124
    },
    "stale": false
   },
@@ -1162,7 +1162,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7222
+    "tSeg": 6915
    },
    "stale": false
   },
@@ -1282,7 +1282,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7104
+    "tSeg": 7149
    },
    "stale": false
   },
@@ -1384,7 +1384,7 @@
    "r": {
     "segState": "ok",
     "quadSource": "trovati dal modello di stanza: controllali",
-    "tSeg": 7517
+    "tSeg": 7445
    },
    "stale": false
   }
