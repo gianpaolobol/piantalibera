@@ -39,10 +39,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { nome: b5-30, seg: "Xenova/segformer-b5-finetuned-ade-640-640", detmin: "0.3" }
-          - { nome: b5-gdino-porte-30, seg: "Xenova/segformer-b5-finetuned-ade-640-640", detmin: "0.3", det2: "onnx-community/grounding-dino-tiny-ONNX", det2min: "0.3", det2lab: "door" }
-          - { nome: b5-gdino-porte-40, seg: "Xenova/segformer-b5-finetuned-ade-640-640", detmin: "0.3", det2: "onnx-community/grounding-dino-tiny-ONNX", det2min: "0.4", det2lab: "door" }
-          - { nome: b5-owl-porte-30, seg: "Xenova/segformer-b5-finetuned-ade-640-640", detmin: "0.3", det2: "Xenova/owlv2-base-patch16-ensemble", det2min: "0.3", det2lab: "door" }
+          - { nome: computer }
+          - { nome: telefono, seg: "Xenova/segformer-b2-finetuned-ade-512-512", detmin: "0.45" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-BF9qa6VzhnooTZb0AIQrd5dqhrGbFBkKdE0RS6ewX3A=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-nPsqYDTmjIa0UQOdH2IdgH0GPjjOdKISXAvud3+rG7o=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4640,8 +4640,11 @@ const F3_TJS = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dis
 let f3SegPipe = null, f3DetPipe = null;
 /* rilevatore di oggetti nel dispositivo: D-FINE S addestrato su Objects365 (365 classi, molti arredi; Apache 2.0).
    Separa gli oggetti uno per uno (sedie, mobili), dove la segmentazione unisce; banco NYU: sedie 47/66, mobili 39/101 */
-const F3_DET = {model:"onnx-community/dfine_s_obj365-ONNX", dtype:"fp32", min:.45, flip:false};
-const F3_SEGCFG = {model:SEG_MODEL};
+/* Computer con memoria sufficiente: segmentazione SegFormer-b5 e rilevatore a soglia .3 (banco NYU, verifica: 135/181 contro 126/181).
+   Telefoni e tablet: modelli leggeri, metà del tempo e un terzo dello scaricamento. */
+const F3_FORTE = typeof matchMedia === "function" && !matchMedia("(pointer: coarse)").matches && (navigator.deviceMemory || 8) >= 8;
+const F3_DET = {model:"onnx-community/dfine_s_obj365-ONNX", dtype:"fp32", min:F3_FORTE ? .3 : .45, flip:false};
+const F3_SEGCFG = {model:F3_FORTE ? "Xenova/segformer-b5-finetuned-ade-640-640" : SEG_MODEL};
 /* secondo rilevatore a vocabolario aperto (OWLv2/OWL-ViT): trova per nome anche ciò che Objects365 non ha
    (piani di cucina, mobili da incasso, porte); banco NYU: 216/329 oggetti contro 129 di D-FINE */
 const F3_DET2 = {model:"Xenova/owlv2-base-patch16-ensemble", dtype:"q8", min:.3, on:false};

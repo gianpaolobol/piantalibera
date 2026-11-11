@@ -144,8 +144,11 @@ const F3_TJS = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dis
 let f3SegPipe = null, f3DetPipe = null;
 /* rilevatore di oggetti nel dispositivo: D-FINE S addestrato su Objects365 (365 classi, molti arredi; Apache 2.0).
    Separa gli oggetti uno per uno (sedie, mobili), dove la segmentazione unisce; banco NYU: sedie 47/66, mobili 39/101 */
-const F3_DET = {model:"onnx-community/dfine_s_obj365-ONNX", dtype:"fp32", min:.45, flip:false};
-const F3_SEGCFG = {model:SEG_MODEL};
+/* Computer con memoria sufficiente: segmentazione SegFormer-b5 e rilevatore a soglia .3 (banco NYU, verifica: 135/181 contro 126/181).
+   Telefoni e tablet: modelli leggeri, metà del tempo e un terzo dello scaricamento. */
+const F3_FORTE = typeof matchMedia === "function" && !matchMedia("(pointer: coarse)").matches && (navigator.deviceMemory || 8) >= 8;
+const F3_DET = {model:"onnx-community/dfine_s_obj365-ONNX", dtype:"fp32", min:F3_FORTE ? .3 : .45, flip:false};
+const F3_SEGCFG = {model:F3_FORTE ? "Xenova/segformer-b5-finetuned-ade-640-640" : SEG_MODEL};
 /* secondo rilevatore a vocabolario aperto (OWLv2/OWL-ViT): trova per nome anche ciò che Objects365 non ha
    (piani di cucina, mobili da incasso, porte); banco NYU: 216/329 oggetti contro 129 di D-FINE */
 const F3_DET2 = {model:"Xenova/owlv2-base-patch16-ensemble", dtype:"q8", min:.3, on:false};
