@@ -22,7 +22,7 @@
       "bundleIdentifier": "it.piantalibera.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Pianta Libera usa la fotocamera solo quando scatti la foto di una stanza per «Da foto al 3D».",
+        "NSCameraUsageDescription": "Pianta Libera usa la fotocamera quando scatti la foto di una stanza per «Da foto al 3D» e durante la «Scansione AR» della stanza.",
         "NSPhotoLibraryUsageDescription": "Pianta Libera apre le foto che scegli per «Da foto al 3D» e per i materiali."
       }
     },

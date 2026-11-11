@@ -557,6 +557,7 @@ function f3PanelHTML(){
     <p class="note">Carica o scatta la foto di una stanza: l'AI riconosce porte, finestre, arredi, luci e persone e Pianta Libera ricostruisce una <b>bozza 3D modificabile</b>, pronta per il render. Non è un rilievo: le misure vanno verificate.</p>`;
   if (!F3.img){
     h += `<div class="btns"><button class="btn primary" id="f3Shoot">Scatta una foto</button><button class="btn" id="f3Pick">Scegli una foto</button></div>
+      ${window.PL_NATIVE?.ar ? `<div class="btns"><button class="btn" id="f3Ar">Scansione AR (prova)</button></div><p class="note">Scansione AR: giri per la stanza con il telefono, l'app registra posizioni e pareti misurate da ARKit. Per ora la scansione si salva come file da inviare per il confronto.${F3.arNote ? ` <b>${esc(F3.arNote)}</b>` : ""}</p>` : ""}
       <p class="note">Consigli: foto orizzontale, fotocamera diritta all'altezza degli occhi, verso una parete, con il pavimento e il soffitto visibili. Un solo locale per foto.</p>`;
   } else if (!F3.a){
     h += `<div class="f3thumb"><img src="${F3.thumb}" alt="Foto da analizzare"><div><b>${esc(F3.name)}</b><br><span class="note">${F3.w}×${F3.h} px${F3.exifFov ? ` · campo visivo ${fmt(F3.exifFov, 0)}° dalla foto` : ""}</span></div></div>
@@ -682,6 +683,7 @@ function f3SyncList(){ document.querySelectorAll("#f3Modal .f3row").forEach((r, 
 function f3Click(e){ const b = e.target.closest("button"); if (!b) return;
   if (b.id === "f3Pick") $("#fF3").click();
   else if (b.id === "f3Shoot") $("#fF3c").click();
+  else if (b.id === "f3Ar") window.ReactNativeWebView?.postMessage(JSON.stringify({type:"ar-scan"}));
   else if (b.id === "f3Reset"){ Object.assign(F3, {img:null, thumb:null, a:null, quad:null, items:[], sel:-1, err:"", report:null, seg:null, localNote:""}); renderImport(); }
   else if (b.id === "f3Go") f3Analyze();
   else if (b.id === "f3Local") f3AnalyzeLocal();
@@ -709,3 +711,5 @@ for (const id of ["#fF3", "#fF3c"]) $(id).addEventListener("change", async e => 
   renderImport(); });
 /* chiamato da renderImport (07-io.js) dopo aver scritto il pannello */
 function f3AfterRender(){ if (!F3.cfg && !F3.cfgLoading) f3LoadConfig(); if (F3.img && !F3.a) f3MountTurnstile(); }
+/* Scansione AR dall'app iPhone (prova): l'app risponde con un riassunto; i dati restano nel file condiviso */
+addEventListener("pl-ar-done", e => { const d = e.detail || {}; F3.arNote = d.error ? `Scansione non riuscita: ${d.error}` : d.cancelled ? "" : `Ultima scansione: ${d.frames} fotogrammi, ${d.planes} superfici (${d.walls} pareti, ${d.doors} porte, ${d.windows} finestre).`; if (typeof renderImport === "function") renderImport(); });

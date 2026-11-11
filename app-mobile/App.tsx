@@ -11,6 +11,7 @@ import { WebView, type WebViewMessageEvent, type WebViewNavigation, type WebView
 import type { ComponentType, Ref } from "react";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import { arAvailable, scanRoom } from "./modules/pianta-ar";
 
 const SITE: string = (Constants.expoConfig?.extra as { site?: string } | undefined)?.site || "https://pianta-libera.gianpaolo-franceschini.workers.dev/";
 const ORIGIN = new URL(SITE).origin;
@@ -19,6 +20,10 @@ const MAX_FILE = 80 * 1024 * 1024;
 const NativeWebView = WebView as unknown as ComponentType<WebViewProps & { ref?: Ref<WebView> }>;
 
 type SaveMessage = { type: "save"; name: string; mime?: string; b64: string };
+type ArMessage = { type: "ar-scan" };
+// funzioni native annunciate alla pagina prima che si carichi (l'editor mostra il pulsante «Scansione AR»)
+const AR = Platform.OS === "ios" && arAvailable();
+const BEFORE_LOAD = `window.PL_NATIVE=${JSON.stringify({ ar: AR })};true;`;
 const safeName = (n: string) => (n || "pianta-libera").replace(/[^\w.\- ]+/g, "_").slice(0, 120);
 
 export default function App() {
@@ -34,8 +39,9 @@ export default function App() {
   }, [canBack]);
 
   const onMessage = useCallback(async (e: WebViewMessageEvent) => {
-    let msg: SaveMessage;
+    let msg: SaveMessage | ArMessage;
     try { msg = JSON.parse(e.nativeEvent.data); } catch { return; }
+    if (msg?.type === "ar-scan") { if (AR) runArScan(); return; }
     if (msg?.type !== "save" || typeof msg.b64 !== "string" || msg.b64.length > MAX_FILE * 1.37) return;
     try {
       const file = new File(Paths.cache, safeName(msg.name));
@@ -46,6 +52,18 @@ export default function App() {
       web.current?.injectJavaScript(`window.dispatchEvent(new CustomEvent("pl-native-saved",{detail:${JSON.stringify(msg.name)}}));true;`);
     } catch (err) {
       web.current?.injectJavaScript(`window.dispatchEvent(new CustomEvent("pl-native-error",{detail:${JSON.stringify(String(err))}}));true;`);
+    }
+  }, []);
+
+  // Scansione AR (prova): la scansione si salva come zip e si condivide (Salva in File, AirDrop, Mail) per il confronto
+  const runArScan = useCallback(async () => {
+    const tell = (detail: object) => web.current?.injectJavaScript(`window.dispatchEvent(new CustomEvent("pl-ar-done",{detail:${JSON.stringify(detail)}}));true;`);
+    try {
+      const r = await scanRoom();
+      tell(r);
+      if (!r.cancelled && r.zip && await Sharing.isAvailableAsync()) await Sharing.shareAsync(r.zip, { mimeType: "application/zip", UTI: "public.zip-archive", dialogTitle: "Scansione AR" });
+    } catch (err) {
+      tell({ error: String((err as Error)?.message || err) });
     }
   }, []);
 
@@ -88,6 +106,7 @@ export default function App() {
           cacheEnabled
           onShouldStartLoadWithRequest={onNav}
           onNavigationStateChange={(s: WebViewNavigation) => setCanBack(s.canGoBack)}
+          injectedJavaScriptBeforeContentLoaded={BEFORE_LOAD}
           onMessage={onMessage}
           onLoadEnd={() => setLoading(false)}
           onError={() => { setOffline(true); setLoading(false); }}
