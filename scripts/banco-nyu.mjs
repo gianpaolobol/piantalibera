@@ -78,7 +78,9 @@ function score(gt, r) {
     let hit = best >= .3; if (hit) used.add(bi);
     // piano di lavoro e fornelli fanno parte del blocco «cucina componibile»: basta che il blocco li contenga (≥ 60 %)
     else if (FAM(g.cat) === "cucina") hit = r.items.some(it => it.on && FAM(it.cat) === "cucina" && cover(it.box, g.box) >= .6);
-    out.rec.push({ fam: FAM(g.cat), hit, vis: !g.cut && g.px >= 4000 });
+    // copertura: un elemento della stessa famiglia contiene l'oggetto (una fila di pensili modellata come un blocco unico)
+    const cov = hit || r.items.some(it => it.on && famOk(it.cat, g.cat) && cover(it.box, g.box) >= .6);
+    out.rec.push({ fam: FAM(g.cat), hit, cov, vis: !g.cut && g.px >= 4000 });
   }
   out.falsi = r.items.filter((it, i) => it.on && FAM(it.cat) && !used.has(i)).length;
   if (!r.ok) return out;
@@ -132,12 +134,12 @@ const rec = rows.flatMap(r => r.rec), pos = rows.flatMap(r => r.pos), ops = rows
 const perFam = Object.fromEntries(fams.map(f => { const a = rec.filter(x => x.fam === f), p = pos.filter(x => x.fam === f && x.found); return [f, `${a.filter(x => x.hit).length}/${a.length} riconosciuti, ${p.length} collocati, errore ${med(p.map(x => x.d)) ?? "-"} m`]; }));
 const found = pos.filter(x => x.found);
 const sum = { modo: MODE, gruppo, varianti: VAR, foto: rows.length, risolte: rows.filter(r => r.ok).length, inclinazione_err: mean(abs(rows.filter(r => r.ok).map(r => r.dPitch))), altezza_fotocamera_err_m: mean(abs(rows.filter(r => r.ok).map(r => r.dHc))),
-  riconoscimento: `${rec.filter(x => x.hit).length}/${rec.length}`, falsi_positivi: rows.reduce((s, r) => s + r.falsi, 0),
+  riconoscimento: `${rec.filter(x => x.hit).length}/${rec.length}`, coperti: `${rec.filter(x => x.cov).length}/${rec.length}`, falsi_positivi: rows.reduce((s, r) => s + r.falsi, 0),
   collocati: `${found.length}/${pos.length}`, errore_pianta_mediana_m: med(found.map(x => x.d)), errore_pianta_relativo_mediana: med(found.map(x => x.rel)), errore_parte_visibile_mediana_m: med(found.map(x => x.dv)),
   errore_laterale_m: mean(abs(found.map(x => x.dr))), errore_profondita_m: mean(abs(found.map(x => x.df))),
   aperture_larghezza_m: mean(abs(ops.map(x => x.dw))), finestre_davanzale_m: mean(abs(ops.filter(x => x.dzmin != null).map(x => x.dzmin))), aperture_sommita_m: mean(abs(ops.map(x => x.dzmax))),
   tempo_medio_s: mean(rows.map(r => r.ms / 1000)), neurons_spesi: Math.round(neuronsSpent), famiglie: perFam };
-  sum.ben_visibili = `${rec.filter(x => x.vis && x.hit).length}/${rec.filter(x => x.vis).length}`; sum.ben_visibili_errore_m = med(found.filter(x => x.vis).map(x => x.d));
+  sum.ben_visibili = `${rec.filter(x => x.vis && x.hit).length}/${rec.filter(x => x.vis).length}`; sum.ben_visibili_coperti = `${rec.filter(x => x.vis && x.cov).length}/${rec.filter(x => x.vis).length}`; sum.ben_visibili_errore_m = med(found.filter(x => x.vis).map(x => x.d));
   return sum;
 }
 for (const [g, rs] of [["sviluppo", rows.filter(r => !isTest(r.key))], ["verifica", rows.filter(r => isTest(r.key))], ["tutte", rows]]) console.log("=== RIEPILOGO " + JSON.stringify(summary(rs, g), null, 1));

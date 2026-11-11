@@ -112,8 +112,11 @@ export function segComponents(m, roomType = "") {
   // ambiente dalle etichette presenti (oltre al tipo di stanza dell'analisi, se c'è): in cucina i mobili bassi sono
   // la cucina componibile; in bagno il piano con il lavabo è il lavabo (banco NYU: piani e mobili di cucina mancati)
   const has = n => names.includes(n), bath = /bagn|bath/i.test(roomType) || ["toilet", "bathtub", "shower"].some(has);
-  const kitchen = !bath && (/cucin|kitchen/i.test(roomType) || ["stove", "oven", "dishwasher", "refrigerator", "kitchen island", "microwave"].filter(has).length >= 1 && (has("countertop") || has("counter") || has("sink")));
-  const { w, h, lab } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (c === "madia" && n === "cabinet" && kitchen) c = "cucina"; if (c === "cucina" && /^counter/.test(n) && !kitchen) c = null; /* piani fuori dalla cucina: lasciati al rilevatore */ return c && c[0] !== "@" ? c : null; });
+  // cucina anche senza elettrodomestici in vista: piano di lavoro con lavello e mobili, senza specchio (che indica il mobile del bagno)
+  const surface = has("countertop") || has("counter");
+  const kitchen = !bath && (/cucin|kitchen/i.test(roomType) || ["stove", "oven", "dishwasher", "refrigerator", "kitchen island", "microwave"].filter(has).length >= 1 && (surface || has("sink"))
+    || surface && has("sink") && has("cabinet") && !has("mirror"));
+  const { w, h, lab } = m, catOf = names.map(n => { let c = SEG_CAT[n]; if (kitchen && (n === "cabinet" || n === "chest of drawers")) c = "cucina"; if (c === "cucina" && /^counter/.test(n) && !kitchen) c = null; /* piani fuori dalla cucina: lasciati al rilevatore */ return c && c[0] !== "@" ? c : null; });
   // «fuori»: solo classi di esterni (cielo, verde, edifici…) viste attraverso il vetro. Nelle foto vere la segmentazione
   // include già nel vetro il paesaggio; allargare ad altre classi allungava le finestre sopra letti e mobili (banco 9/11)
   const seen = new Uint8Array(w * h), out = [], minA = w * h * .0025, Q = new Int32Array(w * h), floorIds = idsOf(m, "@floor"), outside = names.map(n => OUTSIDE.has(n));
