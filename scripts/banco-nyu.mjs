@@ -13,7 +13,7 @@ import { join } from "node:path";
 
 const DIR = process.argv[2], N = Number(process.argv[3] || 120), IMGS = Number(process.env.IMGS || 6);
 const MODE = process.env.MODO || "base";
-const VAR = { seg: process.env.SEG || null, det: process.env.DET || null, detMin: Number(process.env.DETMIN || 0) || null, detDtype: process.env.DETDTYPE || null, sam: process.env.SAM === "1", flip: process.env.FLIP === "1", det2: process.env.DET2 || null, det2Min: Number(process.env.DET2MIN || 0) || null };   // base · profondita (solo dispositivo) · cloudflare (solo server) · combinato
+const VAR = { seg: process.env.SEG || null, det: process.env.DET || null, detMin: Number(process.env.DETMIN || 0) || null, detDtype: process.env.DETDTYPE || null, sam: process.env.SAM === "1", flip: process.env.FLIP === "1", det2: process.env.DET2 || null, det2Min: Number(process.env.DET2MIN || 0) || null, det2Lab: process.env.DET2LAB ? process.env.DET2LAB.split(",") : null };   // base · profondita (solo dispositivo) · cloudflare (solo server) · combinato
 /* analisi di Cloudflare (Llama 4 Scout + DETR, la stessa chiamata di /api/foto), salvata per non rifarla */
 const ACC = process.env.CLOUDFLARE_ACCOUNT_ID, TOK = process.env.CLOUDFLARE_API_TOKEN, AN_DIR = process.env.ANALISI || join(process.env.HOME || ".", "nyu-analisi");
 const cfRun = async (model, input) => { const t0 = Date.now(), r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACC}/ai/run/${model}`, { method: "POST", headers: { Authorization: `Bearer ${TOK}`, "Content-Type": "application/json" }, body: JSON.stringify(input) }); const j = await r.json(); if (!j.success) throw new Error(JSON.stringify(j.errors).slice(0, 200)); return { ...j.result, _ms: Date.now() - t0 }; };
@@ -43,7 +43,7 @@ const iou = (a, b) => { const ix = Math.max(0, Math.min(a[2], b[2]) - Math.max(a
 
 /* ricostruzione nella pagina: posizioni riportate al riferimento della fotocamera (destra, avanti) */
 const RECON = async function ({ photo, W, H, hfov, camH, mode, modello, parts, analysis, diagBoxes, variants }) {
-  if (variants?.seg) F3_SEGCFG.model = variants.seg; if (variants?.det) F3_DET.model = variants.det; if (variants?.detMin) F3_DET.min = variants.detMin; if (variants?.detDtype) F3_DET.dtype = variants.detDtype; F3_SAM.on = !!variants?.sam; F3_DET.flip = !!variants?.flip; F3_DET2.on = !!variants?.det2; if (variants?.det2) F3_DET2.model = variants.det2; if (variants?.det2Min) F3_DET2.min = variants.det2Min;
+  if (variants?.seg) F3_SEGCFG.model = variants.seg; if (variants?.det) F3_DET.model = variants.det; if (variants?.detMin) F3_DET.min = variants.detMin; if (variants?.detDtype) F3_DET.dtype = variants.detDtype; F3_SAM.on = !!variants?.sam; F3_DET.flip = !!variants?.flip; F3_DET2.on = !!variants?.det2; if (variants?.det2) F3_DET2.model = variants.det2; if (variants?.det2Min) F3_DET2.min = variants.det2Min; if (variants?.det2Lab) F3_DET2.labels = variants.det2Lab;
   const deep = mode === "profondita" || mode === "combinato", cloud = mode === "cloudflare" || mode === "combinato"; F3_DEPTH.on = deep; F3_DET.on = deep; if (modello) Object.assign(F3_DEPTH, { base: modello, parts });
   Object.assign(F3, { img: photo, thumb: photo, w: W, h: H, name: "nyu", exifFov: hfov, seg: null, a: null, quadSource: "", fitFov: null });
   // senza profondità l'utente indica l'altezza della fotocamera; con la profondità nessuna misura
