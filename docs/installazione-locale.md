@@ -1,6 +1,6 @@
 # Pianta Libera in locale — guida all'installazione
 
-Aggiornata al 6 novembre 2026 · pacchetto 0.4.0. Il pacchetto si ricostruisce da solo a ogni modifica dell'app; questa guida viene aggiornata insieme.
+Aggiornata all'11 novembre 2026 · pacchetto 0.4.0. Il pacchetto si ricostruisce da solo a ogni modifica dell'app; questa guida viene aggiornata insieme.
 
 **Scarica sempre l'ultima versione:**
 https://github.com/gianpaolobol/piantalibera/releases/download/locale-latest/pianta-libera-locale.zip
@@ -128,7 +128,7 @@ Dalla scheda **Esporta → Condividi con il cliente** il server locale crea link
 
 ### Da foto al 3D in locale
 
-Il server locale non ha un modello con visione: **Importa → Da foto al 3D** risponde sempre con la stessa analisi di prova (un soggiorno con porta, finestra, divano e lampada), utile per provare calibrazione e creazione anche senza internet. Con `PHOTO_FIXTURE=percorso/analisi.json` usa un'altra risposta, nello stesso formato del modello (vedi `shared/photo.js`). L'analisi vera è quella del sito pubblicato. La misura con la profondità (MoGe-2) serve il modello da `public/modelli/`, che non è nel repository: il deploy lo scarica dalla release `modelli-v1`; in locale, senza quei file, si usa il modello di stanza dalla segmentazione (per provarla: scarica `moge2-vits-560x420-q8.onnx` dalla release e dividilo con `python3 scripts/dividi-modello.py moge2-vits-560x420-q8.onnx 2 public/modelli`).
+Il server locale non ha un modello con visione: **Importa → Da foto al 3D** risponde sempre con la stessa analisi di prova (un soggiorno con porta, finestra, divano e lampada), utile per provare calibrazione e creazione anche senza internet. Con `PHOTO_FIXTURE=percorso/analisi.json` usa un'altra risposta, nello stesso formato del modello (vedi `shared/photo.js`). L'analisi vera è quella del sito pubblicato. La misura con la profondità (MoGe-2) serve il modello da `public/modelli/`, che non è nel repository: il deploy lo scarica dalla release `modelli-v1`; in locale, senza quei file, si usa il modello di stanza dalla segmentazione (per provarla: scarica `moge2-vits-560x420-q8.onnx` dalla release e dividilo con `python3 scripts/dividi-modello.py moge2-vits-560x420-q8.onnx 2 public/modelli`). La segmentazione e il rilevatore si scaricano da Hugging Face al primo uso e restano nella cache del browser: sui computer SegFormer-b5 (circa 85 MB), su telefoni e tablet SegFormer-b2 (circa 28 MB). Serve internet la prima volta.
 
 ### Su telefono e tablet
 

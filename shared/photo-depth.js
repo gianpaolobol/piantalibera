@@ -114,10 +114,11 @@ export function dpQuad(G, R, cam, aspect, seen) {
 }
 
 /** Posizione in pianta (r, f), estensioni e quote di un oggetto: punti dentro il riquadro con le etichette indicate. */
-export function dpObject(P, M, w2, h2, m, labelIds, box, G) {
+export function dpObject(P, M, w2, h2, m, labelIds, box, G, mask = null) {
   const r = [], f = [], z = []; const [x0, y0, x1, y1] = box;
   for (let j = Math.floor(y0 * h2); j < Math.ceil(y1 * h2); j++) for (let i = Math.floor(x0 * w2); i < Math.ceil(x1 * w2); i++) { const k = j * w2 + i; if (k < 0 || k >= w2 * h2 || M[k] <= .5) continue;
-    const l = m.lab[Math.min(m.h - 1, Math.floor((j + .5) * m.h / h2)) * m.w + Math.min(m.w - 1, Math.floor((i + .5) * m.w / w2))]; if (labelIds && !labelIds.has(l)) continue;
+    if (mask) { if (!mask.data[Math.min(mask.h - 1, Math.floor((j + .5) * mask.h / h2)) * mask.w + Math.min(mask.w - 1, Math.floor((i + .5) * mask.w / w2))]) continue; }   // contorno esatto (SAM)
+    else { const l = m.lab[Math.min(m.h - 1, Math.floor((j + .5) * m.h / h2)) * m.w + Math.min(m.w - 1, Math.floor((i + .5) * m.w / w2))]; if (labelIds && !labelIds.has(l)) continue; }
     const q = [P[3 * k], P[3 * k + 1], P[3 * k + 2]]; r.push(dpDot(q, G.rt)); f.push(dpDot(q, G.fw)); z.push(dpDot(q, G.up) + G.h); }
   if (r.length < 12) return null;
   return { r: dpPct(r, .5), f: dpPct(f, .5), rmin: dpPct(r, .05), rmax: dpPct(r, .95), fmin: dpPct(f, .08), fmax: dpPct(f, .92), zmin: dpPct(z, .03), zmax: dpPct(z, .97), n: r.length };

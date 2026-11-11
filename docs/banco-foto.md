@@ -53,3 +53,44 @@ codice vero dell'editor e misura; sonde: `scripts/sonda-moge.py` (MoGe-2 in PyTo
 Per famiglia (ora): sedie 52/69 riconosciute, errore 0,35 m; letti 18/21, 0,41 m; mobili 72/120, 0,47 m; finestre
 27/34, 0,49 m; comodini 6/6; porte 9/27 (le porte aperte restano il punto debole). MoGe-2 da solo, con i contorni veri
 degli oggetti, colloca a 0,22 m: il margine che resta è soprattutto nel riconoscimento e nei contorni.
+
+## Iterazioni dell'11/11/2026 — 120 foto, gruppo di verifica separato
+
+Il banco passa a 120 foto NYU: 80 per sviluppare (`svil`) e 40 tenute da parte per la **verifica** (181 oggetti, 51
+ben visibili), mai usate per tarare le regole. Workflow `banco-varianti.yml`: confronta configurazioni dei modelli con
+le variabili `SEG`, `DET`, `DETMIN`, `SAM`, `FLIP`, `DET2`, `DET2MIN`, `DET2LAB`.
+
+Due misure, entrambe riportate:
+- **riconosciuto** (rigida): un nostro elemento della famiglia giusta con IoU ≥ 0,3 sul singolo oggetto etichettato;
+- **coperto**: un nostro elemento della famiglia giusta copre almeno il 60 % del riquadro. Serve perché NYU etichetta
+  ogni anta di una fila di mobili, mentre l'editor crea un blocco unico (cucina, armadio): è corretto per il modello
+  3D ma la misura rigida lo conta come mancato.
+
+| Verifica, 40 foto | Prima (b2, soglia .45) | Computer (b5, soglia .3) | b5 + Grounding DINO porte .4 |
+|---|---|---|---|
+| Riconosciuti (rigida) | 126 / 181 (70 %) | 135 / 181 (75 %) | 136 / 181 |
+| Coperti | 147 / 181 (81 %) | 150 / 181 (83 %) | 151 / 181 |
+| Ben visibili coperti | 39 / 51 | 42 / 51 (82 %) | 42 / 51 |
+| Falsi positivi | 120 | 134 | 143 |
+| Errore in pianta (mediana) | 0,43 m | 0,38 m | 0,39 m |
+| Tempo per foto (CPU di GitHub) | 12 s | 24 s | 44 s |
+
+Altre prove:
+- **Cucina**: riconosciuta anche da piano + lavello + mobili; le basi della cucina contano come un unico blocco. In
+  verifica le cucine passano da 1/8 a 6/8.
+- **SAM** (`slimsam-77`, contorni precisi): errore dei ben visibili da 0,40 a 0,33 m, ma il tempo sale a ~36 s.
+  Resta disattivato (`F3_SAM.on`).
+- **Rilevatori a vocabolario aperto**: OWLv2 su tutte le etichette porta molti falsi positivi in 35–49 s. Limitati
+  alle sole porte, OWLv2 non finisce nel tempo e Grounding DINO guadagna 1 porta su 11 a costo di 9 falsi positivi in
+  più, finestre peggiori e tempo doppio. Restano disattivati (`F3_DET2.on`).
+
+Per famiglia (computer, verifica): sedie 33/43, contenitori 28/35, tavoli 16/22, finestre 11/15, letti 10/11,
+cucina 4–6/8, **porte 4/11**. Le porte restano il punto debole. Il segmentatore le vede come parete (90–99 %), le porte
+vetrate diventano finestre e i box doccia diventano portefinestre. Servono altri indizi: telai, salti di profondità,
+contatto col pavimento.
+
+Configurazione adottata: computer (puntatore fine, memoria ≥ 8 GB) SegFormer-b5 + D-FINE soglia .3; telefoni e tablet
+SegFormer-b2 + soglia .45.
+
+Il 100 % da una sola foto non è raggiungibile: oggetti coperti, fuori campo o ambigui non si vedono in un'immagine. La
+strada per avvicinarsi passa da più foto della stessa stanza.

@@ -1,0 +1,71 @@
+# Varianti dei modelli nel dispositivo a confronto sulle foto vere NYU (gruppo di sviluppo e di verifica separati):
+# ogni variante gira in parallelo. Gratuito: nessuna chiamata a Workers AI.
+name: Banco varianti (NYU)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["feature/foto-iter*"]
+    paths: ["scripts/banco-nyu.mjs", "shared/photo-seg.js", "shared/photo-depth.js", "editor-src/077-foto3d.js", "scripts/sonda-rilevatore.mjs", ".github/workflows/banco-varianti.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: banco-varianti-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepara:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: cache
+        uses: actions/cache@v4
+        with: { path: ~/nyu-sub, key: "nyu-sub-${{ hashFiles('scripts/nyu-estrai.py') }}" }
+      - if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          pip install --quiet h5py numpy pillow
+          curl -sSfL --retry 3 -o ~/nyu.mat http://horatio.cs.nyu.edu/mit/silberman/nyu_depth_v2/nyu_depth_v2_labeled.mat
+          python3 scripts/nyu-estrai.py ~/nyu.mat ~/nyu-sub 120 && rm ~/nyu.mat
+      - uses: actions/upload-artifact@v4
+        with: { name: nyu-sub, path: ~/nyu-sub, retention-days: 2 }
+
+  variante:
+    needs: prepara
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { nome: computer }
+          - { nome: telefono, seg: "Xenova/segformer-b2-finetuned-ade-512-512", detmin: "0.45" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/download-artifact@v4
+        with: { name: nyu-sub, path: nyu-sub }
+      - name: Modello di profondità (release modelli-v1)
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh release download modelli-v1 -p "moge2-vits-560x420-q8.onnx" -D /tmp/modelli
+          python3 scripts/dividi-modello.py /tmp/modelli/moge2-vits-560x420-q8.onnx 2 public/modelli
+      - run: npm ci && npx playwright install --with-deps chromium && node scripts/build-editor.mjs
+      - name: "Banco: ${{ matrix.nome }}"
+        env:
+          MODO: profondita
+          MODELLO: modelli/moge2-vits-560x420-q8.onnx
+          PARTI: "2"
+          IMGS: "0"
+          SAM: ${{ matrix.sam }}
+          FLIP: ${{ matrix.flip }}
+          DET: ${{ matrix.det }}
+          DETMIN: ${{ matrix.detmin }}
+          SEG: ${{ matrix.seg }}
+          DET2: ${{ matrix.det2 }}
+          DET2MIN: ${{ matrix.det2min }}
+          DET2LAB: ${{ matrix.det2lab }}
+        run: node scripts/banco-nyu.mjs nyu-sub 120 2>&1 | grep -v "^   diag OK" | grep -v "^   veri\|^   trovati" | tail -700
+
