@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-hv58ySp2gmO3NUz55z5DCxYL41G1vsXFGrgKDm9KKyI=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-0vHEKPkcpj6h6wPrSTeVJU4XqKW4y6N2TCZm0Das6FM=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -269,9 +269,9 @@ body.compact .bar .seg:last-child{order:1;margin-left:auto}
 body.compact #viewSeg{order:2}body.compact #viewSeg [data-v="both"]{display:none}
 body.compact .bar .field:has(#levelSel){order:3}
 body.compact .bar .field:has(#projName){order:4;flex:1 1 150px}body.compact #projName{width:100%!important;flex:1}
-body.compact #undoBtn,body.compact #redoBtn,body.compact #addLevel{font-size:0;min-width:40px;justify-content:center}
-body.compact #undoBtn::before,body.compact #redoBtn::before{content:"";display:inline-block;flex:none;width:20px;height:20px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 14 4 9l5-5'/%3E%3Cpath d='M4 9h10.5a5.5 5.5 0 0 1 0 11H11'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 14 4 9l5-5'/%3E%3Cpath d='M4 9h10.5a5.5 5.5 0 0 1 0 11H11'/%3E%3C/svg%3E") center/contain no-repeat}
-body.compact #redoBtn::before{transform:scaleX(-1)}body.compact #addLevel::before{content:"+";font-size:18px}
+#undoBtn,#redoBtn{font-size:0;min-width:34px;display:inline-flex;align-items:center;justify-content:center}body.compact #undoBtn,body.compact #redoBtn,body.compact #addLevel{font-size:0;min-width:40px;justify-content:center}
+#undoBtn::before,#redoBtn::before{content:"";display:inline-block;flex:none;width:20px;height:20px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 14 4 9l5-5'/%3E%3Cpath d='M4 9h10.5a5.5 5.5 0 0 1 0 11H11'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 14 4 9l5-5'/%3E%3Cpath d='M4 9h10.5a5.5 5.5 0 0 1 0 11H11'/%3E%3C/svg%3E") center/contain no-repeat}
+#redoBtn::before{transform:scaleX(-1)}body.compact #addLevel::before{content:"+";font-size:18px}
 @media (max-width:560px){body.compact .bar .field:has(#projName){order:1;flex:none}body.compact #projName{display:none}body.compact .bar .seg:last-child{order:2;margin-left:0}body.compact .brand{margin-right:auto}
   body.compact #viewSeg{order:3}body.compact .bar .field:has(#levelSel){order:4;flex:1}body.compact #levelSel{flex:1;width:0}}
 body.compact .spacer,body.compact #sideToggle,body.compact .side-grip,body.compact .side-head,body.compact #sideFloat{display:none!important}
@@ -323,6 +323,19 @@ body.compact .hud{bottom:52px}
 .f3row.sel{background:var(--accent-soft)}.f3row .note{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0}
 .btn.mini{min-height:30px;padding:2px 8px}
 .photo-ov{position:absolute;inset:0;pointer-events:none;display:flex;justify-content:center;z-index:2}.photo-ov img{height:100%;width:auto;max-width:none}
+/* revisione 11/2026 (U7, U10, U11): nome del progetto più largo, striscia degli strumenti con indizio di scorrimento, testi minimi più leggibili */
+#projName{width:clamp(170px, 18vw, 280px)!important}
+body.compact .tools{-webkit-mask-image:linear-gradient(90deg, #000 calc(100% - 28px), transparent);mask-image:linear-gradient(90deg, #000 calc(100% - 28px), transparent)}
+.statusbar,.statusbar .sb{font-size:11.5px}
+.hud{font-size:12px}
+.lbl{font-size:11px}
+.exp-sec{margin:14px 2px 6px;font:600 10.5px var(--f-data);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+/* revisione 11/2026 (#59): una sola riga d'intestazione sul computer, suggerimento dello strumento non troncato */
+.brand small{display:none}
+body:not(.compact) .statusbar .sb-left#hud2d{display:flex;position:absolute;left:6px;right:6px;bottom:32px;gap:8px;flex-wrap:wrap;pointer-events:none}
+body:not(.compact) .statusbar .sb-left#hud2d span{background:color-mix(in srgb, var(--panel) 90%, transparent);padding:3px 7px;border-radius:4px;font-size:11.5px;color:var(--ink);box-shadow:0 0 0 1px var(--line);white-space:normal;overflow:visible;text-overflow:clip;max-width:none}
+.tool[hidden]{display:none!important}
+#camSel{min-width:116px}
 .no3d{position:absolute;inset:12px;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:20px;background:var(--panel, #fff);color:var(--ink, #222);border:1px solid var(--line, #ccc);border-radius:10px;font-size:14px;line-height:1.45;text-align:center;z-index:5}
 .no3d b{font-size:15px}
 </style>
@@ -337,7 +350,7 @@ body.compact .hud{bottom:52px}
     <div class="seg" id="viewSeg" role="group" aria-label="Viste">
       <button data-v="2d">Pianta</button><button data-v="3d">3D</button><button data-v="both" aria-pressed="true">Affiancate</button>
     </div>
-    <div class="seg"><button id="undoBtn" title="Annulla (Ctrl+Z)">Annulla</button><button id="redoBtn" title="Ripristina (Ctrl+Y)">Ripristina</button></div>
+    <div class="seg"><button id="undoBtn" title="Annulla (Ctrl+Z)" aria-label="Annulla">Annulla</button><button id="redoBtn" title="Ripristina (Ctrl+Y)" aria-label="Ripristina">Ripristina</button></div>
   </header>
 
   <div class="main">
@@ -581,6 +594,53 @@ function swatchUrl(key){
 }
 function swatchStyle(key){ const u = swatchUrl(key), m = matDef(key); return esc(u ? `background-image:url("${String(u).replace(/["\\\n]/g, "")}")` : `background:${/^#[0-9a-f]{3,8}$/i.test(m.color || "") ? m.color : "#ccc"}`); }
 function projMatKeys(){ return Object.keys(P.materials || {}); }
+
+/* ---- ../shared/geometria.js ---- */
+// Geometria della pianta: funzioni pure, senza Three.js né stato dell'editor (#64).
+// Le usa l'editor (incorporate senza «export» da scripts/build-editor.mjs) e le provano i test unitari
+// (tests/geometria.test.mjs). Coordinate in metri, pianta con y verso il basso; muro = {a:[x,y], b:[x,y], thick, level}.
+function wallFrame(w){ const dx=w.b[0]-w.a[0], dy=w.b[1]-w.a[1], len=Math.hypot(dx,dy)||1e-9; const ux=dx/len, uy=dy/len; return {len, ux, uy, nx:-uy, ny:ux}; }
+const ptOnWall = (w, s, off=0) => { const f = wallFrame(w); return [w.a[0]+f.ux*s+f.nx*off, w.a[1]+f.uy*s+f.ny*off]; };
+function projOnSeg(p, a, b){ const dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy||1e-9; const t=Math.min(1, Math.max(0, ((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2)); const q=[a[0]+dx*t, a[1]+dy*t]; return {t, q, d:Math.hypot(p[0]-q[0], p[1]-q[1])}; }
+function polyArea(pts){ let a=0; for(let i=0;i<pts.length;i++){ const p=pts[i], q=pts[(i+1)%pts.length]; a += p[0]*q[1]-q[0]*p[1]; } return a/2; }
+function polyCentroid(pts){ let x=0,y=0,a=0; for(let i=0;i<pts.length;i++){ const p=pts[i], q=pts[(i+1)%pts.length], c=p[0]*q[1]-q[0]*p[1]; a+=c; x+=(p[0]+q[0])*c; y+=(p[1]+q[1])*c; } if (Math.abs(a)<1e-9) return pts[0]; return [x/(3*a), y/(3*a)]; }
+function inPoly(p, pts){ let ins=false; for(let i=0,j=pts.length-1;i<pts.length;j=i++){ const a=pts[i], b=pts[j]; if(((a[1]>p[1])!==(b[1]>p[1])) && (p[0] < (b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])) ins=!ins; } return ins; }
+
+/* Lunghezza delle due facce di un muro (A = lato +n, B = lato −n), raccordate con i muri collegati:
+   all'angolo la faccia interna si accorcia e quella esterna si allunga fino all'incontro con le facce dell'altro muro;
+   all'innesto a T la faccia si ferma sul filo del muro passante. Senza collegamenti vale la lunghezza in asse. */
+function wallFaceLengths(w, walls){
+  const f = wallFrame(w), len = f.len, u = [f.ux, f.uy], n = [f.nx, f.ny], EPS = 1e-3;
+  const shift = {A:[0, 0], B:[0, 0]};   // di quanto la faccia rientra (positivo) o sporge (negativo) a ciascun estremo
+  for (const [ei, E, dir] of [[0, w.a, u], [1, w.b, [-u[0], -u[1]]]]){
+    const conns = [];   // direzioni dei muri collegati, uscenti dal punto di giunzione
+    for (const v of walls){ if (v === w || v.level !== w.level) continue;
+      const g = wallFrame(v), ev = [g.ux, g.uy];
+      if (Math.hypot(v.a[0]-E[0], v.a[1]-E[1]) < EPS) conns.push({e:ev, t:v.thick});
+      else if (Math.hypot(v.b[0]-E[0], v.b[1]-E[1]) < EPS) conns.push({e:[-ev[0], -ev[1]], t:v.thick});
+      else { const q = projOnSeg(E, v.a, v.b); if (q.d < EPS && q.t > 1e-4 && q.t < 1 - 1e-4){ conns.push({e:ev, t:v.thick}); conns.push({e:[-ev[0], -ev[1]], t:v.thick}); } } }
+    for (const [side, sg] of [["A", 1], ["B", -1]]){
+      let best = null; const nn = [n[0]*sg, n[1]*sg];   // normale verso la faccia
+      for (const c of conns){
+        const m = [-c.e[1], c.e[0]], cr = dir[0]*c.e[1] - dir[1]*c.e[0]; if (Math.abs(cr) < 1e-6) continue;   // muri allineati: la faccia prosegue
+        const toward = nn[0]*c.e[0] + nn[1]*c.e[1] > 0;   // la faccia guarda verso il muro collegato?
+        const sm = (m[0]*dir[0] + m[1]*dir[1] > 0 ? 1 : -1) * (toward ? 1 : -1);   // faccia dell'altro muro: verso questo muro se «toward»
+        // retta della faccia: E + nn·t/2 + dir·λ ; faccia dell'altro muro: E + m·sm·tv/2 + e·μ
+        const p0 = [nn[0]*w.thick/2 - m[0]*sm*c.t/2, nn[1]*w.thick/2 - m[1]*sm*c.t/2];
+        const lam = (c.e[0]*p0[1] - c.e[1]*p0[0]) / (dir[0]*c.e[1] - dir[1]*c.e[0]);
+        if (best === null || lam > best) best = lam;
+      }
+      shift[side][ei] = best ?? 0;
+    }
+  }
+  // muri che s'innestano a metà di questo (T): la faccia da quel lato è interrotta dallo spessore del muro innestato
+  const cut = {A:0, B:0};
+  for (const v of walls){ if (v === w || v.level !== w.level) continue;
+    for (const [P0, P1] of [[v.a, v.b], [v.b, v.a]]){ const q = projOnSeg(P0, w.a, w.b); if (q.d > EPS || q.t < 1e-4 || q.t > 1 - 1e-4) continue;
+      const g = Math.hypot(P1[0]-P0[0], P1[1]-P0[1]) || 1, e = [(P1[0]-P0[0])/g, (P1[1]-P0[1])/g], sn = Math.abs(u[0]*e[1] - u[1]*e[0]); if (sn < 1e-6) continue;
+      cut[n[0]*e[0] + n[1]*e[1] > 0 ? "A" : "B"] += v.thick / sn; } }
+  return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B), shift};
+}
 
 /* ---- 02-lib.js ---- */
 /* ============================================================
@@ -1121,12 +1181,6 @@ function worldUV(geo, size=1){
 function clean(g){ g = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(g.attributes)) if (k !== "position") g.deleteAttribute(k); return g; }
 
 /* ---------- Geometria di pianta ---------- */
-function wallFrame(w){ const dx=w.b[0]-w.a[0], dy=w.b[1]-w.a[1], len=Math.hypot(dx,dy)||1e-9; const ux=dx/len, uy=dy/len; return {len, ux, uy, nx:-uy, ny:ux}; }
-const ptOnWall = (w, s, off=0) => { const f = wallFrame(w); return [w.a[0]+f.ux*s+f.nx*off, w.a[1]+f.uy*s+f.ny*off]; };
-function projOnSeg(p, a, b){ const dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy||1e-9; const t=clamp(((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2,0,1); const q=[a[0]+dx*t, a[1]+dy*t]; return {t, q, d:Math.hypot(p[0]-q[0], p[1]-q[1])}; }
-function polyArea(pts){ let a=0; for(let i=0;i<pts.length;i++){ const p=pts[i], q=pts[(i+1)%pts.length]; a += p[0]*q[1]-q[0]*p[1]; } return a/2; }
-function polyCentroid(pts){ let x=0,y=0,a=0; for(let i=0;i<pts.length;i++){ const p=pts[i], q=pts[(i+1)%pts.length], c=p[0]*q[1]-q[0]*p[1]; a+=c; x+=(p[0]+q[0])*c; y+=(p[1]+q[1])*c; } if (Math.abs(a)<1e-9) return pts[0]; return [x/(3*a), y/(3*a)]; }
-function inPoly(p, pts){ let ins=false; for(let i=0,j=pts.length-1;i<pts.length;j=i++){ const a=pts[i], b=pts[j]; if(((a[1]>p[1])!==(b[1]>p[1])) && (p[0] < (b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])) ins=!ins; } return ins; }
 function wallSolidRanges(w){
   const f = wallFrame(w), ext = w.thick/2;
   const cuts = P.openings.filter(o=>o.wall===w.id).map(o=>({s0:Math.max(.02,o.t-o.w/2), s1:Math.min(f.len-.02,o.t+o.w/2), o})).filter(c=>c.s1>c.s0).sort((a,b)=>a.s0-b.s0);
@@ -1834,7 +1888,7 @@ function placeFurniture(p){
    quote, snap configurabili, menu contestuale, barra di stato, aiuto
    ============================================================ */
 const PREFS_KEY = "pianta-libera-prefs-v1";
-const PREFS = Object.assign({grid:.05, snapGrid:true, snapEnds:true, snapMid:true, snapWall:true, guides:true, ortho:false, autoDims:false, wallRef:"asse", rectRef:"asse"},
+const PREFS = Object.assign({grid:.05, snapGrid:true, snapEnds:true, snapMid:true, snapWall:true, guides:true, ortho:false, autoDims:true, wallRef:"asse", rectRef:"asse"},
   (() => { try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch(e){ return {}; } })());
 function savePrefs(){ try { localStorage.setItem(PREFS_KEY, JSON.stringify(PREFS)); } catch(e){} }
 
@@ -2547,7 +2601,7 @@ function applySite(){ const s = P.site; if (!s?.auto) return; const r = siteSun(
 const hhmm = h => `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
 function sunHTML(){
   const s = P.site || siteDefaults(), auto = !!s.auto, lm = P.lightsMode || "auto";
-  const common = `<div class="row"><div class="f"><span class="lbl">Luci artificiali</span><select id="lightsMode" class="inp"><option value="auto" ${lm === "auto" ? "selected" : ""}>Accese al tramonto e di notte</option><option value="on" ${lm === "on" ? "selected" : ""}>Sempre accese</option><option value="off" ${lm === "off" ? "selected" : ""}>Spente</option></select></div>${F("northDeg", "Nord (° dall'alto della pianta)", s.north || 0, 'inputmode="decimal"')}</div>`;
+  const common = `<div class="row"><div class="f"><span class="lbl">Luci artificiali</span><select id="lightsMode" class="inp"><option value="auto" ${lm === "auto" ? "selected" : ""}>Sera e notte</option><option value="on" ${lm === "on" ? "selected" : ""}>Sempre accese</option><option value="off" ${lm === "off" ? "selected" : ""}>Spente</option></select></div>${F("northDeg", "Nord (° dall'alto della pianta)", s.north || 0, 'inputmode="decimal"')}</div>`;
   if (!auto) return `<div class="f"><span class="lbl">Sole</span><div class="seg"><button data-sunmode="0" aria-pressed="true">Manuale</button><button data-sunmode="1" aria-pressed="false">Da luogo, data e ora</button></div></div>
       <div class="f"><label class="lbl" for="sAz">Orientamento sole · ${Math.round(P.sun.az)}°</label><input type="range" id="sAz" min="0" max="360" value="${P.sun.az}"></div>
       <div class="f"><label class="lbl" for="sEl">Altezza sole · ${Math.round(P.sun.el)}°</label><input type="range" id="sEl" min="3" max="80" value="${P.sun.el}"></div>${common}`;
@@ -2981,6 +3035,9 @@ function renderInspector(){
   }
   if (!sel && S.tool !== "furn" && S.tool !== "calib" && S.tool !== "paint"){
     const U = L.underlay;
+    // primi passi (U12): tre punti di partenza finché l'utente non chiude il riquadro
+    if (!PREFS.introDone && !S.viewer && !S.guest) h += `<div class="sec intro"><h3>Per iniziare</h3><p class="note">Disegna, importa o parti dall'esempio. Clic su un elemento per vederne le proprietà; <kbd>?</kbd> mostra tutte le scorciatoie.</p>
+      <div class="btns"><button class="btn primary" id="inRoom">Disegna una stanza</button><button class="btn" id="inImport">Importa una pianta</button><button class="btn" id="inNew">Progetto vuoto</button><button class="btn" id="inClose" aria-label="Chiudi i primi passi">Ho capito</button></div></div>`;
     h += `<div class="sec"><h3>Piano</h3>${F("lName","Nome",L.name)}<div class="row3">${F("lElev","Quota (m)",fmt(L.elev),'inputmode="decimal"')}${F("lH","Altezza muri",fmt(L.height),'inputmode="decimal"')}${F("lSlab","Solaio",fmt(L.slab),'inputmode="decimal"')}</div>
       <div class="row"><div class="f"><span class="lbl">Copertura</span><select id="lRoof" class="inp"><option value="none">Nessuna</option><option value="flat">Piana</option><option value="gable">A due falde</option><option value="hip">A padiglione (quattro falde)</option><option value="shed">A una falda</option></select></div>
       ${["gable","hip","shed"].includes(L.roof.type)?F("lPitch","Pendenza °",L.roof.pitch,'inputmode="decimal"'):"<div></div>"}</div>
@@ -3057,6 +3114,12 @@ P_.addEventListener("input", e => {
   if (t.id === "libQ"){ S.libQ = t.value; const g = $("#libGrid"); if (g){ g.innerHTML = libGridHTML(); hydrateThumbs(g); } $$("[data-fcat]", P_).forEach(b => b.setAttribute("aria-pressed", !S.libQ && b.dataset.fcat === S.furnCat)); }
 });
 P_.addEventListener("click", e => {
+  const ib = e.target.closest("#inRoom, #inImport, #inNew, #inClose");
+  if (ib){ PREFS.introDone = true; savePrefs();
+    if (ib.id === "inRoom"){ setTool("rect"); toast("Trascina nella pianta per disegnare una stanza con i muri"); }
+    if (ib.id === "inImport"){ S.tab = "import"; renderTabs(); }
+    if (ib.id === "inNew"){ const p = sampleProject(); p.name = "Nuovo progetto"; p.walls = []; p.openings = []; p.rooms = []; p.objects = []; p.levels[0].roof.type = "none"; openProjectData(p); }
+    renderInspector(); return; }
   const b = e.target.closest("button"); if (!b) return; const sel = findSel(), L = level();
   if (b.dataset.fs){ S.furnSrc = b.dataset.fs; S.onlinePick = null; renderInspector(); return; }
   if (b.dataset.fcat){ S.furnCat = b.dataset.fcat; S.libQ = ""; renderInspector(); return; }
@@ -3118,7 +3181,9 @@ function autoLabel(root){ for (const el of root.querySelectorAll("select, input:
   if (el.getAttribute("aria-label") || el.getAttribute("aria-labelledby") || el.labels?.length) continue;
   const t = (el.closest(".f, label, .row")?.querySelector(".lbl")?.textContent || el.getAttribute("title") || el.getAttribute("placeholder") || "").trim(); if (t) el.setAttribute("aria-label", t); } }
 let autoLabelQ = 0; new MutationObserver(() => { if (!autoLabelQ) autoLabelQ = requestAnimationFrame(() => { autoLabelQ = 0; autoLabel(document.body); }); }).observe(document.body, {childList:true, subtree:true});
-function refresh(){ renderLevels(); renderInspector(); draw2D(); rebuild3D(); $("#undoBtn").disabled = !past.length; $("#redoBtn").disabled = !future.length; if (S.tab === "export") renderExport(); if (S.tab === "list") renderList(); renderCamSel(); }
+// strumenti del ricalco solo quando il piano ha una base importata (#59, U3)
+function syncUnderlayTools(){ const on = !!level()?.underlay; for (const b of document.querySelectorAll('[data-tool="calib"], [data-tool="moveunder"]')) b.hidden = !on; }
+function refresh(){ syncUnderlayTools(); renderLevels(); renderInspector(); draw2D(); rebuild3D(); $("#undoBtn").disabled = !past.length; $("#redoBtn").disabled = !future.length; if (S.tab === "export") renderExport(); if (S.tab === "list") renderList(); renderCamSel(); }
 
 /* ---- 06-online.js ---- */
 /* ============================================================
@@ -3275,6 +3340,10 @@ const EX = {ground:false, objects:true, scale:100, minMm:1.2, baseMm:2, split:tr
 function renderExport(){
   const pb = printBox();
   $("#panel-export").innerHTML = `
+  <div class="exp"><header><h4>Progetto</h4><span class="tag">.json</span></header>
+    <p class="note">Contiene tutto, compresi modelli e materiali importati. I modelli delle librerie online vengono riscaricati all'apertura. Tutti i progetti di questo browser sono nel pulsante <b>Progetti</b> in alto.</p><button class="btn" id="exJson">Salva progetto</button></div>
+  ${tavoleHTML()}${shareHTML()}
+  <h5 class="exp-sec">Per altri programmi</h5>
   <div class="exp"><header><h4>Per D5 Render e altri motori</h4><span class="tag">metri · Y in alto</span></header>
     <p class="note">Ogni materiale è un oggetto separato con un nome leggibile (es. <b>Muri · Intonaco bianco · Piano terra</b>), così in D5 lo sostituisci con un clic.</p>
     <label class="chk"><input type="checkbox" id="exObj" ${EX.objects?"checked":""}> Includi arredi, verde, persone e modelli importati</label>
@@ -3296,9 +3365,7 @@ function renderExport(){
     <button class="btn primary" id="exPrint">Esporta per la stampa${(EX.fmt3==="3mf"?zipNeeded("3mf"):zipNeeded("stl"))?" (.zip)":""}</button></div>
   <div class="exp"><header><h4>Pianta in DXF</h4><span class="tag">AutoCAD · Archicad · Revit</span></header>
     <p class="note">Piano corrente, in metri: layer MURI, APERTURE, LOCALI, ARREDI e TESTI.</p><button class="btn" id="exDxf">DXF del piano${zipNeeded("dxf")?" (.zip)":""}</button></div>
-  <div class="exp"><header><h4>Progetto</h4><span class="tag">.json</span></header>
-    <p class="note">Contiene tutto, compresi modelli e materiali importati. I modelli delle librerie online vengono riscaricati all'apertura. Tutti i progetti di questo browser sono nel pulsante <b>Progetti</b> in alto.</p><button class="btn" id="exJson">Salva progetto</button></div>
-  ${shareHTML()}${tavoleHTML()}${imagesExportHTML()}${moreExportHTML()}`;
+  ${imagesExportHTML()}${moreExportHTML()}`;
   $("#exRes").value = EX.res; afterRenderExportShare();
 }
 const PE = $("#panel-export");
@@ -6158,41 +6225,6 @@ function secMark(g){
 // superficie delle aperture di un muro, limitata al muro (larghezza fino alla lunghezza, altezza fino al muro)
 function openingArea(w){ const len = wallFrame(w).len, H = w.height || level(w.level).height;
   return Math.min(len * H, P.openings.filter(o => o.wall === w.id).reduce((s, o) => s + clamp(o.w, 0, len) * clamp(Math.min(o.h, H - (o.type === "door" ? 0 : o.sill)), 0, H), 0)); }
-/* Lunghezza delle due facce di un muro (A = lato +n, B = lato −n), raccordate con i muri collegati:
-   all'angolo la faccia interna si accorcia e quella esterna si allunga fino all'incontro con le facce dell'altro muro;
-   all'innesto a T la faccia si ferma sul filo del muro passante. Senza collegamenti vale la lunghezza in asse. */
-function wallFaceLengths(w, walls){
-  const f = wallFrame(w), len = f.len, u = [f.ux, f.uy], n = [f.nx, f.ny], EPS = 1e-3;
-  const shift = {A:[0, 0], B:[0, 0]};   // di quanto la faccia rientra (positivo) o sporge (negativo) a ciascun estremo
-  for (const [ei, E, dir] of [[0, w.a, u], [1, w.b, [-u[0], -u[1]]]]){
-    const conns = [];   // direzioni dei muri collegati, uscenti dal punto di giunzione
-    for (const v of walls){ if (v === w || v.level !== w.level) continue;
-      const g = wallFrame(v), ev = [g.ux, g.uy];
-      if (Math.hypot(v.a[0]-E[0], v.a[1]-E[1]) < EPS) conns.push({e:ev, t:v.thick});
-      else if (Math.hypot(v.b[0]-E[0], v.b[1]-E[1]) < EPS) conns.push({e:[-ev[0], -ev[1]], t:v.thick});
-      else { const q = projOnSeg(E, v.a, v.b); if (q.d < EPS && q.t > 1e-4 && q.t < 1 - 1e-4){ conns.push({e:ev, t:v.thick}); conns.push({e:[-ev[0], -ev[1]], t:v.thick}); } } }
-    for (const [side, sg] of [["A", 1], ["B", -1]]){
-      let best = null; const nn = [n[0]*sg, n[1]*sg];   // normale verso la faccia
-      for (const c of conns){
-        const m = [-c.e[1], c.e[0]], cr = dir[0]*c.e[1] - dir[1]*c.e[0]; if (Math.abs(cr) < 1e-6) continue;   // muri allineati: la faccia prosegue
-        const toward = nn[0]*c.e[0] + nn[1]*c.e[1] > 0;   // la faccia guarda verso il muro collegato?
-        const sm = (m[0]*dir[0] + m[1]*dir[1] > 0 ? 1 : -1) * (toward ? 1 : -1);   // faccia dell'altro muro: verso questo muro se «toward»
-        // retta della faccia: E + nn·t/2 + dir·λ ; faccia dell'altro muro: E + m·sm·tv/2 + e·μ
-        const p0 = [nn[0]*w.thick/2 - m[0]*sm*c.t/2, nn[1]*w.thick/2 - m[1]*sm*c.t/2];
-        const lam = (c.e[0]*p0[1] - c.e[1]*p0[0]) / (dir[0]*c.e[1] - dir[1]*c.e[0]);
-        if (best === null || lam > best) best = lam;
-      }
-      shift[side][ei] = best ?? 0;
-    }
-  }
-  // muri che s'innestano a metà di questo (T): la faccia da quel lato è interrotta dallo spessore del muro innestato
-  const cut = {A:0, B:0};
-  for (const v of walls){ if (v === w || v.level !== w.level) continue;
-    for (const [P0, P1] of [[v.a, v.b], [v.b, v.a]]){ const q = projOnSeg(P0, w.a, w.b); if (q.d > EPS || q.t < 1e-4 || q.t > 1 - 1e-4) continue;
-      const g = Math.hypot(P1[0]-P0[0], P1[1]-P0[1]) || 1, e = [(P1[0]-P0[0])/g, (P1[1]-P0[1])/g], sn = Math.abs(u[0]*e[1] - u[1]*e[0]); if (sn < 1e-6) continue;
-      cut[n[0]*e[0] + n[1]*e[1] > 0 ? "A" : "B"] += v.thick / sn; } }
-  return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B), shift};
-}
 const STYLE_NAME = Object.fromEntries([...DOOR_STYLES, ...WIN_STYLES.map(([k, n]) => ["w_" + k, n])]);
 function computo(){
   const R = new Map(), add = (key, cat, voce, um, q) => { if (!(q > 1e-6)) return; const r = R.get(key) || {key, cat, voce, um, q:0}; r.q += q; R.set(key, r); };

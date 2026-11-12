@@ -768,3 +768,14 @@ test("elenco: rapporto aeroilluminante per locale; tavole: cartiglio con i dati 
   expect(await page.evaluate(() => migrate(JSON.parse(JSON.stringify(P))).tav.info.committente)).toBe("Famiglia Rossi");
   expect(errors).toEqual([]);
 });
+
+// Revisione 11/2026 (U12): primi passi nel pannello, finché non si chiudono
+test("primi passi: disegna una stanza, importa, progetto vuoto; chiusi restano chiusi", async ({ page }) => {
+  const errors = await open(page);
+  await expect(page.locator("#panel-props .intro")).toContainText("Per iniziare");
+  await page.click("#inRoom"); expect(await page.evaluate(() => S.tool)).toBe("rect");
+  await expect(page.locator("#panel-props .intro")).toHaveCount(0);
+  await page.reload(); await page.waitForFunction(() => typeof P !== "undefined" && P);
+  await expect(page.locator("#panel-props .intro")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

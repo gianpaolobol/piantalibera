@@ -9,7 +9,7 @@
     "build": "npm run lint:globali && npm run build:editor -- --check",
     "build:editor": "node scripts/build-editor.mjs",
     "test": "npm run test:unit && npm run test:php && npm run test:e2e",
-    "test:unit": "node --test tests/worker.test.mjs tests/photo.test.mjs tests/photo-seg.test.mjs tests/auto3d.test.mjs tests/local-server.test.mjs",
+    "test:unit": "node --test tests/geometria.test.mjs tests/worker.test.mjs tests/photo.test.mjs tests/photo-seg.test.mjs tests/auto3d.test.mjs tests/local-server.test.mjs",
     "test:e2e": "playwright test",
     "deploy:cloudflare": "npx wrangler deploy --config worker/wrangler.toml",
     "test:php": "node --test tests/php.test.mjs",

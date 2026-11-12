@@ -40,6 +40,7 @@ Avvio: `npm install` → `npm run dev` → apri `http://localhost:8787/`.
 | `051-condivisione.js` | link per il cliente, modalità di sola lettura, commenti in pianta |
 | `052-avanguardia.js` | ritocco AI con maschera e galleria nel progetto, video, IFC4, anteprima di stampa 3D, pannello staccabile, tablet |
 | `09-init.js` | progetto di esempio, migrazione dello schema, avvio |
+| `../shared/geometria.js` | geometria pura della pianta (asse dei muri, proiezioni, superfici, facce raccordate), incorporata nell'editor e provata con `node --test` (#64) |
 
 Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, versioni fissate), fflate, dxf-parser e pdf.js caricati su richiesta.
 
@@ -54,6 +55,11 @@ Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, ve
 - Export: GLB e OBJ per D5 Render (un oggetto per materiale, nomi leggibili), 3MF/STL per la stampa 3D in scala con parete minima, basamento e piani separati, DXF della pianta, PNG, pacchetto AI, progetto JSON (schema versione 2 con migrazione dalla 1).
 - Render AI: preset «Backend Pianta Libera» sul contratto `/api/render` (vista + profondità + contorni + camera), modalità fedele/creativo, polling dei lavori, galleria con confronto. Preset diretti verso servizi esterni solo per prove locali.
 
+- **Quote dei muri visibili dall'inizio** (revisione 11/2026, #61): la lunghezza di tutti i muri («Quote» nella barra di stato) è accesa per impostazione; chi l'ha spenta la ritrova spenta.
+
+- **Per iniziare** (revisione 11/2026, U12): finché non si chiude, il pannello senza selezione mostra tre punti di partenza (disegna una stanza, importa una pianta, progetto vuoto); la scelta resta nelle preferenze del browser (`PREFS.introDone`).
+- **Scheda Esporta riordinata** (revisione 11/2026, #60): in cima Salva progetto, Tavole tecniche e Condividi con il cliente; sotto «Per altri programmi» D5/Blender, pacchetto AI, stampa 3D, DXF, immagini e IFC.
+- **Intestazione compatta** (revisione 11/2026, #59): sul computer una sola riga (annulla e ripristina come icone, senza slogan); il suggerimento dello strumento sta sopra la barra di stato e va a capo invece di troncarsi; «Scala rif.» e «Sposta rif.» compaiono solo se il piano ha una base di ricalco; il menu «Camere…» ha sempre la sua etichetta.
 - **Rapporto aeroilluminante** (revisione 11/2026): nella tabella dei locali (scheda Elenco) superficie delle finestre e delle porte vetrate sul perimetro e R.A.I. (finestre / superficie netta), con ⚠ sotto 1/8 (D.M. 5/7/1975, verifica indicativa).
 - **Cartiglio con i dati dello studio** (revisione 11/2026): Esporta → Tavole tecniche, campi «Studio / progettista», «Committente» e «Luogo» (`P.tav.info`), scritti nel cartiglio di ogni foglio.
 - **Progetti aperti da file** (revisione 11/2026, #56): oltre alla sanificazione dei testi e degli identificativi si correggono i valori fisici: muri più corti di 1 cm tolti, spessori e altezze non positivi riportati ai valori predefiniti, aperture con misure positive e dentro il loro muro, aperture senza muro tolte.
