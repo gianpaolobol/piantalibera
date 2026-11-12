@@ -44,7 +44,7 @@ test("correttezza: computo, copertura, IFC", async ({ page }) => {
     const C = [[0,0],[10,0],[10,4],[4,4],[4,10],[0,10]];
     for (let i = 0; i < C.length; i++) P.walls.push({id:"w"+i, level:L.id, a:C[i], b:C[(i+1)%C.length], thick:.3, height:null, mat:"intonaco"});
     commit(); const q = computo().find(x => x.cat === "Copertura")?.q || 0;
-    const atteso = 10.3 * 4.3 + 4.3 * 5.7;   // sagoma al filo esterno (bracci da 4 m in asse)
+    const atteso = 10.3 * 4.3 + 4.3 * 6.0;   // sagoma al filo esterno: 70,09 m² (bracci da 4 m in asse, muri 30 cm)
     return +(Math.abs(q - atteso) / atteso * 100).toFixed(1);
   });
 
