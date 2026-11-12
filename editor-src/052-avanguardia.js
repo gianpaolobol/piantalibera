@@ -102,102 +102,20 @@ async function recordVideo(kind, secs, hres){
 }
 document.addEventListener("keydown", e => { if (e.key === "Escape" && VID.on) VID.stop = true; });
 
-/* ---------- esportazione IFC4 (BIM) ---------- */
-const IFC64 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$";
-function ifcGuid(){ const b = crypto.getRandomValues(new Uint8Array(16)); let n = 0n; for (const x of b) n = (n << 8n) | BigInt(x); let s = ""; for (let i = 21; i >= 0; i--) s += IFC64[Number((n >> BigInt(6 * i)) & 63n)]; return s; }
-function ifcStr(s){ let o = ""; for (const ch of String(s ?? "")){ const c = ch.codePointAt(0); if (ch === "'") o += "''"; else if (ch === "\\") o += "\\\\"; else if (c >= 32 && c < 127) o += ch; else o += `\\X2\\${c.toString(16).toUpperCase().padStart(4, "0")}\\X0\\`; } return `'${o}'`; }
-/* Muro esterno: da almeno un lato non c'è un locale del suo piano (prova a 20 cm dalla faccia, a metà muro);
-   senza locali disegnati si considera esterno. */
-function wallIsExternal(w, Lv){
-  const rooms = P.rooms.filter(r => r.level === Lv.id && r.pts.length > 2); if (!rooms.length) return true;
-  const f = wallFrame(w), m = [(w.a[0]+w.b[0])/2, (w.a[1]+w.b[1])/2], d = w.thick/2 + .2;
-  const side = s => rooms.some(r => inPoly([m[0] + f.nx*d*s, m[1] + f.ny*d*s], r.pts));
-  return !(side(1) && side(-1));
-}
+/* ---------- esportazione IFC4 (BIM): il calcolo è in shared/ifc.js (buildIFC), qui solo le superfici dal 3D ---------- */
 function exportIFC(){
-  const L = [], add = s => { L.push(s); return "#" + L.length; }, R = v => { const x = Math.round(v * 1e6) / 1e6; return Number.isInteger(x) ? x + "." : String(x); };
-  const pt3 = (x, y, z) => add(`IFCCARTESIANPOINT((${R(x)},${R(y)},${R(z)}))`), pt2 = (x, y) => add(`IFCCARTESIANPOINT((${R(x)},${R(y)}))`), dir = (x, y, z) => add(`IFCDIRECTION((${R(x)},${R(y)},${R(z)}))`);
-  const ax3 = (p, zd, xd) => add(`IFCAXIS2PLACEMENT3D(${p},${zd || "$"},${xd || "$"})`), lp = (rel, a) => add(`IFCLOCALPLACEMENT(${rel || "$"},${a})`);
-  const Z = dir(0, 0, 1), O = pt3(0, 0, 0), A0 = ax3(O, Z, dir(1, 0, 0));
-  const ctx = add(`IFCGEOMETRICREPRESENTATIONCONTEXT($,'Model',3,1.E-05,${A0},$)`), body = add(`IFCGEOMETRICREPRESENTATIONSUBCONTEXT('Body','Model',*,*,*,*,${ctx},$,.MODEL_VIEW.,$)`);
-  const units = add(`IFCUNITASSIGNMENT((${add("IFCSIUNIT(*,.LENGTHUNIT.,$,.METRE.)")},${add("IFCSIUNIT(*,.AREAUNIT.,$,.SQUARE_METRE.)")},${add("IFCSIUNIT(*,.VOLUMEUNIT.,$,.CUBIC_METRE.)")},${add("IFCSIUNIT(*,.PLANEANGLEUNIT.,$,.RADIAN.)")}))`);
-  const proj = add(`IFCPROJECT('${ifcGuid()}',$,${ifcStr(P.name || "Progetto")},'Pianta Libera',$,$,$,(${ctx}),${units})`);
-  const siteLP = lp(null, A0), site = add(`IFCSITE('${ifcGuid()}',$,'Sito',$,$,${siteLP},$,$,.ELEMENT.,$,$,$,$,$)`);
-  const bLP = lp(siteLP, A0), bld = add(`IFCBUILDING('${ifcGuid()}',$,${ifcStr(P.name || "Edificio")},$,$,${bLP},$,$,.ELEMENT.,$,$,$)`);
-  add(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${proj},(${site}))`); add(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${site},(${bld}))`);
-  const rep = items => add(`IFCPRODUCTDEFINITIONSHAPE($,$,(${add(`IFCSHAPEREPRESENTATION(${body},'Body','SweptSolid',(${items.join(",")}))`)}))`);
-  const repT = items => add(`IFCPRODUCTDEFINITIONSHAPE($,$,(${add(`IFCSHAPEREPRESENTATION(${body},'Body','Tessellation',(${items.join(",")}))`)}))`);
-  const box = (cx, cy, xd, yd, z0, h) => add(`IFCEXTRUDEDAREASOLID(${add(`IFCRECTANGLEPROFILEDEF(.AREA.,$,${add(`IFCAXIS2PLACEMENT2D(${pt2(cx, cy)},$)`)},${R(xd)},${R(yd)})`)},${ax3(pt3(0, 0, z0))},${Z},${R(h)})`);
-  const W2I = p => [p[0], -p[1]];   // pianta (y verso sud) → IFC (Y verso nord)
-  const storeys = [], counts = {walls:0, doors:0, windows:0, spaces:0, slabs:0, other:0};
-  const bySt = [...P.levels].sort((a, b) => a.elev - b.elev);
   const {root} = buildModel({ground:false, objects:true, roof:true}); root.updateMatrixWorld(true);
   const meshTess = (filter, elev) => { const pts = [], idx = []; root.traverse(o => { if (!o.isMesh || !filter(o)) return; const g = o.geometry, p = g.attributes.position, ix = g.index, n = ix ? ix.count : p.count, v = new THREE.Vector3();
       if (pts.length / 3 + n > 60000) return; const base = pts.length / 3;
       for (let i = 0; i < p.count; i++){ v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); pts.push(v.x, -v.z, v.y - elev); }
       for (let i = 0; i + 2 < n; i += 3) idx.push([0, 1, 2].map(k => base + 1 + (ix ? ix.getX(i + k) : i + k))); });
-    if (!idx.length) return null;
-    const list = add(`IFCCARTESIANPOINTLIST3D((${Array.from({length:pts.length / 3}, (_, i) => `(${R(pts[i*3])},${R(pts[i*3+1])},${R(pts[i*3+2])})`).join(",")}))`);
-    return add(`IFCTRIANGULATEDFACESET(${list},$,$,(${idx.map(t => `(${t.join(",")})`).join(",")}),$)`); };
-  // materiali (uno per nome, associati agli elementi) e insiemi di proprietà e quantità standard (#57)
-  const bim = { mats:new Map(), matRel:new Map(),
-    mat(el, key){ const n = matName(key || "intonaco"); let m = this.mats.get(n); if (!m){ m = add(`IFCMATERIAL(${ifcStr(n)},$,$)`); this.mats.set(n, m); } (this.matRel.get(m) || this.matRel.set(m, []).get(m)).push(el); },
-    pset(el, name, props){ const ps = props.map(([k, t, v]) => add(`IFCPROPERTYSINGLEVALUE('${k}',$,${t === "bool" ? `IFCBOOLEAN(${v ? ".T." : ".F."})` : `IFCLABEL(${ifcStr(String(v))})`},$)`));
-      add(`IFCRELDEFINESBYPROPERTIES('${ifcGuid()}',$,$,$,(${el}),${add(`IFCPROPERTYSET('${ifcGuid()}',$,'${name}',$,(${ps.join(",")}))`)})`); },
-    qto(el, name, qs){ const T = {len:"IFCQUANTITYLENGTH", area:"IFCQUANTITYAREA", vol:"IFCQUANTITYVOLUME"};
-      add(`IFCRELDEFINESBYPROPERTIES('${ifcGuid()}',$,$,$,(${el}),${add(`IFCELEMENTQUANTITY('${ifcGuid()}',$,'${name}',$,$,(${qs.map(([k, t, v]) => add(`${T[t]}('${k}',$,$,${R(v)},$)`)).join(",")}))`)})`); } };
-  for (const Lv of bySt){
-    const sLP = lp(bLP, ax3(pt3(0, 0, Lv.elev))), st = add(`IFCBUILDINGSTOREY('${ifcGuid()}',$,${ifcStr(Lv.name)},$,$,${sLP},$,$,.ELEMENT.,${R(Lv.elev)})`); storeys.push(st);
-    const elems = [], spaces = [];
-    for (const w of wallsOf(Lv.id)){
-      const f = wallFrame(w); if (f.len < .01) continue; const a = W2I(w.a), h = w.height || Lv.height;
-      const wLP = lp(sLP, ax3(pt3(a[0], a[1], 0), Z, dir(f.ux, -f.uy, 0)));
-      // sagoma in pianta con gli angoli raccordati (nessuna sovrapposizione tra muri, #57); asse locale y = lato B
-      const sh = wallFaceLengths(w, P.walls).shift, t2 = w.thick / 2;
-      const quad = [[sh.A[0], -t2], [f.len - sh.A[1], -t2], [f.len - sh.B[1], t2], [sh.B[0], t2]];
-      const wprof = add(`IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,${add(`IFCPOLYLINE((${[...quad, quad[0]].map(q => pt2(q[0], q[1])).join(",")}))`)})`);
-      const wall = add(`IFCWALL('${ifcGuid()}',$,${ifcStr(`Muro ${Math.round(w.thick * 100)} cm`)},${ifcStr(matName(w.mat))},$,${wLP},${rep([add(`IFCEXTRUDEDAREASOLID(${wprof},${ax3(O)},${Z},${R(h)})`)])},$,.STANDARD.)`); elems.push(wall); counts.walls++;
-      const ext = wallIsExternal(w, Lv); bim.mat(wall, w.mat);
-      bim.pset(wall, "Pset_WallCommon", [["IsExternal", "bool", ext], ["LoadBearing", "bool", w.thick >= .25 || /portante|esterno/i.test(w.wtype || "")], ["Reference", "label", w.wtype || `Muro ${Math.round(w.thick * 100)} cm`]]);
-      bim.qto(wall, "Qto_WallBaseQuantities", [["Length", "len", f.len], ["Width", "len", w.thick], ["Height", "len", h], ["NetSideArea", "area", Math.max(0, f.len * h - openingArea(w))], ["NetVolume", "vol", Math.max(0, f.len * h - openingArea(w)) * w.thick]]);;
-      for (const o of P.openings.filter(o => o.wall === w.id)){
-        const bot = o.type === "door" ? 0 : o.sill, oh = Math.min(o.h, h - bot), oLP = lp(wLP, ax3(pt3(o.t, 0, bot)));
-        const op = add(`IFCOPENINGELEMENT('${ifcGuid()}',$,'Vano',$,$,${oLP},${rep([box(0, 0, o.w, w.thick + .1, 0, oh)])},$,.OPENING.)`);
-        add(`IFCRELVOIDSELEMENT('${ifcGuid()}',$,$,$,${wall},${op})`);
-        const fLP = lp(oLP, A0), geo = rep([box(0, 0, o.w, .06, 0, oh)]);
-        const el = o.type === "door" ? add(`IFCDOOR('${ifcGuid()}',$,${ifcStr("Porta " + (o.style || "battente"))},$,$,${fLP},${geo},$,${R(oh)},${R(o.w)},.DOOR.,${o.style === "doppia" || o.style === "portafinestra" ? ".DOUBLE_DOOR_SINGLE_SWING." : o.style === "scorrevole" || o.style === "scomparsa" ? ".SLIDING_TO_LEFT." : ".SINGLE_SWING_LEFT."},$)`)
-          : add(`IFCWINDOW('${ifcGuid()}',$,${ifcStr("Finestra " + (o.style || "battente"))},$,$,${fLP},${geo},$,${R(oh)},${R(o.w)},.WINDOW.,${o.w > 1.3 && (o.style || "battente") === "battente" ? ".DOUBLE_PANEL_VERTICAL." : ".SINGLE_PANEL."},$)`);
-        add(`IFCRELFILLSELEMENT('${ifcGuid()}',$,$,$,${op},${el})`); elems.push(el); counts[o.type === "door" ? "doors" : "windows"]++;
-        bim.pset(el, o.type === "door" ? "Pset_DoorCommon" : "Pset_WindowCommon", [["IsExternal", "bool", ext], ["Reference", "label", `${o.type === "door" ? "Porta" : "Finestra"} ${o.style || "battente"} ${Math.round(o.w * 100)}×${Math.round(oh * 100)}`]]);
-        bim.mat(el, o.type === "door" ? "legno" : "serramento");
-      }
-    }
-    for (const r of P.rooms.filter(r => r.level === Lv.id && r.pts.length > 2)){
-      const poly = r.pts.map(W2I), prof = () => add(`IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,${add(`IFCPOLYLINE((${[...poly, poly[0]].map(p => pt2(p[0], p[1])).join(",")}))`)})`);
-      const slab = add(`IFCSLAB('${ifcGuid()}',$,${ifcStr("Solaio " + (r.name || ""))},${ifcStr(matName(r.mat))},$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(pt3(0, 0, -Lv.slab))},${Z},${R(Lv.slab)})`)])},$,.FLOOR.)`); bim.mat(slab, r.mat); elems.push(slab); counts.slabs++;
-      const sp = add(`IFCSPACE('${ifcGuid()}',$,${ifcStr(r.name || "Locale")},$,$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(O)},${Z},${R(r.ceilH || Lv.height)})`)])},${ifcStr(r.name || "Locale")},.ELEMENT.,.INTERNAL.,$)`); spaces.push(sp); counts.spaces++;
-      const q = add(`IFCELEMENTQUANTITY('${ifcGuid()}',$,'Qto_SpaceBaseQuantities',$,$,(${add(`IFCQUANTITYAREA('NetFloorArea',$,$,${R(Math.abs(polyArea(r.pts)))},$)`)},${add(`IFCQUANTITYLENGTH('Height',$,$,${R(r.ceilH || Lv.height)},$)`)}))`);
-      add(`IFCRELDEFINESBYPROPERTIES('${ifcGuid()}',$,$,$,(${sp}),${q})`);
-    }
-    // copertura, scale, ringhiere, arredi: superfici triangolate
-    if (Lv.roof?.type && Lv.roof.type !== "none"){ const t = meshTess(o => (o.userData.cat === "roof" || o.userData.cat === "gable") && o.userData.level === Lv.id, Lv.elev);
-      if (t){ elems.push(add(`IFCROOF('${ifcGuid()}',$,'Copertura',${ifcStr(matName(Lv.roof.mat))},$,${lp(bLP, ax3(pt3(0, 0, Lv.elev)))},${repT([t])},$,${({flat:".FLAT_ROOF.", gable:".GABLE_ROOF.", hip:".HIP_ROOF.", shed:".SHED_ROOF."})[Lv.roof.type] || ".NOTDEFINED."})`)); counts.other++; } }
-    for (const ob of P.objects.filter(o => o.level === Lv.id && !o.hidden)){
-      const it = ob.kind === "lib" ? LIBMAP[libRef(ob.ref)] : null; if (it?.cat === "Verde" || it?.cat === "Persone") continue;
-      const t = meshTess(m => { let x = m; while (x && !x.userData?.objId) x = x.parent; return x?.userData.objId === ob.id && !m.userData.leaves; }, Lv.elev); if (!t) continue;
-      const kind = it?.param?.kind === "stair" ? `IFCSTAIR('${ifcGuid()}',$,${ifcStr(ob.name)},$,$,${lp(sLP, A0)},${repT([t])},$,${({dritta:".STRAIGHT_RUN_STAIR.", L:".QUARTER_TURN_STAIR.", U:".HALF_TURN_STAIR.", chiocciola:".SPIRAL_STAIR."})[paramsOf(ob, it).shape] || ".NOTDEFINED."})`
-        : it?.param?.kind === "rail" ? `IFCRAILING('${ifcGuid()}',$,${ifcStr(ob.name)},$,$,${lp(sLP, A0)},${repT([t])},$,.BALUSTRADE.)`
-        : it?.cat === "Luci" ? `IFCLIGHTFIXTURE('${ifcGuid()}',$,${ifcStr(ob.name)},$,$,${lp(sLP, A0)},${repT([t])},$,.NOTDEFINED.)`
-        : `IFCFURNITURE('${ifcGuid()}',$,${ifcStr(ob.name)},$,$,${lp(sLP, A0)},${repT([t])},$,.NOTDEFINED.)`;
-      elems.push(add(kind)); counts.other++; }
-    if (elems.length) add(`IFCRELCONTAINEDINSPATIALSTRUCTURE('${ifcGuid()}',$,$,$,(${elems.join(",")}),${st})`);
-    if (spaces.length) add(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${st},(${spaces.join(",")}))`);
-  }
-  if (storeys.length) add(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${bld},(${storeys.join(",")}))`);
-  for (const [m, els] of bim.matRel) add(`IFCRELASSOCIATESMATERIAL('${ifcGuid()}',$,$,$,(${els.join(",")}),${m})`);
-  const now = new Date().toISOString().slice(0, 19), name = slug() + ".ifc";
-  const text = `ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('ViewDefinition [ReferenceView_V1.2]'),'2;1');\nFILE_NAME(${ifcStr(name)},'${now}',('Pianta Libera'),('Pianta Libera'),'Pianta Libera','Pianta Libera','');\nFILE_SCHEMA(('IFC4'));\nENDSEC;\nDATA;\n${L.map((s, i) => `#${i + 1}=${s};`).join("\n")}\nENDSEC;\nEND-ISO-10303-21;\n`;
-  return {text, counts};
+    return idx.length ? {pts, idx} : null; };
+  const objOf = m => { let x = m; while (x && !x.userData?.objId) x = x.parent; return x?.userData.objId; };
+  return buildIFC(P, { matName, guid:ifcGuid, fileName:slug() + ".ifc",
+    tess: (s, elev) => s.roof ? meshTess(o => (o.userData.cat === "roof" || o.userData.cat === "gable") && o.userData.level === s.roof, elev)
+      : meshTess(m => objOf(m) === s.obj && !m.userData.leaves, elev),
+    objInfo: ob => { const it = ob.kind === "lib" ? LIBMAP[libRef(ob.ref)] : null; if (it?.cat === "Verde" || it?.cat === "Persone") return null;
+      return it?.param?.kind === "stair" ? {kind:"stair", shape:paramsOf(ob, it).shape} : it?.param?.kind === "rail" ? {kind:"rail"} : it?.cat === "Luci" ? {kind:"light"} : {kind:"furniture"}; } });
 }
 
 /* ---------- anteprima di stampa 3D ---------- */

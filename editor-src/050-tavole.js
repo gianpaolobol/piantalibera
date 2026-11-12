@@ -298,8 +298,7 @@ function secMark(g){
 
 /* ---------- computo delle quantità ---------- */
 // superficie delle aperture di un muro, limitata al muro (larghezza fino alla lunghezza, altezza fino al muro)
-function openingArea(w){ const len = wallFrame(w).len, H = w.height || level(w.level).height;
-  return Math.min(len * H, P.openings.filter(o => o.wall === w.id).reduce((s, o) => s + clamp(o.w, 0, len) * clamp(Math.min(o.h, H - (o.type === "door" ? 0 : o.sill)), 0, H), 0)); }
+function openingArea(w){ return wallOpeningArea(w, P.openings, w.height || level(w.level).height); }   // shared/ifc.js
 const STYLE_NAME = Object.fromEntries([...DOOR_STYLES, ...WIN_STYLES.map(([k, n]) => ["w_" + k, n])]);
 function computo(){
   const R = new Map(), add = (key, cat, voce, um, q) => { if (!(q > 1e-6)) return; const r = R.get(key) || {key, cat, voce, um, q:0}; r.q += q; R.set(key, r); };
