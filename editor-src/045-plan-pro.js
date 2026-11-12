@@ -3,7 +3,7 @@
    quote, snap configurabili, menu contestuale, barra di stato, aiuto
    ============================================================ */
 const PREFS_KEY = "pianta-libera-prefs-v1";
-const PREFS = Object.assign({grid:.05, snapGrid:true, snapEnds:true, snapMid:true, snapWall:true, guides:true, ortho:false, autoDims:false, wallRef:"asse", rectRef:"asse"},
+const PREFS = Object.assign({grid:.05, snapGrid:true, snapEnds:true, snapMid:true, snapWall:true, guides:true, ortho:false, autoDims:true, wallRef:"asse", rectRef:"asse"},
   (() => { try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch(e){ return {}; } })());
 function savePrefs(){ try { localStorage.setItem(PREFS_KEY, JSON.stringify(PREFS)); } catch(e){} }
 

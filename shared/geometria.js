@@ -41,5 +41,5 @@ export function wallFaceLengths(w, walls){
     for (const [P0, P1] of [[v.a, v.b], [v.b, v.a]]){ const q = projOnSeg(P0, w.a, w.b); if (q.d > EPS || q.t < 1e-4 || q.t > 1 - 1e-4) continue;
       const g = Math.hypot(P1[0]-P0[0], P1[1]-P0[1]) || 1, e = [(P1[0]-P0[0])/g, (P1[1]-P0[1])/g], sn = Math.abs(u[0]*e[1] - u[1]*e[0]); if (sn < 1e-6) continue;
       cut[n[0]*e[0] + n[1]*e[1] > 0 ? "A" : "B"] += v.thick / sn; } }
-  return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B)};
+  return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B), shift};
 }

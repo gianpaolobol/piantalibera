@@ -110,7 +110,7 @@ function pageDXF(pg){
       for (const s of it.sub){ if (s.pts.length < 2) continue; out.push("0","POLYLINE","8",lay,"66","1","70",s.closed ? "1" : "0"); for (const p of s.pts) out.push("0","VERTEX","8",lay,"10",p[0].toFixed(3),"20",Y(p[1]),"30","0"); out.push("0","SEQEND","8",lay); } }
     else { const b = textBox(it); out.push("0","TEXT","8","TESTI","10",b.x.toFixed(3),"20",Y(b.y),"30","0","40",(it.size * .72).toFixed(3),"1",it.text.replace(/[\r\n]/g, " "),"50",(-it.rot * 180 / Math.PI).toFixed(2)); }
   }
-  out.push("0","ENDSEC","0","EOF"); return out.join("\n");
+  out.push("0","ENDSEC","0","EOF"); return dxfWithLayers(out).join("\n");
 }
 
 /* ---------- impostazioni delle tavole ---------- */
@@ -219,7 +219,11 @@ function titleBlock(g, pg, title, scaleTxt, n, N){
   g.poly([[10, 10], [W - 10, 10], [W - 10, H - 10], [10, H - 10]], {stroke:"#111", lw:.5});
   g.poly([[bx, by], [bx + bw, by], [bx + bw, H - 10], [bx, H - 10]], {fill:"#fff", stroke:"#111", lw:.35});
   g.line([bx, by + 13], [bx + bw, by + 13], .2); g.line([bx + bw * .62, by], [bx + bw * .62, H - 10], .2); g.line([bx + bw * .62, by + 6.5], [bx + bw, by + 6.5], .15); g.line([bx + bw * .81, by + 13], [bx + bw * .81, H - 10], .15);
-  g.text(P.name || "Progetto", bx + 3, by + 6, 4, {bold:true}); g.text(title, bx + 3, by + 11, 3); g.text("Pianta Libera · elaborato generato dal modello: verificare le misure, non è un documento tecnico certificato", bx + 3, by + 19.5, 1.9, {col:"#555"});
+  const I = tav().info || {}, cut = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s, who = cut([I.committente && "Committente: " + I.committente, I.luogo].filter(Boolean).join(" · "), Math.round(bw * .62 / 1.25));
+  g.text(P.name || "Progetto", bx + 3, by + 6, 4, {bold:true}); g.text(title, bx + 3, by + 11, 3);
+  if (I.studio) g.text(cut(I.studio, Math.round(bw * .62 / 1.45)), bx + 3, by + 17.2, 2.6, {bold:true});
+  if (who) g.text(who, bx + 3, by + (I.studio ? 20.6 : 17.6), 2.2);
+  g.text("Pianta Libera · elaborato generato dal modello: verificare le misure, non è un documento tecnico certificato", bx + 3, by + (I.studio || who ? 24.4 : 19.5), I.studio || who ? 1.6 : 1.9, {col:"#555"});
   g.text("Scala", bx + bw * .62 + 2, by + 4, 1.8, {col:"#666"}); g.text(scaleTxt, bx + bw * .62 + 2, by + 6.2 + 4.6, 3.2, {bold:true});
   g.text("Data", bx + bw * .62 + 2, by + 17, 1.8, {col:"#666"}); g.text(new Date().toLocaleDateString("it-IT"), bx + bw * .62 + 2, by + 22.5, 2.8);
   g.text("Foglio", bx + bw * .81 + 2, by + 17, 1.8, {col:"#666"}); g.text(`${n}/${N}`, bx + bw * .81 + 2, by + 22.5, 2.8, {bold:true});
@@ -313,7 +317,8 @@ function computo(){
   for (const o of P.openings){ const w = wallById(o.wall); if (!w) continue; const st = o.type === "door" ? (STYLE_NAME[o.style || "battente"] || "A battente") : (STYLE_NAME["w_" + (o.style || "battente")] || "A battente");
     add(`ap:${o.type}:${o.style || ""}:${Math.round(o.w * 100)}:${Math.round(o.h * 100)}`, o.type === "door" ? "Porte" : "Finestre", `${o.type === "door" ? "Porta" : "Finestra"} ${st.toLowerCase()} ${Math.round(o.w * 100)}×${Math.round(o.h * 100)}`, "n.", 1);
     if (o.shut) add(`osc:${o.shut}`, "Finestre", o.shut === "persiane" ? "Persiane (coppie)" : "Tapparelle", "n.", 1); }
-  for (const L of P.levels){ if (!L.roof || L.roof.type === "none") continue; const b = planBounds(L.id); if (!b) continue; const o = L.roof.overhang || 0, A = (b.x1 - b.x0 + 2*o) * (b.y1 - b.y0 + 2*o), p = THREE.MathUtils.degToRad(clamp(L.roof.pitch || 0, 0, 60));
+  // superficie della copertura: proiezione in pianta della sagoma con lo sporto, divisa per il coseno della pendenza (falde tutte uguali)
+  for (const L of P.levels){ if (!L.roof || L.roof.type === "none") continue; const RR = roofRects(L.id); if (!RR) continue; const o = L.roof.overhang || 0, A = RR.area(o), p = THREE.MathUtils.degToRad(clamp(L.roof.pitch || 0, 0, 60));
     add(`tetto:${L.roof.mat}`, "Copertura", `Copertura ${({flat:"piana", gable:"a due falde", hip:"a padiglione", shed:"a una falda"})[L.roof.type]} in ${matName(L.roof.mat).toLowerCase()}`, "m²", L.roof.type === "flat" ? A : A / Math.cos(p)); }
   for (const o of P.objects){ const it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null; if (it?.cat === "Persone") continue;
     if (it?.param?.kind === "rail") add("ringhiera", "Scale e parapetti", "Ringhiera / parapetto", "m", paramsOf(o, it).len * (o.scale || 1));
@@ -329,7 +334,7 @@ function computoHTML(){
   const body = rows.map(r => { const p = pr[r.key], imp = p != null ? p * r.q : null; if (imp != null) tot += imp; const head = r.cat !== cat ? `<tr class="cat"><td colspan="5">${esc(cat = r.cat)}</td></tr>` : "";
     return head + `<tr><td>${esc(r.voce)}</td><td>${esc(r.um)}</td><td class="num">${fmt(r.q, r.um === "n." ? 0 : 2)}</td><td><input class="inp price" data-price="${esc(r.key)}" value="${p != null ? fmt(p, 2) : ""}" inputmode="decimal" aria-label="Prezzo unitario ${esc(r.voce)}" placeholder="€"></td><td class="num">${imp != null ? eur(imp) : ""}</td></tr>`; }).join("");
   return `<div class="sec"><h3>Computo delle quantità</h3><p class="note">Quantità ricavate dal modello: muri in asse al netto delle aperture, pavimenti netti, coperture in falda. Scrivi i prezzi unitari (€) del tuo listino per avere gli importi: restano nel progetto.</p>
-    <div class="tblwrap"><table class="olist comp"><thead><tr><th>Voce</th><th>u.m.</th><th>Quantità</th><th>€/u.m.</th><th>Importo €</th></tr></thead><tbody>${body}
+    <div class="tblwrap" tabindex="0" role="region" aria-label="Tabella"><table class="olist comp"><thead><tr><th>Voce</th><th>u.m.</th><th>Quantità</th><th>€/u.m.</th><th>Importo €</th></tr></thead><tbody>${body}
     <tr class="tot"><td>Totale</td><td></td><td></td><td></td><td class="num">${eur(tot)}</td></tr></tbody></table></div>
     <div class="btns"><button class="btn" id="compCsv">Esporta computo in CSV</button></div></div>`;
 }
@@ -351,6 +356,7 @@ function tavoleHTML(){
       <div class="f"><span class="lbl">Scala</span><select id="tvScale" class="inp">${[50, 100, 200].map(s => `<option value="${s}" ${T.scale === s ? "selected" : ""}>1:${s}</option>`).join("")}</select></div>
       <div class="f"><span class="lbl">Sezione A-A</span><select id="tvAxis" class="inp"><option value="x" ${T.sec.axis === "x" ? "selected" : ""}>Verticale in pianta</option><option value="z" ${T.sec.axis === "z" ? "selected" : ""}>Orizzontale in pianta</option></select></div></div>
     <div class="row">${F("tvPos", T.sec.axis === "x" ? "Sezione a x = (m)" : "Sezione a y = (m)", fmt(T.sec.pos), 'inputmode="decimal"')}<div class="f"><span class="lbl">Guarda verso</span><select id="tvDir" class="inp"><option value="1" ${T.sec.dir > 0 ? "selected" : ""}>${T.sec.axis === "x" ? "Est" : "Sud"}</option><option value="-1" ${T.sec.dir < 0 ? "selected" : ""}>${T.sec.axis === "x" ? "Ovest" : "Nord"}</option></select></div></div>
+    <div class="row3">${F("tvStudio", "Studio / progettista", T.info?.studio || "", 'maxlength="80"')}${F("tvClient", "Committente", T.info?.committente || "", 'maxlength="80"')}${F("tvPlace", "Luogo", T.info?.luogo || "", 'maxlength="80"')}</div>
     <label class="chk"><input type="checkbox" id="tvChains" ${T.chains ? "checked" : ""}> Catene di quote esterne automatiche</label>
     <label class="chk"><input type="checkbox" id="tvFurn" ${T.furniture ? "checked" : ""}> Arredi in pianta</label>
     <label class="chk"><input type="checkbox" id="tvColor" ${T.color ? "checked" : ""}> Prospetti e sezioni a colori</label>
@@ -360,6 +366,7 @@ function tavoleHTML(){
 }
 $("#panel-export").addEventListener("change", e => { const t = e.target, T = tav(), v = num(t.value);
   const set = {tvPaper:() => T.paper = t.value, tvScale:() => T.scale = +t.value, tvAxis:() => { T.sec.axis = t.value; const b = planBounds(); if (b) T.sec.pos = +(t.value === "x" ? (b.x0 + b.x1) / 2 : (b.y0 + b.y1) / 2).toFixed(2); renderExport(); }, tvPos:() => { if (v !== null) T.sec.pos = v; }, tvDir:() => T.sec.dir = +t.value,
+    tvStudio:() => (T.info = {...T.info, studio:t.value.trim().slice(0, 80)}), tvClient:() => (T.info = {...T.info, committente:t.value.trim().slice(0, 80)}), tvPlace:() => (T.info = {...T.info, luogo:t.value.trim().slice(0, 80)}),
     tvChains:() => T.chains = t.checked, tvFurn:() => T.furniture = t.checked, tvColor:() => T.color = t.checked, tvComp:() => T.comp = t.checked}[t.id];
   if (set){ set(); save(); draw2D(); }
 });
