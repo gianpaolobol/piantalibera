@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Xsfg2O+4zWcSpfmQ5Ki0+M5YHUghtjuTjo/+CWySj4k=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-hv58ySp2gmO3NUz55z5DCxYL41G1vsXFGrgKDm9KKyI=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -143,7 +143,7 @@ canvas{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-web
 .side{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden;position:relative}
 .side-grip{position:absolute;left:0;top:0;bottom:0;width:6px;cursor:ew-resize;z-index:3;touch-action:none}.side-grip:hover{background:var(--accent-soft)}
 .side-head{display:none;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px;border-bottom:1px solid var(--line);cursor:move;font-size:12px;color:var(--muted);touch-action:none}.side-head .btn{padding:2px 8px;font-size:12px}
-.tabs .tab-ic{flex:0 0 26px;font-size:13px}.tabs button{white-space:nowrap}
+.tabs .tab-ic{flex:0 0 26px;font-size:13px}.tabs-in{display:contents}.tabs button{white-space:nowrap}
 body.side-float .main{grid-template-columns:auto 1fr}
 body.side-float .side{position:fixed;z-index:45;resize:both;box-shadow:0 12px 32px rgba(0,0,0,.22);min-width:260px;min-height:220px;max-width:90vw;max-height:90vh}
 body.side-float .side-head{display:flex}body.side-float .side-grip,body.side-float #sideFloat{display:none}
@@ -323,6 +323,8 @@ body.compact .hud{bottom:52px}
 .f3row.sel{background:var(--accent-soft)}.f3row .note{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0}
 .btn.mini{min-height:30px;padding:2px 8px}
 .photo-ov{position:absolute;inset:0;pointer-events:none;display:flex;justify-content:center;z-index:2}.photo-ov img{height:100%;width:auto;max-width:none}
+.no3d{position:absolute;inset:12px;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:20px;background:var(--panel, #fff);color:var(--ink, #222);border:1px solid var(--line, #ccc);border-radius:10px;font-size:14px;line-height:1.45;text-align:center;z-index:5}
+.no3d b{font-size:15px}
 </style>
 
 <div id="app">
@@ -371,12 +373,12 @@ body.compact .hud{bottom:52px}
     </section>
 
     <aside class="side">
-      <div class="tabs" role="tablist">
+      <div class="tabs"><div class="tabs-in" role="tablist" aria-label="Pannello">
         <button role="tab" data-tab="props" aria-selected="true">Proprietà</button>
         <button role="tab" data-tab="list" aria-selected="false">Elenco</button><button role="tab" data-tab="import" aria-selected="false">Importa</button>
         <button role="tab" data-tab="export" aria-selected="false">Esporta</button>
         <button role="tab" data-tab="ai" aria-selected="false">Render AI</button>
-      </div>
+      </div></div>
       <div class="panel" id="panel-props"></div>
       <div class="panel" id="panel-import" hidden></div>
       <div class="panel" id="panel-export" hidden></div>
@@ -384,7 +386,7 @@ body.compact .hud{bottom:52px}
       <div class="panel" id="panel-ai" hidden></div>
     </aside>
   </div>
-  <div id="toast" role="status"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
   <input type="file" id="fPlan" accept=".dxf,.dwg,.pdf,.png,.jpg,.jpeg,.webp" hidden>
   <input type="file" id="fA3" accept=".dxf,.dwg" multiple hidden>
   <input type="file" id="fF3" accept="image/*" hidden>
@@ -957,7 +959,7 @@ const thumbCache = {};
 let thumbR = null;
 function thumbRenderer(){
   if (thumbR) return thumbR;
-  const r = new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true});
+  const r = NO_WEBGL ? inertObject() : new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true});
   r.setPixelRatio(1); r.setSize(THUMB.w, THUMB.h); r.outputEncoding = THREE.sRGBEncoding; r.toneMapping = THREE.ACESFilmicToneMapping;
   r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
   const sc = new THREE.Scene(), pm = new THREE.PMREMGenerator(r); sc.environment = pm.fromScene(new THREE.RoomEnvironment(), .04).texture;
@@ -1028,7 +1030,17 @@ const wallsOf = lid => P.walls.filter(w => w.level === lid);
 const wallById = id => P.walls.find(w => w.id === id);
 
 const c3d = $("#c3d");
-const renderer = new THREE.WebGLRenderer({canvas:c3d, antialias:true, preserveDrawingBuffer:true});
+/* Senza WebGL (PC senza accelerazione grafica, macchine virtuali, desktop remoto) l'editor resta usabile in pianta:
+   il renderer diventa un oggetto inerte che accetta ogni chiamata, e la vista 3D mostra un messaggio (#67). */
+function inertObject(){ const h = { get:(t, k) => k === Symbol.toPrimitive ? () => 0 : k === "then" ? undefined : k in t ? t[k] : (t[k] = new Proxy(function(){}, h)),
+  apply:() => new Proxy(function(){}, h), construct:() => new Proxy(function(){}, h), set:(t, k, v) => { t[k] = v; return true; } }; return new Proxy(function(){}, h); }
+let NO_WEBGL = false;
+const renderer = (() => { try { const r = new THREE.WebGLRenderer({canvas:c3d, antialias:true, preserveDrawingBuffer:true}); if (!r.getContext()) throw new Error("WebGL"); return r; }
+  catch(e){ NO_WEBGL = true; console.warn("WebGL non disponibile: vista 3D disattivata", e?.message || e); return inertObject(); } })();
+if (NO_WEBGL) queueMicrotask(() => {
+  const box = document.createElement("div"); box.className = "no3d"; box.setAttribute("role", "status");
+  box.innerHTML = "<b>La vista 3D non è disponibile su questo dispositivo.</b><span>Il browser non può usare la grafica 3D (WebGL): capita su computer senza accelerazione grafica, in macchine virtuali o in desktop remoto. La pianta, le tavole, il computo e le esportazioni funzionano. Per il 3D: attiva l'accelerazione hardware nelle impostazioni del browser o aggiorna i driver della scheda video.</span>";
+  c3d.parentElement.appendChild(box); });
 renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1;
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
@@ -1126,6 +1138,42 @@ function wallSolidRanges(w){
 
 /* ---------- Costruzione del modello ----------
    opts: {print, minThick(m), noFill, objects(bool), roof(bool), ground(bool)} */
+/* Sagoma della copertura di un piano: rettangoli massimi (anche sovrapposti) che coprono l'ingombro dei muri,
+   compresi i loro spessori e le aree chiuse. Piante a L, T, U → più rettangoli; muri obliqui → un rettangolo
+   d'ingombro (ortho:false). area(o) = superficie in pianta con lo sporto o (unione esatta per le piante ortogonali). */
+function roofRects(lid){
+  const ws = wallsOf(lid); if (!ws.length) return null;
+  let tMax = 0, ortho = true; const xs = new Set(), zs = new Set();
+  for (const w of ws){ tMax = Math.max(tMax, w.thick); const dx = w.b[0]-w.a[0], dz = w.b[1]-w.a[1]; if (Math.abs(dx) > 1e-3 && Math.abs(dz) > 1e-3) ortho = false;
+    for (const q of [w.a, w.b]){ xs.add(+(q[0]-w.thick/2).toFixed(3)); xs.add(+(q[0]+w.thick/2).toFixed(3)); zs.add(+(q[1]-w.thick/2).toFixed(3)); zs.add(+(q[1]+w.thick/2).toFixed(3)); } }
+  const X = [...xs].sort((a, b) => a - b), Z = [...zs].sort((a, b) => a - b);
+  const bbox = {x0:X[0], x1:X[X.length-1], z0:Z[0], z1:Z[Z.length-1]};
+  const rectArea = (rs, o) => { const ex = [...new Set(rs.flatMap(r => [r.x0-o, r.x1+o]))].sort((a, b) => a - b), ez = [...new Set(rs.flatMap(r => [r.z0-o, r.z1+o]))].sort((a, b) => a - b); let A = 0;
+    for (let i = 0; i < ex.length-1; i++) for (let j = 0; j < ez.length-1; j++){ const cx = (ex[i]+ex[i+1])/2, cz = (ez[j]+ez[j+1])/2; if (rs.some(r => cx > r.x0-o && cx < r.x1+o && cz > r.z0-o && cz < r.z1+o)) A += (ex[i+1]-ex[i])*(ez[j+1]-ez[j]); } return A; };
+  if (!ortho || X.length > 80 || Z.length > 80) return {rects:[bbox], bbox, tMax, ortho:false, area:o => rectArea([bbox], o)};
+  // celle della griglia: piene se dentro un muro o in un'area chiusa dai muri (riempimento dall'esterno)
+  const nx = X.length-1, nz = Z.length-1, inWall = (x, z) => ws.some(w => { const q = projOnSeg([x, z], w.a, w.b); return q.d <= w.thick/2 + 1e-4; });
+  const full = Array.from({length:nx}, (_, i) => Array.from({length:nz}, (_, j) => inWall((X[i]+X[i+1])/2, (Z[j]+Z[j+1])/2)));
+  const out = Array.from({length:nx}, () => Array(nz).fill(false)), st = [];
+  for (let i = 0; i < nx; i++) for (const j of [0, nz-1]) if (!full[i][j]) st.push([i, j]);
+  for (let j = 0; j < nz; j++) for (const i of [0, nx-1]) if (!full[i][j]) st.push([i, j]);
+  while (st.length){ const [i, j] = st.pop(); if (i < 0 || j < 0 || i >= nx || j >= nz || out[i][j] || full[i][j]) continue; out[i][j] = true; st.push([i+1, j], [i-1, j], [i, j+1], [i, j-1]); }
+  const cov = (i0, i1, j0, j1) => { for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) if (out[i][j]) return false; return true; };
+  // rettangoli massimi: per ogni coppia di colonne, le strisce di righe coperte; si tengono quelli non contenuti in altri
+  const cand = [];
+  for (let i0 = 0; i0 < nx; i0++) for (let i1 = i0; i1 < nx; i1++){ let j0 = null;
+    for (let j = 0; j <= nz; j++){ const ok = j < nz && cov(i0, i1, j, j); if (ok && j0 === null) j0 = j; if (!ok && j0 !== null){ cand.push({i0, i1, j0, j1:j-1}); j0 = null; } } }
+  const maxi = cand.filter(r => !cand.some(q => q !== r && q.i0 <= r.i0 && q.i1 >= r.i1 && q.j0 <= r.j0 && q.j1 >= r.j1));
+  const area = r => (X[r.i1+1]-X[r.i0])*(Z[r.j1+1]-Z[r.j0]);
+  // copertura avida: il rettangolo che copre più celle ancora scoperte (in superficie), finché tutto è coperto; strisce sotto 1 m scartate se già coperte
+  const left = new Set(); for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) if (!out[i][j]) left.add(i*nz + j);
+  const pick = [];
+  while (left.size){ let best = null, bv = 0;
+    for (const r of maxi){ let v = 0; for (let i = r.i0; i <= r.i1; i++) for (let j = r.j0; j <= r.j1; j++) if (left.has(i*nz + j)) v += (X[i+1]-X[i])*(Z[j+1]-Z[j]); const sc = v + area(r)*1e-3; if (v > 0 && sc > bv){ bv = sc; best = r; } }
+    if (!best) break; pick.push(best); for (let i = best.i0; i <= best.i1; i++) for (let j = best.j0; j <= best.j1; j++) left.delete(i*nz + j); }
+  const rects = pick.map(r => ({x0:X[r.i0], x1:X[r.i1+1], z0:Z[r.j0], z1:Z[r.j1+1]}));
+  return {rects:rects.length ? rects : [bbox], bbox, tMax, ortho:true, area:o => rectArea(rects.length ? rects : [bbox], o)};
+}
 function buildModel(opts={}){
   const root = new THREE.Group(); root.name = P.name || "Progetto";
   const buckets = new Map();
@@ -1173,15 +1221,15 @@ function buildModel(opts={}){
       if (!opts.print && r.skirt) for (const sg of skirtGeos(r, L)) add(L.id, r.skirt.mat || "bianco", "skirt", sg);
     }
     if (L.roof && L.roof.type !== "none" && opts.roof !== false){
-      const ws = wallsOf(L.id); if (ws.length){
-        let x0=Infinity,x1=-Infinity,z0=Infinity,z1=-Infinity, tMax=0;
-        for (const w of ws){ for (const p of [w.a,w.b]){ x0=Math.min(x0,p[0]-w.thick/2); x1=Math.max(x1,p[0]+w.thick/2); z0=Math.min(z0,p[1]-w.thick/2); z1=Math.max(z1,p[1]+w.thick/2);} tMax=Math.max(tMax,w.thick); }
+      const ws = wallsOf(L.id), RR = roofRects(L.id); if (ws.length && RR) for (const rr of RR.rects){
+        // una copertura per ogni rettangolo massimo della sagoma: sulle piante a L, T, U i tetti si incontrano nei compluvi
+        const {x0, x1, z0, z1} = rr, tMax = RR.tMax, single = RR.rects.length === 1;
         const topY = e0 + L.height, o = L.roof.overhang, th = .22, rm = L.roof.mat, lid = "roof:"+L.id;
-        if (L.roof.type === "hip" || L.roof.type === "shed") buildRoofX(L, {x0, x1, z0, z1, tMax, topY, o, lid, rm}, add, opts);
+        if (L.roof.type === "hip" || L.roof.type === "shed") buildRoofX(L, {x0, x1, z0, z1, tMax, topY, o, lid, rm, all:RR.bbox, others:RR.rects.filter(q => q !== rr)}, add, opts);
         else if (L.roof.type === "flat"){
           add(lid, rm, "roof", boxGeo((x0+x1)/2, topY+th/2, (z0+z1)/2, x1-x0+2*o, th, z1-z0+2*o));
         } else {
-          const p = THREE.MathUtils.degToRad(clamp(L.roof.pitch, 5, 60)), along = L.roof.ridge === "x" ? true : L.roof.ridge === "y" ? false : (x1-x0) >= (z1-z0);
+          const p = THREE.MathUtils.degToRad(clamp(L.roof.pitch, 5, 60)), along = single && L.roof.ridge === "x" ? true : single && L.roof.ridge === "y" ? false : (x1-x0) >= (z1-z0);
           const W0 = along ? z1-z0 : x1-x0, Lr = (along ? x1-x0 : z1-z0) + 2*o, cx=(x0+x1)/2, cz=(z0+z1)/2;
           const rise0 = W0/2*Math.tan(p), half = W0/2 + o, sl = half/Math.cos(p), eave = topY - o*Math.tan(p), midY = eave + half*Math.tan(p)/2;
           if (along){
@@ -1338,13 +1386,30 @@ function materialsCanvas(scale, opts={}){
    Vista in pianta e interazione
    ============================================================ */
 let snap = null; const past = [], future = [];
-function commit(){ if (S.viewer){ if (snap) P = JSON.parse(snap); refresh(); return; } const s = JSON.stringify(P); if (s === snap) return; if (snap) past.push(snap); if (past.length > 80) past.shift(); future.length = 0; snap = s; save(); refresh(); }
-function undo(){ if (!past.length) return; future.push(snap); snap = past.pop(); P = JSON.parse(snap); afterLoad(); }
-function redo(){ if (!future.length) return; past.push(snap); snap = future.pop(); P = JSON.parse(snap); afterLoad(); }
+/* Storia di annulla: copie JSON del progetto in cui le immagini incorporate (data URL oltre 8 KB: texture importate,
+   foto, base di ricalco) sono sostituite da un riferimento; ogni immagine si tiene una volta sola (#55). */
+const BLOBS = new Map(), BLOB_OF = new Map();
+const blobRef = v => { let id = BLOBS.get(v); if (!id){ id = "\u0001blob:" + BLOBS.size; BLOBS.set(v, id); BLOB_OF.set(id, v); } return id; };
+const snapOf = p => JSON.stringify(p, (k, v) => typeof v === "string" && v.length > 8192 && v.startsWith("data:") ? blobRef(v) : v);
+const fromSnap = s => JSON.parse(s, (k, v) => typeof v === "string" && v.charCodeAt(0) === 1 && BLOB_OF.has(v) ? BLOB_OF.get(v) : v);
+function historyBytes(){ let n = (snap || "").length; for (const x of past) n += x.length; for (const x of future) n += x.length; for (const v of BLOBS.keys()) n += v.length; return n; }
+function commit(){ if (S.viewer){ if (snap) P = fromSnap(snap); refresh(); return; } const s = snapOf(P); if (s === snap) return; if (snap) past.push(snap); if (past.length > 80) past.shift(); future.length = 0; snap = s; save(); refresh(); }
+function undo(){ if (!past.length) return; future.push(snap); snap = past.pop(); P = fromSnap(snap); afterLoad(); }
+function redo(){ if (!future.length) return; past.push(snap); snap = future.pop(); P = fromSnap(snap); afterLoad(); }
 function afterLoad(){ for (const k of Object.keys(matCache)) if (!MATS[k]) invalidateMat(k); fixSel(); save(); refresh(); }
 function fixSel(){ if (!level(S.level)) S.level = P.levels[0].id; P.dims = P.dims || []; setSel(selList().filter(x => itemOf(x))); }
 let saveWarned = false;
-function save(){ if (S.viewer) return; if (S.guest) return guestSave(); try { localStorage.setItem("pianta-libera-v2", JSON.stringify(P)); savedAt = new Date(); updateStatusInfo(); } catch(e){ if (!saveWarned && e?.name === "QuotaExceededError"){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio nel browser: resta nella raccolta Progetti, ma conviene anche Esporta → Salva progetto", true); } } queueIdbSave(); }
+/* Salvataggio nel browser. localStorage tiene l'ultima versione con l'ora (LS_T); sessionStorage ricorda il progetto
+   di questa scheda. Se localStorage è pieno, la copia vecchia si toglie e resta solo il riferimento al progetto:
+   alla riapertura si legge la raccolta Progetti (IndexedDB), che è più recente (09-init.js, restoreFromIdb). */
+const LS_P = "pianta-libera-v2", LS_T = "pianta-libera-t", LS_LAST = "pianta-libera-ultimo", SS_PID = "pianta-libera-pid";
+function save(){ if (S.viewer) return; if (S.guest) return guestSave();
+  try { sessionStorage.setItem(SS_PID, P.pid); } catch(e){}
+  try { localStorage.setItem(LS_P, JSON.stringify(P)); localStorage.setItem(LS_T, String(Date.now())); localStorage.removeItem(LS_LAST); savedAt = new Date(); updateStatusInfo(); }
+  catch(e){ try { localStorage.removeItem(LS_P); localStorage.removeItem(LS_T); localStorage.setItem(LS_LAST, P.pid); } catch(_){}
+    if (!saveWarned){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio rapido del browser: resta nella raccolta Progetti. Per sicurezza usa anche Esporta → Salva progetto", true); }
+    if (idbReady){ saveToIdb(); return; } }   // senza copia rapida la raccolta si scrive subito
+  queueIdbSave(); }
 function findSel(){ if (!S.sel) return null; const k = {wall:"walls", opening:"openings", room:"rooms", object:"objects", dim:"dims"}[S.sel.type]; return P[k]?.find(x => x.id === S.sel.id) || null; }
 
 const c2d = $("#c2d"), ctx = c2d.getContext("2d");
@@ -2267,12 +2332,12 @@ function objRows(){
 function renderList(){
   const el = $("#panel-list"); if (!el) return; const {k, dir} = S.listSort;
   const rows = objRows().sort((a, b) => { const x = a[k], y = b[k]; return (typeof x === "number" ? x - y : String(x).localeCompare(String(y), "it")) * dir; });
-  const th = (key, n) => `<th><button data-sort="${key}" aria-sort="${k === key ? (dir > 0 ? "ascending" : "descending") : "none"}">${n}${k === key ? (dir > 0 ? " ▲" : " ▼") : ""}</button></th>`;
+  const th = (key, n) => `<th aria-sort="${k === key ? (dir > 0 ? "ascending" : "descending") : "none"}"><button data-sort="${key}">${n}${k === key ? (dir > 0 ? " ▲" : " ▼") : ""}</button></th>`;
   const rooms = P.rooms.map(r => ({r, ...roomAreas(r), lv:level(r.level)?.name || ""}));
-  el.innerHTML = `<div class="sec"><h3>Oggetti (${rows.length})</h3><div class="tblwrap"><table class="olist"><thead><tr>${th("name","Nome")}${th("cat","Categoria")}${th("w","L×P×H cm")}${th("lv","Piano")}<th><span class="sr">Visibile</span>👁</th><th><span class="sr">Bloccato</span>🔒</th></tr></thead><tbody>
+  el.innerHTML = `<div class="sec"><h3>Oggetti (${rows.length})</h3><div class="tblwrap" tabindex="0" role="region" aria-label="Tabella"><table class="olist"><thead><tr>${th("name","Nome")}${th("cat","Categoria")}${th("w","L×P×H cm")}${th("lv","Piano")}<th><span class="sr">Visibile</span>👁</th><th><span class="sr">Bloccato</span>🔒</th></tr></thead><tbody>
     ${rows.map(x => `<tr data-oid="${x.o.id}" class="${isSelected(x.o.id) ? "on" : ""}${x.o.hidden ? " off" : ""}"><td>${esc(x.name)}</td><td>${esc(x.cat)}</td><td class="num">${Math.round(x.w*100)}×${Math.round(x.d*100)}×${Math.round(x.h*100)}</td><td>${esc(x.lv)}</td><td><button class="ic" data-ohide="${x.o.id}" aria-pressed="${!x.o.hidden}" aria-label="${x.o.hidden ? "Mostra" : "Nascondi"} ${esc(x.name)}">${x.o.hidden ? "◌" : "●"}</button></td><td><button class="ic" data-olock="${x.o.id}" aria-pressed="${!!x.o.locked}" aria-label="${x.o.locked ? "Sblocca" : "Blocca"} ${esc(x.name)}">${x.o.locked ? "■" : "□"}</button></td></tr>`).join("")}</tbody></table></div>
     <p class="note">Clic su una riga per selezionare (Maiusc per aggiungere), doppio clic per le proprietà. Gli oggetti bloccati non si spostano col mouse.</p></div>
-    <div class="sec"><h3>Locali (${rooms.length})</h3><div class="tblwrap"><table class="olist"><thead><tr><th>Nome</th><th>Piano</th><th>Netta m²</th><th>Lorda m²</th><th>Perimetro m</th><th>Finestre m²</th><th><abbr title="Rapporto aeroilluminante: finestre / superficie netta">R.A.I.</abbr></th></tr></thead><tbody>
+    <div class="sec"><h3>Locali (${rooms.length})</h3><div class="tblwrap" tabindex="0" role="region" aria-label="Tabella"><table class="olist"><thead><tr><th>Nome</th><th>Piano</th><th>Netta m²</th><th>Lorda m²</th><th>Perimetro m</th><th>Finestre m²</th><th><abbr title="Rapporto aeroilluminante: finestre / superficie netta">R.A.I.</abbr></th></tr></thead><tbody>
     ${rooms.map(x => { const gl = roomGlazing(x.r), rai = x.net > 0 ? gl / x.net : 0, ok = rai >= 1/8 - 1e-9;
       return `<tr data-rid="${x.r.id}" class="${isSelected(x.r.id) ? "on" : ""}"><td>${esc(x.r.name || "Locale")}</td><td>${esc(x.lv)}</td><td class="num">${fmt(x.net)}</td><td class="num">${fmt(x.gross)}</td><td class="num">${fmt(x.per)}</td><td class="num">${fmt(gl)}</td><td class="num ${ok ? "" : "warn"}" title="${ok ? "Almeno 1/8" : "Meno di 1/8: insufficiente per un locale abitabile"}">${rai > 0 ? "1/" + fmt(1 / rai, 1) : "—"}${ok ? "" : " ⚠"}</td></tr>`; }).join("")}
     ${rooms.length ? `<tr class="tot"><td>Totale</td><td></td><td class="num">${fmt(rooms.reduce((s, x) => s + x.net, 0))}</td><td class="num">${fmt(rooms.reduce((s, x) => s + x.gross, 0))}</td><td></td><td></td><td></td></tr>` : ""}</tbody></table></div>
@@ -2750,20 +2815,28 @@ function buildRoofX(L, R, add, opts){
         add(lid, rm, "roof", slabGeo(f, dv)); }
     return;
   }
-  // una falda: "dir" è il lato verso cui scende l'acqua (s, n, e, o)
+  // una falda: "dir" è il lato verso cui scende l'acqua (s, n, e, o). Un solo piano per tutta la sagoma (R.all = rettangolo
+  // d'ingombro, R.others = gli altri rettangoli della sagoma): su una pianta a L le falde dei rettangoli combaciano.
   const thv = th / Math.cos(p), dir = L.roof.dir || "s", gt = Math.max(tMax, opts.print ? opts.minThick || 0 : 0), wm = wallsOf(L.id)[0]?.mat || "intonaco";
-  const alongZ = dir === "s" || dir === "n", D = alongZ ? z1 - z0 : x1 - x0, Yh = topY + (D + o)*tn, rise = D*tn;
-  let face, infill = [];
-  if (dir === "s"){ face = [V(X0, Yh, Z0), V(X1, Yh, Z0), V(X1, Ye, Z1), V(X0, Ye, Z1)];
-    infill = [[V(x0, topY, z0), V(x1, topY, z0), V(x1, topY + rise - thv, z0), V(x0, topY + rise - thv, z0), V(0, 0, gt)], [V(x0, topY, z0), V(x0, topY + rise - thv, z0), V(x0, topY, z1), V(gt, 0, 0)], [V(x1, topY, z0), V(x1, topY + rise - thv, z0), V(x1, topY, z1), V(-gt, 0, 0)]]; }
-  else if (dir === "n"){ face = [V(X0, Ye, Z0), V(X1, Ye, Z0), V(X1, Yh, Z1), V(X0, Yh, Z1)];
-    infill = [[V(x0, topY, z1), V(x1, topY, z1), V(x1, topY + rise - thv, z1), V(x0, topY + rise - thv, z1), V(0, 0, -gt)], [V(x0, topY, z1), V(x0, topY + rise - thv, z1), V(x0, topY, z0), V(gt, 0, 0)], [V(x1, topY, z1), V(x1, topY + rise - thv, z1), V(x1, topY, z0), V(-gt, 0, 0)]]; }
-  else if (dir === "e"){ face = [V(X0, Yh, Z0), V(X0, Yh, Z1), V(X1, Ye, Z1), V(X1, Ye, Z0)];
-    infill = [[V(x0, topY, z0), V(x0, topY, z1), V(x0, topY + rise - thv, z1), V(x0, topY + rise - thv, z0), V(gt, 0, 0)], [V(x0, topY, z0), V(x0, topY + rise - thv, z0), V(x1, topY, z0), V(0, 0, gt)], [V(x0, topY, z1), V(x0, topY + rise - thv, z1), V(x1, topY, z1), V(0, 0, -gt)]]; }
-  else { face = [V(X0, Ye, Z0), V(X0, Ye, Z1), V(X1, Yh, Z1), V(X1, Yh, Z0)];
-    infill = [[V(x1, topY, z0), V(x1, topY, z1), V(x1, topY + rise - thv, z1), V(x1, topY + rise - thv, z0), V(-gt, 0, 0)], [V(x1, topY, z0), V(x1, topY + rise - thv, z0), V(x0, topY, z0), V(0, 0, gt)], [V(x1, topY, z1), V(x1, topY + rise - thv, z1), V(x0, topY, z1), V(0, 0, -gt)]]; }
+  const G = R.all || {x0, x1, z0, z1}, others = R.others || [];
+  const t = (x, z) => dir === "s" ? G.z1 - z : dir === "n" ? z - G.z0 : dir === "e" ? G.x1 - x : x - G.x0;   // distanza dal filo basso
+  const Y = (x, z) => topY + t(x, z)*tn;
+  const face = (dir === "s" || dir === "n" ? [[X0, Z0], [X1, Z0], [X1, Z1], [X0, Z1]] : [[X0, Z0], [X0, Z1], [X1, Z1], [X1, Z0]]).map(([x, z]) => V(x, Y(x, z), z));
   add(lid, rm, "roof", slabGeo(face, dv));
-  for (const f of infill){ const d = f.pop(); add(lid, wm, "gable", slabGeo(f, d)); }
+  // tamponamenti sotto la falda lungo i quattro fili del rettangolo, solo dove il filo è sul bordo della sagoma
+  const inside = (x, z) => others.some(q => x > q.x0 + 1e-3 && x < q.x1 - 1e-3 && z > q.z0 + 1e-3 && z < q.z1 - 1e-3);
+  const edges = [[[x0, z0], [x1, z0], [0, 0, gt], [0, -1]], [[x0, z1], [x1, z1], [0, 0, -gt], [0, 1]], [[x0, z0], [x0, z1], [gt, 0, 0], [-1, 0]], [[x1, z0], [x1, z1], [-gt, 0, 0], [1, 0]]];
+  for (const [A, B, d, out] of edges){
+    const cuts = [0, 1]; for (const q of others) for (const c of (A[0] === B[0] ? [q.z0, q.z1].map(v => (v - A[1]) / (B[1] - A[1])) : [q.x0, q.x1].map(v => (v - A[0]) / (B[0] - A[0])))) if (c > 1e-4 && c < 1 - 1e-4) cuts.push(c);
+    cuts.sort((m, n) => m - n);
+    for (let i = 0; i < cuts.length - 1; i++){
+      const P0 = [A[0] + (B[0]-A[0])*cuts[i], A[1] + (B[1]-A[1])*cuts[i]], P1 = [A[0] + (B[0]-A[0])*cuts[i+1], A[1] + (B[1]-A[1])*cuts[i+1]], m = [(P0[0]+P1[0])/2 + out[0]*.02, (P0[1]+P1[1])/2 + out[1]*.02];
+      if (inside(m[0], m[1])) continue;
+      const h0 = Y(P0[0], P0[1]) - thv, h1 = Y(P1[0], P1[1]) - thv; if (Math.max(h0, h1) <= topY + 1e-3) continue;
+      const poly = [V(P0[0], topY, P0[1]), V(P1[0], topY, P1[1])]; if (h1 > topY + 1e-3) poly.push(V(P1[0], h1, P1[1])); if (h0 > topY + 1e-3) poly.push(V(P0[0], h0, P0[1]));
+      add(lid, wm, "gable", slabGeo(poly, V(...d)));
+    }
+  }
 }
 
 /* ---------- eventi dell'ispettore ---------- */
@@ -3039,6 +3112,12 @@ $$("[data-cam]").forEach(b => b.addEventListener("click", () => camPreset(b.data
 $(".tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (!b) return; S.tab = b.dataset.tab; renderTabs(); });
 function renderTabs(){ $$(".tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === S.tab)); for (const t of ["props","list","import","export","ai"]) $("#panel-"+t).hidden = S.tab !== t; if (S.tab === "list") renderList(); if (S.tab === "export") renderExport(); if (S.tab === "import") renderImport(); if (S.tab === "ai") renderAI(); }
 $("#undoBtn").addEventListener("click", undo); $("#redoBtn").addEventListener("click", redo);
+/* Accessibilità (#62): i campi dei pannelli hanno l'etichetta visibile in <span class="lbl"> accanto; qui la si collega
+   come nome accessibile (aria-label) a ogni select, input e textarea che non ne ha uno, anche nei pannelli ridisegnati. */
+function autoLabel(root){ for (const el of root.querySelectorAll("select, input:not([type=hidden]), textarea")){
+  if (el.getAttribute("aria-label") || el.getAttribute("aria-labelledby") || el.labels?.length) continue;
+  const t = (el.closest(".f, label, .row")?.querySelector(".lbl")?.textContent || el.getAttribute("title") || el.getAttribute("placeholder") || "").trim(); if (t) el.setAttribute("aria-label", t); } }
+let autoLabelQ = 0; new MutationObserver(() => { if (!autoLabelQ) autoLabelQ = requestAnimationFrame(() => { autoLabelQ = 0; autoLabel(document.body); }); }).observe(document.body, {childList:true, subtree:true});
 function refresh(){ renderLevels(); renderInspector(); draw2D(); rebuild3D(); $("#undoBtn").disabled = !past.length; $("#redoBtn").disabled = !future.length; if (S.tab === "export") renderExport(); if (S.tab === "list") renderList(); renderCamSel(); }
 
 /* ---- 06-online.js ---- */
@@ -3337,6 +3416,17 @@ async function exportPrint(){
   else if (pieces.length === 1) await saveFile(base + ".stl", new Blob([stlBinary(pieces[0].geo)]));
   else { const files = {}; pieces.forEach((pc,i) => files[`${String(i+1).padStart(2,"0")}-${slugify(pc.name)}.stl`] = stlBinary(pc.geo)); await saveFile(base + "-stl.zip", new Blob([fflate.zipSync(files)])); }
 }
+/* Tabella dei layer (DXF R12): ogni layer usato dalle entità viene dichiarato con colore e linea continua, così
+   anche i CAD che non creano i layer mancanti li mostrano (#57). Si inserisce dopo l'intestazione. */
+const DXF_COLORS = {MURI:7, APERTURE:4, LOCALI:3, TESTI:2, ARREDI:8, QUOTE:1, SEZIONE:6, CARTIGLIO:7};
+function dxfWithLayers(out){
+  const used = new Set(); for (let i = 0; i + 1 < out.length; i += 2) if (out[i] === "8") used.add(out[i + 1]);   // coppie codice/valore
+  used.add("0"); let at = -1; for (let i = 0; i + 1 < out.length; i += 2) if (out[i] === "0" && out[i + 1] === "ENDSEC"){ at = i + 2; break; } if (at < 0) return out;
+  const t = ["0","SECTION","2","TABLES","0","TABLE","2","LTYPE","70","1","0","LTYPE","2","CONTINUOUS","70","0","3","Continua","72","65","73","0","40","0.0","0","ENDTAB","0","TABLE","2","LAYER","70",String(used.size)];
+  let c = 1; for (const n of used) t.push("0","LAYER","2",n,"70","0","62",String(DXF_COLORS[n] || (c++ % 6) + 1),"6","CONTINUOUS");
+  t.push("0","ENDTAB","0","ENDSEC");
+  return [...out.slice(0, at), ...t, ...out.slice(at)];
+}
 function exportDXF(){
   const L = level(), out = ["0","SECTION","2","HEADER","9","$ACADVER","1","AC1009","9","$INSUNITS","70","6","0","ENDSEC","0","SECTION","2","ENTITIES"];
   const line = (lay, a, b) => out.push("0","LINE","8",lay,"10",a[0].toFixed(4),"20",(-a[1]).toFixed(4),"30","0","11",b[0].toFixed(4),"21",(-b[1]).toFixed(4),"31","0");
@@ -3349,15 +3439,18 @@ function exportDXF(){
         out.push("0","ARC","8","APERTURE","10",H[0].toFixed(4),"20",(-H[1]).toFixed(4),"30","0","40",o.w.toFixed(4),"50",((sa+360)%360).toFixed(3),"51",((ea+360)%360).toFixed(3)); } } }
   for (const r of P.rooms.filter(r=>r.level===L.id)){ r.pts.forEach((p,i)=>line("LOCALI", p, r.pts[(i+1)%r.pts.length])); const c = polyCentroid(r.pts); text("TESTI", c, .25, r.name || "Locale"); text("TESTI", [c[0], c[1]+.4], .18, fmt(Math.abs(polyArea(r.pts))) + " mq"); }
   for (const o of P.objects.filter(o=>o.level===L.id)){ const fp = objFootprint(o), a = THREE.MathUtils.degToRad(o.rot||0); const pts = [[-1,-1],[1,-1],[1,1],[-1,1]].map(([sx,sz]) => { const lx = fp.cx + sx*fp.w/2, lz = fp.cz + sz*fp.d/2; return [o.x + lx*Math.cos(a) + lz*Math.sin(a), o.y - lx*Math.sin(a) + lz*Math.cos(a)]; }); for (let i=0;i<4;i++) line("ARREDI", pts[i], pts[(i+1)%4]); }
-  out.push("0","ENDSEC","0","EOF"); return out.join("\n");
+  out.push("0","ENDSEC","0","EOF"); return dxfWithLayers(out).join("\n");
 }
 function projectData(){
   const data = JSON.parse(JSON.stringify(P)); data.imports = {};
   for (const [id, it] of Object.entries(importStore)) if (P.objects.some(o => o.kind === "import" && o.ref === id)) data.imports[id] = {file:it.file, opts:it.opts, source:it.source};
+  // modelli non ancora ricaricati (o non leggibili) dopo la riapertura: si conservano così come erano nella raccolta
+  for (const o of P.objects) if (o.kind === "import" && !data.imports[o.ref] && pendingImports[o.ref]) data.imports[o.ref] = pendingImports[o.ref];
   data.app = "Pianta Libera"; data.version = SCHEMA_VERSION; return data;
 }
 async function exportProject(){ await saveFile(slug() + ".json", JSON.stringify(projectData())); }
 /* apre un progetto (file .json o raccolta): keepPid tiene l'identità del progetto nella raccolta */
+const pendingImports = {};   // file dei modelli importati letti dalla raccolta e non ancora in importStore
 async function openProjectData(data, opts = {}){
   if (!data?.levels || !data.walls) throw new Error("non è un progetto di Pianta Libera");
   const imports = data.imports || {}; delete data.imports; delete data.app; if (!opts.keepPid || !data.pid) data.pid = uid();
@@ -3597,7 +3690,7 @@ $("#fModel").addEventListener("change", async e => { const files = [...e.target.
     const label = (main?.name || files[0].name).split(/[\\/]/).pop().replace(/\.[^.]+$/,"");
     const single = entries.length === 1;
     const file = single ? {name:entries[0].name, ext:entries[0].name.split(".").pop().toLowerCase(), b64:b64(entries[0].data)} : {name:label + ".zip", ext:"zip", b64:b64(fflate.zipSync(Object.fromEntries(entries.map(en => [en.name, en.data]))))};
-    const id = "m" + uid(); await registerImport(id, file, {unit:$("#imUnit").value, up:$("#imUp").value});
+    const id = "m" + uid(); await registerImport(id, file, {unit:$("#imUnit")?.value || "auto", up:$("#imUp")?.value || "auto"});
     let nm = 0; if ($("#imMats")?.checked) nm = harvestMaterials(id, label).length;
     const o = {id:uid(), level:S.level, kind:"import", ref:id, name:label, x:Math.round(V.cx*20)/20, y:Math.round(V.cy*20)/20, rot:0, scale:1, z:0};
     P.objects.push(o); S.sel = {type:"object", id:o.id}; busy(""); commit(); S.tab = "props"; renderTabs();
@@ -5619,7 +5712,7 @@ async function panoJPEG(cv){
 }
 /* visore 360° nella pagina */
 function openPanoViewer(cv){
-  closePanoViewer();
+  closePanoViewer(); if (NO_WEBGL){ toast("Il visore 360° richiede la grafica 3D (WebGL), non disponibile su questo dispositivo", true); return; }
   const d = document.createElement("div"); d.id = "panoBox"; d.className = "help pano"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Panorama 360°");
   d.innerHTML = `<div class="pano-in"><header><h3>Panorama 360°</h3><span class="note">Trascina per guardarti intorno · rotella per lo zoom</span><button class="btn" id="panoSave">Scarica JPG</button><button class="btn" id="panoClose" aria-label="Chiudi">✕</button></header><canvas id="panoCv"></canvas></div>`;
   document.body.appendChild(d);
@@ -5706,8 +5799,12 @@ const projDel = id => idbDo("readwrite", s => s.delete(id));
 function projThumb(){ try { const w = 240, h = 150, c = document.createElement("canvas"); c.width = w; c.height = h; const k = Math.max(w / c3d.width, h / c3d.height), sw = w / k, sh = h / k; c.getContext("2d").drawImage(c3d, (c3d.width - sw) / 2, (c3d.height - sh) / 2, sw, sh, 0, 0, w, h); return c.toDataURL("image/jpeg", .7); } catch(e){ return ""; } }
 let idbTimer = 0, idbWarned = false;
 function queueIdbSave(){ clearTimeout(idbTimer); idbTimer = setTimeout(saveToIdb, 1500); }
+// uscendo dalla pagina o passando a un'altra app si scrive subito, senza aspettare il ritardo di queueIdbSave
+addEventListener("pagehide", () => { if (idbTimer) saveToIdb(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && idbTimer) saveToIdb(); });
+let idbReady = false;   // diventa vero dopo restoreFromIdb: prima non si scrive nella raccolta
 async function saveToIdb(){
-  clearTimeout(idbTimer); if (!P?.pid || !window.indexedDB) return;
+  clearTimeout(idbTimer); idbTimer = 0; if (!P?.pid || !window.indexedDB) return; if (!idbReady){ queueIdbSave(); return; }
   try { await projPut({id:P.pid, name:P.name || "Progetto", updated:Date.now(), thumb:projThumb(), data:JSON.stringify(projectData())}); if (document.getElementById("projBox")) renderProjects(); }
   catch(e){ if (!idbWarned){ idbWarned = true; console.warn("raccolta progetti", e); } }
 }
@@ -5871,7 +5968,7 @@ function pageDXF(pg){
       for (const s of it.sub){ if (s.pts.length < 2) continue; out.push("0","POLYLINE","8",lay,"66","1","70",s.closed ? "1" : "0"); for (const p of s.pts) out.push("0","VERTEX","8",lay,"10",p[0].toFixed(3),"20",Y(p[1]),"30","0"); out.push("0","SEQEND","8",lay); } }
     else { const b = textBox(it); out.push("0","TEXT","8","TESTI","10",b.x.toFixed(3),"20",Y(b.y),"30","0","40",(it.size * .72).toFixed(3),"1",it.text.replace(/[\r\n]/g, " "),"50",(-it.rot * 180 / Math.PI).toFixed(2)); }
   }
-  out.push("0","ENDSEC","0","EOF"); return out.join("\n");
+  out.push("0","ENDSEC","0","EOF"); return dxfWithLayers(out).join("\n");
 }
 
 /* ---------- impostazioni delle tavole ---------- */
@@ -6094,7 +6191,7 @@ function wallFaceLengths(w, walls){
     for (const [P0, P1] of [[v.a, v.b], [v.b, v.a]]){ const q = projOnSeg(P0, w.a, w.b); if (q.d > EPS || q.t < 1e-4 || q.t > 1 - 1e-4) continue;
       const g = Math.hypot(P1[0]-P0[0], P1[1]-P0[1]) || 1, e = [(P1[0]-P0[0])/g, (P1[1]-P0[1])/g], sn = Math.abs(u[0]*e[1] - u[1]*e[0]); if (sn < 1e-6) continue;
       cut[n[0]*e[0] + n[1]*e[1] > 0 ? "A" : "B"] += v.thick / sn; } }
-  return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B)};
+  return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B), shift};
 }
 const STYLE_NAME = Object.fromEntries([...DOOR_STYLES, ...WIN_STYLES.map(([k, n]) => ["w_" + k, n])]);
 function computo(){
@@ -6113,7 +6210,8 @@ function computo(){
   for (const o of P.openings){ const w = wallById(o.wall); if (!w) continue; const st = o.type === "door" ? (STYLE_NAME[o.style || "battente"] || "A battente") : (STYLE_NAME["w_" + (o.style || "battente")] || "A battente");
     add(`ap:${o.type}:${o.style || ""}:${Math.round(o.w * 100)}:${Math.round(o.h * 100)}`, o.type === "door" ? "Porte" : "Finestre", `${o.type === "door" ? "Porta" : "Finestra"} ${st.toLowerCase()} ${Math.round(o.w * 100)}×${Math.round(o.h * 100)}`, "n.", 1);
     if (o.shut) add(`osc:${o.shut}`, "Finestre", o.shut === "persiane" ? "Persiane (coppie)" : "Tapparelle", "n.", 1); }
-  for (const L of P.levels){ if (!L.roof || L.roof.type === "none") continue; const b = planBounds(L.id); if (!b) continue; const o = L.roof.overhang || 0, A = (b.x1 - b.x0 + 2*o) * (b.y1 - b.y0 + 2*o), p = THREE.MathUtils.degToRad(clamp(L.roof.pitch || 0, 0, 60));
+  // superficie della copertura: proiezione in pianta della sagoma con lo sporto, divisa per il coseno della pendenza (falde tutte uguali)
+  for (const L of P.levels){ if (!L.roof || L.roof.type === "none") continue; const RR = roofRects(L.id); if (!RR) continue; const o = L.roof.overhang || 0, A = RR.area(o), p = THREE.MathUtils.degToRad(clamp(L.roof.pitch || 0, 0, 60));
     add(`tetto:${L.roof.mat}`, "Copertura", `Copertura ${({flat:"piana", gable:"a due falde", hip:"a padiglione", shed:"a una falda"})[L.roof.type]} in ${matName(L.roof.mat).toLowerCase()}`, "m²", L.roof.type === "flat" ? A : A / Math.cos(p)); }
   for (const o of P.objects){ const it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null; if (it?.cat === "Persone") continue;
     if (it?.param?.kind === "rail") add("ringhiera", "Scale e parapetti", "Ringhiera / parapetto", "m", paramsOf(o, it).len * (o.scale || 1));
@@ -6129,7 +6227,7 @@ function computoHTML(){
   const body = rows.map(r => { const p = pr[r.key], imp = p != null ? p * r.q : null; if (imp != null) tot += imp; const head = r.cat !== cat ? `<tr class="cat"><td colspan="5">${esc(cat = r.cat)}</td></tr>` : "";
     return head + `<tr><td>${esc(r.voce)}</td><td>${esc(r.um)}</td><td class="num">${fmt(r.q, r.um === "n." ? 0 : 2)}</td><td><input class="inp price" data-price="${esc(r.key)}" value="${p != null ? fmt(p, 2) : ""}" inputmode="decimal" aria-label="Prezzo unitario ${esc(r.voce)}" placeholder="€"></td><td class="num">${imp != null ? eur(imp) : ""}</td></tr>`; }).join("");
   return `<div class="sec"><h3>Computo delle quantità</h3><p class="note">Quantità ricavate dal modello: muri in asse al netto delle aperture, pavimenti netti, coperture in falda. Scrivi i prezzi unitari (€) del tuo listino per avere gli importi: restano nel progetto.</p>
-    <div class="tblwrap"><table class="olist comp"><thead><tr><th>Voce</th><th>u.m.</th><th>Quantità</th><th>€/u.m.</th><th>Importo €</th></tr></thead><tbody>${body}
+    <div class="tblwrap" tabindex="0" role="region" aria-label="Tabella"><table class="olist comp"><thead><tr><th>Voce</th><th>u.m.</th><th>Quantità</th><th>€/u.m.</th><th>Importo €</th></tr></thead><tbody>${body}
     <tr class="tot"><td>Totale</td><td></td><td></td><td></td><td class="num">${eur(tot)}</td></tr></tbody></table></div>
     <div class="btns"><button class="btn" id="compCsv">Esporta computo in CSV</button></div></div>`;
 }
@@ -6320,7 +6418,7 @@ async function enterViewer(id){
   try {
     const d = await shareFetch("/" + encodeURIComponent(id)); await shareConfig();
     P = migrate(d.project); P.pid = "condiviso-" + id; S.viewer.name = d.name; S.viewer.expires = d.expires_at; S.viewer.updated = d.updated_at; S.comments = d.comments || [];
-    S.level = P.levels[0].id; setSel([]); snap = JSON.stringify(P); past.length = 0; future.length = 0;
+    S.level = P.levels[0].id; setSel([]); snap = snapOf(P); past.length = 0; future.length = 0;
     $("#projName").value = d.name; $("#projName").readOnly = true; S.tab = "props"; renderTabs(); setTool("select");
     refresh(); fitPlan(); applySky(); camPreset("ext"); $("#tag2d")?.insertAdjacentHTML("beforeend", `<span class="viewtag">sola lettura</span>`);
   } catch(e){ S.viewer.error = e.message; renderInspector(); }
@@ -6398,7 +6496,7 @@ async function enterGuest(id, key){
     const resume = local?.project && local.base === d.updated_at;
     if (resume) S.guest.sent = local.sent || null;
     P = migrate(resume ? local.project : d.project); P.pid = "ospite-" + id; delete P.share;
-    S.level = P.levels[0].id; setSel([]); snap = JSON.stringify(P); past.length = 0; future.length = 0;
+    S.level = P.levels[0].id; setSel([]); snap = snapOf(P); past.length = 0; future.length = 0;
     $("#projName").value = d.name; refresh(); fitPlan(); applySky(); camPreset("ext");
     $("#tag2d")?.insertAdjacentHTML("beforeend", `<button class="viewtag" id="guestTag" title="Invia le modifiche al progettista">modifiche per il progettista</button>`);
     $("#guestTag")?.addEventListener("click", () => { S.tab = "export"; renderTabs(); renderExport(); });
@@ -6543,6 +6641,14 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && VID.on) VI
 const IFC64 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$";
 function ifcGuid(){ const b = crypto.getRandomValues(new Uint8Array(16)); let n = 0n; for (const x of b) n = (n << 8n) | BigInt(x); let s = ""; for (let i = 21; i >= 0; i--) s += IFC64[Number((n >> BigInt(6 * i)) & 63n)]; return s; }
 function ifcStr(s){ let o = ""; for (const ch of String(s ?? "")){ const c = ch.codePointAt(0); if (ch === "'") o += "''"; else if (ch === "\\") o += "\\\\"; else if (c >= 32 && c < 127) o += ch; else o += `\\X2\\${c.toString(16).toUpperCase().padStart(4, "0")}\\X0\\`; } return `'${o}'`; }
+/* Muro esterno: da almeno un lato non c'è un locale del suo piano (prova a 20 cm dalla faccia, a metà muro);
+   senza locali disegnati si considera esterno. */
+function wallIsExternal(w, Lv){
+  const rooms = P.rooms.filter(r => r.level === Lv.id && r.pts.length > 2); if (!rooms.length) return true;
+  const f = wallFrame(w), m = [(w.a[0]+w.b[0])/2, (w.a[1]+w.b[1])/2], d = w.thick/2 + .2;
+  const side = s => rooms.some(r => inPoly([m[0] + f.nx*d*s, m[1] + f.ny*d*s], r.pts));
+  return !(side(1) && side(-1));
+}
 function exportIFC(){
   const L = [], add = s => { L.push(s); return "#" + L.length; }, R = v => { const x = Math.round(v * 1e6) / 1e6; return Number.isInteger(x) ? x + "." : String(x); };
   const pt3 = (x, y, z) => add(`IFCCARTESIANPOINT((${R(x)},${R(y)},${R(z)}))`), pt2 = (x, y) => add(`IFCCARTESIANPOINT((${R(x)},${R(y)}))`), dir = (x, y, z) => add(`IFCDIRECTION((${R(x)},${R(y)},${R(z)}))`);
@@ -6568,13 +6674,27 @@ function exportIFC(){
     if (!idx.length) return null;
     const list = add(`IFCCARTESIANPOINTLIST3D((${Array.from({length:pts.length / 3}, (_, i) => `(${R(pts[i*3])},${R(pts[i*3+1])},${R(pts[i*3+2])})`).join(",")}))`);
     return add(`IFCTRIANGULATEDFACESET(${list},$,$,(${idx.map(t => `(${t.join(",")})`).join(",")}),$)`); };
+  // materiali (uno per nome, associati agli elementi) e insiemi di proprietà e quantità standard (#57)
+  const bim = { mats:new Map(), matRel:new Map(),
+    mat(el, key){ const n = matName(key || "intonaco"); let m = this.mats.get(n); if (!m){ m = add(`IFCMATERIAL(${ifcStr(n)},$,$)`); this.mats.set(n, m); } (this.matRel.get(m) || this.matRel.set(m, []).get(m)).push(el); },
+    pset(el, name, props){ const ps = props.map(([k, t, v]) => add(`IFCPROPERTYSINGLEVALUE('${k}',$,${t === "bool" ? `IFCBOOLEAN(${v ? ".T." : ".F."})` : `IFCLABEL(${ifcStr(String(v))})`},$)`));
+      add(`IFCRELDEFINESBYPROPERTIES('${ifcGuid()}',$,$,$,(${el}),${add(`IFCPROPERTYSET('${ifcGuid()}',$,'${name}',$,(${ps.join(",")}))`)})`); },
+    qto(el, name, qs){ const T = {len:"IFCQUANTITYLENGTH", area:"IFCQUANTITYAREA", vol:"IFCQUANTITYVOLUME"};
+      add(`IFCRELDEFINESBYPROPERTIES('${ifcGuid()}',$,$,$,(${el}),${add(`IFCELEMENTQUANTITY('${ifcGuid()}',$,'${name}',$,$,(${qs.map(([k, t, v]) => add(`${T[t]}('${k}',$,$,${R(v)},$)`)).join(",")}))`)})`); } };
   for (const Lv of bySt){
     const sLP = lp(bLP, ax3(pt3(0, 0, Lv.elev))), st = add(`IFCBUILDINGSTOREY('${ifcGuid()}',$,${ifcStr(Lv.name)},$,$,${sLP},$,$,.ELEMENT.,${R(Lv.elev)})`); storeys.push(st);
     const elems = [], spaces = [];
     for (const w of wallsOf(Lv.id)){
       const f = wallFrame(w); if (f.len < .01) continue; const a = W2I(w.a), h = w.height || Lv.height;
       const wLP = lp(sLP, ax3(pt3(a[0], a[1], 0), Z, dir(f.ux, -f.uy, 0)));
-      const wall = add(`IFCWALL('${ifcGuid()}',$,${ifcStr(`Muro ${Math.round(w.thick * 100)} cm`)},${ifcStr(matName(w.mat))},$,${wLP},${rep([box(f.len / 2, 0, f.len + w.thick, w.thick, -Lv.slab, h + Lv.slab)])},$,.STANDARD.)`); elems.push(wall); counts.walls++;
+      // sagoma in pianta con gli angoli raccordati (nessuna sovrapposizione tra muri, #57); asse locale y = lato B
+      const sh = wallFaceLengths(w, P.walls).shift, t2 = w.thick / 2;
+      const quad = [[sh.A[0], -t2], [f.len - sh.A[1], -t2], [f.len - sh.B[1], t2], [sh.B[0], t2]];
+      const wprof = add(`IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,${add(`IFCPOLYLINE((${[...quad, quad[0]].map(q => pt2(q[0], q[1])).join(",")}))`)})`);
+      const wall = add(`IFCWALL('${ifcGuid()}',$,${ifcStr(`Muro ${Math.round(w.thick * 100)} cm`)},${ifcStr(matName(w.mat))},$,${wLP},${rep([add(`IFCEXTRUDEDAREASOLID(${wprof},${ax3(O)},${Z},${R(h)})`)])},$,.STANDARD.)`); elems.push(wall); counts.walls++;
+      const ext = wallIsExternal(w, Lv); bim.mat(wall, w.mat);
+      bim.pset(wall, "Pset_WallCommon", [["IsExternal", "bool", ext], ["LoadBearing", "bool", w.thick >= .25 || /portante|esterno/i.test(w.wtype || "")], ["Reference", "label", w.wtype || `Muro ${Math.round(w.thick * 100)} cm`]]);
+      bim.qto(wall, "Qto_WallBaseQuantities", [["Length", "len", f.len], ["Width", "len", w.thick], ["Height", "len", h], ["NetSideArea", "area", Math.max(0, f.len * h - openingArea(w))], ["NetVolume", "vol", Math.max(0, f.len * h - openingArea(w)) * w.thick]]);;
       for (const o of P.openings.filter(o => o.wall === w.id)){
         const bot = o.type === "door" ? 0 : o.sill, oh = Math.min(o.h, h - bot), oLP = lp(wLP, ax3(pt3(o.t, 0, bot)));
         const op = add(`IFCOPENINGELEMENT('${ifcGuid()}',$,'Vano',$,$,${oLP},${rep([box(0, 0, o.w, w.thick + .1, 0, oh)])},$,.OPENING.)`);
@@ -6583,11 +6703,13 @@ function exportIFC(){
         const el = o.type === "door" ? add(`IFCDOOR('${ifcGuid()}',$,${ifcStr("Porta " + (o.style || "battente"))},$,$,${fLP},${geo},$,${R(oh)},${R(o.w)},.DOOR.,${o.style === "doppia" || o.style === "portafinestra" ? ".DOUBLE_DOOR_SINGLE_SWING." : o.style === "scorrevole" || o.style === "scomparsa" ? ".SLIDING_TO_LEFT." : ".SINGLE_SWING_LEFT."},$)`)
           : add(`IFCWINDOW('${ifcGuid()}',$,${ifcStr("Finestra " + (o.style || "battente"))},$,$,${fLP},${geo},$,${R(oh)},${R(o.w)},.WINDOW.,${o.w > 1.3 && (o.style || "battente") === "battente" ? ".DOUBLE_PANEL_VERTICAL." : ".SINGLE_PANEL."},$)`);
         add(`IFCRELFILLSELEMENT('${ifcGuid()}',$,$,$,${op},${el})`); elems.push(el); counts[o.type === "door" ? "doors" : "windows"]++;
+        bim.pset(el, o.type === "door" ? "Pset_DoorCommon" : "Pset_WindowCommon", [["IsExternal", "bool", ext], ["Reference", "label", `${o.type === "door" ? "Porta" : "Finestra"} ${o.style || "battente"} ${Math.round(o.w * 100)}×${Math.round(oh * 100)}`]]);
+        bim.mat(el, o.type === "door" ? "legno" : "serramento");
       }
     }
     for (const r of P.rooms.filter(r => r.level === Lv.id && r.pts.length > 2)){
       const poly = r.pts.map(W2I), prof = () => add(`IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,${add(`IFCPOLYLINE((${[...poly, poly[0]].map(p => pt2(p[0], p[1])).join(",")}))`)})`);
-      const slab = add(`IFCSLAB('${ifcGuid()}',$,${ifcStr("Solaio " + (r.name || ""))},${ifcStr(matName(r.mat))},$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(pt3(0, 0, -Lv.slab))},${Z},${R(Lv.slab)})`)])},$,.FLOOR.)`); elems.push(slab); counts.slabs++;
+      const slab = add(`IFCSLAB('${ifcGuid()}',$,${ifcStr("Solaio " + (r.name || ""))},${ifcStr(matName(r.mat))},$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(pt3(0, 0, -Lv.slab))},${Z},${R(Lv.slab)})`)])},$,.FLOOR.)`); bim.mat(slab, r.mat); elems.push(slab); counts.slabs++;
       const sp = add(`IFCSPACE('${ifcGuid()}',$,${ifcStr(r.name || "Locale")},$,$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(O)},${Z},${R(r.ceilH || Lv.height)})`)])},${ifcStr(r.name || "Locale")},.ELEMENT.,.INTERNAL.,$)`); spaces.push(sp); counts.spaces++;
       const q = add(`IFCELEMENTQUANTITY('${ifcGuid()}',$,'Qto_SpaceBaseQuantities',$,$,(${add(`IFCQUANTITYAREA('NetFloorArea',$,$,${R(Math.abs(polyArea(r.pts)))},$)`)},${add(`IFCQUANTITYLENGTH('Height',$,$,${R(r.ceilH || Lv.height)},$)`)}))`);
       add(`IFCRELDEFINESBYPROPERTIES('${ifcGuid()}',$,$,$,(${sp}),${q})`);
@@ -6607,6 +6729,7 @@ function exportIFC(){
     if (spaces.length) add(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${st},(${spaces.join(",")}))`);
   }
   if (storeys.length) add(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${bld},(${storeys.join(",")}))`);
+  for (const [m, els] of bim.matRel) add(`IFCRELASSOCIATESMATERIAL('${ifcGuid()}',$,$,$,(${els.join(",")}),${m})`);
   const now = new Date().toISOString().slice(0, 19), name = slug() + ".ifc";
   const text = `ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('ViewDefinition [ReferenceView_V1.2]'),'2;1');\nFILE_NAME(${ifcStr(name)},'${now}',('Pianta Libera'),('Pianta Libera'),'Pianta Libera','Pianta Libera','');\nFILE_SCHEMA(('IFC4'));\nENDSEC;\nDATA;\n${L.map((s, i) => `#${i + 1}=${s};`).join("\n")}\nENDSEC;\nEND-ISO-10303-21;\n`;
   return {text, counts};
@@ -6630,6 +6753,9 @@ function openPrintPreview(){
       ${rows.some(r => !r.fits) ? `<p class="note warn">Alcuni pezzi superano il piatto: scegli una scala più piccola o separa i piani (scheda Esporta).</p>` : `<p class="note">Tutti i pezzi entrano nel piatto.</p>`}
       <p class="note">Il piatto in figura è a grandezza reale; i pezzi sono già appoggiati e distanziati come nel file 3MF.</p></div></div></div>`;
   document.body.appendChild(d);
+  if (NO_WEBGL){ $("#prCv").replaceWith(Object.assign(document.createElement("p"), {className:"note", textContent:"Anteprima 3D non disponibile senza WebGL: le misure e il file 3MF restano validi."}));
+    d.addEventListener("click", e => { if (e.target === d || e.target.closest("#prClose")) closePrintPreview(); });
+    $("#prPrinter").addEventListener("change", e => { PREFS.printer = +e.target.value; savePrefs(); openPrintPreview(); }); return; }
   const cv = $("#prCv"), r = new THREE.WebGLRenderer({canvas:cv, antialias:true}); r.outputEncoding = THREE.sRGBEncoding; r.setClearColor(isDark() ? "#1b2124" : "#eef0ee");
   const sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(40, 1, 1, 5000); sc.add(new THREE.HemisphereLight("#ffffff", "#8a8f8a", .9)); const dl = new THREE.DirectionalLight("#ffffff", .9); dl.position.set(200, 400, 300); sc.add(dl);
   const grp = new THREE.Group(); sc.add(grp); let ox = 5, oz = 5, rowD = 0;   // pezzi disposti a file sul piatto
@@ -6948,12 +7074,19 @@ function sanitizeProject(p){
   for (const L of arr("levels")){ L.id = fix(L.id); L.name = T(L.name, 80) || "Piano"; L.elev = N(L.elev); L.height = N(L.height, 2.7) || 2.7; L.slab = N(L.slab, .25);
     if (L.roof && typeof L.roof === "object"){ L.roof = {type:["none", "flat", "gable", "hip", "shed"].includes(L.roof.type) ? L.roof.type : "none", pitch:N(L.roof.pitch, 30), overhang:N(L.roof.overhang, .5), mat:K(L.roof.mat) || "tegole", ...(L.roof.ridge === "x" || L.roof.ridge === "y" ? {ridge:L.roof.ridge} : {}), ...(["s", "n", "e", "o"].includes(L.roof.dir) ? {dir:L.roof.dir} : {})}; } else L.roof = null;
     if (L.underlay && typeof L.underlay === "object"){ const U = L.underlay; if (U.kind === "img" && !okUrl(U.src)) L.underlay = null; else for (const k of ["ox", "oy", "mpp", "k", "opacity"]) if (k in U) U[k] = N(U[k]); } }
+  // valori fisici (#56): altezze e spessori positivi, muri non nulli, aperture con misure positive dentro il muro
+  for (const L of p.levels){ if (!(L.height > 0)) L.height = 2.7; if (!(L.slab >= 0)) L.slab = .25; }
   if (!p.levels.length) p.levels.push({id:"L0", name:"Piano terra", elev:0, height:2.9, slab:.25, roof:null, underlay:null});
   for (const w of arr("walls")){ w.id = fix(w.id); w.level = fix(w.level); w.a = pt(w.a); w.b = pt(w.b); w.thick = N(w.thick, .3) || .3; w.height = Nn(w.height); for (const k of ["mat", "matA", "matB"]) if (w[k] != null) w[k] = K(w[k]); if (w.wtype != null) w.wtype = K(w.wtype); if (w.layers) w.layers = {core:N(w.layers.core), insul:N(w.layers.insul)};
     if (w.arc){ w.arc = {g:fix(w.arc.g), i:N(w.arc.i), h:N(w.arc.h), A:pt(w.arc.A), B:pt(w.arc.B)}; } }
+  p.walls = p.walls.filter(w => Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1]) >= .01);
+  for (const w of p.walls){ if (!(w.thick > 0)) w.thick = .3; w.thick = Math.min(w.thick, 3); if (w.height != null && !(w.height > 0)) w.height = null; }
   for (const r of arr("rooms")){ r.id = fix(r.id); r.level = fix(r.level); r.pts = Array.isArray(r.pts) ? r.pts.map(pt) : []; r.name = T(r.name, 80); r.mat = K(r.mat); if (r.lab) r.lab = pt(r.lab);
     if (r.ceilH != null) r.ceilH = Nn(r.ceilH); if (r.ceilMat != null) r.ceilMat = K(r.ceilMat); if (r.tile) r.tile = {scale:N(r.tile.scale, 1), rot:N(r.tile.rot), ox:N(r.tile.ox), oy:N(r.tile.oy)}; if (r.skirt) r.skirt = {h:N(r.skirt.h, .08), mat:K(r.skirt.mat) || "bianco"}; }
   for (const o of arr("openings")){ o.id = fix(o.id); o.wall = fix(o.wall); for (const k of ["t", "w", "h", "sill"]) o[k] = N(o[k]); o.type = o.type === "door" ? "door" : "window"; o.flip = N(o.flip) | 0; if (o.style != null) o.style = K(o.style); if (o.shut != null) o.shut = K(o.shut); }
+  { const len = new Map(p.walls.map(w => [w.id, Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1])]));
+    p.openings = p.openings.filter(o => len.has(o.wall));
+    for (const o of p.openings){ const L = len.get(o.wall); if (!(o.w > 0)) o.w = Math.min(.9, L); o.w = Math.min(o.w, L); if (!(o.h > 0)) o.h = o.type === "door" ? 2.1 : 1.2; if (!(o.sill >= 0)) o.sill = o.type === "door" ? 0 : .9; o.t = clamp(o.t, o.w / 2, Math.max(o.w / 2, L - o.w / 2)); } }
   for (const o of arr("objects")){ o.id = fix(o.id); o.level = fix(o.level); o.kind = K(o.kind) || "lib"; o.ref = K(o.ref); o.name = T(o.name, 120); for (const k of ["x", "y", "z", "rot"]) o[k] = N(o[k]); o.scale = N(o.scale, 1) || 1;
     if (o.p && typeof o.p === "object") for (const [k, v] of Object.entries(o.p)) o.p[k] = typeof v === "number" ? N(v) : typeof v === "boolean" ? v : K(v);
     if (o.light && typeof o.light === "object") o.light = {on:o.light.on !== false, ...(o.light.lm != null ? {lm:N(o.light.lm, 800)} : {}), ...(o.light.k != null ? {k:N(o.light.k, 3000)} : {})}; }
@@ -6990,10 +7123,35 @@ function migrate(p){
   if (!p.pid) p.pid = uid();
   p.version = SCHEMA_VERSION; return p;
 }
+/* Alla riapertura la raccolta Progetti (IndexedDB) può essere più aggiornata di localStorage: salvataggio rapido
+   fallito per spazio, altra scheda che ha scritto localStorage, modelli importati (che localStorage non contiene).
+   Si apre la versione più recente del progetto di questa scheda e si ricaricano i modelli importati. */
+async function restoreFromIdb(wantPid, savedT){
+  if (!window.indexedDB) return;
+  try {
+    const before = snap, pid = wantPid || P.pid, rec = await projGet(pid); if (!rec?.data) return;
+    if (snap !== before) return;   // l'utente ha già cominciato a modificare: non si cambia il progetto sotto le mani
+    const data = JSON.parse(rec.data);
+    if (pid !== P.pid || (rec.updated || 0) > savedT + 1000){
+      await openProjectData(data, {keepPid:true});
+      if (savedT && pid === P.pid) toast("Riaperta la versione più recente dalla raccolta Progetti");
+      return;
+    }
+    let n = 0;
+    for (const [id, it] of Object.entries(data.imports || {})){
+      if (importStore[id] || !P.objects.some(o => o.kind === "import" && o.ref === id)) continue;
+      pendingImports[id] = it;
+      try { if (it.file) await registerImport(id, it.file, it.opts || {unit:"auto", up:"auto"}); else if (it.source) await restoreRemote(id, it.source); delete pendingImports[id]; n++; } catch(err){ console.warn("modello importato", err); }
+    }
+    if (n){ draw2D(); rebuild3D(); }
+  } catch(e){ console.warn("raccolta progetti", e); }
+}
 function readCanvasColors(){ readColors(); draw2D(); render3D(); }
 function init(){
-  let saved = null; try { saved = JSON.parse(localStorage.getItem("pianta-libera-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v1")); } catch(e){}
-  P = migrate(saved?.levels?.length ? saved : sampleProject()); S.level = P.levels[0].id; snap = JSON.stringify(P);
+  let saved = null, savedT = 0, tabPid = null, lastPid = null;
+  try { saved = JSON.parse(localStorage.getItem(LS_P)) || JSON.parse(localStorage.getItem("pianta-aperta-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v1")); savedT = +localStorage.getItem(LS_T) || 0; lastPid = localStorage.getItem(LS_LAST); } catch(e){}
+  try { tabPid = sessionStorage.getItem(SS_PID); } catch(e){}
+  P = migrate(saved?.levels?.length ? saved : sampleProject()); S.level = P.levels[0].id; snap = snapOf(P);
   $("#projName").value = P.name; readColors(); setTool("select"); renderStatus();
   if (!saved?.levels?.length && !new URLSearchParams(location.search).get("condividi")) save();   // l'identità del progetto (pid) resta tra un'apertura e l'altra
   new ResizeObserver(() => { resize2D(); resize3D(); }).observe($("#views"));
@@ -7005,7 +7163,8 @@ function init(){
   loadPersonalIndex();
   const shareId = new URLSearchParams(location.search).get("condividi");
   const editKey = (location.hash.match(/(?:^#|&)modifica=([a-f0-9]{48})/) || [])[1];
-  if (shareId && editKey) enterGuest(shareId, editKey); else if (shareId) enterViewer(shareId); else { setTimeout(queueIdbSave, 2500); loadGallery(); }
+  if (shareId && editKey) enterGuest(shareId, editKey); else if (shareId) enterViewer(shareId);
+  else { restoreFromIdb(tabPid || lastPid, savedT).finally(() => { idbReady = true; setTimeout(queueIdbSave, 2500); }); loadGallery(); }
 }
 init();
 
