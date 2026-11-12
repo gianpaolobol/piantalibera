@@ -45,7 +45,7 @@ un'iterazione con la precedente sulla stessa macchina.
 | Indicatore | Metodo | Attuale | Livello | Motivo |
 |---|---|---|---|---|
 | Modifica di un muro nell'edificio di prova (4 piani, 400 locali, 1.200 arredi) | L `modifica_edificio_grande_ms` | 99 ms con la ricostruzione per piano (#77; prima 266–381 ms secondo il carico) | **≤ 100 ms** | oltre 100 ms la modifica non sembra più immediata |
-| Mesh dell'edificio di prova | L `mesh_edificio_grande` | 9.625 (invariato) | **≤ 2.500** — proposta di modifica, vedi sotto | istanze e unione per materiale |
+| Mesh dell'edificio di prova | L `mesh_edificio_grande` | 2.425 (prima 9.625; #88, pezzi degli arredi uniti per materiale) | **≤ 2.500** | meno chiamate di disegno: vista 3D fluida anche su computer modesti |
 | Storia di annulla dopo 20 modifiche con una texture da 3 MB | L `storia_annulla_MB` | 2,9 MB (prima 54,4 MB) | **≤ 5 MB** | #55; i telefoni hanno poca memoria per pagina |
 | Primo disegno | Lighthouse o L (FCP) | 0,3–0,4 s | **≤ 1,0 s** (mantenere) | |
 
@@ -63,16 +63,16 @@ un'iterazione con la precedente sulla stessa macchina.
 |---|---|---|---|---|
 | Altezza occupata sopra le viste a 1440×900 | L `altezza_sopra_le_viste_px` | 48 px (prima 84) | **≤ 52 px** | #59: una sola riga d'intestazione |
 | Testi troncati visibili a 1440×900 | L `testi_troncati` | 0 (prima 2) | **0** | #59 |
-| Critiche U1–U12 del report risolte | R | 11 su 12 (resta U8, doppio selettore del piano) | **≥ 8 su 12, tutte le «media»** | |
+| Critiche U1–U12 del report risolte | R | 12 su 12 (U8 con #89) | **≥ 8 su 12, tutte le «media»** | |
 | Punti di blocco nei 5 scenari | R (report §3) | 0 non già noti (tetto a L risolto; il DWG sul web richiede la rete per scelta, il pacchetto locale lo include) | **0** non già noti | |
-| Euristiche di Nielsen, punteggio medio (0–4, tabella sotto) | R | 3,3 (prima 2,5) | **≥ 3,2** | nessuna euristica sotto 3 |
+| Euristiche di Nielsen, punteggio medio (0–4, tabella sotto) | R | 3,4 (prima 2,5) | **≥ 3,2** | nessuna euristica sotto 3 |
 
 ### Codice
 
 | Indicatore | Metodo | Attuale | Livello | Motivo |
 |---|---|---|---|---|
-| Prove unitarie e nel browser verdi | E | 66/66 unitarie (+7), 51/51 nel browser (+11: una o più per ogni bug chiuso) | **tutte verdi** + una prova per ogni bug chiuso | |
-| Funzioni di calcolo provate con `node --test` (computo, aree, coperture, IFC) | R: moduli in `shared/` con test | 3 su 4 (computo, aree, coperture) | **4 su 4** | #64 |
+| Prove unitarie e nel browser verdi | E | 69/69 unitarie (+10), 53/53 nel browser (+13: una o più per ogni bug chiuso) | **tutte verdi** + una prova per ogni bug chiuso | |
+| Funzioni di calcolo provate con `node --test` (computo, aree, coperture, IFC) | R: moduli in `shared/` con test | 4 su 4 (IFC con #90: `tests/ifc.test.mjs`, riletto con web-ifc) | **4 su 4** | #64 |
 | Vulnerabilità `npm audit` | `npm audit` | 0 | **0** | |
 | `'unsafe-eval'` nella CSP della pagina | `public/index.html` | sì | **no** (solo nel worker del lettore DWG) — proposta di modifica, vedi sotto | report §5 |
 
@@ -101,20 +101,20 @@ Punteggio 0–4 sull'editor completo; tra parentesi il valore del 12/11 prima de
 | 1 | Visibilità dello stato | 4 (3) | «salvato hh:mm», suggerimento dello strumento intero, lunghezze dei muri visibili, messaggi annunciati |
 | 2 | Linguaggio del mondo reale | 3 (3) | slogan tecnico tolto; resta «pacchetto AI» nella scheda Esporta |
 | 3 | Controllo e libertà | 4 (2) | annulla/ripristina leggero, riapertura sempre all'ultima versione, conferme sulle eliminazioni |
-| 4 | Coerenza | 3 (2) | azioni frequenti in cima a Esporta; restano due selettori del piano (U8) |
+| 4 | Coerenza | 4 (2) | azioni frequenti in cima a Esporta; un solo selettore del piano (U8) |
 | 5 | Prevenzione degli errori | 3 (2) | tetti sulla sagoma, valori fuori campo corretti all'apertura, R.A.I. segnalato |
 | 6 | Riconoscere invece di ricordare | 4 (3) | parola e scorciatoia sotto ogni icona, quote visibili, strumenti di ricalco solo quando servono |
 | 7 | Flessibilità ed efficienza | 3 (3) | scorciatoie, misure digitate, menu contestuale |
 | 8 | Estetica e minimalismo | 3 (2) | una riga d'intestazione, strumenti contestuali; il pannello del piano resta denso |
 | 9 | Riconoscere e correggere gli errori | 3 (2) | messaggio chiaro senza WebGL, messaggi annunciati; i messaggi temporanei restano brevi |
 | 10 | Aiuto e documentazione | 3 (3) | primi passi nel pannello, `?` con le scorciatoie, Info |
-| | **Media** | **3,3** (2,5) | |
+| | **Media** | **3,4** (2,5) | |
 
 ## Proposte di modifica dei livelli (da approvare nella issue #1)
 
-- **Mesh dell'edificio di prova ≤ 2.500**: l'obiettivo vero, cioè la modifica sotto i 100 ms, è raggiunto con la ricostruzione per piano (#77). Per scendere sotto 2.500 mesh servono istanze o unione per materiale degli arredi, che toccano selezione, trascinamento, luci e porte animate nel 3D: rischio alto per un guadagno che oggi non si misura (manca un indicatore di FPS stabile in CI senza GPU). Proposta: sostituire l'indicatore con «FPS della vista 3D sull'edificio di prova su un computer reale ≥ 30», misurato dal titolare con la lista di prove, e tenere le istanze come lavoro futuro.
+- ~~**Mesh dell'edificio di prova ≤ 2.500**~~: ritirata, livello raggiunto con #88 (2.425 mesh) unendo per materiale i pezzi di ogni modello pronto; selezione, trascinamento, luci e porte nel 3D restano come prima.
 - **`'unsafe-eval'` fuori dalla CSP**: lo chiede solo il lettore DWG (libredwg in WebAssembly con embind). Toglierlo vuol dire caricare il lettore in un worker con una CSP propria, che su GitHub Pages e nel pacchetto locale non si può impostare per un singolo file. Proposta: livello «`'unsafe-eval'` solo finché il lettore DWG non ha una build senza `new Function`», con la verifica che nessun altro modulo ne abbia bisogno (oggi è così).
-- **IFC con `node --test` (4 su 4)**: l'IFC nasce dal modello 3D di Three.js; separarne la parte di calcolo richiede di riscrivere la triangolazione. Proposta: 3 su 4 per questo ciclo, l'IFC resta provato con web-ifc e IfcOpenShell nelle prove nel browser e nella misura dei livelli.
+- ~~**IFC con `node --test` (4 su 4)**~~: ritirata, livello raggiunto con #90: il calcolo dell'IFC è in `shared/ifc.js` e coperture e arredi arrivano già triangolati dal 3D, senza riscrivere la triangolazione.
 
 ### Euristiche di Nielsen (12/11/2026)
 
@@ -152,3 +152,6 @@ Punteggio 0–4 sull'editor completo (pianta, 3D, pannello, telefono); motivo in
 | 12/11/2026 | #84, #85 | funzioni di calcolo con node --test 0 → 3 su 4 |
 | 12/11/2026 | #77 | modifica sull'edificio grande ≤ 100 ms (99 ms) |
 | 12/11/2026 | #80 | varianti 12 → 15 su 15 |
+| 12/11/2026 | #88 | mesh dell'edificio di prova 9.625 → 2.425 (livello ≤ 2.500) |
+| 12/11/2026 | #89 | U1–U12 11 → 12 su 12; Nielsen 3,3 → 3,4 |
+| 12/11/2026 | #90 | funzioni di calcolo con node --test 3 → 4 su 4 |
