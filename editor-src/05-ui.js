@@ -91,6 +91,9 @@ function renderInspector(){
   }
   if (!sel && S.tool !== "furn" && S.tool !== "calib" && S.tool !== "paint"){
     const U = L.underlay;
+    // primi passi (U12): tre punti di partenza finché l'utente non chiude il riquadro
+    if (!PREFS.introDone && !S.viewer && !S.guest) h += `<div class="sec intro"><h3>Per iniziare</h3><p class="note">Disegna, importa o parti dall'esempio. Clic su un elemento per vederne le proprietà; <kbd>?</kbd> mostra tutte le scorciatoie.</p>
+      <div class="btns"><button class="btn primary" id="inRoom">Disegna una stanza</button><button class="btn" id="inImport">Importa una pianta</button><button class="btn" id="inNew">Progetto vuoto</button><button class="btn" id="inClose" aria-label="Chiudi i primi passi">Ho capito</button></div></div>`;
     h += `<div class="sec"><h3>Piano</h3>${F("lName","Nome",L.name)}<div class="row3">${F("lElev","Quota (m)",fmt(L.elev),'inputmode="decimal"')}${F("lH","Altezza muri",fmt(L.height),'inputmode="decimal"')}${F("lSlab","Solaio",fmt(L.slab),'inputmode="decimal"')}</div>
       <div class="row"><div class="f"><span class="lbl">Copertura</span><select id="lRoof" class="inp"><option value="none">Nessuna</option><option value="flat">Piana</option><option value="gable">A due falde</option><option value="hip">A padiglione (quattro falde)</option><option value="shed">A una falda</option></select></div>
       ${["gable","hip","shed"].includes(L.roof.type)?F("lPitch","Pendenza °",L.roof.pitch,'inputmode="decimal"'):"<div></div>"}</div>
@@ -167,6 +170,12 @@ P_.addEventListener("input", e => {
   if (t.id === "libQ"){ S.libQ = t.value; const g = $("#libGrid"); if (g){ g.innerHTML = libGridHTML(); hydrateThumbs(g); } $$("[data-fcat]", P_).forEach(b => b.setAttribute("aria-pressed", !S.libQ && b.dataset.fcat === S.furnCat)); }
 });
 P_.addEventListener("click", e => {
+  const ib = e.target.closest("#inRoom, #inImport, #inNew, #inClose");
+  if (ib){ PREFS.introDone = true; savePrefs();
+    if (ib.id === "inRoom"){ setTool("rect"); toast("Trascina nella pianta per disegnare una stanza con i muri"); }
+    if (ib.id === "inImport"){ S.tab = "import"; renderTabs(); }
+    if (ib.id === "inNew"){ const p = sampleProject(); p.name = "Nuovo progetto"; p.walls = []; p.openings = []; p.rooms = []; p.objects = []; p.levels[0].roof.type = "none"; openProjectData(p); }
+    renderInspector(); return; }
   const b = e.target.closest("button"); if (!b) return; const sel = findSel(), L = level();
   if (b.dataset.fs){ S.furnSrc = b.dataset.fs; S.onlinePick = null; renderInspector(); return; }
   if (b.dataset.fcat){ S.furnCat = b.dataset.fcat; S.libQ = ""; renderInspector(); return; }

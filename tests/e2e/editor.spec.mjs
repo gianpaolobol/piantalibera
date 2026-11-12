@@ -598,3 +598,14 @@ test("computo: finiture per lato, battiscopa e aperture coincidono con il calcol
   expect(q).toEqual({muro:45.03, interno:41.79, esterno:48.27, pavimento:17.39, battiscopa:15.9, muroConAperturaLarga:2.6});   // 2 × 2,70 − 2 × 1,40
   expect(errors).toEqual([]);
 });
+
+// Revisione 11/2026 (U12): primi passi nel pannello, finché non si chiudono
+test("primi passi: disegna una stanza, importa, progetto vuoto; chiusi restano chiusi", async ({ page }) => {
+  const errors = await open(page);
+  await expect(page.locator("#panel-props .intro")).toContainText("Per iniziare");
+  await page.click("#inRoom"); expect(await page.evaluate(() => S.tool)).toBe("rect");
+  await expect(page.locator("#panel-props .intro")).toHaveCount(0);
+  await page.reload(); await page.waitForFunction(() => typeof P !== "undefined" && P);
+  await expect(page.locator("#panel-props .intro")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

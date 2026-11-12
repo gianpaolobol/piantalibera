@@ -56,6 +56,8 @@ Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, ve
 
 - **Quote dei muri visibili dall'inizio** (revisione 11/2026, #61): la lunghezza di tutti i muri («Quote» nella barra di stato) è accesa per impostazione; chi l'ha spenta la ritrova spenta.
 
+- **Per iniziare** (revisione 11/2026, U12): finché non si chiude, il pannello senza selezione mostra tre punti di partenza (disegna una stanza, importa una pianta, progetto vuoto); la scelta resta nelle preferenze del browser (`PREFS.introDone`).
+
 ## Pianta di precisione (fase 1 della roadmap d'interfaccia)
 
 - **Selezione**: clic, Maiusc+clic per aggiungere/togliere, trascinamento nel vuoto = selezione a riquadro (su touch sposta la vista), Ctrl+A. Più elementi si spostano insieme trascinandone uno o con le frecce (Maiusc ×10); i muri non selezionati collegati seguono.
