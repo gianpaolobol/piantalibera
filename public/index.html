@@ -83,6 +83,8 @@ button.viewtag{cursor:pointer;font:inherit;pointer-events:auto;border:0}
 #tag2d{display:flex;gap:2px;padding:2px;pointer-events:auto;text-transform:none;letter-spacing:0}
 #tag2d .lvl{border:0;background:none;color:var(--muted);font:600 11px var(--f-ui, inherit);padding:3px 8px;border-radius:3px;cursor:pointer}
 #tag2d .lvl[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink)}
+/* U8: con la pianta visibile il piano si sceglie dalle schede sopra la pianta (con «+»); il selettore in alto resta in sola vista 3D e su telefono */
+body:not(.compact):has(#views:not([data-mode="3d"])) .bar .field:has(#levelSel){display:none}
 .wtypes .wt-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:2px 0 6px}
 .wtypes .wt{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 2px;display:grid;gap:1px;justify-items:center;cursor:pointer;min-height:44px}
 .wtypes .wt b{font:600 13px var(--f-data)}.wtypes .wt small{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
