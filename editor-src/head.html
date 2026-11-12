@@ -140,7 +140,7 @@ canvas{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-web
 .side{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden;position:relative}
 .side-grip{position:absolute;left:0;top:0;bottom:0;width:6px;cursor:ew-resize;z-index:3;touch-action:none}.side-grip:hover{background:var(--accent-soft)}
 .side-head{display:none;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px;border-bottom:1px solid var(--line);cursor:move;font-size:12px;color:var(--muted);touch-action:none}.side-head .btn{padding:2px 8px;font-size:12px}
-.tabs .tab-ic{flex:0 0 26px;font-size:13px}.tabs button{white-space:nowrap}
+.tabs .tab-ic{flex:0 0 26px;font-size:13px}.tabs-in{display:contents}.tabs button{white-space:nowrap}
 body.side-float .main{grid-template-columns:auto 1fr}
 body.side-float .side{position:fixed;z-index:45;resize:both;box-shadow:0 12px 32px rgba(0,0,0,.22);min-width:260px;min-height:220px;max-width:90vw;max-height:90vh}
 body.side-float .side-head{display:flex}body.side-float .side-grip,body.side-float #sideFloat{display:none}
@@ -266,9 +266,9 @@ body.compact .bar .seg:last-child{order:1;margin-left:auto}
 body.compact #viewSeg{order:2}body.compact #viewSeg [data-v="both"]{display:none}
 body.compact .bar .field:has(#levelSel){order:3}
 body.compact .bar .field:has(#projName){order:4;flex:1 1 150px}body.compact #projName{width:100%!important;flex:1}
-body.compact #undoBtn,body.compact #redoBtn,body.compact #addLevel{font-size:0;min-width:40px;justify-content:center}
-body.compact #undoBtn::before,body.compact #redoBtn::before{content:"";display:inline-block;flex:none;width:20px;height:20px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 14 4 9l5-5'/%3E%3Cpath d='M4 9h10.5a5.5 5.5 0 0 1 0 11H11'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 14 4 9l5-5'/%3E%3Cpath d='M4 9h10.5a5.5 5.5 0 0 1 0 11H11'/%3E%3C/svg%3E") center/contain no-repeat}
-body.compact #redoBtn::before{transform:scaleX(-1)}body.compact #addLevel::before{content:"+";font-size:18px}
+#undoBtn,#redoBtn{font-size:0;min-width:34px;display:inline-flex;align-items:center;justify-content:center}body.compact #undoBtn,body.compact #redoBtn,body.compact #addLevel{font-size:0;min-width:40px;justify-content:center}
+#undoBtn::before,#redoBtn::before{content:"";display:inline-block;flex:none;width:20px;height:20px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 14 4 9l5-5'/%3E%3Cpath d='M4 9h10.5a5.5 5.5 0 0 1 0 11H11'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 14 4 9l5-5'/%3E%3Cpath d='M4 9h10.5a5.5 5.5 0 0 1 0 11H11'/%3E%3C/svg%3E") center/contain no-repeat}
+#redoBtn::before{transform:scaleX(-1)}body.compact #addLevel::before{content:"+";font-size:18px}
 @media (max-width:560px){body.compact .bar .field:has(#projName){order:1;flex:none}body.compact #projName{display:none}body.compact .bar .seg:last-child{order:2;margin-left:0}body.compact .brand{margin-right:auto}
   body.compact #viewSeg{order:3}body.compact .bar .field:has(#levelSel){order:4;flex:1}body.compact #levelSel{flex:1;width:0}}
 body.compact .spacer,body.compact #sideToggle,body.compact .side-grip,body.compact .side-head,body.compact #sideFloat{display:none!important}
@@ -321,6 +321,14 @@ body.compact .hud{bottom:52px}
 .btn.mini{min-height:30px;padding:2px 8px}
 .photo-ov{position:absolute;inset:0;pointer-events:none;display:flex;justify-content:center;z-index:2}.photo-ov img{height:100%;width:auto;max-width:none}
 .exp-sec{margin:14px 2px 6px;font:600 10.5px var(--f-data);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+/* revisione 11/2026 (#59): una sola riga d'intestazione sul computer, suggerimento dello strumento non troncato */
+.brand small{display:none}
+body:not(.compact) .statusbar .sb-left#hud2d{display:flex;position:absolute;left:6px;right:6px;bottom:32px;gap:8px;flex-wrap:wrap;pointer-events:none}
+body:not(.compact) .statusbar .sb-left#hud2d span{background:color-mix(in srgb, var(--panel) 90%, transparent);padding:3px 7px;border-radius:4px;font-size:11.5px;color:var(--ink);box-shadow:0 0 0 1px var(--line);white-space:normal;overflow:visible;text-overflow:clip;max-width:none}
+.tool[hidden]{display:none!important}
+#camSel{min-width:116px}
+.no3d{position:absolute;inset:12px;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:20px;background:var(--panel, #fff);color:var(--ink, #222);border:1px solid var(--line, #ccc);border-radius:10px;font-size:14px;line-height:1.45;text-align:center;z-index:5}
+.no3d b{font-size:15px}
 </style>
 
 <div id="app">
@@ -333,7 +341,7 @@ body.compact .hud{bottom:52px}
     <div class="seg" id="viewSeg" role="group" aria-label="Viste">
       <button data-v="2d">Pianta</button><button data-v="3d">3D</button><button data-v="both" aria-pressed="true">Affiancate</button>
     </div>
-    <div class="seg"><button id="undoBtn" title="Annulla (Ctrl+Z)">Annulla</button><button id="redoBtn" title="Ripristina (Ctrl+Y)">Ripristina</button></div>
+    <div class="seg"><button id="undoBtn" title="Annulla (Ctrl+Z)" aria-label="Annulla">Annulla</button><button id="redoBtn" title="Ripristina (Ctrl+Y)" aria-label="Ripristina">Ripristina</button></div>
   </header>
 
   <div class="main">
@@ -369,12 +377,12 @@ body.compact .hud{bottom:52px}
     </section>
 
     <aside class="side">
-      <div class="tabs" role="tablist">
+      <div class="tabs"><div class="tabs-in" role="tablist" aria-label="Pannello">
         <button role="tab" data-tab="props" aria-selected="true">Proprietà</button>
         <button role="tab" data-tab="list" aria-selected="false">Elenco</button><button role="tab" data-tab="import" aria-selected="false">Importa</button>
         <button role="tab" data-tab="export" aria-selected="false">Esporta</button>
         <button role="tab" data-tab="ai" aria-selected="false">Render AI</button>
-      </div>
+      </div></div>
       <div class="panel" id="panel-props"></div>
       <div class="panel" id="panel-import" hidden></div>
       <div class="panel" id="panel-export" hidden></div>
@@ -382,7 +390,7 @@ body.compact .hud{bottom:52px}
       <div class="panel" id="panel-ai" hidden></div>
     </aside>
   </div>
-  <div id="toast" role="status"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
   <input type="file" id="fPlan" accept=".dxf,.dwg,.pdf,.png,.jpg,.jpeg,.webp" hidden>
   <input type="file" id="fA3" accept=".dxf,.dwg" multiple hidden>
   <input type="file" id="fF3" accept="image/*" hidden>

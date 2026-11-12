@@ -53,7 +53,7 @@ async function panoJPEG(cv){
 }
 /* visore 360° nella pagina */
 function openPanoViewer(cv){
-  closePanoViewer();
+  closePanoViewer(); if (NO_WEBGL){ toast("Il visore 360° richiede la grafica 3D (WebGL), non disponibile su questo dispositivo", true); return; }
   const d = document.createElement("div"); d.id = "panoBox"; d.className = "help pano"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Panorama 360°");
   d.innerHTML = `<div class="pano-in"><header><h3>Panorama 360°</h3><span class="note">Trascina per guardarti intorno · rotella per lo zoom</span><button class="btn" id="panoSave">Scarica JPG</button><button class="btn" id="panoClose" aria-label="Chiudi">✕</button></header><canvas id="panoCv"></canvas></div>`;
   document.body.appendChild(d);
@@ -140,8 +140,12 @@ const projDel = id => idbDo("readwrite", s => s.delete(id));
 function projThumb(){ try { const w = 240, h = 150, c = document.createElement("canvas"); c.width = w; c.height = h; const k = Math.max(w / c3d.width, h / c3d.height), sw = w / k, sh = h / k; c.getContext("2d").drawImage(c3d, (c3d.width - sw) / 2, (c3d.height - sh) / 2, sw, sh, 0, 0, w, h); return c.toDataURL("image/jpeg", .7); } catch(e){ return ""; } }
 let idbTimer = 0, idbWarned = false;
 function queueIdbSave(){ clearTimeout(idbTimer); idbTimer = setTimeout(saveToIdb, 1500); }
+// uscendo dalla pagina o passando a un'altra app si scrive subito, senza aspettare il ritardo di queueIdbSave
+addEventListener("pagehide", () => { if (idbTimer) saveToIdb(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && idbTimer) saveToIdb(); });
+let idbReady = false;   // diventa vero dopo restoreFromIdb: prima non si scrive nella raccolta
 async function saveToIdb(){
-  clearTimeout(idbTimer); if (!P?.pid || !window.indexedDB) return;
+  clearTimeout(idbTimer); idbTimer = 0; if (!P?.pid || !window.indexedDB) return; if (!idbReady){ queueIdbSave(); return; }
   try { await projPut({id:P.pid, name:P.name || "Progetto", updated:Date.now(), thumb:projThumb(), data:JSON.stringify(projectData())}); if (document.getElementById("projBox")) renderProjects(); }
   catch(e){ if (!idbWarned){ idbWarned = true; console.warn("raccolta progetti", e); } }
 }

@@ -374,7 +374,7 @@ const thumbCache = {};
 let thumbR = null;
 function thumbRenderer(){
   if (thumbR) return thumbR;
-  const r = new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true});
+  const r = NO_WEBGL ? inertObject() : new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true});
   r.setPixelRatio(1); r.setSize(THUMB.w, THUMB.h); r.outputEncoding = THREE.sRGBEncoding; r.toneMapping = THREE.ACESFilmicToneMapping;
   r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
   const sc = new THREE.Scene(), pm = new THREE.PMREMGenerator(r); sc.environment = pm.fromScene(new THREE.RoomEnvironment(), .04).texture;

@@ -222,4 +222,12 @@ $$("[data-cam]").forEach(b => b.addEventListener("click", () => camPreset(b.data
 $(".tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (!b) return; S.tab = b.dataset.tab; renderTabs(); });
 function renderTabs(){ $$(".tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === S.tab)); for (const t of ["props","list","import","export","ai"]) $("#panel-"+t).hidden = S.tab !== t; if (S.tab === "list") renderList(); if (S.tab === "export") renderExport(); if (S.tab === "import") renderImport(); if (S.tab === "ai") renderAI(); }
 $("#undoBtn").addEventListener("click", undo); $("#redoBtn").addEventListener("click", redo);
-function refresh(){ renderLevels(); renderInspector(); draw2D(); rebuild3D(); $("#undoBtn").disabled = !past.length; $("#redoBtn").disabled = !future.length; if (S.tab === "export") renderExport(); if (S.tab === "list") renderList(); renderCamSel(); }
+/* Accessibilità (#62): i campi dei pannelli hanno l'etichetta visibile in <span class="lbl"> accanto; qui la si collega
+   come nome accessibile (aria-label) a ogni select, input e textarea che non ne ha uno, anche nei pannelli ridisegnati. */
+function autoLabel(root){ for (const el of root.querySelectorAll("select, input:not([type=hidden]), textarea")){
+  if (el.getAttribute("aria-label") || el.getAttribute("aria-labelledby") || el.labels?.length) continue;
+  const t = (el.closest(".f, label, .row")?.querySelector(".lbl")?.textContent || el.getAttribute("title") || el.getAttribute("placeholder") || "").trim(); if (t) el.setAttribute("aria-label", t); } }
+let autoLabelQ = 0; new MutationObserver(() => { if (!autoLabelQ) autoLabelQ = requestAnimationFrame(() => { autoLabelQ = 0; autoLabel(document.body); }); }).observe(document.body, {childList:true, subtree:true});
+// strumenti del ricalco solo quando il piano ha una base importata (#59, U3)
+function syncUnderlayTools(){ const on = !!level()?.underlay; for (const b of document.querySelectorAll('[data-tool="calib"], [data-tool="moveunder"]')) b.hidden = !on; }
+function refresh(){ syncUnderlayTools(); renderLevels(); renderInspector(); draw2D(); rebuild3D(); $("#undoBtn").disabled = !past.length; $("#redoBtn").disabled = !future.length; if (S.tab === "export") renderExport(); if (S.tab === "list") renderList(); renderCamSel(); }
