@@ -779,3 +779,33 @@ test("primi passi: disegna una stanza, importa, progetto vuoto; chiusi restano c
   await expect(page.locator("#panel-props .intro")).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test("arredi più leggeri nel 3D: stessa sagoma, meno mesh, selezione dal 3D (#63)", async ({ page }) => {
+  await open(page);
+  const r = await page.evaluate(() => {
+    let prima = 0, dopo = 0, peggiori = [];
+    const conta = G => { let n = 0; G.traverse(o => { if (o.isMesh) n++; }); return n; };
+    for (const it of LIB.filter(x => x.build)){
+      let A; try { A = it.build(); } catch { continue; } // alcuni modelli (scale) vogliono parametri
+      A.updateMatrixWorld(true); const bA = new THREE.Box3().setFromObject(A, true), nA = conta(A);
+      const B = finishTpl(it.build()); B.updateMatrixWorld(true); const bB = new THREE.Box3().setFromObject(B, true), nB = conta(B);
+      prima += nA; dopo += nB;
+      const d = Math.max(bA.min.distanceTo(bB.min), bA.max.distanceTo(bB.max));
+      if (d > 1e-3 || nB > nA) peggiori.push(`${it.ref}: ${d.toFixed(4)} m, ${nA}→${nB}`);
+    }
+    return { prima, dopo, peggiori };
+  });
+  expect(r.peggiori).toEqual([]);
+  expect(r.dopo).toBeLessThan(r.prima * 0.6);
+  // un arredo nel 3D si seleziona ancora con un clic sul suo corpo
+  const sel = await page.evaluate(async () => {
+    const o = P.objects.find(x => LIBMAP[x.ref]?.build && !/sagoma|quercia|tiglio|betulla|olivo|cipresso|pino|palma|arbusto|siepe|vaso/.test(x.ref));
+    rebuildNow?.(); let g = null; modelGroup.traverse(x => { if (x.userData?.objId === o.id) g = x; });
+    const c = new THREE.Box3().setFromObject(g).getCenter(new THREE.Vector3());
+    camera.position.set(c.x, c.y + 1.6, c.z + .01); camera.lookAt(c); camera.updateMatrixWorld(); // dall'alto, sotto il soffitto
+    const p = c.clone().project(camera), rc = c3d.getBoundingClientRect();
+    const hit = pick3D({ clientX: rc.left + (p.x + 1) / 2 * rc.width, clientY: rc.top + (1 - p.y) / 2 * rc.height });
+    return { atteso: o.id, ref: o.ref, cat: hit?.object.userData.cat, nome: hit?.object.name, trovato: hit && objOf3D(hit.object)?.userData.objId, dentro: Math.abs(p.x) < 1 && Math.abs(p.y) < 1 };
+  });
+  expect(sel.dentro).toBe(true); expect(sel.trovato, JSON.stringify(sel)).toBe(sel.atteso);
+});

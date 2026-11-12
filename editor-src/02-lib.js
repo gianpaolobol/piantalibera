@@ -324,7 +324,30 @@ function finishTpl(G){
     if (o.userData.wuv){ const k = (Array.isArray(o.material) ? o.material[0] : o.material).userData.key; o.geometry = worldUV(o.geometry.index ? o.geometry.toNonIndexed() : o.geometry, matDef(k).size || .5); }
     if (o.material?.alphaTest > 0) o.customDepthMaterial = new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking, map:o.material.map, alphaTest:o.material.alphaTest});
   });
-  G.userData.box = null; return G;
+  G.userData.box = null; return mergeTplMeshes(G);
+}
+/* Arredi più leggeri nel 3D (#63): nel modello di un arredo le parti con lo stesso materiale diventano una mesh sola
+   (meno oggetti e chiamate di disegno quando l'arredo si ripete). Restano separate le lampadine, i materiali multipli,
+   le parti specchiate e quelle con attributi diversi. Il gruppo, le luci e i dati del modello (pianta, scala) non cambiano. */
+function mergeTplMeshes(G){
+  G.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(G.matrixWorld).invert(), groups = new Map();
+  G.traverse(o => { if (!o.isMesh || Array.isArray(o.material) || o.userData.bulb || o.isSkinnedMesh || o.isInstancedMesh || o.morphTargetInfluences) return;
+    const M = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld); if (M.determinant() < 0) return;
+    const k = `${o.material.uuid}|${o.userData.leaves ? 1 : 0}|${o.customDepthMaterial?.uuid || ""}|${o.castShadow}|${o.receiveShadow}|${o.userData.wuv ? 1 : 0}`;
+    (groups.get(k) || groups.set(k, []).get(k)).push([o, M]); });
+  for (const list of groups.values()){
+    if (list.length < 2) continue;
+    const geos = list.map(([m, M]) => { const g = (m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()); g.morphAttributes = {}; g.applyMatrix4(M); return g; });
+    const sig = g => Object.keys(g.attributes).sort().map(k => k + g.attributes[k].itemSize).join();
+    if (geos.some(g => sig(g) !== sig(geos[0]))) continue;
+    const merged = THREE.BufferGeometryUtils.mergeBufferGeometries(geos, false); if (!merged) continue;
+    const m0 = list[0][0], mesh = new THREE.Mesh(merged, m0.material);
+    mesh.name = m0.material.name || m0.name; mesh.castShadow = m0.castShadow; mesh.receiveShadow = m0.receiveShadow; mesh.userData = {...m0.userData};
+    if (m0.customDepthMaterial) mesh.customDepthMaterial = m0.customDepthMaterial;
+    for (const [m] of list) m.parent?.remove(m);
+    G.add(mesh);
+  }
+  return G;
 }
 function libRef(ref){ return LIBMAP[ref] ? ref : (LIB_ALIASES[ref] || ref); }
 function objTemplate(o){
