@@ -222,4 +222,6 @@ $$("[data-cam]").forEach(b => b.addEventListener("click", () => camPreset(b.data
 $(".tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (!b) return; S.tab = b.dataset.tab; renderTabs(); });
 function renderTabs(){ $$(".tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === S.tab)); for (const t of ["props","list","import","export","ai"]) $("#panel-"+t).hidden = S.tab !== t; if (S.tab === "list") renderList(); if (S.tab === "export") renderExport(); if (S.tab === "import") renderImport(); if (S.tab === "ai") renderAI(); }
 $("#undoBtn").addEventListener("click", undo); $("#redoBtn").addEventListener("click", redo);
-function refresh(){ renderLevels(); renderInspector(); draw2D(); rebuild3D(); $("#undoBtn").disabled = !past.length; $("#redoBtn").disabled = !future.length; if (S.tab === "export") renderExport(); if (S.tab === "list") renderList(); renderCamSel(); }
+// strumenti del ricalco solo quando il piano ha una base importata (#59, U3)
+function syncUnderlayTools(){ const on = !!level()?.underlay; for (const b of document.querySelectorAll('[data-tool="calib"], [data-tool="moveunder"]')) b.hidden = !on; }
+function refresh(){ syncUnderlayTools(); renderLevels(); renderInspector(); draw2D(); rebuild3D(); $("#undoBtn").disabled = !past.length; $("#redoBtn").disabled = !future.length; if (S.tab === "export") renderExport(); if (S.tab === "list") renderList(); renderCamSel(); }
