@@ -55,6 +55,7 @@ Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, ve
 - Export: GLB e OBJ per D5 Render (un oggetto per materiale, nomi leggibili), 3MF/STL per la stampa 3D in scala con parete minima, basamento e piani separati, DXF della pianta, PNG, pacchetto AI, progetto JSON (schema versione 2 con migrazione dalla 1).
 - Render AI: preset «Backend Pianta Libera» sul contratto `/api/render` (vista + profondità + contorni + camera), modalità fedele/creativo, polling dei lavori, galleria con confronto. Preset diretti verso servizi esterni solo per prove locali.
 
+- **Ricostruzione del 3D per piano** (revisione 11/2026, #63): a ogni modifica si ricostruiscono solo i piani i cui dati sono cambiati (impronta per piano in `levelKeys`, gruppi riusati in `LV3D`); `rebuildNow()` è la ricostruzione immediata, `rebuild3D()` la mette al fotogramma successivo.
 - **Quote dei muri visibili dall'inizio** (revisione 11/2026, #61): la lunghezza di tutti i muri («Quote» nella barra di stato) è accesa per impostazione; chi l'ha spenta la ritrova spenta.
 
 - **Per iniziare** (revisione 11/2026, U12): finché non si chiude, il pannello senza selezione mostra tre punti di partenza (disegna una stanza, importa una pianta, progetto vuoto); la scelta resta nelle preferenze del browser (`PREFS.introDone`).

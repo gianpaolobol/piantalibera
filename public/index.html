@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-0vHEKPkcpj6h6wPrSTeVJU4XqKW4y6N2TCZm0Das6FM=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-2BhAYZRJJNCKX0rKp+Fjv7ZbcJqhav8IH7g54MZmrJo=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -642,6 +642,43 @@ function wallFaceLengths(w, walls){
   return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B), shift};
 }
 
+/* Sagoma della copertura di un piano: rettangoli massimi (anche sovrapposti) che coprono l'ingombro dei muri,
+   compresi i loro spessori e le aree chiuse. Piante a L, T, U → più rettangoli; muri obliqui → un rettangolo
+   d'ingombro (ortho:false). area(o) = superficie in pianta con lo sporto o (unione esatta per le piante ortogonali). */
+function roofRectsOf(ws){
+  if (!ws.length) return null;
+  let tMax = 0, ortho = true; const xs = new Set(), zs = new Set();
+  for (const w of ws){ tMax = Math.max(tMax, w.thick); const dx = w.b[0]-w.a[0], dz = w.b[1]-w.a[1]; if (Math.abs(dx) > 1e-3 && Math.abs(dz) > 1e-3) ortho = false;
+    for (const q of [w.a, w.b]){ xs.add(+(q[0]-w.thick/2).toFixed(3)); xs.add(+(q[0]+w.thick/2).toFixed(3)); zs.add(+(q[1]-w.thick/2).toFixed(3)); zs.add(+(q[1]+w.thick/2).toFixed(3)); } }
+  const X = [...xs].sort((a, b) => a - b), Z = [...zs].sort((a, b) => a - b);
+  const bbox = {x0:X[0], x1:X[X.length-1], z0:Z[0], z1:Z[Z.length-1]};
+  const rectArea = (rs, o) => { const ex = [...new Set(rs.flatMap(r => [r.x0-o, r.x1+o]))].sort((a, b) => a - b), ez = [...new Set(rs.flatMap(r => [r.z0-o, r.z1+o]))].sort((a, b) => a - b); let A = 0;
+    for (let i = 0; i < ex.length-1; i++) for (let j = 0; j < ez.length-1; j++){ const cx = (ex[i]+ex[i+1])/2, cz = (ez[j]+ez[j+1])/2; if (rs.some(r => cx > r.x0-o && cx < r.x1+o && cz > r.z0-o && cz < r.z1+o)) A += (ex[i+1]-ex[i])*(ez[j+1]-ez[j]); } return A; };
+  if (!ortho || X.length > 80 || Z.length > 80) return {rects:[bbox], bbox, tMax, ortho:false, area:o => rectArea([bbox], o)};
+  // celle della griglia: piene se dentro un muro o in un'area chiusa dai muri (riempimento dall'esterno)
+  const nx = X.length-1, nz = Z.length-1, inWall = (x, z) => ws.some(w => { const q = projOnSeg([x, z], w.a, w.b); return q.d <= w.thick/2 + 1e-4; });
+  const full = Array.from({length:nx}, (_, i) => Array.from({length:nz}, (_, j) => inWall((X[i]+X[i+1])/2, (Z[j]+Z[j+1])/2)));
+  const out = Array.from({length:nx}, () => Array(nz).fill(false)), st = [];
+  for (let i = 0; i < nx; i++) for (const j of [0, nz-1]) if (!full[i][j]) st.push([i, j]);
+  for (let j = 0; j < nz; j++) for (const i of [0, nx-1]) if (!full[i][j]) st.push([i, j]);
+  while (st.length){ const [i, j] = st.pop(); if (i < 0 || j < 0 || i >= nx || j >= nz || out[i][j] || full[i][j]) continue; out[i][j] = true; st.push([i+1, j], [i-1, j], [i, j+1], [i, j-1]); }
+  const cov = (i0, i1, j0, j1) => { for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) if (out[i][j]) return false; return true; };
+  // rettangoli massimi: per ogni coppia di colonne, le strisce di righe coperte; si tengono quelli non contenuti in altri
+  const cand = [];
+  for (let i0 = 0; i0 < nx; i0++) for (let i1 = i0; i1 < nx; i1++){ let j0 = null;
+    for (let j = 0; j <= nz; j++){ const ok = j < nz && cov(i0, i1, j, j); if (ok && j0 === null) j0 = j; if (!ok && j0 !== null){ cand.push({i0, i1, j0, j1:j-1}); j0 = null; } } }
+  const maxi = cand.filter(r => !cand.some(q => q !== r && q.i0 <= r.i0 && q.i1 >= r.i1 && q.j0 <= r.j0 && q.j1 >= r.j1));
+  const area = r => (X[r.i1+1]-X[r.i0])*(Z[r.j1+1]-Z[r.j0]);
+  // copertura avida: il rettangolo che copre più celle ancora scoperte (in superficie), finché tutto è coperto; strisce sotto 1 m scartate se già coperte
+  const left = new Set(); for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) if (!out[i][j]) left.add(i*nz + j);
+  const pick = [];
+  while (left.size){ let best = null, bv = 0;
+    for (const r of maxi){ let v = 0; for (let i = r.i0; i <= r.i1; i++) for (let j = r.j0; j <= r.j1; j++) if (left.has(i*nz + j)) v += (X[i+1]-X[i])*(Z[j+1]-Z[j]); const sc = v + area(r)*1e-3; if (v > 0 && sc > bv){ bv = sc; best = r; } }
+    if (!best) break; pick.push(best); for (let i = best.i0; i <= best.i1; i++) for (let j = best.j0; j <= best.j1; j++) left.delete(i*nz + j); }
+  const rects = pick.map(r => ({x0:X[r.i0], x1:X[r.i1+1], z0:Z[r.j0], z1:Z[r.j1+1]}));
+  return {rects:rects.length ? rects : [bbox], bbox, tMax, ortho:true, area:o => rectArea(rects.length ? rects : [bbox], o)};
+}
+
 /* ---- 02-lib.js ---- */
 /* ============================================================
    Libreria: alberi procedurali per specie, persone, arredi
@@ -1192,49 +1229,16 @@ function wallSolidRanges(w){
 
 /* ---------- Costruzione del modello ----------
    opts: {print, minThick(m), noFill, objects(bool), roof(bool), ground(bool)} */
-/* Sagoma della copertura di un piano: rettangoli massimi (anche sovrapposti) che coprono l'ingombro dei muri,
-   compresi i loro spessori e le aree chiuse. Piante a L, T, U → più rettangoli; muri obliqui → un rettangolo
-   d'ingombro (ortho:false). area(o) = superficie in pianta con lo sporto o (unione esatta per le piante ortogonali). */
-function roofRects(lid){
-  const ws = wallsOf(lid); if (!ws.length) return null;
-  let tMax = 0, ortho = true; const xs = new Set(), zs = new Set();
-  for (const w of ws){ tMax = Math.max(tMax, w.thick); const dx = w.b[0]-w.a[0], dz = w.b[1]-w.a[1]; if (Math.abs(dx) > 1e-3 && Math.abs(dz) > 1e-3) ortho = false;
-    for (const q of [w.a, w.b]){ xs.add(+(q[0]-w.thick/2).toFixed(3)); xs.add(+(q[0]+w.thick/2).toFixed(3)); zs.add(+(q[1]-w.thick/2).toFixed(3)); zs.add(+(q[1]+w.thick/2).toFixed(3)); } }
-  const X = [...xs].sort((a, b) => a - b), Z = [...zs].sort((a, b) => a - b);
-  const bbox = {x0:X[0], x1:X[X.length-1], z0:Z[0], z1:Z[Z.length-1]};
-  const rectArea = (rs, o) => { const ex = [...new Set(rs.flatMap(r => [r.x0-o, r.x1+o]))].sort((a, b) => a - b), ez = [...new Set(rs.flatMap(r => [r.z0-o, r.z1+o]))].sort((a, b) => a - b); let A = 0;
-    for (let i = 0; i < ex.length-1; i++) for (let j = 0; j < ez.length-1; j++){ const cx = (ex[i]+ex[i+1])/2, cz = (ez[j]+ez[j+1])/2; if (rs.some(r => cx > r.x0-o && cx < r.x1+o && cz > r.z0-o && cz < r.z1+o)) A += (ex[i+1]-ex[i])*(ez[j+1]-ez[j]); } return A; };
-  if (!ortho || X.length > 80 || Z.length > 80) return {rects:[bbox], bbox, tMax, ortho:false, area:o => rectArea([bbox], o)};
-  // celle della griglia: piene se dentro un muro o in un'area chiusa dai muri (riempimento dall'esterno)
-  const nx = X.length-1, nz = Z.length-1, inWall = (x, z) => ws.some(w => { const q = projOnSeg([x, z], w.a, w.b); return q.d <= w.thick/2 + 1e-4; });
-  const full = Array.from({length:nx}, (_, i) => Array.from({length:nz}, (_, j) => inWall((X[i]+X[i+1])/2, (Z[j]+Z[j+1])/2)));
-  const out = Array.from({length:nx}, () => Array(nz).fill(false)), st = [];
-  for (let i = 0; i < nx; i++) for (const j of [0, nz-1]) if (!full[i][j]) st.push([i, j]);
-  for (let j = 0; j < nz; j++) for (const i of [0, nx-1]) if (!full[i][j]) st.push([i, j]);
-  while (st.length){ const [i, j] = st.pop(); if (i < 0 || j < 0 || i >= nx || j >= nz || out[i][j] || full[i][j]) continue; out[i][j] = true; st.push([i+1, j], [i-1, j], [i, j+1], [i, j-1]); }
-  const cov = (i0, i1, j0, j1) => { for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) if (out[i][j]) return false; return true; };
-  // rettangoli massimi: per ogni coppia di colonne, le strisce di righe coperte; si tengono quelli non contenuti in altri
-  const cand = [];
-  for (let i0 = 0; i0 < nx; i0++) for (let i1 = i0; i1 < nx; i1++){ let j0 = null;
-    for (let j = 0; j <= nz; j++){ const ok = j < nz && cov(i0, i1, j, j); if (ok && j0 === null) j0 = j; if (!ok && j0 !== null){ cand.push({i0, i1, j0, j1:j-1}); j0 = null; } } }
-  const maxi = cand.filter(r => !cand.some(q => q !== r && q.i0 <= r.i0 && q.i1 >= r.i1 && q.j0 <= r.j0 && q.j1 >= r.j1));
-  const area = r => (X[r.i1+1]-X[r.i0])*(Z[r.j1+1]-Z[r.j0]);
-  // copertura avida: il rettangolo che copre più celle ancora scoperte (in superficie), finché tutto è coperto; strisce sotto 1 m scartate se già coperte
-  const left = new Set(); for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) if (!out[i][j]) left.add(i*nz + j);
-  const pick = [];
-  while (left.size){ let best = null, bv = 0;
-    for (const r of maxi){ let v = 0; for (let i = r.i0; i <= r.i1; i++) for (let j = r.j0; j <= r.j1; j++) if (left.has(i*nz + j)) v += (X[i+1]-X[i])*(Z[j+1]-Z[j]); const sc = v + area(r)*1e-3; if (v > 0 && sc > bv){ bv = sc; best = r; } }
-    if (!best) break; pick.push(best); for (let i = best.i0; i <= best.i1; i++) for (let j = best.j0; j <= best.j1; j++) left.delete(i*nz + j); }
-  const rects = pick.map(r => ({x0:X[r.i0], x1:X[r.i1+1], z0:Z[r.j0], z1:Z[r.j1+1]}));
-  return {rects:rects.length ? rects : [bbox], bbox, tMax, ortho:true, area:o => rectArea(rects.length ? rects : [bbox], o)};
-}
+/* Sagoma della copertura di un piano: vedi roofRectsOf in shared/geometria.js */
+function roofRects(lid){ return roofRectsOf(wallsOf(lid)); }
 function buildModel(opts={}){
   const root = new THREE.Group(); root.name = P.name || "Progetto";
   const buckets = new Map();
   const add = (lid, mat, cat, geo, room) => { const k = lid+"|"+mat+"|"+cat+(room ? "|"+room.id : ""); if (!buckets.has(k)) buckets.set(k, {lid, mat, cat, geos:[], tile:room?.tile}); buckets.get(k).geos.push(clean(geo)); };
   const parts = {};
-  const levelGroup = lid => parts[lid] || (parts[lid] = Object.assign(new THREE.Group(), {name: level(lid)?.name || lid}));
+  const levelGroup = lid => parts[lid] || (parts[lid] = Object.assign(new THREE.Group(), {name: level(lid)?.name || lid, userData:{lid}}));
   for (const L of P.levels){
+    if (opts.levels && !opts.levels.has(L.id)) continue;   // solo i piani richiesti (ricostruzione per piano, #63)
     const e0 = L.elev, base = e0 - L.slab;
     for (const w of wallsOf(L.id)){
       const {f, cuts, solids} = wallSolidRanges(w); if (f.len < .01) continue;
@@ -1318,7 +1322,7 @@ function buildModel(opts={}){
   }
   if (opts.objects !== false){
     for (const o of P.objects){
-      if (o.hidden) continue; const t = objTemplate(o), L = level(o.level); if (!t || !L) continue;
+      if (o.hidden || (opts.levels && !opts.levels.has(o.level))) continue; const t = objTemplate(o), L = level(o.level); if (!t || !L) continue;
       const c = t.clone(true); c.name = o.name || "Oggetto"; c.position.set(o.x, L.elev + (o.z||0), o.y); c.rotation.y = -THREE.MathUtils.degToRad(o.rot||0); c.scale.setScalar(o.scale||1);
       c.userData = {cat:"object", level:L.id, objId:o.id};
       c.traverse(m => { if (m.isMesh && m !== c) m.userData = {...m.userData, level:L.id, inObject:true}; });
@@ -1338,15 +1342,44 @@ function modelBox(){ const b = new THREE.Box3(); modelGroup.traverse(o => { if (
 function archBox(){ const b = new THREE.Box3(); modelGroup.traverse(o => { if (o.isMesh && ["wall","roof","floor","gable"].includes(o.userData.cat)) b.expandByObject(o); }); if (b.isEmpty()) return modelBox(); return b; }
 
 let rebuildQueued = false;
+/* Ricostruzione per piano (#63): ogni piano ha un'impronta dei dati che lo determinano (il piano, i suoi muri, locali,
+   aperture e oggetti, le scale di tutti i piani per i fori nei solai, quote e altezze dei piani, materiali, terreno);
+   si ricostruiscono solo i piani la cui impronta è cambiata e si riusano gli altri gruppi così come sono. */
+const LV3D = new Map();   // id del piano → {key, group, roofs:[mesh]}
+let ground3D = null;
+const longOut = (k, v) => typeof v === "string" && v.length > 256 ? v.length + ":" + v.slice(0, 64) + v.slice(-64) : v;
+function levelKeys(){
+  const stairs = P.objects.filter(o => o.kind === "lib" && LIBMAP[libRef(o.ref)]?.param?.kind === "stair");
+  const common = JSON.stringify([P.levels.map(l => [l.id, l.elev, l.height, l.slab]), stairs, P.materials], longOut);
+  const out = new Map();
+  for (const L of P.levels){ const ws = wallsOf(L.id), ids = new Set(ws.map(w => w.id));
+    out.set(L.id, common + JSON.stringify([L, ws, P.rooms.filter(r => r.level === L.id), P.openings.filter(o => ids.has(o.wall)), P.objects.filter(o => o.level === L.id).map(o => [o, objTemplate(o)?.uuid || null])], longOut)); }   // il modello può arrivare dopo (import, modelli realistici)
+  return out;
+}
+function disposeMeshes(g){ g.traverse(o => { if (o.isMesh && !o.userData.inObject && o.userData.cat && o.userData.cat !== "object") o.geometry?.dispose?.(); }); }
 function rebuild3D(){
   if (rebuildQueued) return; rebuildQueued = true;
-  requestAnimationFrame(() => {
-    rebuildQueued = false;
+  requestAnimationFrame(() => { rebuildQueued = false; rebuildNow(); });
+}
+function rebuildNow(){
+  {
     scene.remove(modelGroup);
-    modelGroup.traverse(o => { if (o.isMesh && !o.userData.inObject && o.userData.cat && o.userData.cat !== "object") o.geometry?.dispose?.(); });
-    modelGroup = buildModel({ground:S.ground}).root; scene.add(modelGroup);
+    const keys = levelKeys(), changed = new Set([...keys].filter(([id, k]) => LV3D.get(id)?.key !== k).map(([id]) => id));
+    for (const [id, c] of LV3D) if (!keys.has(id) || changed.has(id)){ disposeMeshes(c.group); for (const m of c.roofs) disposeMeshes(m); LV3D.delete(id); }
+    const fresh = changed.size || !ground3D !== !S.ground ? buildModel({ground:S.ground && !ground3D, levels:changed}).root : null;
+    if (fresh){ const roofG = fresh.children.find(c => c.name === "Copertura");
+      for (const id of changed){ const g = fresh.children.find(c => c !== roofG && c.userData.lid === id) || Object.assign(new THREE.Group(), {name:level(id)?.name || id});
+        g.userData.lid = id; LV3D.set(id, {key:keys.get(id), group:g, roofs:roofG ? roofG.children.filter(m => m.userData.level === id) : []}); }
+      const gr = fresh.children.find(c => c.userData.cat === "ground"); if (gr) ground3D = gr; }
+    if (!S.ground && ground3D){ ground3D.geometry.dispose(); ground3D = null; }
+    const root = new THREE.Group(); root.name = P.name || "Progetto"; const roof = new THREE.Group(); roof.name = "Copertura";
+    for (const L of P.levels){ const c = LV3D.get(L.id); if (!c) continue; root.add(c.group); for (const m of c.roofs) roof.add(m);
+      // luci accese o spente dipendono dall'ora e dalla modalità, non dai dati del piano: si aggiornano anche sui piani riusati
+      if (!changed.has(L.id)) for (const ch of c.group.children){ const id = ch.userData?.objId; if (!id) continue; const o = P.objects.find(x => x.id === id); if (o) decorateObject3D(ch, o); } }
+    if (roof.children.length) root.add(roof); if (ground3D) root.add(ground3D);
+    modelGroup = root; scene.add(modelGroup);
     applyVisibility(); placeSun(); render3D(); if (typeof afterRebuild3D === "function") afterRebuild3D();
-  });
+  }
 }
 function applyVisibility(){
   const cur = level(); const cut = S.show3d === "section";

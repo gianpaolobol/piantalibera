@@ -22,75 +22,99 @@ un'iterazione con la precedente sulla stessa macchina.
 
 ### Affidabilità
 
-| Indicatore | Metodo | Attuale (12/11) | Livello | Motivo |
+| Indicatore | Metodo | Attuale | Livello | Motivo |
 |---|---|---|---|---|
-| Issue aperte bloccanti | G | 1 (#51) | **0** | perdita di dati: nessuna tollerata |
-| Issue aperte alte | G | 4 (#52, #53, #55, #67) | **0** | misure sbagliate e funzioni principali bloccate non sono accettabili per un architetto |
-| Riapertura dopo un salvataggio fallito nel browser | L `persistenza_dopo_quota` | persa | **ok** | #51 |
-| Valori fuori campo accettati all'apertura di un progetto | L `import_valori_fuori_campo` | 5 | **0** | #56 |
-| Errori nella pagina nel percorso delle varianti | V «nessun errore» | ok su Chromium e WebKit | **ok su tutte** | |
-| Avvio senza WebGL | R: Chrome con `--disable-webgl` | pagina vuota | **messaggio chiaro + pianta 2D** | #67 |
+| Issue aperte bloccanti | G | 0 (prima 2: #51, #69) | **0** | perdita di dati: nessuna tollerata |
+| Issue aperte alte | G | 0 (prima 4: #52, #53, #55, #67) | **0** | misure sbagliate e funzioni principali bloccate non sono accettabili per un architetto |
+| Riapertura dopo un salvataggio fallito nel browser | L `persistenza_dopo_quota` | ok (prima: persa) | **ok** | #51 |
+| Valori fuori campo accettati all'apertura di un progetto | L `import_valori_fuori_campo` | 0 (prima 5) | **0** | #56 |
+| Errori nella pagina nel percorso delle varianti | V «nessun errore» | ok su tutte le 15 varianti provate in CI | **ok su tutte** | |
+| Avvio senza WebGL | R e prova `senza-webgl.spec.mjs` | messaggio chiaro + pianta 2D (prima: pagina vuota) | **messaggio chiaro + pianta 2D** | #67 |
 
 ### Funzionalità e correttezza
 
 | Indicatore | Metodo | Attuale | Livello | Motivo |
 |---|---|---|---|---|
-| Errore massimo del computo sulla stanza di riferimento (murature, finiture per lato, pavimento, battiscopa) | L `computo_errore_max_pct` | 7,75 % (finitura interna) | **≤ 0,5 %** | un computo serve solo se i numeri coincidono con il calcolo a mano |
-| Errore della copertura su pianta a L | L `copertura_L_errore_pct` | 45,3 % | **≤ 2 %** | #52; il 2 % lascia spazio allo sporto e alle approssimazioni |
-| Errore del volume dei muri nell'IFC rispetto al netto atteso | L `ifc_volume_muri_errore_pct` | 17,9 % | **≤ 2 %** | #57: chi estrae quantità dall'IFC deve trovare gli stessi numeri del computo |
-| Copertura delle funzioni MVP del confronto (report §4, righe «sì») | R | 5 su 15 | **10 su 15** | priorità alle righe che bloccano il lavoro: tetto su sagoma, testi e quote associative, cartiglio con dati, rapporto aeroilluminante, sopraluce |
+| Errore massimo del computo sulla stanza di riferimento (murature, finiture per lato, pavimento, battiscopa) | L `computo_errore_max_pct` | 0 % (prima 7,75 %) | **≤ 0,5 %** | un computo serve solo se i numeri coincidono con il calcolo a mano |
+| Errore della copertura su pianta a L | L `copertura_L_errore_pct` | 0 % (prima 42,7 % sul valore esatto 70,09 m²) | **≤ 2 %** | #52; il 2 % lascia spazio allo sporto e alle approssimazioni |
+| Errore del volume dei muri nell'IFC rispetto al netto atteso | L `ifc_volume_muri_errore_pct` | 0 % (prima 17,9 %) | **≤ 2 %** | #57: chi estrae quantità dall'IFC deve trovare gli stessi numeri del computo |
+| Copertura delle funzioni MVP del confronto (report §4, righe «sì») | R | 10 su 15 (+ tetto su sagoma, giunzioni e Pset/materiali nell'IFC, cartiglio con dati, rapporto aeroilluminante) | **10 su 15** | priorità alle righe che bloccano il lavoro: tetto su sagoma, testi e quote associative, cartiglio con dati, rapporto aeroilluminante, sopraluce |
 
 ### Prestazioni
 
 | Indicatore | Metodo | Attuale | Livello | Motivo |
 |---|---|---|---|---|
-| Modifica di un muro nell'edificio di prova (4 piani, 400 locali, 1.200 arredi) | L `modifica_edificio_grande_ms` | 266 ms | **≤ 100 ms** | oltre 100 ms la modifica non sembra più immediata |
-| Mesh dell'edificio di prova | L `mesh_edificio_grande` | 9.625 | **≤ 2.500** | istanze e unione per materiale |
-| Storia di annulla dopo 20 modifiche con una texture da 3 MB | L `storia_annulla_MB` | 54,4 MB | **≤ 5 MB** | #55; i telefoni hanno poca memoria per pagina |
+| Modifica di un muro nell'edificio di prova (4 piani, 400 locali, 1.200 arredi) | L `modifica_edificio_grande_ms` | 99 ms con la ricostruzione per piano (#77; prima 266–381 ms secondo il carico) | **≤ 100 ms** | oltre 100 ms la modifica non sembra più immediata |
+| Mesh dell'edificio di prova | L `mesh_edificio_grande` | 9.625 (invariato) | **≤ 2.500** — proposta di modifica, vedi sotto | istanze e unione per materiale |
+| Storia di annulla dopo 20 modifiche con una texture da 3 MB | L `storia_annulla_MB` | 2,9 MB (prima 54,4 MB) | **≤ 5 MB** | #55; i telefoni hanno poca memoria per pagina |
 | Primo disegno | Lighthouse o L (FCP) | 0,3–0,4 s | **≤ 1,0 s** (mantenere) | |
 
 ### Accessibilità
 
 | Indicatore | Metodo | Attuale | Livello | Motivo |
 |---|---|---|---|---|
-| Violazioni axe critiche e serie (WCAG 2.2 AA) sulle 5 schede | L `axe_critiche_serie` | 24 | **0** | #62 |
-| Messaggi annunciati ai lettori di schermo (`aria-live`) | R | no | **sì** | |
+| Violazioni axe critiche e serie (WCAG 2.2 AA) sulle 5 schede | L `axe_critiche_serie` | 0 (prima 24) | **0** | #62 |
+| Messaggi annunciati ai lettori di schermo (`aria-live`) | R | sì (prima no) | **sì** | |
 | Focus visibile su tutti gli elementi raggiunti con Tab | R (report §3) | 40 su 40 | **tutti** (mantenere) | |
 
 ### UI/UX e usabilità
 
 | Indicatore | Metodo | Attuale | Livello | Motivo |
 |---|---|---|---|---|
-| Altezza occupata sopra le viste a 1440×900 | L `altezza_sopra_le_viste_px` | 84 px | **≤ 52 px** | #59: una sola riga d'intestazione |
-| Testi troncati visibili a 1440×900 | L `testi_troncati` | 2 | **0** | #59 |
-| Critiche U1–U12 del report risolte | R | 0 su 12 | **≥ 8 su 12, tutte le «media»** | |
-| Punti di blocco nei 5 scenari | R (report §3) | 2 (tetto a L, DWG senza rete) | **0** non già noti | |
-| Euristiche di Nielsen, punteggio medio (0–4, tabella sotto) | R | 2,5 | **≥ 3,2** | nessuna euristica sotto 3 |
+| Altezza occupata sopra le viste a 1440×900 | L `altezza_sopra_le_viste_px` | 48 px (prima 84) | **≤ 52 px** | #59: una sola riga d'intestazione |
+| Testi troncati visibili a 1440×900 | L `testi_troncati` | 0 (prima 2) | **0** | #59 |
+| Critiche U1–U12 del report risolte | R | 11 su 12 (resta U8, doppio selettore del piano) | **≥ 8 su 12, tutte le «media»** | |
+| Punti di blocco nei 5 scenari | R (report §3) | 0 non già noti (tetto a L risolto; il DWG sul web richiede la rete per scelta, il pacchetto locale lo include) | **0** non già noti | |
+| Euristiche di Nielsen, punteggio medio (0–4, tabella sotto) | R | 3,3 (prima 2,5) | **≥ 3,2** | nessuna euristica sotto 3 |
 
 ### Codice
 
 | Indicatore | Metodo | Attuale | Livello | Motivo |
 |---|---|---|---|---|
-| Prove unitarie e nel browser verdi | E | 59/59, 44/44 | **tutte verdi** + una prova per ogni bug chiuso | |
-| Funzioni di calcolo provate con `node --test` (computo, aree, coperture, IFC) | R: moduli in `shared/` con test | 0 su 4 | **4 su 4** | #64 |
+| Prove unitarie e nel browser verdi | E | 66/66 unitarie (+7), 51/51 nel browser (+11: una o più per ogni bug chiuso) | **tutte verdi** + una prova per ogni bug chiuso | |
+| Funzioni di calcolo provate con `node --test` (computo, aree, coperture, IFC) | R: moduli in `shared/` con test | 3 su 4 (computo, aree, coperture) | **4 su 4** | #64 |
 | Vulnerabilità `npm audit` | `npm audit` | 0 | **0** | |
-| `'unsafe-eval'` nella CSP della pagina | `public/index.html` | sì | **no** (solo nel worker del lettore DWG) | report §5 |
+| `'unsafe-eval'` nella CSP della pagina | `public/index.html` | sì | **no** (solo nel worker del lettore DWG) — proposta di modifica, vedi sotto | report §5 |
 
 ### Interoperabilità
 
 | Indicatore | Metodo | Attuale | Livello | Motivo |
 |---|---|---|---|---|
 | Errori di schema IFC4 (IfcOpenShell) | I | 0 | **0** (mantenere) | |
-| Pset e materiali nell'IFC | L `ifc_pset_e_materiali` | 0 / 0 | **Pset_WallCommon, Pset_DoorCommon, Pset_WindowCommon e materiali su ogni elemento** | apribile con senso in Archicad, Revit, Bonsai |
-| Layer DXF usati ma non dichiarati | L `dxf_layer_non_dichiarati` | 4 | **0** | alcuni CAD non creano i layer mancanti con colori e tipi di linea |
+| Pset e materiali nell'IFC | L `ifc_pset_e_materiali` | 6 / 4 sulla stanza di riferimento (prima 0 / 0) | **Pset_WallCommon, Pset_DoorCommon, Pset_WindowCommon e materiali su ogni elemento** | apribile con senso in Archicad, Revit, Bonsai |
+| Layer DXF usati ma non dichiarati | L `dxf_layer_non_dichiarati` | 0 (prima 4) | **0** | alcuni CAD non creano i layer mancanti con colori e tipi di linea |
 | Errori di audit DXF (ezdxf) | I | 0 | **0** (mantenere) | |
 
 ### Piattaforme
 
 | Indicatore | Metodo | Attuale | Livello | Motivo |
 |---|---|---|---|---|
-| Varianti con tutte le funzioni «ok» o «non applicabile» motivato | V | 12 su 15 (Firefox ed Electron Mac senza WebGL nel runner: #67; Android instabile al primo avvio) | **15 su 15** | |
+| Varianti con tutte le funzioni «ok» o «non applicabile» motivato | V | 15 su 15 (Firefox con finestra su schermo virtuale; Android e iOS aprono il sito pubblicato e girano su main) | **15 su 15** | |
 | Prove su dispositivi reali (lista del report §8) | R: risposte del titolare | 0 su 16 | **16 su 16** | dipende dal titolare |
+
+### Euristiche di Nielsen
+
+Punteggio 0–4 sull'editor completo; tra parentesi il valore del 12/11 prima delle iterazioni.
+
+| # | Euristica | Punti | Motivo |
+|---|---|---|---|
+| 1 | Visibilità dello stato | 4 (3) | «salvato hh:mm», suggerimento dello strumento intero, lunghezze dei muri visibili, messaggi annunciati |
+| 2 | Linguaggio del mondo reale | 3 (3) | slogan tecnico tolto; resta «pacchetto AI» nella scheda Esporta |
+| 3 | Controllo e libertà | 4 (2) | annulla/ripristina leggero, riapertura sempre all'ultima versione, conferme sulle eliminazioni |
+| 4 | Coerenza | 3 (2) | azioni frequenti in cima a Esporta; restano due selettori del piano (U8) |
+| 5 | Prevenzione degli errori | 3 (2) | tetti sulla sagoma, valori fuori campo corretti all'apertura, R.A.I. segnalato |
+| 6 | Riconoscere invece di ricordare | 4 (3) | parola e scorciatoia sotto ogni icona, quote visibili, strumenti di ricalco solo quando servono |
+| 7 | Flessibilità ed efficienza | 3 (3) | scorciatoie, misure digitate, menu contestuale |
+| 8 | Estetica e minimalismo | 3 (2) | una riga d'intestazione, strumenti contestuali; il pannello del piano resta denso |
+| 9 | Riconoscere e correggere gli errori | 3 (2) | messaggio chiaro senza WebGL, messaggi annunciati; i messaggi temporanei restano brevi |
+| 10 | Aiuto e documentazione | 3 (3) | primi passi nel pannello, `?` con le scorciatoie, Info |
+| | **Media** | **3,3** (2,5) | |
+
+## Proposte di modifica dei livelli (da approvare nella issue #1)
+
+- **Mesh dell'edificio di prova ≤ 2.500**: l'obiettivo vero, cioè la modifica sotto i 100 ms, è raggiunto con la ricostruzione per piano (#77). Per scendere sotto 2.500 mesh servono istanze o unione per materiale degli arredi, che toccano selezione, trascinamento, luci e porte animate nel 3D: rischio alto per un guadagno che oggi non si misura (manca un indicatore di FPS stabile in CI senza GPU). Proposta: sostituire l'indicatore con «FPS della vista 3D sull'edificio di prova su un computer reale ≥ 30», misurato dal titolare con la lista di prove, e tenere le istanze come lavoro futuro.
+- **`'unsafe-eval'` fuori dalla CSP**: lo chiede solo il lettore DWG (libredwg in WebAssembly con embind). Toglierlo vuol dire caricare il lettore in un worker con una CSP propria, che su GitHub Pages e nel pacchetto locale non si può impostare per un singolo file. Proposta: livello «`'unsafe-eval'` solo finché il lettore DWG non ha una build senza `new Function`», con la verifica che nessun altro modulo ne abbia bisogno (oggi è così).
+- **IFC con `node --test` (4 su 4)**: l'IFC nasce dal modello 3D di Three.js; separarne la parte di calcolo richiede di riscrivere la triangolazione. Proposta: 3 su 4 per questo ciclo, l'IFC resta provato con web-ifc e IfcOpenShell nelle prove nel browser e nella misura dei livelli.
 
 ### Euristiche di Nielsen (12/11/2026)
 
@@ -114,4 +138,17 @@ Punteggio 0–4 sull'editor completo (pianta, 3D, pannello, telefono); motivo in
 
 | Data | PR | Indicatori cambiati |
 |---|---|---|
-| 12/11/2026 | #50, #66 | misura iniziale |
+| 12/11/2026 | #50, #66, #68 | misura iniziale |
+| 12/11/2026 | #70 | computo: errore massimo 7,75 % → 0 % |
+| 12/11/2026 | #72 | copertura su pianta a L: 42,7 % → 0 %; funzioni MVP +1 |
+| 12/11/2026 | #71 | bloccanti 2 → 0; riapertura dopo quota: persa → ok |
+| 12/11/2026 | #73 | avvio senza WebGL: pagina vuota → messaggio + pianta 2D; alte 4 → 2 |
+| 12/11/2026 | #74 | storia di annulla: 54,4 → 2,9 MB; alte → 0 |
+| 12/11/2026 | #75 | axe critiche e serie: 24 → 0; aria-live sì |
+| 12/11/2026 | #76 | valori fuori campo: 5 → 0 |
+| 12/11/2026 | #78 | volume muri IFC: 17,9 % → 0 %; Pset/materiali 0/0 → 6/4; layer DXF non dichiarati 4 → 0; funzioni MVP +2 |
+| 12/11/2026 | #81 | funzioni MVP +2 (R.A.I., cartiglio) → 10 su 15 |
+| 12/11/2026 | #79, #82, #83 | altezza sopra le viste 84 → 48 px; testi troncati 2 → 0; U1–U12 11 su 12; Nielsen 2,5 → 3,3 |
+| 12/11/2026 | #84, #85 | funzioni di calcolo con node --test 0 → 3 su 4 |
+| 12/11/2026 | #77 | modifica sull'edificio grande ≤ 100 ms (99 ms) |
+| 12/11/2026 | #80 | varianti 12 → 15 su 15 |
