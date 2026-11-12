@@ -30,8 +30,9 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: Percorso di prova
-        env: { PROGETTI: "${{ matrix.progetti }}" }
-        run: npx playwright test -c playwright.varianti.config.mjs
+        env: { PROGETTI: "${{ matrix.progetti }}", PW_HEADED: "${{ matrix.browser == 'firefox' && '1' || '' }}" }
+        # Firefox headless nel runner non ha WebGL: si apre con una finestra vera su uno schermo virtuale (Mesa llvmpipe)
+        run: ${{ matrix.browser == 'firefox' && 'xvfb-run -a' || '' }} npx playwright test -c playwright.varianti.config.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: "varianti-${{ matrix.browser }}", path: test-results/varianti/, retention-days: 14 }

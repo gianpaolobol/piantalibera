@@ -7,7 +7,7 @@ const gl = { launchOptions: { args: ["--use-gl=angle", "--use-angle=swiftshader"
 const all = [
   { name: "chromium-computer", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, ...gl } },
   { name: "chromium-1920", use: { ...devices["Desktop Chrome"], viewport: { width: 1920, height: 1080 }, ...gl } },
-  { name: "firefox-computer", use: { ...devices["Desktop Firefox"], viewport: { width: 1440, height: 900 }, launchOptions: { firefoxUserPrefs: { "webgl.force-enabled": true, "webgl.disabled": false, "webgl.enable-webgl2": true } } } },
+  { name: "firefox-computer", use: { ...devices["Desktop Firefox"], viewport: { width: 1440, height: 900 }, headless: !process.env.PW_HEADED, launchOptions: { firefoxUserPrefs: { "webgl.force-enabled": true, "webgl.disabled": false, "webgl.enable-webgl2": true, "gfx.webrender.software": true, "layers.acceleration.force-enabled": true } } } },
   { name: "webkit-mac", use: { ...devices["Desktop Safari"], viewport: { width: 1440, height: 900 } } },
   { name: "webkit-iphone", use: { ...devices["iPhone 13 Mini"] } },
   { name: "webkit-ipad-verticale", use: { ...devices["iPad (gen 7)"] } },
