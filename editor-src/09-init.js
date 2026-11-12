@@ -94,7 +94,7 @@ function migrate(p){
 function readCanvasColors(){ readColors(); draw2D(); render3D(); }
 function init(){
   let saved = null; try { saved = JSON.parse(localStorage.getItem("pianta-libera-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v1")); } catch(e){}
-  P = migrate(saved?.levels?.length ? saved : sampleProject()); S.level = P.levels[0].id; snap = JSON.stringify(P);
+  P = migrate(saved?.levels?.length ? saved : sampleProject()); S.level = P.levels[0].id; snap = snapOf(P);
   $("#projName").value = P.name; readColors(); setTool("select"); renderStatus();
   if (!saved?.levels?.length && !new URLSearchParams(location.search).get("condividi")) save();   // l'identità del progetto (pid) resta tra un'apertura e l'altra
   new ResizeObserver(() => { resize2D(); resize3D(); }).observe($("#views"));
