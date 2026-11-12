@@ -106,6 +106,14 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && VID.on) VI
 const IFC64 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$";
 function ifcGuid(){ const b = crypto.getRandomValues(new Uint8Array(16)); let n = 0n; for (const x of b) n = (n << 8n) | BigInt(x); let s = ""; for (let i = 21; i >= 0; i--) s += IFC64[Number((n >> BigInt(6 * i)) & 63n)]; return s; }
 function ifcStr(s){ let o = ""; for (const ch of String(s ?? "")){ const c = ch.codePointAt(0); if (ch === "'") o += "''"; else if (ch === "\\") o += "\\\\"; else if (c >= 32 && c < 127) o += ch; else o += `\\X2\\${c.toString(16).toUpperCase().padStart(4, "0")}\\X0\\`; } return `'${o}'`; }
+/* Muro esterno: da almeno un lato non c'è un locale del suo piano (prova a 20 cm dalla faccia, a metà muro);
+   senza locali disegnati si considera esterno. */
+function wallIsExternal(w, Lv){
+  const rooms = P.rooms.filter(r => r.level === Lv.id && r.pts.length > 2); if (!rooms.length) return true;
+  const f = wallFrame(w), m = [(w.a[0]+w.b[0])/2, (w.a[1]+w.b[1])/2], d = w.thick/2 + .2;
+  const side = s => rooms.some(r => inPoly([m[0] + f.nx*d*s, m[1] + f.ny*d*s], r.pts));
+  return !(side(1) && side(-1));
+}
 function exportIFC(){
   const L = [], add = s => { L.push(s); return "#" + L.length; }, R = v => { const x = Math.round(v * 1e6) / 1e6; return Number.isInteger(x) ? x + "." : String(x); };
   const pt3 = (x, y, z) => add(`IFCCARTESIANPOINT((${R(x)},${R(y)},${R(z)}))`), pt2 = (x, y) => add(`IFCCARTESIANPOINT((${R(x)},${R(y)}))`), dir = (x, y, z) => add(`IFCDIRECTION((${R(x)},${R(y)},${R(z)}))`);
@@ -131,13 +139,27 @@ function exportIFC(){
     if (!idx.length) return null;
     const list = add(`IFCCARTESIANPOINTLIST3D((${Array.from({length:pts.length / 3}, (_, i) => `(${R(pts[i*3])},${R(pts[i*3+1])},${R(pts[i*3+2])})`).join(",")}))`);
     return add(`IFCTRIANGULATEDFACESET(${list},$,$,(${idx.map(t => `(${t.join(",")})`).join(",")}),$)`); };
+  // materiali (uno per nome, associati agli elementi) e insiemi di proprietà e quantità standard (#57)
+  const bim = { mats:new Map(), matRel:new Map(),
+    mat(el, key){ const n = matName(key || "intonaco"); let m = this.mats.get(n); if (!m){ m = add(`IFCMATERIAL(${ifcStr(n)},$,$)`); this.mats.set(n, m); } (this.matRel.get(m) || this.matRel.set(m, []).get(m)).push(el); },
+    pset(el, name, props){ const ps = props.map(([k, t, v]) => add(`IFCPROPERTYSINGLEVALUE('${k}',$,${t === "bool" ? `IFCBOOLEAN(${v ? ".T." : ".F."})` : `IFCLABEL(${ifcStr(String(v))})`},$)`));
+      add(`IFCRELDEFINESBYPROPERTIES('${ifcGuid()}',$,$,$,(${el}),${add(`IFCPROPERTYSET('${ifcGuid()}',$,'${name}',$,(${ps.join(",")}))`)})`); },
+    qto(el, name, qs){ const T = {len:"IFCQUANTITYLENGTH", area:"IFCQUANTITYAREA", vol:"IFCQUANTITYVOLUME"};
+      add(`IFCRELDEFINESBYPROPERTIES('${ifcGuid()}',$,$,$,(${el}),${add(`IFCELEMENTQUANTITY('${ifcGuid()}',$,'${name}',$,$,(${qs.map(([k, t, v]) => add(`${T[t]}('${k}',$,$,${R(v)},$)`)).join(",")}))`)})`); } };
   for (const Lv of bySt){
     const sLP = lp(bLP, ax3(pt3(0, 0, Lv.elev))), st = add(`IFCBUILDINGSTOREY('${ifcGuid()}',$,${ifcStr(Lv.name)},$,$,${sLP},$,$,.ELEMENT.,${R(Lv.elev)})`); storeys.push(st);
     const elems = [], spaces = [];
     for (const w of wallsOf(Lv.id)){
       const f = wallFrame(w); if (f.len < .01) continue; const a = W2I(w.a), h = w.height || Lv.height;
       const wLP = lp(sLP, ax3(pt3(a[0], a[1], 0), Z, dir(f.ux, -f.uy, 0)));
-      const wall = add(`IFCWALL('${ifcGuid()}',$,${ifcStr(`Muro ${Math.round(w.thick * 100)} cm`)},${ifcStr(matName(w.mat))},$,${wLP},${rep([box(f.len / 2, 0, f.len + w.thick, w.thick, -Lv.slab, h + Lv.slab)])},$,.STANDARD.)`); elems.push(wall); counts.walls++;
+      // sagoma in pianta con gli angoli raccordati (nessuna sovrapposizione tra muri, #57); asse locale y = lato B
+      const sh = wallFaceLengths(w, P.walls).shift, t2 = w.thick / 2;
+      const quad = [[sh.A[0], -t2], [f.len - sh.A[1], -t2], [f.len - sh.B[1], t2], [sh.B[0], t2]];
+      const wprof = add(`IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,${add(`IFCPOLYLINE((${[...quad, quad[0]].map(q => pt2(q[0], q[1])).join(",")}))`)})`);
+      const wall = add(`IFCWALL('${ifcGuid()}',$,${ifcStr(`Muro ${Math.round(w.thick * 100)} cm`)},${ifcStr(matName(w.mat))},$,${wLP},${rep([add(`IFCEXTRUDEDAREASOLID(${wprof},${ax3(O)},${Z},${R(h)})`)])},$,.STANDARD.)`); elems.push(wall); counts.walls++;
+      const ext = wallIsExternal(w, Lv); bim.mat(wall, w.mat);
+      bim.pset(wall, "Pset_WallCommon", [["IsExternal", "bool", ext], ["LoadBearing", "bool", w.thick >= .25 || /portante|esterno/i.test(w.wtype || "")], ["Reference", "label", w.wtype || `Muro ${Math.round(w.thick * 100)} cm`]]);
+      bim.qto(wall, "Qto_WallBaseQuantities", [["Length", "len", f.len], ["Width", "len", w.thick], ["Height", "len", h], ["NetSideArea", "area", Math.max(0, f.len * h - openingArea(w))], ["NetVolume", "vol", Math.max(0, f.len * h - openingArea(w)) * w.thick]]);;
       for (const o of P.openings.filter(o => o.wall === w.id)){
         const bot = o.type === "door" ? 0 : o.sill, oh = Math.min(o.h, h - bot), oLP = lp(wLP, ax3(pt3(o.t, 0, bot)));
         const op = add(`IFCOPENINGELEMENT('${ifcGuid()}',$,'Vano',$,$,${oLP},${rep([box(0, 0, o.w, w.thick + .1, 0, oh)])},$,.OPENING.)`);
@@ -146,11 +168,13 @@ function exportIFC(){
         const el = o.type === "door" ? add(`IFCDOOR('${ifcGuid()}',$,${ifcStr("Porta " + (o.style || "battente"))},$,$,${fLP},${geo},$,${R(oh)},${R(o.w)},.DOOR.,${o.style === "doppia" || o.style === "portafinestra" ? ".DOUBLE_DOOR_SINGLE_SWING." : o.style === "scorrevole" || o.style === "scomparsa" ? ".SLIDING_TO_LEFT." : ".SINGLE_SWING_LEFT."},$)`)
           : add(`IFCWINDOW('${ifcGuid()}',$,${ifcStr("Finestra " + (o.style || "battente"))},$,$,${fLP},${geo},$,${R(oh)},${R(o.w)},.WINDOW.,${o.w > 1.3 && (o.style || "battente") === "battente" ? ".DOUBLE_PANEL_VERTICAL." : ".SINGLE_PANEL."},$)`);
         add(`IFCRELFILLSELEMENT('${ifcGuid()}',$,$,$,${op},${el})`); elems.push(el); counts[o.type === "door" ? "doors" : "windows"]++;
+        bim.pset(el, o.type === "door" ? "Pset_DoorCommon" : "Pset_WindowCommon", [["IsExternal", "bool", ext], ["Reference", "label", `${o.type === "door" ? "Porta" : "Finestra"} ${o.style || "battente"} ${Math.round(o.w * 100)}×${Math.round(oh * 100)}`]]);
+        bim.mat(el, o.type === "door" ? "legno" : "serramento");
       }
     }
     for (const r of P.rooms.filter(r => r.level === Lv.id && r.pts.length > 2)){
       const poly = r.pts.map(W2I), prof = () => add(`IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,${add(`IFCPOLYLINE((${[...poly, poly[0]].map(p => pt2(p[0], p[1])).join(",")}))`)})`);
-      const slab = add(`IFCSLAB('${ifcGuid()}',$,${ifcStr("Solaio " + (r.name || ""))},${ifcStr(matName(r.mat))},$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(pt3(0, 0, -Lv.slab))},${Z},${R(Lv.slab)})`)])},$,.FLOOR.)`); elems.push(slab); counts.slabs++;
+      const slab = add(`IFCSLAB('${ifcGuid()}',$,${ifcStr("Solaio " + (r.name || ""))},${ifcStr(matName(r.mat))},$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(pt3(0, 0, -Lv.slab))},${Z},${R(Lv.slab)})`)])},$,.FLOOR.)`); bim.mat(slab, r.mat); elems.push(slab); counts.slabs++;
       const sp = add(`IFCSPACE('${ifcGuid()}',$,${ifcStr(r.name || "Locale")},$,$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(O)},${Z},${R(r.ceilH || Lv.height)})`)])},${ifcStr(r.name || "Locale")},.ELEMENT.,.INTERNAL.,$)`); spaces.push(sp); counts.spaces++;
       const q = add(`IFCELEMENTQUANTITY('${ifcGuid()}',$,'Qto_SpaceBaseQuantities',$,$,(${add(`IFCQUANTITYAREA('NetFloorArea',$,$,${R(Math.abs(polyArea(r.pts)))},$)`)},${add(`IFCQUANTITYLENGTH('Height',$,$,${R(r.ceilH || Lv.height)},$)`)}))`);
       add(`IFCRELDEFINESBYPROPERTIES('${ifcGuid()}',$,$,$,(${sp}),${q})`);
@@ -170,6 +194,7 @@ function exportIFC(){
     if (spaces.length) add(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${st},(${spaces.join(",")}))`);
   }
   if (storeys.length) add(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${bld},(${storeys.join(",")}))`);
+  for (const [m, els] of bim.matRel) add(`IFCRELASSOCIATESMATERIAL('${ifcGuid()}',$,$,$,(${els.join(",")}),${m})`);
   const now = new Date().toISOString().slice(0, 19), name = slug() + ".ifc";
   const text = `ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('ViewDefinition [ReferenceView_V1.2]'),'2;1');\nFILE_NAME(${ifcStr(name)},'${now}',('Pianta Libera'),('Pianta Libera'),'Pianta Libera','Pianta Libera','');\nFILE_SCHEMA(('IFC4'));\nENDSEC;\nDATA;\n${L.map((s, i) => `#${i + 1}=${s};`).join("\n")}\nENDSEC;\nEND-ISO-10303-21;\n`;
   return {text, counts};

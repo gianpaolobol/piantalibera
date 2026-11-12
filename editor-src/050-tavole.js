@@ -110,7 +110,7 @@ function pageDXF(pg){
       for (const s of it.sub){ if (s.pts.length < 2) continue; out.push("0","POLYLINE","8",lay,"66","1","70",s.closed ? "1" : "0"); for (const p of s.pts) out.push("0","VERTEX","8",lay,"10",p[0].toFixed(3),"20",Y(p[1]),"30","0"); out.push("0","SEQEND","8",lay); } }
     else { const b = textBox(it); out.push("0","TEXT","8","TESTI","10",b.x.toFixed(3),"20",Y(b.y),"30","0","40",(it.size * .72).toFixed(3),"1",it.text.replace(/[\r\n]/g, " "),"50",(-it.rot * 180 / Math.PI).toFixed(2)); }
   }
-  out.push("0","ENDSEC","0","EOF"); return out.join("\n");
+  out.push("0","ENDSEC","0","EOF"); return dxfWithLayers(out).join("\n");
 }
 
 /* ---------- impostazioni delle tavole ---------- */
@@ -329,7 +329,7 @@ function wallFaceLengths(w, walls){
     for (const [P0, P1] of [[v.a, v.b], [v.b, v.a]]){ const q = projOnSeg(P0, w.a, w.b); if (q.d > EPS || q.t < 1e-4 || q.t > 1 - 1e-4) continue;
       const g = Math.hypot(P1[0]-P0[0], P1[1]-P0[1]) || 1, e = [(P1[0]-P0[0])/g, (P1[1]-P0[1])/g], sn = Math.abs(u[0]*e[1] - u[1]*e[0]); if (sn < 1e-6) continue;
       cut[n[0]*e[0] + n[1]*e[1] > 0 ? "A" : "B"] += v.thick / sn; } }
-  return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B)};
+  return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B), shift};
 }
 const STYLE_NAME = Object.fromEntries([...DOOR_STYLES, ...WIN_STYLES.map(([k, n]) => ["w_" + k, n])]);
 function computo(){
