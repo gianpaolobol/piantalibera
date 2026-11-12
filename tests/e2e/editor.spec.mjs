@@ -598,3 +598,28 @@ test("computo: finiture per lato, battiscopa e aperture coincidono con il calcol
   expect(q).toEqual({muro:45.03, interno:41.79, esterno:48.27, pavimento:17.39, battiscopa:15.9, muroConAperturaLarga:2.6});   // 2 × 2,70 − 2 × 1,40
   expect(errors).toEqual([]);
 });
+
+// Revisione 11/2026, #52: coperture sulla sagoma della pianta, non sul rettangolo d'ingombro
+test("coperture su pianta a L: il tetto segue la sagoma, computo esatto", async ({ page }) => {
+  const errors = await open(page);
+  const r = await page.evaluate(() => {
+    const out = {};
+    for (const type of ["flat", "gable", "hip", "shed"]){
+      P = sampleProject(); P.walls = []; P.rooms = []; P.openings = []; P.objects = [];
+      const L = P.levels[0]; L.roof = {type, pitch:30, overhang:type === "flat" ? 0 : .5, mat:"tegole"};
+      const C = [[0, 0], [10, 0], [10, 4], [4, 4], [4, 10], [0, 10]];
+      for (let i = 0; i < C.length; i++) P.walls.push({id:"w" + i, level:L.id, a:C[i], b:C[(i + 1) % C.length], thick:.3, height:null, mat:"intonaco"});
+      commit();
+      const root = buildModel({ground:false}).root; root.updateMatrixWorld(true);
+      const roofs = []; root.traverse(o => { if (o.isMesh && o.userData.cat === "roof") roofs.push(o); });
+      const hit = (x, z) => new THREE.Raycaster(new THREE.Vector3(x, 50, z), new THREE.Vector3(0, -1, 0)).intersectObjects(roofs, false).length > 0;
+      out[type] = {area:+(computo().find(x => x.cat === "Copertura")?.q || 0).toFixed(2), sopraIlCortile:hit(7, 7), sopraLaCasa:[hit(2, 2), hit(8, 2), hit(2, 8)].every(Boolean)};
+    }
+    return out;
+  });
+  // piano senza sporto: 10,3 × 4,3 + 4,3 × 6,0 = 70,09 m²; con sporto 0,50 la sagoma dilatata è 11,3 × 5,3 + 5,3 × 6,0 = 91,69 m², a 30° ÷ cos 30°
+  const falda = +(91.69 / Math.cos(Math.PI / 6)).toFixed(2);
+  expect(r).toEqual({ flat:{area:70.09, sopraIlCortile:false, sopraLaCasa:true}, gable:{area:falda, sopraIlCortile:false, sopraLaCasa:true},
+    hip:{area:falda, sopraIlCortile:false, sopraLaCasa:true}, shed:{area:falda, sopraIlCortile:false, sopraLaCasa:true} });
+  expect(errors).toEqual([]);
+});
