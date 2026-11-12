@@ -342,11 +342,8 @@ function computo(){
   for (const r of P.rooms){ const L = level(r.level); if (!L) continue; const a = Math.abs(polyArea(r.pts));
     add(`pav:${r.mat}`, "Pavimenti", `Pavimento ${matName(r.mat).toLowerCase()}`, "m²", a);
     if (r.skirt){ let per = 0; for (let i = 0; i < r.pts.length; i++){ const p = r.pts[i], q = r.pts[(i + 1) % r.pts.length]; per += Math.hypot(q[0]-p[0], q[1]-p[1]); }
-      // si tolgono le porte sul perimetro del locale (il vano della porta non ha battiscopa)
-      let gap = 0; for (const o of P.openings){ if (o.type !== "door") continue; const w = wallById(o.wall); if (!w || w.level !== r.level) continue; const f = wallFrame(w), c = ptOnWall(w, o.t);
-        let near = Infinity; for (let i = 0; i < r.pts.length; i++) near = Math.min(near, projOnSeg(c, r.pts[i], r.pts[(i + 1) % r.pts.length]).d);
-        if (near < w.thick / 2 + .05) gap += Math.min(o.w, f.len); }
-      add(`bat:${r.skirt.mat || "bianco"}`, "Finiture", `Battiscopa ${matName(r.skirt.mat || "bianco").toLowerCase()} h ${Math.round((r.skirt.h || .08) * 100)} cm`, "m", Math.max(0, per - gap)); }
+      const doors = skirtGeos(r, L).reduce((s, g) => { g.computeBoundingBox(); const bb = g.boundingBox; return s + Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z); }, 0);
+      add(`bat:${r.skirt.mat || "bianco"}`, "Finiture", `Battiscopa ${matName(r.skirt.mat || "bianco").toLowerCase()} h ${Math.round((r.skirt.h || .08) * 100)} cm`, "m", doors || per); }
     if (r.ceilH) add("controsoffitto", "Finiture", "Controsoffitto in cartongesso", "m²", a); else if (!r.noCeiling) add("soffitto", "Finiture", "Tinteggiatura soffitti", "m²", a); }
   for (const o of P.openings){ const w = wallById(o.wall); if (!w) continue; const st = o.type === "door" ? (STYLE_NAME[o.style || "battente"] || "A battente") : (STYLE_NAME["w_" + (o.style || "battente")] || "A battente");
     add(`ap:${o.type}:${o.style || ""}:${Math.round(o.w * 100)}:${Math.round(o.h * 100)}`, o.type === "door" ? "Porte" : "Finestre", `${o.type === "door" ? "Porta" : "Finestra"} ${st.toLowerCase()} ${Math.round(o.w * 100)}×${Math.round(o.h * 100)}`, "n.", 1);
