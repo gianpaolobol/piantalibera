@@ -16,7 +16,8 @@ function save(){ if (S.viewer) return; if (S.guest) return guestSave();
   try { sessionStorage.setItem(SS_PID, P.pid); } catch(e){}
   try { localStorage.setItem(LS_P, JSON.stringify(P)); localStorage.setItem(LS_T, String(Date.now())); localStorage.removeItem(LS_LAST); savedAt = new Date(); updateStatusInfo(); }
   catch(e){ try { localStorage.removeItem(LS_P); localStorage.removeItem(LS_T); localStorage.setItem(LS_LAST, P.pid); } catch(_){}
-    if (!saveWarned){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio rapido del browser: resta nella raccolta Progetti. Per sicurezza usa anche Esporta → Salva progetto", true); } }
+    if (!saveWarned){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio rapido del browser: resta nella raccolta Progetti. Per sicurezza usa anche Esporta → Salva progetto", true); }
+    if (idbReady){ saveToIdb(); return; } }   // senza copia rapida la raccolta si scrive subito
   queueIdbSave(); }
 function findSel(){ if (!S.sel) return null; const k = {wall:"walls", opening:"openings", room:"rooms", object:"objects", dim:"dims"}[S.sel.type]; return P[k]?.find(x => x.id === S.sel.id) || null; }
 

@@ -578,7 +578,11 @@ test("nuova versione pubblicata: avviso con Aggiorna", async ({ page }) => {
 // Revisione 11/2026, #51 #58 #69: la riapertura non perde mai la versione più recente né i modelli importati
 const OBJ_CUBO = "v 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nv 0 0 1\nv 1 0 1\nv 1 1 1\nv 0 1 1\nf 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
 const ready = page => page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function" && idbReady);
-const inRaccolta = (page, fn) => page.waitForFunction(async f => { try { const r = await projGet(P.pid); return r && new Function("d", "return " + f)(JSON.parse(r.data)); } catch { return false; } }, fn, { timeout: 20_000, polling: 300 });
+// attende che la raccolta Progetti (IndexedDB) contenga il progetto corrente con la condizione data
+async function inRaccolta(page, cond){
+  for (let i = 0; i < 60; i++){ if (await page.evaluate(async c => { const r = await projGet(P.pid); return !!r && new Function("d", "return " + c)(JSON.parse(r.data)); }, cond)) return; await page.waitForTimeout(300); }
+  throw new Error("la raccolta non contiene: " + cond);
+}
 test("riapertura: salvataggio rapido pieno, si riapre la versione più recente dalla raccolta (#51)", async ({ page }) => {
   test.setTimeout(180_000);
   const errors = await open(page); await ready(page);

@@ -145,7 +145,7 @@ addEventListener("pagehide", () => { if (idbTimer) saveToIdb(); });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && idbTimer) saveToIdb(); });
 let idbReady = false;   // diventa vero dopo restoreFromIdb: prima non si scrive nella raccolta
 async function saveToIdb(){
-  clearTimeout(idbTimer); if (!P?.pid || !window.indexedDB) return; if (!idbReady){ queueIdbSave(); return; }
+  clearTimeout(idbTimer); idbTimer = 0; if (!P?.pid || !window.indexedDB) return; if (!idbReady){ queueIdbSave(); return; }
   try { await projPut({id:P.pid, name:P.name || "Progetto", updated:Date.now(), thumb:projThumb(), data:JSON.stringify(projectData())}); if (document.getElementById("projBox")) renderProjects(); }
   catch(e){ if (!idbWarned){ idbWarned = true; console.warn("raccolta progetti", e); } }
 }

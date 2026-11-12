@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Kwv9ZXdJZrTcz0Int1zfqK5W8Ql6B+GD8/CBnfhSI+4=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-t/tjfsvvxWtceuSOlD9/ZTv+Svz8ZVEWEYrfSW/o3vg=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1352,7 +1352,8 @@ function save(){ if (S.viewer) return; if (S.guest) return guestSave();
   try { sessionStorage.setItem(SS_PID, P.pid); } catch(e){}
   try { localStorage.setItem(LS_P, JSON.stringify(P)); localStorage.setItem(LS_T, String(Date.now())); localStorage.removeItem(LS_LAST); savedAt = new Date(); updateStatusInfo(); }
   catch(e){ try { localStorage.removeItem(LS_P); localStorage.removeItem(LS_T); localStorage.setItem(LS_LAST, P.pid); } catch(_){}
-    if (!saveWarned){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio rapido del browser: resta nella raccolta Progetti. Per sicurezza usa anche Esporta → Salva progetto", true); } }
+    if (!saveWarned){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio rapido del browser: resta nella raccolta Progetti. Per sicurezza usa anche Esporta → Salva progetto", true); }
+    if (idbReady){ saveToIdb(); return; } }   // senza copia rapida la raccolta si scrive subito
   queueIdbSave(); }
 function findSel(){ if (!S.sel) return null; const k = {wall:"walls", opening:"openings", room:"rooms", object:"objects", dim:"dims"}[S.sel.type]; return P[k]?.find(x => x.id === S.sel.id) || null; }
 
@@ -5711,7 +5712,7 @@ addEventListener("pagehide", () => { if (idbTimer) saveToIdb(); });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && idbTimer) saveToIdb(); });
 let idbReady = false;   // diventa vero dopo restoreFromIdb: prima non si scrive nella raccolta
 async function saveToIdb(){
-  clearTimeout(idbTimer); if (!P?.pid || !window.indexedDB) return; if (!idbReady){ queueIdbSave(); return; }
+  clearTimeout(idbTimer); idbTimer = 0; if (!P?.pid || !window.indexedDB) return; if (!idbReady){ queueIdbSave(); return; }
   try { await projPut({id:P.pid, name:P.name || "Progetto", updated:Date.now(), thumb:projThumb(), data:JSON.stringify(projectData())}); if (document.getElementById("projBox")) renderProjects(); }
   catch(e){ if (!idbWarned){ idbWarned = true; console.warn("raccolta progetti", e); } }
 }
