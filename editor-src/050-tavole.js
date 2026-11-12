@@ -293,14 +293,52 @@ function secMark(g){
 }
 
 /* ---------- computo delle quantità ---------- */
-function openingArea(w){ return P.openings.filter(o => o.wall === w.id).reduce((s, o) => s + o.w * Math.min(o.h, (w.height || level(w.level).height) - (o.type === "door" ? 0 : o.sill)), 0); }
+// superficie delle aperture di un muro, limitata al muro (larghezza fino alla lunghezza, altezza fino al muro)
+function openingArea(w){ const len = wallFrame(w).len, H = w.height || level(w.level).height;
+  return Math.min(len * H, P.openings.filter(o => o.wall === w.id).reduce((s, o) => s + clamp(o.w, 0, len) * clamp(Math.min(o.h, H - (o.type === "door" ? 0 : o.sill)), 0, H), 0)); }
+/* Lunghezza delle due facce di un muro (A = lato +n, B = lato −n), raccordate con i muri collegati:
+   all'angolo la faccia interna si accorcia e quella esterna si allunga fino all'incontro con le facce dell'altro muro;
+   all'innesto a T la faccia si ferma sul filo del muro passante. Senza collegamenti vale la lunghezza in asse. */
+function wallFaceLengths(w, walls){
+  const f = wallFrame(w), len = f.len, u = [f.ux, f.uy], n = [f.nx, f.ny], EPS = 1e-3;
+  const shift = {A:[0, 0], B:[0, 0]};   // di quanto la faccia rientra (positivo) o sporge (negativo) a ciascun estremo
+  for (const [ei, E, dir] of [[0, w.a, u], [1, w.b, [-u[0], -u[1]]]]){
+    const conns = [];   // direzioni dei muri collegati, uscenti dal punto di giunzione
+    for (const v of walls){ if (v === w || v.level !== w.level) continue;
+      const g = wallFrame(v), ev = [g.ux, g.uy];
+      if (Math.hypot(v.a[0]-E[0], v.a[1]-E[1]) < EPS) conns.push({e:ev, t:v.thick});
+      else if (Math.hypot(v.b[0]-E[0], v.b[1]-E[1]) < EPS) conns.push({e:[-ev[0], -ev[1]], t:v.thick});
+      else { const q = projOnSeg(E, v.a, v.b); if (q.d < EPS && q.t > 1e-4 && q.t < 1 - 1e-4){ conns.push({e:ev, t:v.thick}); conns.push({e:[-ev[0], -ev[1]], t:v.thick}); } } }
+    for (const [side, sg] of [["A", 1], ["B", -1]]){
+      let best = null; const nn = [n[0]*sg, n[1]*sg];   // normale verso la faccia
+      for (const c of conns){
+        const m = [-c.e[1], c.e[0]], cr = dir[0]*c.e[1] - dir[1]*c.e[0]; if (Math.abs(cr) < 1e-6) continue;   // muri allineati: la faccia prosegue
+        const toward = nn[0]*c.e[0] + nn[1]*c.e[1] > 0;   // la faccia guarda verso il muro collegato?
+        const sm = (m[0]*dir[0] + m[1]*dir[1] > 0 ? 1 : -1) * (toward ? 1 : -1);   // faccia dell'altro muro: verso questo muro se «toward»
+        // retta della faccia: E + nn·t/2 + dir·λ ; faccia dell'altro muro: E + m·sm·tv/2 + e·μ
+        const p0 = [nn[0]*w.thick/2 - m[0]*sm*c.t/2, nn[1]*w.thick/2 - m[1]*sm*c.t/2];
+        const lam = (c.e[0]*p0[1] - c.e[1]*p0[0]) / (dir[0]*c.e[1] - dir[1]*c.e[0]);
+        if (best === null || lam > best) best = lam;
+      }
+      shift[side][ei] = best ?? 0;
+    }
+  }
+  // muri che s'innestano a metà di questo (T): la faccia da quel lato è interrotta dallo spessore del muro innestato
+  const cut = {A:0, B:0};
+  for (const v of walls){ if (v === w || v.level !== w.level) continue;
+    for (const [P0, P1] of [[v.a, v.b], [v.b, v.a]]){ const q = projOnSeg(P0, w.a, w.b); if (q.d > EPS || q.t < 1e-4 || q.t > 1 - 1e-4) continue;
+      const g = Math.hypot(P1[0]-P0[0], P1[1]-P0[1]) || 1, e = [(P1[0]-P0[0])/g, (P1[1]-P0[1])/g], sn = Math.abs(u[0]*e[1] - u[1]*e[0]); if (sn < 1e-6) continue;
+      cut[n[0]*e[0] + n[1]*e[1] > 0 ? "A" : "B"] += v.thick / sn; } }
+  return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B)};
+}
 const STYLE_NAME = Object.fromEntries([...DOOR_STYLES, ...WIN_STYLES.map(([k, n]) => ["w_" + k, n])]);
 function computo(){
   const R = new Map(), add = (key, cat, voce, um, q) => { if (!(q > 1e-6)) return; const r = R.get(key) || {key, cat, voce, um, q:0}; r.q += q; R.set(key, r); };
   for (const w of P.walls){ const L = level(w.level); if (!L) continue; const len = wallFrame(w).len, h = w.height || L.height, net = len * h - openingArea(w);
     add(`muro:${w.thick}:${w.mat}`, "Murature", `Muro sp. ${Math.round(w.thick * 100)} cm (${matName(w.mat).toLowerCase()})`, "m²", net);
     add(`muro_v:${w.thick}`, "Murature", `Volume muri sp. ${Math.round(w.thick * 100)} cm`, "m³", net * w.thick);
-    for (const [k, side] of [["matA", "A"], ["matB", "B"]]) add(`fin:${w[k] || w.mat}`, "Finiture pareti", `Finitura ${matName(w[k] || w.mat).toLowerCase()} (per lato)`, "m²", net); }
+    const fl = wallFaceLengths(w, P.walls), op = openingArea(w);
+    for (const [k, side] of [["matA", "A"], ["matB", "B"]]) add(`fin:${w[k] || w.mat}`, "Finiture pareti", `Finitura ${matName(w[k] || w.mat).toLowerCase()}`, "m²", Math.max(0, fl[side] * h - op)); }
   for (const r of P.rooms){ const L = level(r.level); if (!L) continue; const a = Math.abs(polyArea(r.pts));
     add(`pav:${r.mat}`, "Pavimenti", `Pavimento ${matName(r.mat).toLowerCase()}`, "m²", a);
     if (r.skirt){ let per = 0; for (let i = 0; i < r.pts.length; i++){ const p = r.pts[i], q = r.pts[(i + 1) % r.pts.length]; per += Math.hypot(q[0]-p[0], q[1]-p[1]); }
@@ -308,9 +346,10 @@ function computo(){
       add(`bat:${r.skirt.mat || "bianco"}`, "Finiture", `Battiscopa ${matName(r.skirt.mat || "bianco").toLowerCase()} h ${Math.round((r.skirt.h || .08) * 100)} cm`, "m", doors || per); }
     if (r.ceilH) add("controsoffitto", "Finiture", "Controsoffitto in cartongesso", "m²", a); else if (!r.noCeiling) add("soffitto", "Finiture", "Tinteggiatura soffitti", "m²", a); }
   for (const o of P.openings){ const w = wallById(o.wall); if (!w) continue; const st = o.type === "door" ? (STYLE_NAME[o.style || "battente"] || "A battente") : (STYLE_NAME["w_" + (o.style || "battente")] || "A battente");
-    add(`ap:${o.type}:${o.style || ""}:${o.w}:${o.h}`, o.type === "door" ? "Porte" : "Finestre", `${o.type === "door" ? "Porta" : "Finestra"} ${st.toLowerCase()} ${Math.round(o.w * 100)}×${Math.round(o.h * 100)}`, "n.", 1);
+    add(`ap:${o.type}:${o.style || ""}:${Math.round(o.w * 100)}:${Math.round(o.h * 100)}`, o.type === "door" ? "Porte" : "Finestre", `${o.type === "door" ? "Porta" : "Finestra"} ${st.toLowerCase()} ${Math.round(o.w * 100)}×${Math.round(o.h * 100)}`, "n.", 1);
     if (o.shut) add(`osc:${o.shut}`, "Finestre", o.shut === "persiane" ? "Persiane (coppie)" : "Tapparelle", "n.", 1); }
-  for (const L of P.levels){ if (!L.roof || L.roof.type === "none") continue; const b = planBounds(L.id); if (!b) continue; const o = L.roof.overhang || 0, A = (b.x1 - b.x0 + 2*o) * (b.y1 - b.y0 + 2*o), p = THREE.MathUtils.degToRad(clamp(L.roof.pitch || 0, 0, 60));
+  // superficie della copertura: proiezione in pianta della sagoma con lo sporto, divisa per il coseno della pendenza (falde tutte uguali)
+  for (const L of P.levels){ if (!L.roof || L.roof.type === "none") continue; const RR = roofRects(L.id); if (!RR) continue; const o = L.roof.overhang || 0, A = RR.area(o), p = THREE.MathUtils.degToRad(clamp(L.roof.pitch || 0, 0, 60));
     add(`tetto:${L.roof.mat}`, "Copertura", `Copertura ${({flat:"piana", gable:"a due falde", hip:"a padiglione", shed:"a una falda"})[L.roof.type]} in ${matName(L.roof.mat).toLowerCase()}`, "m²", L.roof.type === "flat" ? A : A / Math.cos(p)); }
   for (const o of P.objects){ const it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null; if (it?.cat === "Persone") continue;
     if (it?.param?.kind === "rail") add("ringhiera", "Scale e parapetti", "Ringhiera / parapetto", "m", paramsOf(o, it).len * (o.scale || 1));
