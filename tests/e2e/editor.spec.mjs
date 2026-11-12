@@ -575,6 +575,55 @@ test("nuova versione pubblicata: avviso con Aggiorna", async ({ page }) => {
   await expect(page.locator("#newVersion")).toHaveCount(0);
 });
 
+// Revisione 11/2026, #53 #54 #65: computo confrontato con il calcolo a mano
+test("computo: finiture per lato, battiscopa e aperture coincidono con il calcolo a mano", async ({ page }) => {
+  const errors = await open(page);
+  const q = await page.evaluate(() => {
+    P = sampleProject(); P.walls = []; P.rooms = []; P.openings = []; P.objects = []; P.dims = [];
+    const L = P.levels[0]; L.height = 2.7; L.roof = {type:"none", pitch:30, overhang:.5, mat:"tegole"};
+    const C = [[0, 0], [5, 0], [5, 4], [0, 4]];
+    // percorso con il locale a sinistra: lato A interno (intonaco sabbia), lato B esterno (intonaco grigio)
+    for (let i = 0; i < 4; i++) P.walls.push({id:"w" + i, level:L.id, a:C[i].slice(), b:C[(i + 1) % 4].slice(), thick:.3, height:null, mat:"intonaco", matA:"intonaco_sab", matB:"intonaco_gr"});
+    P.rooms.push({id:"r1", level:L.id, name:"Soggiorno", mat:"parquet", pts:[[.15, .15], [4.85, .15], [4.85, 3.85], [.15, 3.85]], skirt:{h:.08, mat:"bianco"}});
+    P.openings.push({id:"d1", wall:"w0", type:"door", t:2.5, w:.9, h:2.1, sill:0}, {id:"f1", wall:"w2", type:"window", t:2.5, w:1.2, h:1.4, sill:.9});
+    commit();
+    const rows = computo(), sum = re => +rows.filter(x => re.test(x.voce)).reduce((s, x) => s + x.q, 0).toFixed(2);
+    const a = {muro:sum(/^Muro sp/), interno:sum(/sabbia/), esterno:sum(/grigio/), pavimento:sum(/^Pavimento/), battiscopa:sum(/^Battiscopa/)};
+    // apertura più larga del muro: non si sottrae più del muro
+    P.walls = [{id:"x", level:L.id, a:[0, 0], b:[2, 0], thick:.3, height:null, mat:"intonaco"}]; P.rooms = []; P.openings = [{id:"o", wall:"x", type:"window", t:1, w:3, h:1.4, sill:.9}]; commit();
+    a.muroConAperturaLarga = +computo().filter(x => /^Muro sp/.test(x.voce)).reduce((s, x) => s + x.q, 0).toFixed(2);
+    return a;
+  });
+  // asse 18 × 2,70 − 1,89 − 1,68 = 45,03; filo interno 16,8 × 2,70 − 3,57 = 41,79; filo esterno 19,2 × 2,70 − 3,57 = 48,27
+  expect(q).toEqual({muro:45.03, interno:41.79, esterno:48.27, pavimento:17.39, battiscopa:15.9, muroConAperturaLarga:2.6});   // 2 × 2,70 − 2 × 1,40
+  expect(errors).toEqual([]);
+});
+
+// Revisione 11/2026, #52: coperture sulla sagoma della pianta, non sul rettangolo d'ingombro
+test("coperture su pianta a L: il tetto segue la sagoma, computo esatto", async ({ page }) => {
+  const errors = await open(page);
+  const r = await page.evaluate(() => {
+    const out = {};
+    for (const type of ["flat", "gable", "hip", "shed"]){
+      P = sampleProject(); P.walls = []; P.rooms = []; P.openings = []; P.objects = [];
+      const L = P.levels[0]; L.roof = {type, pitch:30, overhang:type === "flat" ? 0 : .5, mat:"tegole"};
+      const C = [[0, 0], [10, 0], [10, 4], [4, 4], [4, 10], [0, 10]];
+      for (let i = 0; i < C.length; i++) P.walls.push({id:"w" + i, level:L.id, a:C[i], b:C[(i + 1) % C.length], thick:.3, height:null, mat:"intonaco"});
+      commit();
+      const root = buildModel({ground:false}).root; root.updateMatrixWorld(true);
+      const roofs = []; root.traverse(o => { if (o.isMesh && o.userData.cat === "roof") roofs.push(o); });
+      const hit = (x, z) => new THREE.Raycaster(new THREE.Vector3(x, 50, z), new THREE.Vector3(0, -1, 0)).intersectObjects(roofs, false).length > 0;
+      out[type] = {area:+(computo().find(x => x.cat === "Copertura")?.q || 0).toFixed(2), sopraIlCortile:hit(7, 7), sopraLaCasa:[hit(2, 2), hit(8, 2), hit(2, 8)].every(Boolean)};
+    }
+    return out;
+  });
+  // piano senza sporto: 10,3 × 4,3 + 4,3 × 6,0 = 70,09 m²; con sporto 0,50 la sagoma dilatata è 11,3 × 5,3 + 5,3 × 6,0 = 91,69 m², a 30° ÷ cos 30°
+  const falda = +(91.69 / Math.cos(Math.PI / 6)).toFixed(2);
+  expect(r).toEqual({ flat:{area:70.09, sopraIlCortile:false, sopraLaCasa:true}, gable:{area:falda, sopraIlCortile:false, sopraLaCasa:true},
+    hip:{area:falda, sopraIlCortile:false, sopraLaCasa:true}, shed:{area:falda, sopraIlCortile:false, sopraLaCasa:true} });
+  expect(errors).toEqual([]);
+});
+
 // Revisione 11/2026, #51 #58 #69: la riapertura non perde mai la versione più recente né i modelli importati
 const OBJ_CUBO = "v 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nv 0 0 1\nv 1 0 1\nv 1 1 1\nv 0 1 1\nf 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
 const ready = page => page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function" && idbReady);
