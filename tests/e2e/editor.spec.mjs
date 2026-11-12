@@ -598,3 +598,27 @@ test("computo: finiture per lato, battiscopa e aperture coincidono con il calcol
   expect(q).toEqual({muro:45.03, interno:41.79, esterno:48.27, pavimento:17.39, battiscopa:15.9, muroConAperturaLarga:2.6});   // 2 × 2,70 − 2 × 1,40
   expect(errors).toEqual([]);
 });
+
+// Revisione 11/2026: rapporto aeroilluminante per locale e cartiglio con studio, committente e luogo
+test("elenco: rapporto aeroilluminante per locale; tavole: cartiglio con i dati dello studio", async ({ page }) => {
+  const errors = await open(page);
+  await page.evaluate(() => {
+    P = sampleProject(); P.walls = []; P.rooms = []; P.openings = []; P.objects = [];
+    const L = P.levels[0], C = [[0, 0], [5, 0], [5, 4], [0, 4]];
+    for (let i = 0; i < 4; i++) P.walls.push({id:"w" + i, level:L.id, a:C[i], b:C[(i + 1) % 4], thick:.3, height:null, mat:"intonaco"});
+    P.rooms.push({id:"r", level:L.id, name:"Soggiorno", mat:"parquet", pts:[[.15, .15], [4.85, .15], [4.85, 3.85], [.15, 3.85]]});
+    // 17,39 m² netti: una finestra 120×140 (1,68 m²) → 1/10,4 (insufficiente); con una portafinestra 140×240 (3,36 m²) → 1/3,5
+    P.openings.push({id:"f", wall:"w2", type:"window", t:2.5, w:1.2, h:1.4, sill:.9}); commit();
+  });
+  await page.click('[data-tab="list"]');
+  const row = page.locator('#panel-list tr[data-rid="r"]');
+  await expect(row).toContainText("1,68"); await expect(row).toContainText("1/10,4"); await expect(row).toContainText("⚠");
+  await page.evaluate(() => { P.openings.push({id:"p", wall:"w0", type:"door", style:"portafinestra", t:2.5, w:1.4, h:2.4, sill:0}); commit(); });
+  await expect(row).toContainText("5,04"); await expect(row).not.toContainText("⚠");
+  await page.click('[data-tab="export"]');
+  for (const [id, v] of [["#tvStudio", "Studio Prova Architettura"], ["#tvClient", "Famiglia Rossi"], ["#tvPlace", "Bologna, via Esempio 1"]]){ await page.fill(id, v); await page.locator(id).blur(); }
+  const svg = await page.evaluate(() => pageSVG(buildSheets().pages[0]));
+  expect(svg).toContain("Studio Prova Architettura"); expect(svg).toContain("Committente: Famiglia Rossi · Bologna, via Esempio 1");
+  expect(await page.evaluate(() => migrate(JSON.parse(JSON.stringify(P))).tav.info.committente)).toBe("Famiglia Rossi");
+  expect(errors).toEqual([]);
+});

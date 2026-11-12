@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-pC307s2mfkirxgWcyuHsf2o2MOoUlkTcRB4io9eadn4=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Xsfg2O+4zWcSpfmQ5Ki0+M5YHUghtjuTjo/+CWySj4k=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2066,6 +2066,16 @@ function offsetPoly(pts, d){
     return [p[0] + m[0]/ml*k, p[1] + m[1]/ml*k]; });
   const a = run(1); return Math.abs(polyArea(a)) > Math.abs(polyArea(pts)) ? a : run(-1);
 }
+/* Rapporto aeroilluminante (indicativo): superficie delle finestre e delle porte vetrate sul perimetro del locale
+   diviso la superficie netta. Il D.M. 5/7/1975 chiede almeno 1/8 per i locali abitabili. */
+const GLAZED_DOORS = new Set(["vetrata", "portafinestra"]);
+function roomGlazing(r){
+  let a = 0;
+  for (const o of P.openings){ if (o.type !== "window" && !GLAZED_DOORS.has(o.style)) continue; const w = wallById(o.wall); if (!w || w.level !== r.level) continue;
+    const c = ptOnWall(w, o.t); let near = Infinity; for (let i = 0; i < r.pts.length; i++) near = Math.min(near, projOnSeg(c, r.pts[i], r.pts[(i + 1) % r.pts.length]).d);
+    if (near < w.thick / 2 + .05) a += Math.max(0, o.w) * Math.max(0, o.h); }
+  return a;
+}
 function roomAreas(r){
   const net = Math.abs(polyArea(r.pts)); let per = 0, tsum = 0, lsum = 0;
   for (let i = 0; i < r.pts.length; i++){ const a = r.pts[i], b = r.pts[(i+1) % r.pts.length], L = Math.hypot(b[0]-a[0], b[1]-a[1]); per += L;
@@ -2262,9 +2272,11 @@ function renderList(){
   el.innerHTML = `<div class="sec"><h3>Oggetti (${rows.length})</h3><div class="tblwrap"><table class="olist"><thead><tr>${th("name","Nome")}${th("cat","Categoria")}${th("w","L×P×H cm")}${th("lv","Piano")}<th><span class="sr">Visibile</span>👁</th><th><span class="sr">Bloccato</span>🔒</th></tr></thead><tbody>
     ${rows.map(x => `<tr data-oid="${x.o.id}" class="${isSelected(x.o.id) ? "on" : ""}${x.o.hidden ? " off" : ""}"><td>${esc(x.name)}</td><td>${esc(x.cat)}</td><td class="num">${Math.round(x.w*100)}×${Math.round(x.d*100)}×${Math.round(x.h*100)}</td><td>${esc(x.lv)}</td><td><button class="ic" data-ohide="${x.o.id}" aria-pressed="${!x.o.hidden}" aria-label="${x.o.hidden ? "Mostra" : "Nascondi"} ${esc(x.name)}">${x.o.hidden ? "◌" : "●"}</button></td><td><button class="ic" data-olock="${x.o.id}" aria-pressed="${!!x.o.locked}" aria-label="${x.o.locked ? "Sblocca" : "Blocca"} ${esc(x.name)}">${x.o.locked ? "■" : "□"}</button></td></tr>`).join("")}</tbody></table></div>
     <p class="note">Clic su una riga per selezionare (Maiusc per aggiungere), doppio clic per le proprietà. Gli oggetti bloccati non si spostano col mouse.</p></div>
-    <div class="sec"><h3>Locali (${rooms.length})</h3><div class="tblwrap"><table class="olist"><thead><tr><th>Nome</th><th>Piano</th><th>Netta m²</th><th>Lorda m²</th><th>Perimetro m</th></tr></thead><tbody>
-    ${rooms.map(x => `<tr data-rid="${x.r.id}" class="${isSelected(x.r.id) ? "on" : ""}"><td>${esc(x.r.name || "Locale")}</td><td>${esc(x.lv)}</td><td class="num">${fmt(x.net)}</td><td class="num">${fmt(x.gross)}</td><td class="num">${fmt(x.per)}</td></tr>`).join("")}
-    ${rooms.length ? `<tr class="tot"><td>Totale</td><td></td><td class="num">${fmt(rooms.reduce((s, x) => s + x.net, 0))}</td><td class="num">${fmt(rooms.reduce((s, x) => s + x.gross, 0))}</td><td></td></tr>` : ""}</tbody></table></div>
+    <div class="sec"><h3>Locali (${rooms.length})</h3><div class="tblwrap"><table class="olist"><thead><tr><th>Nome</th><th>Piano</th><th>Netta m²</th><th>Lorda m²</th><th>Perimetro m</th><th>Finestre m²</th><th><abbr title="Rapporto aeroilluminante: finestre / superficie netta">R.A.I.</abbr></th></tr></thead><tbody>
+    ${rooms.map(x => { const gl = roomGlazing(x.r), rai = x.net > 0 ? gl / x.net : 0, ok = rai >= 1/8 - 1e-9;
+      return `<tr data-rid="${x.r.id}" class="${isSelected(x.r.id) ? "on" : ""}"><td>${esc(x.r.name || "Locale")}</td><td>${esc(x.lv)}</td><td class="num">${fmt(x.net)}</td><td class="num">${fmt(x.gross)}</td><td class="num">${fmt(x.per)}</td><td class="num">${fmt(gl)}</td><td class="num ${ok ? "" : "warn"}" title="${ok ? "Almeno 1/8" : "Meno di 1/8: insufficiente per un locale abitabile"}">${rai > 0 ? "1/" + fmt(1 / rai, 1) : "—"}${ok ? "" : " ⚠"}</td></tr>`; }).join("")}
+    ${rooms.length ? `<tr class="tot"><td>Totale</td><td></td><td class="num">${fmt(rooms.reduce((s, x) => s + x.net, 0))}</td><td class="num">${fmt(rooms.reduce((s, x) => s + x.gross, 0))}</td><td></td><td></td><td></td></tr>` : ""}</tbody></table></div>
+    <p class="note">R.A.I. indicativo: finestre e porte vetrate sul perimetro del locale diviso la superficie netta. Per i locali abitabili il D.M. 5/7/1975 chiede almeno 1/8; bagni e ripostigli possono avere aerazione meccanica.</p>
     <div class="btns"><button class="btn" id="listCsv">Esporta elenco in CSV</button></div></div>${computoHTML()}`;
 }
 $("#panel-list")?.addEventListener("click", async e => {
@@ -5968,7 +5980,11 @@ function titleBlock(g, pg, title, scaleTxt, n, N){
   g.poly([[10, 10], [W - 10, 10], [W - 10, H - 10], [10, H - 10]], {stroke:"#111", lw:.5});
   g.poly([[bx, by], [bx + bw, by], [bx + bw, H - 10], [bx, H - 10]], {fill:"#fff", stroke:"#111", lw:.35});
   g.line([bx, by + 13], [bx + bw, by + 13], .2); g.line([bx + bw * .62, by], [bx + bw * .62, H - 10], .2); g.line([bx + bw * .62, by + 6.5], [bx + bw, by + 6.5], .15); g.line([bx + bw * .81, by + 13], [bx + bw * .81, H - 10], .15);
-  g.text(P.name || "Progetto", bx + 3, by + 6, 4, {bold:true}); g.text(title, bx + 3, by + 11, 3); g.text("Pianta Libera · elaborato generato dal modello: verificare le misure, non è un documento tecnico certificato", bx + 3, by + 19.5, 1.9, {col:"#555"});
+  const I = tav().info || {}, cut = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s, who = cut([I.committente && "Committente: " + I.committente, I.luogo].filter(Boolean).join(" · "), Math.round(bw * .62 / 1.25));
+  g.text(P.name || "Progetto", bx + 3, by + 6, 4, {bold:true}); g.text(title, bx + 3, by + 11, 3);
+  if (I.studio) g.text(cut(I.studio, Math.round(bw * .62 / 1.45)), bx + 3, by + 17.2, 2.6, {bold:true});
+  if (who) g.text(who, bx + 3, by + (I.studio ? 20.6 : 17.6), 2.2);
+  g.text("Pianta Libera · elaborato generato dal modello: verificare le misure, non è un documento tecnico certificato", bx + 3, by + (I.studio || who ? 24.4 : 19.5), I.studio || who ? 1.6 : 1.9, {col:"#555"});
   g.text("Scala", bx + bw * .62 + 2, by + 4, 1.8, {col:"#666"}); g.text(scaleTxt, bx + bw * .62 + 2, by + 6.2 + 4.6, 3.2, {bold:true});
   g.text("Data", bx + bw * .62 + 2, by + 17, 1.8, {col:"#666"}); g.text(new Date().toLocaleDateString("it-IT"), bx + bw * .62 + 2, by + 22.5, 2.8);
   g.text("Foglio", bx + bw * .81 + 2, by + 17, 1.8, {col:"#666"}); g.text(`${n}/${N}`, bx + bw * .81 + 2, by + 22.5, 2.8, {bold:true});
@@ -6135,6 +6151,7 @@ function tavoleHTML(){
       <div class="f"><span class="lbl">Scala</span><select id="tvScale" class="inp">${[50, 100, 200].map(s => `<option value="${s}" ${T.scale === s ? "selected" : ""}>1:${s}</option>`).join("")}</select></div>
       <div class="f"><span class="lbl">Sezione A-A</span><select id="tvAxis" class="inp"><option value="x" ${T.sec.axis === "x" ? "selected" : ""}>Verticale in pianta</option><option value="z" ${T.sec.axis === "z" ? "selected" : ""}>Orizzontale in pianta</option></select></div></div>
     <div class="row">${F("tvPos", T.sec.axis === "x" ? "Sezione a x = (m)" : "Sezione a y = (m)", fmt(T.sec.pos), 'inputmode="decimal"')}<div class="f"><span class="lbl">Guarda verso</span><select id="tvDir" class="inp"><option value="1" ${T.sec.dir > 0 ? "selected" : ""}>${T.sec.axis === "x" ? "Est" : "Sud"}</option><option value="-1" ${T.sec.dir < 0 ? "selected" : ""}>${T.sec.axis === "x" ? "Ovest" : "Nord"}</option></select></div></div>
+    <div class="row3">${F("tvStudio", "Studio / progettista", T.info?.studio || "", 'maxlength="80"')}${F("tvClient", "Committente", T.info?.committente || "", 'maxlength="80"')}${F("tvPlace", "Luogo", T.info?.luogo || "", 'maxlength="80"')}</div>
     <label class="chk"><input type="checkbox" id="tvChains" ${T.chains ? "checked" : ""}> Catene di quote esterne automatiche</label>
     <label class="chk"><input type="checkbox" id="tvFurn" ${T.furniture ? "checked" : ""}> Arredi in pianta</label>
     <label class="chk"><input type="checkbox" id="tvColor" ${T.color ? "checked" : ""}> Prospetti e sezioni a colori</label>
@@ -6144,6 +6161,7 @@ function tavoleHTML(){
 }
 $("#panel-export").addEventListener("change", e => { const t = e.target, T = tav(), v = num(t.value);
   const set = {tvPaper:() => T.paper = t.value, tvScale:() => T.scale = +t.value, tvAxis:() => { T.sec.axis = t.value; const b = planBounds(); if (b) T.sec.pos = +(t.value === "x" ? (b.x0 + b.x1) / 2 : (b.y0 + b.y1) / 2).toFixed(2); renderExport(); }, tvPos:() => { if (v !== null) T.sec.pos = v; }, tvDir:() => T.sec.dir = +t.value,
+    tvStudio:() => (T.info = {...T.info, studio:t.value.trim().slice(0, 80)}), tvClient:() => (T.info = {...T.info, committente:t.value.trim().slice(0, 80)}), tvPlace:() => (T.info = {...T.info, luogo:t.value.trim().slice(0, 80)}),
     tvChains:() => T.chains = t.checked, tvFurn:() => T.furniture = t.checked, tvColor:() => T.color = t.checked, tvComp:() => T.comp = t.checked}[t.id];
   if (set){ set(); save(); draw2D(); }
 });
@@ -6952,7 +6970,7 @@ function sanitizeProject(p){
   if (p.site && typeof p.site === "object"){ const s = p.site; p.site = {auto:!!s.auto, city:T(s.city, 40), lat:N(s.lat, 44.494), lon:N(s.lon, 11.343), tz:N(s.tz, 1), dst:s.dst !== false, north:N(s.north), date:/^\d{4}-\d{2}-\d{2}$/.test(s.date || "") ? s.date : "2026-06-21", hour:N(s.hour, 16)}; }
   if (p.prices && typeof p.prices === "object"){ const q = {}; for (const [k, v] of Object.entries(p.prices)) if (Number.isFinite(Number(v))) q[T(k, 160)] = Number(v); p.prices = q; }
   if (p.share && typeof p.share === "object") p.share = ID_OK.test(p.share.id || "") ? {id:p.share.id, expires_at:T(p.share.expires_at, 40), mode:p.share.mode === "edit" ? "edit" : "view"} : undefined;
-  if (p.tav && typeof p.tav === "object"){ const t = p.tav; p.tav = {paper:["A4", "A3", "A2", "A1"].includes(t.paper) ? t.paper : "A3", scale:[50, 100, 200].includes(+t.scale) ? +t.scale : 100, color:!!t.color, chains:t.chains !== false, furniture:t.furniture !== false, comp:t.comp !== false, sec:{axis:t.sec?.axis === "z" ? "z" : "x", pos:N(t.sec?.pos, 5), dir:N(t.sec?.dir, 1) < 0 ? -1 : 1}}; }
+  if (p.tav && typeof p.tav === "object"){ const t = p.tav; p.tav = {paper:["A4", "A3", "A2", "A1"].includes(t.paper) ? t.paper : "A3", scale:[50, 100, 200].includes(+t.scale) ? +t.scale : 100, color:!!t.color, chains:t.chains !== false, furniture:t.furniture !== false, comp:t.comp !== false, sec:{axis:t.sec?.axis === "z" ? "z" : "x", pos:N(t.sec?.pos, 5), dir:N(t.sec?.dir, 1) < 0 ? -1 : 1}, ...(t.info && typeof t.info === "object" ? {info:{studio:T(t.info.studio, 80), committente:T(t.info.committente, 80), luogo:T(t.info.luogo, 80)}} : {})}; }
   if (p.lightsMode != null && !["auto", "on", "off"].includes(p.lightsMode)) p.lightsMode = "auto";
   return p;
 }
