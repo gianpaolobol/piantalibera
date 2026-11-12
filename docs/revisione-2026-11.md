@@ -158,23 +158,26 @@ A1: le violazioni sopra. A2: la pianta (`canvas`) non è raggiungibile da tastie
 
 ## 7. Tabella funzione × variante
 
-Dalla prova comune `tests/varianti/smoke.spec.mjs` (PR #50) e dal workflow «Varianti». Valori provati qui in locale; le altre colonne si riempiono dalla prima esecuzione in CI (riepilogo del workflow) e dalla lista della sezione 8.
+Dalla prova comune `tests/varianti/smoke.spec.mjs`, `scripts/smoke-electron.mjs`, `scripts/smoke-android.sh` e `scripts/smoke-ios.sh` (workflow «Varianti», PR #50 e #80). Aggiornata il 12/11 dopo le iterazioni.
 
-| Funzione | Chromium computer | Chromium Android (profilo) | Firefox | WebKit Mac | iPhone (WebKit) | iPad (WebKit) | Electron Win/Mac/Linux | APK su emulatore | App iOS su simulatore |
+| Funzione | Chromium 1440/1920 | Chromium Pixel 7 / Tab S4 | Firefox | WebKit Mac | iPhone 13 mini (WebKit) | iPad vert./orizz. (WebKit) | Electron Win/Mac/Linux | APK su emulatore | App iOS su simulatore |
 |---|---|---|---|---|---|---|---|---|---|
-| apertura | ok | ok | CI | CI | CI | CI | CI | CI | CI |
-| vista 3D (WebGL) | ok | ok | CI | CI | CI | CI | CI | — | — |
-| stanza, annulla, ripristina | ok | ok | CI | CI | CI | CI | CI | — | — |
-| salvataggio e riapertura | ok* | ok* | CI | CI | CI | CI | CI | — | — |
-| export DXF, IFC, GLB | ok | ok | CI | CI | CI | CI | CI | — | — |
-| tavole PDF | ok | ok | CI | CI | CI | CI | — | — | — |
-| raccolta progetti | ok | ok | CI | CI | CI | CI | — | — | — |
-| niente scorrimento orizzontale | ok | ok | CI | CI | CI | CI | — | — | — |
-| nessun errore | ok | ok | CI | CI | CI | CI | CI | — | — |
-| avvio, WebView, rotazione, Indietro | — | — | — | — | — | — | — | CI | CI |
+| apertura | ok | ok | ok* | ok | ok | ok | ok | ok | ok |
+| vista 3D (WebGL) | ok | ok | ok* | ok | ok | ok | ok | — | — |
+| stanza, annulla, ripristina | ok | ok | ok | ok | ok | ok | ok | — | — |
+| salvataggio e riapertura | ok | ok | ok | ok | ok | ok | ok | — | — |
+| export DXF, IFC, GLB | ok | ok | ok | ok | ok | ok | ok | — | — |
+| tavole PDF | ok | ok | ok | ok | ok | ok | — | — | — |
+| raccolta progetti | ok | ok | ok | ok | ok | ok | — | — | — |
+| niente scorrimento orizzontale | ok | ok | ok | ok | ok | ok | — | — | — |
+| nessun errore | ok | ok | ok | ok | ok | ok | ok | — | — |
+| editor nella WebView, rotazione, Indietro | — | — | — | — | — | — | — | ok** | ok |
+| senza WebGL (messaggio + pianta) | ok (`senza-webgl.spec.mjs`) | | | | | | | | |
 | pacchetto locale senza rete | ok (`smoke-package.mjs`) | | | | | | | | |
 
-\* salvo il caso B1. «CI» = misurato dal workflow «Varianti» della PR #50; il risultato va nel registro di `docs/livelli-qualita.md`.
+\* Firefox headless nel runner non ha WebGL: si prova con una finestra vera su schermo virtuale; senza WebGL, dopo #73, l'editor si apre comunque in pianta.
+\** La WebView dell'emulatore al primo avvio può impiegare oltre 3 minuti: su alcune esecuzioni il controllo è scaduto (attesa portata a 5 minuti in #80). Android e iOS aprono il sito pubblicato, quindi girano su main e non bloccano le PR.
+«—» = non applicabile: le app per telefono contengono lo stesso editor web, già provato nei profili WebKit e Chromium; nel contenitore si provano avvio, WebView, rotazione e tasto Indietro.
 
 ## 8. Lista di prove per il titolare
 
