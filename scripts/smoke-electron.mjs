@@ -11,7 +11,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = join(root, "test-results/varianti"); mkdirSync(OUT, { recursive: true });
 const name = `electron-${process.platform}-${process.arch}`;
 const exe = createRequire(join(root, "app-desktop/package.json"))("electron");
-const app = await electron.launch({ executablePath: exe, args: [join(root, "app-desktop"), "--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"], env: { ...process.env, PIANTA_LIBERA_URL: process.env.PIANTA_LIBERA_URL || "http://127.0.0.1:8787/" } });
+const app = await electron.launch({ executablePath: exe, args: [join(root, "app-desktop"), ...(process.platform === "darwin" ? ["--ignore-gpu-blocklist"] : ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"])], env: { ...process.env, PIANTA_LIBERA_URL: process.env.PIANTA_LIBERA_URL || "http://127.0.0.1:8787/" } });
 const esiti = {}; const errors = [];
 const prova = async (k, fn) => { try { await fn(); esiti[k] = "ok"; } catch(e){ esiti[k] = "difetto: " + String(e.message || e).split("\n")[0].slice(0, 160); } };
 try {
