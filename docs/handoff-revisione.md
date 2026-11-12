@@ -1,27 +1,39 @@
 # Handoff — revisione completa di Pianta Libera (UI/UX, funzioni, codice)
 
 > Per un agente Claude esperto di UI/UX e di software di modellazione per architettura e interior design.
-> Scritto il 12 novembre 2026 su richiesta del titolare (Gian Paolo Franceschini, architetto). Lavora in **italiano**.
+> Scritto il 12 novembre 2026 (aggiornato lo stesso giorno: tutte le varianti, livelli e iterazioni) su richiesta del titolare (Gian Paolo Franceschini, architetto). Lavora in **italiano**.
 > Prima di tutto leggi `CLAUDE.md` (regole del progetto). Questo documento ti assegna l'incarico; `CLAUDE.md` prevale
 > in caso di conflitto.
 
 ## 1. Incarico
 
-Prova Pianta Libera **da utente esigente e da revisore tecnico**, e consegna una recensione critica completa:
+Il lavoro ha tre fasi, in quest'ordine (dettagli nella sezione 8):
 
-1. **Bug ed errori** nell'interfaccia, nell'uso e nel codice: tutto ciò che si rompe, dà un risultato sbagliato, si
-   comporta in modo incoerente o lento.
-2. **Mancanze** rispetto ai software comparabili, sia BIM sia non BIM (sezione 5).
-3. **Critiche** di UI/UX: chiarezza, flussi, coerenza, densità, scorciatoie, apprendibilità, telefono e tablet,
-   accessibilità.
-4. **Ottimizzazione del codice**: prestazioni, memoria, dimensioni, architettura, sicurezza, manutenibilità.
-5. **Suggerimenti** concreti e ordinati per valore e sforzo.
+1. **Prova a fondo**, su **tutte le varianti** di Pianta Libera (sezione 4.1):
+   - versione libera sul web (sito, demo, pacchetto locale, PWA);
+   - PC Windows e Mac;
+   - Android;
+   - iPhone e iPad.
+2. **Analisi e livelli**: per ogni area critica (UI/UX, usabilità, funzionalità, codice, prestazioni, accessibilità,
+   affidabilità, interoperabilità, piattaforme) misura lo stato attuale e **fissa tu un livello da raggiungere**,
+   misurabile.
+3. **Miglioramento per iterazioni continue**: implementa le correzioni e i miglioramenti, rimisura dopo ogni
+   iterazione e continua finché **ogni area raggiunge il livello che hai fissato**. Se un livello si rivela
+   irraggiungibile, spiega perché e chiedi al titolare di cambiarlo.
 
-Prova **tutte** le funzioni e opzioni elencate nella sezione 4: ogni pulsante, scheda, menu, scorciatoia, formato di
-importazione ed esportazione.
+Nella fase 1 cerca:
+- **bug ed errori** nell'interfaccia, nell'uso e nel codice: tutto ciò che si rompe, dà un risultato sbagliato, si
+  comporta in modo incoerente o lento;
+- **mancanze** rispetto ai software comparabili, BIM e non BIM (sezione 5);
+- **critiche di UI/UX**: chiarezza, flussi, coerenza, densità, scorciatoie, apprendibilità, telefono e tablet,
+  accessibilità;
+- **ottimizzazione del codice**: prestazioni, memoria, dimensioni, architettura, sicurezza, manutenibilità;
+- **suggerimenti** concreti, ordinati per valore e sforzo.
 
-Sii severo e specifico: il titolare vuole tutte le critiche possibili, non rassicurazioni. Ogni affermazione deve
-essere verificabile: passi per riprodurre, file e riga, misura, schermata.
+Prova **tutte** le funzioni e opzioni della sezione 4: ogni pulsante, scheda, menu, scorciatoia, formato di
+importazione ed esportazione. Sii severo e specifico: il titolare vuole tutte le critiche possibili, non
+rassicurazioni. Ogni affermazione deve essere verificabile, con passi per riprodurre, file e riga, misura o
+schermata.
 
 ## 2. Il prodotto in breve
 
@@ -80,8 +92,18 @@ npx playwright install chromium && npm run test:e2e   # 44 prove nel browser, an
 - **Niente segreti** nel codice, nei log, nelle issue o nelle PR. Non tentare di aggirare quote, Turnstile o
   `OWNER_TOKEN`. Se trovi una falla di sicurezza, descrivila in modo riservato al titolare, non in una issue pubblica
   con le istruzioni per sfruttarla.
-- **Niente deploy e niente merge su `main`.** Il tuo prodotto è la recensione. Se correggi bug evidenti, fallo su
-  branch `fix/*` con una PR ciascuno, test inclusi, e lasciale da unire al titolare. Niente force push.
+- **Modifiche al codice** (fase 3): piccole PR, una per problema o gruppo coerente, su branch `fix/*`, `ux/*`, `perf/*`
+  o `feat/*`. Ogni PR contiene i test che provano la correzione e la misura prima/dopo dell'indicatore toccato.
+  - Puoi unire una PR su `main` da solo solo quando tutte le prove di CI sono verdi, inclusa la compilazione delle
+    app, e hai verificato di persona il risultato. Un merge su `main` pubblica sito, demo e pacchetto locale.
+  - Niente force push e niente riscritture di `main`.
+  - Chi cambia avvio, requisiti, comandi o funzioni locali aggiorna `docs/installazione-locale.md` nella stessa PR.
+- **Non toccare senza il titolare**:
+  - quote, prezzi, modelli AI e spese del Worker;
+  - pagine legali;
+  - pubblicazione su App Store e Google Play.
+- Le build di prova per **TestFlight interno** sono permesse (workflow «Store», azione `build`); l'APK di prova
+  si rigenera da solo.
 - Non toccare i dati della condivisione (`/api/share`) di altri: crea link di prova tuoi.
 - **Repository pubblico**: niente foto private o dati personali in issue, PR o file.
 
@@ -149,13 +171,8 @@ usa? Undo e redo funzionano? Il progetto salvato e riaperto la conserva? Come si
 - Area clienti: link in sola lettura o con modifica (90 giorni), storico delle versioni, approvazione, «chiedi
   modifiche», commenti in pianta.
 
-**Piattaforme**
-- Disposizione compatta sotto 900 px, gesti a tocco.
-- PWA installabile e funzionamento senza rete.
-- Pannello staccabile.
-- App desktop.
-- App mobile: la Scansione AR (prova) richiede un iPhone vero; valuta il codice in
-  `app-mobile/modules/pianta-ar/` e il flusso descritto in `docs/scansione-ar.md`.
+**Piattaforme**: vedi la matrice nella sezione 4.1; ogni funzione sopra va provata almeno su computer, telefono e
+tablet.
 
 **Pagine legali e informative**: privacy, termini, crediti, `scarica.html`. P.IVA ed e-mail del titolare mancano di
 proposito: non segnalarlo come bug.
@@ -166,6 +183,29 @@ proposito: non segnalarlo come bug.
 3. Ristrutturazione da una pianta DWG esistente.
 4. Bozza di una stanza da una foto, poi corretta e arredata.
 5. Il cliente apre il link, commenta, chiede modifiche; il progettista risponde con una nuova versione.
+
+### 4.1 Matrice delle varianti
+
+Le varianti condividono lo stesso editor web, ma il contenitore cambia comportamento: file, condivisione, tasto
+Indietro, tastiera, tocco, memoria, scansione AR. Prova ogni funzione critica su ogni variante e segna in una tabella
+funzione × variante l'esito: ok, difetto o non applicabile.
+
+| Variante | Dove si trova | Come provarla da agente | Limiti: cosa resta da far provare al titolare |
+|---|---|---|---|
+| Versione libera sul web | sito pubblicato; demo GitHub Pages | Playwright su Chromium, Firefox e WebKit; viewport 1440×900 e 1920×1080 | — |
+| Pacchetto locale | release `locale-latest`, `node server/local-server.mjs` | come sopra, anche senza rete | — |
+| PWA installata | installazione dal sito | Chromium con service worker; prova senza rete | installazione reale su iPhone e Android |
+| PC Windows | release `app-latest` (.exe x64/arm64), `app-desktop/` | runner `windows-latest` in GitHub Actions: avvio con Playwright per Electron, schermate | prova a mano su un PC reale |
+| Mac | release `app-latest` (.dmg universale) | runner `macos-latest`, come sopra | avviso di Gatekeeper per l'app non firmata |
+| Android | APK in `app-latest`, `app-mobile/` | emulatore Android in Actions (`reactivecircus/android-emulator-runner`): installazione, avvio, WebView, schermate; profili telefono e tablet di Playwright per la pagina | tocco, prestazioni e salvataggio file su un telefono reale |
+| iPhone | `app-mobile/` (Expo), TestFlight | simulatore iOS su `macos-latest` (`xcodebuild` + `xcrun simctl`): avvio, WebView, schermate; WebKit di Playwright con profilo iPhone | Scansione AR, fotocamera e prestazioni: solo su iPhone reale (il titolare ha un iPhone 13 mini) |
+| iPad | come iPhone (`supportsTablet`) | simulatore iPad; WebKit con profilo iPad, verticale e orizzontale | Apple Pencil e tastiera esterna |
+
+Se manca un workflow per una variante, crealo: per esempio un'avvio-e-schermata per Electron, emulatore Android e
+simulatore iOS. Diventa parte della CI e misura i livelli della sezione 8.
+
+Quello che solo un dispositivo reale può verificare va in una **lista di prove per il titolare**, breve e passo per
+passo, allegata al report. I suoi risultati si inseriscono nella tabella quando arrivano.
 
 ## 5. Confronto con i software comparabili
 
@@ -240,23 +280,77 @@ progetto non vuole diventare Revit: segnala le mancanze BIM, ma valuta con reali
   titolare.
 - Quote AI basse per scelta: la demo è gratuita.
 
-## 8. Consegna
+## 8. Metodo: fasi, livelli, iterazioni
 
-1. **Report** in `docs/revisione-2026-11.md` su un branch `docs/revisione-2026-11`, con una PR.
-2. **Una issue per ogni bug riproducibile** di gravità media o superiore, con passi, risultato atteso e ottenuto,
-   ambiente e schermata. Prefisso nel titolo: `[bug]`, `[ux]`, `[prestazioni]`, `[codice]`, `[mancanza]`.
-3. **PR di correzione** separate su `fix/*`, solo per bug evidenti e circoscritti, con test.
-4. Un commento riassuntivo nella issue #1 con i link.
+### Fase 1 — Prova e analisi
 
-**Struttura del report**
-1. Sintesi in 10 righe: il giudizio complessivo e le 5 cose più urgenti.
-2. Tabella dei bug: id, area, gravità (bloccante / alta / media / bassa), passi, attesa, ottenuto, file e riga se noti,
-   issue.
-3. Critiche UI/UX, per flusso e per schermata, con schermate.
-4. Confronto con i comparabili: tabella ambito × Pianta Libera × migliori concorrenti, con cosa manca e priorità.
-5. Revisione del codice: problemi e proposte con file e riga.
-6. Prestazioni e accessibilità, con misure.
-7. Roadmap consigliata: interventi ordinati per valore/sforzo, distinti in subito, prossimo mese e più avanti.
+- Prova tutte le funzioni (sezione 4) su tutte le varianti (sezione 4.1), cronometra i 5 scenari e confronta con i
+  comparabili (sezione 5).
+- Annota ogni problema come issue con il prefisso `[bug]`, `[ux]`, `[prestazioni]`, `[codice]`, `[mancanza]`,
+  `[accessibilità]` o `[piattaforma]` e la gravità (sotto).
+- Consegna il report `docs/revisione-2026-11.md`, su un branch con una PR, con questa struttura:
+  1. sintesi in 10 righe;
+  2. tabella dei bug;
+  3. critiche UI/UX con schermate;
+  4. confronto con i comparabili;
+  5. revisione del codice;
+  6. prestazioni e accessibilità misurate;
+  7. tabella funzione × variante;
+  8. lista di prove per il titolare.
+
+### Fase 2 — Livelli da raggiungere (li fissi tu)
+
+Crea `docs/livelli-qualita.md`: per ogni area una tabella con indicatore, metodo di misura (comando o procedura
+ripetibile), valore attuale, **livello da raggiungere** e motivazione.
+
+- Gli indicatori devono essere **misurabili e ripetibili**, possibilmente da uno script o da un workflow.
+- I livelli devono essere ambiziosi ma realistici per un MVP rivolto ad architetti e interior designer.
+
+Aree minime ed esempi di indicatori (scegli tu indicatori e soglie):
+
+| Area | Esempi di indicatori |
+|---|---|
+| UI/UX | punteggio sulle 10 euristiche di Nielsen per schermata; coerenza di termini, icone e posizioni |
+| Usabilità | tempo, numero di passi ed errori nei 5 scenari; numero di punti in cui ci si blocca |
+| Funzionalità | copertura delle funzioni MVP rispetto ai comparabili; correttezza di quote, computo, tavole ed export rispetto ai valori attesi |
+| Affidabilità | issue aperte per gravità (bloccanti e alte a zero); salvataggio e riapertura senza perdite; nessun errore in console negli scenari |
+| Prestazioni | tempo al primo disegno e all'editor utilizzabile; FPS della vista 3D su una scena di riferimento; memoria dopo 10 minuti; peso scaricato |
+| Accessibilità | punteggio Lighthouse; errori axe gravi e critici; uso completo da tastiera |
+| Codice | test unitari ed e2e sulle funzioni critiche; duplicazioni e funzioni troppo lunghe; nomi globali; avvisi del linter; vulnerabilità |
+| Interoperabilità | IFC4 valido (per esempio con IfcOpenShell o web-ifc) e leggibile in un viewer; DXF, GLB e OBJ aperti senza errori in CAD e Blender |
+| Piattaforme | tabella funzione × variante tutta «ok» o «non applicabile» motivato; smoke test in CI per ogni variante |
+
+Pubblica `docs/livelli-qualita.md` prima di iniziare la fase 3, e segnalalo nella issue #1 perché il titolare possa
+commentarlo.
+
+### Fase 3 — Iterazioni fino al livello
+
+Ripeti il ciclo finché tutte le aree sono al livello:
+
+1. **Scegli** gli interventi a più alto valore per l'area più lontana dal livello. Prima i bloccanti e gli alti.
+2. **Implementa** in piccole PR, con test e misura prima/dopo.
+3. **Verifica**: CI verde su tutte le varianti, prova di persona, nessuna regressione negli altri indicatori.
+4. **Unisci e rimisura**: aggiorna in `docs/livelli-qualita.md` il valore attuale e una riga di registro
+   dell'iterazione (data, PR, indicatori cambiati).
+5. Ogni 3–5 iterazioni, un **riepilogo nella issue #1**: cosa è migliorato, cosa manca, cosa serve dal titolare.
+
+Regole delle iterazioni:
+- Non abbassare un livello per raggiungerlo. Se è irraggiungibile, motivalo e proponi una modifica al titolare nella
+  issue #1.
+- Le funzioni mancanti di livello BIM professionale si propongono, non si implementano senza l'accordo del titolare,
+  salvo che siano nei livelli approvati.
+- Conserva l'architettura esistente (`CLAUDE.md`: niente riscritture di codice valido). Le ristrutturazioni del
+  codice si fanno a passi piccoli e coperti da test.
+- Ogni modifica visibile all'utente si documenta in `docs/editor.md`.
+
+## 9. Consegna (riepilogo)
+
+| Quando | Cosa |
+|---|---|
+| Fine fase 1 | `docs/revisione-2026-11.md` (PR); una issue per ogni problema di gravità media o superiore, con passi, atteso, ottenuto, variante e schermata; tabella funzione × variante; lista di prove per il titolare |
+| Fine fase 2 | `docs/livelli-qualita.md` con indicatori, metodi, valori attuali e livelli; avviso nella issue #1 |
+| Durante la fase 3 | PR piccole con test e misura prima/dopo; registro delle iterazioni in `docs/livelli-qualita.md`; riepilogo nella issue #1 ogni 3–5 iterazioni |
+| Fine | Tutte le aree al livello, oppure motivazione per ciascuna che non lo è; riepilogo finale nella issue #1 con cosa resta e cosa serve dal titolare |
 
 **Gravità**
 - **bloccante**: perdita di dati, crash, risultato tecnicamente sbagliato in una tavola o in un export;
