@@ -16,9 +16,11 @@ const esiti = {}; const errors = [];
 const prova = async (k, fn) => { try { await fn(); esiti[k] = "ok"; } catch(e){ esiti[k] = "difetto: " + String(e.message || e).split("\n")[0].slice(0, 160); } };
 try {
   const page = await app.firstWindow();
-  page.on("pageerror", e => errors.push(e.message));
+  const log = []; page.on("pageerror", e => errors.push(e.message)); page.on("console", m => log.push(`${m.type()}: ${m.text()}`.slice(0, 300)));
   const t0 = Date.now();
-  await page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function", null, { timeout: 120_000 });
+  try { await page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function", null, { timeout: 120_000 }); }
+  catch(e){ await page.screenshot({ path: join(OUT, `${name}-bloccata.png`) }).catch(() => {}); console.log("URL", page.url(), "\nERRORI", errors.join(" | "), "\nCONSOLE\n" + log.slice(-40).join("\n"));
+    appendFileSync(join(OUT, "varianti.jsonl"), JSON.stringify({ variante: name, pronto_ms: null, esiti: { apertura: "difetto: editor non pronto in 120 s — " + (errors[0] || page.url()) } }) + "\n"); throw e; }
   const pronto = Date.now() - t0; await page.waitForTimeout(1500);
   await prova("apertura", async () => { if (!(await page.evaluate(() => P.walls.length > 3))) throw new Error("progetto di esempio mancante"); });
   await prova("vista 3D (WebGL)", async () => { if (!(await page.evaluate(() => !!renderer.getContext()))) throw new Error("WebGL assente"); });

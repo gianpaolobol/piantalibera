@@ -13,10 +13,15 @@ test("percorso base della variante", async ({ page }, info) => {
   test.setTimeout(240_000);
   const errors = [];
   page.on("pageerror", e => errors.push(e.message));
-  page.on("console", m => { if (/Content Security Policy|integrity/i.test(m.text())) errors.push(m.text()); });
+  const log = [];
+  page.on("console", m => { log.push(`${m.type()}: ${m.text()}`.slice(0, 300)); if (/Content Security Policy|integrity/i.test(m.text())) errors.push(m.text()); });
+  page.on("requestfailed", r => log.push(`richiesta fallita: ${r.url().slice(0, 120)} ${r.failure()?.errorText}`));
   const t0 = Date.now();
   await page.goto("/");
-  await page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function", null, { timeout: 120_000 });
+  try { await page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function", null, { timeout: 120_000 }); }
+  catch(e){ await page.screenshot({ path: `${OUT}/${info.project.name}-bloccata.png` }).catch(() => {});
+    appendFileSync(`${OUT}/varianti.jsonl`, JSON.stringify({ variante: info.project.name, pronto_ms: null, esiti: { apertura: "difetto: editor non pronto in 120 s — " + (errors[0] || log.filter(l => /error|fallita/i.test(l))[0] || "") } }) + "\n");
+    console.log("ERRORI:\n" + errors.join("\n") + "\nCONSOLE:\n" + log.slice(-40).join("\n")); throw e; }
   const tPronto = Date.now() - t0;
   await page.waitForTimeout(1500);
 
