@@ -8,14 +8,14 @@ Ogni affermazione ha i passi o la prova che la ripete: le prove esplorative stan
 
 1. **Perdita di dati (bloccante)**: se il progetto supera lo spazio di `localStorage` (≈5 MB, basta un modello SketchUp con texture), alla riapertura l'editor carica la versione vecchia e **sovrascrive** quella nuova nella raccolta Progetti (B1).
 2. **Coperture sbagliate su piante non rettangolari (alta)**: tutti i tetti (piano, due falde, padiglione, una falda) coprono il **rettangolo d'ingombro**: su una pianta a L il tetto copre il cortile, il computo ne conta il 44 % in più, anche IFC e prospetti (B2).
-3. **Computo delle finiture per lato sbagliato (alta)**: ogni lato del muro si misura sull'asse; con materiali diversi dentro e fuori l'interno è sovrastimato (+8,5 % su una stanza 5×4) e l'esterno sottostimato (B3).
+3. **Computo delle finiture per lato sbagliato (alta)**: ogni lato del muro si misura sull'asse; con materiali diversi dentro e fuori l’interno è sovrastimato (+7,8 % su una stanza 5×4) e l’esterno sottostimato (−6,7 %) (B3).
 4. **Memoria**: la storia di annulla tiene 80 copie intere del progetto; con una texture importata da 3 MB arriva a 60 MB dopo 20 modifiche (B5). Il 3D si ricostruisce per intero a ogni modifica: 0,35 s per modifica su un edificio di 4 piani e 400 locali, 3,9 milioni di triangoli e 742 chiamate di disegno (P1).
 5. **Import non validato a fondo**: muri a lunghezza zero, spessori e larghezze negative entrano nel progetto (B6).
 6. **IFC4 valido** (IfcOpenShell: 0 errori) ma povero per il BIM: niente materiali, niente `Pset_WallCommon`, muri sovrapposti agli angoli, altezza dei muri diversa da quella del piano (B7, M-IFC).
 7. **Accessibilità**: 20 select senza nome, schede senza ruoli figli corretti, attributi ARIA non ammessi (axe, 5 regole critiche); il disegno della pianta non si usa da tastiera (A1–A4).
 8. **UI**: buona base (etichette sotto le icone, temi chiaro/scuro, telefono curato); i problemi sono di densità e gerarchia: due righe d'intestazione, barra di stato troncata, strumenti di ricalco sempre visibili, esportazioni in un'unica colonna lunga (U1–U12).
 9. **Suite di prove**: 59 unitarie e 44 nel browser tutte verdi in CI; in locale 8 prove nel browser falliscono per tempi con 4 processi paralleli (C4). Mancano prove su misure di computo, coperture e persistenza.
-10. **Varianti**: web, Android e iPhone verdi in profilo; Firefox, WebKit, Electron, emulatore Android e simulatore iOS ora girano in CI (PR #50); restano da provare a mano tocco, prestazioni, AR e Pencil (sezione 8).
+10. **Varianti**: Chromium, WebKit (Mac, iPhone, iPad), Electron su Windows e Linux e APK su emulatore verdi in CI (PR #50); Firefox ed Electron su Mac si fermano perché senza WebGL **l'editor non si apre affatto** (B12, alta); restano da provare a mano tocco, prestazioni, AR e Pencil (sezione 8).
 
 ## 2. Tabella dei bug
 
@@ -33,6 +33,7 @@ Gravità secondo il handoff: bloccante, alta, media, bassa. «Prova» indica il 
 | B8 | media | computo | Apertura più larga del muro: il computo sottrae l'intera apertura | muro 2 m, finestra 3 m | apertura limitata al muro | 1,60 m² invece di 0 | `050-tavole.js:296` |
 | B9 | media | persistenza | Due schede del browser condividono una sola chiave di `localStorage`: ricaricando la scheda B compare il progetto della scheda A | `persistenza.spec.mjs` («due schede») | ogni scheda riapre il suo progetto | la scheda B mostra «Progetto A»; le modifiche concorrenti si sovrascrivono | `09-init.js:99` |
 | B10 | bassa | 3D | «Dall'alto» non inquadra tutto in una vista verticale stretta (Affiancate) | `coperture.spec.mjs`, schermata | modello intero | il modello esce ai lati | `03-model.js:262` |
+| B12 | alta | avvio | Senza WebGL (PC senza accelerazione, macchine virtuali, desktop remoto) la pagina resta vuota: `new THREE.WebGLRenderer` lancia un'eccezione e ferma tutto lo script | workflow «Varianti»: Firefox headless, Electron su Mac senza GPU | messaggio chiaro e pianta 2D | pagina vuota, nessun messaggio | `03-model.js:15` |
 | B11 | bassa | computo | Le voci delle aperture usano la misura grezza (`o.w` con decimali): due porte «90×210» possono finire su righe diverse | porta larga 0,9 e 0,9000001 | una riga | due righe uguali | `050-tavole.js:311` |
 
 Non riprodotti: XSS da progetto preparato (la sanificazione regge, prova esistente), perdite di geometrie tra una ricostruzione e l'altra (176 → 176 dopo 10 ricostruzioni).
