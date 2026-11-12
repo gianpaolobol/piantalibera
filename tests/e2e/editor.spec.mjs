@@ -574,3 +574,16 @@ test("nuova versione pubblicata: avviso con Aggiorna", async ({ page }) => {
   await page.evaluate(() => checkNewVersion(true)); await page.waitForTimeout(500);
   await expect(page.locator("#newVersion")).toHaveCount(0);
 });
+
+// Revisione 11/2026, #62: nessuna violazione axe critica o seria (WCAG 2.2 AA) nelle cinque schede
+test("accessibilità: nessuna violazione axe critica o seria nelle schede del pannello", async ({ page }) => {
+  await open(page);
+  await page.evaluate(src => (0, eval)(src), readFileSync("node_modules/axe-core/axe.min.js", "utf8"));
+  const found = [];
+  for (const tab of ["props", "list", "import", "export", "ai"]){
+    await page.click(`[data-tab="${tab}"]`); await page.waitForTimeout(300);
+    found.push(...await page.evaluate(async () => (await axe.run(document, { runOnly: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] })).violations
+      .filter(v => ["critical", "serious"].includes(v.impact)).flatMap(v => v.nodes.map(n => `${v.id} ${n.target.join(" ")}`))));
+  }
+  expect([...new Set(found)]).toEqual([]);
+});

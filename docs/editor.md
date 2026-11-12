@@ -54,6 +54,8 @@ Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, ve
 - Export: GLB e OBJ per D5 Render (un oggetto per materiale, nomi leggibili), 3MF/STL per la stampa 3D in scala con parete minima, basamento e piani separati, DXF della pianta, PNG, pacchetto AI, progetto JSON (schema versione 2 con migrazione dalla 1).
 - Render AI: preset «Backend Pianta Libera» sul contratto `/api/render` (vista + profondità + contorni + camera), modalità fedele/creativo, polling dei lavori, galleria con confronto. Preset diretti verso servizi esterni solo per prove locali.
 
+- **Accessibilità** (revisione 11/2026, #62): ogni campo dei pannelli prende il nome dall'etichetta visibile (`autoLabel`, anche nei pannelli ridisegnati); lista delle schede con soli figli `tab` (il pulsante «Stacca» è accanto); ordinamento annunciato sulle intestazioni di colonna; tabelle scorrevoli raggiungibili da tastiera; messaggi annunciati (`aria-live`). Prova axe (WCAG 2.2 AA) nelle prove nel browser.
+
 ## Pianta di precisione (fase 1 della roadmap d'interfaccia)
 
 - **Selezione**: clic, Maiusc+clic per aggiungere/togliere, trascinamento nel vuoto = selezione a riquadro (su touch sposta la vista), Ctrl+A. Più elementi si spostano insieme trascinandone uno o con le frecce (Maiusc ×10); i muri non selezionati collegati seguono.
