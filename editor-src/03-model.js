@@ -12,7 +12,17 @@ const wallsOf = lid => P.walls.filter(w => w.level === lid);
 const wallById = id => P.walls.find(w => w.id === id);
 
 const c3d = $("#c3d");
-const renderer = new THREE.WebGLRenderer({canvas:c3d, antialias:true, preserveDrawingBuffer:true});
+/* Senza WebGL (PC senza accelerazione grafica, macchine virtuali, desktop remoto) l'editor resta usabile in pianta:
+   il renderer diventa un oggetto inerte che accetta ogni chiamata, e la vista 3D mostra un messaggio (#67). */
+function inertObject(){ const h = { get:(t, k) => k === Symbol.toPrimitive ? () => 0 : k === "then" ? undefined : k in t ? t[k] : (t[k] = new Proxy(function(){}, h)),
+  apply:() => new Proxy(function(){}, h), construct:() => new Proxy(function(){}, h), set:(t, k, v) => { t[k] = v; return true; } }; return new Proxy(function(){}, h); }
+let NO_WEBGL = false;
+const renderer = (() => { try { const r = new THREE.WebGLRenderer({canvas:c3d, antialias:true, preserveDrawingBuffer:true}); if (!r.getContext()) throw new Error("WebGL"); return r; }
+  catch(e){ NO_WEBGL = true; console.warn("WebGL non disponibile: vista 3D disattivata", e?.message || e); return inertObject(); } })();
+if (NO_WEBGL) queueMicrotask(() => {
+  const box = document.createElement("div"); box.className = "no3d"; box.setAttribute("role", "status");
+  box.innerHTML = "<b>La vista 3D non è disponibile su questo dispositivo.</b><span>Il browser non può usare la grafica 3D (WebGL): capita su computer senza accelerazione grafica, in macchine virtuali o in desktop remoto. La pianta, le tavole, il computo e le esportazioni funzionano. Per il 3D: attiva l'accelerazione hardware nelle impostazioni del browser o aggiorna i driver della scheda video.</span>";
+  c3d.parentElement.appendChild(box); });
 renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1;
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();

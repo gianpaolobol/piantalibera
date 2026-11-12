@@ -668,3 +668,4 @@ test("riapertura: ogni scheda ritrova il suo progetto (#58)", async ({ page, con
   await page.reload(); await ready(page); await page.waitForTimeout(2500);
   expect(await page.evaluate(() => P.name)).toBe("Progetto A");
 });
+

@@ -53,7 +53,7 @@ async function panoJPEG(cv){
 }
 /* visore 360° nella pagina */
 function openPanoViewer(cv){
-  closePanoViewer();
+  closePanoViewer(); if (NO_WEBGL){ toast("Il visore 360° richiede la grafica 3D (WebGL), non disponibile su questo dispositivo", true); return; }
   const d = document.createElement("div"); d.id = "panoBox"; d.className = "help pano"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Panorama 360°");
   d.innerHTML = `<div class="pano-in"><header><h3>Panorama 360°</h3><span class="note">Trascina per guardarti intorno · rotella per lo zoom</span><button class="btn" id="panoSave">Scarica JPG</button><button class="btn" id="panoClose" aria-label="Chiudi">✕</button></header><canvas id="panoCv"></canvas></div>`;
   document.body.appendChild(d);

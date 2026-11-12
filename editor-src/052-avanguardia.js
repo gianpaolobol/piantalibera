@@ -193,6 +193,9 @@ function openPrintPreview(){
       ${rows.some(r => !r.fits) ? `<p class="note warn">Alcuni pezzi superano il piatto: scegli una scala più piccola o separa i piani (scheda Esporta).</p>` : `<p class="note">Tutti i pezzi entrano nel piatto.</p>`}
       <p class="note">Il piatto in figura è a grandezza reale; i pezzi sono già appoggiati e distanziati come nel file 3MF.</p></div></div></div>`;
   document.body.appendChild(d);
+  if (NO_WEBGL){ $("#prCv").replaceWith(Object.assign(document.createElement("p"), {className:"note", textContent:"Anteprima 3D non disponibile senza WebGL: le misure e il file 3MF restano validi."}));
+    d.addEventListener("click", e => { if (e.target === d || e.target.closest("#prClose")) closePrintPreview(); });
+    $("#prPrinter").addEventListener("change", e => { PREFS.printer = +e.target.value; savePrefs(); openPrintPreview(); }); return; }
   const cv = $("#prCv"), r = new THREE.WebGLRenderer({canvas:cv, antialias:true}); r.outputEncoding = THREE.sRGBEncoding; r.setClearColor(isDark() ? "#1b2124" : "#eef0ee");
   const sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(40, 1, 1, 5000); sc.add(new THREE.HemisphereLight("#ffffff", "#8a8f8a", .9)); const dl = new THREE.DirectionalLight("#ffffff", .9); dl.position.set(200, 400, 300); sc.add(dl);
   const grp = new THREE.Group(); sc.add(grp); let ox = 5, oz = 5, rowD = 0;   // pezzi disposti a file sul piatto
