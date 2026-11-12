@@ -87,8 +87,9 @@ test("prestazioni: modifica su edificio grande, storia di annulla", async ({ pag
         for (let k = 0; k < 4; k++){ const id = `w${l}_${i}_${j}_${k}`; P.walls.push({id, level:L.id, a:C[k], b:C[(k+1)%4], thick:.15, height:null, mat:"intonaco"}); if (!k) P.openings.push({id:"o"+id, wall:id, type:"door", t:.5, w:.8, h:2.1, sill:0}); }
         P.rooms.push({id:`r${l}_${i}_${j}`, level:L.id, name:"L", mat:"parquet", pts:[[x+.075,y+.075],[x+3.925,y+.075],[x+3.925,y+3.925],[x+.075,y+3.925]]});
         for (const ref of ["divano", "tavolo", "letto"]) P.objects.push({id:`o${l}_${i}_${j}_${ref}`, level:L.id, kind:"lib", ref, x:x+2, y:y+2, z:0, rot:0, scale:1}); } }
-    S.level = "L0"; commit();
-    const runs = []; for (let i = 0; i < 3; i++){ const t = performance.now(); P.walls[0].thick = .2 + i/100; commit(); buildModel({ground:S.ground}); runs.push(performance.now() - t); }
+    S.level = "L0"; commit(); if (typeof rebuildNow === "function") rebuildNow();
+    // modifica di un muro e ricostruzione del 3D come la fa l'editor (rebuildNow se c'è, altrimenti costruzione intera)
+    const runs = []; for (let i = 0; i < 3; i++){ const t = performance.now(); P.walls[0].thick = .2 + i/100; commit(); if (typeof rebuildNow === "function") rebuildNow(); else buildModel({ground:S.ground}); runs.push(performance.now() - t); }
     let meshes = 0, calls = 0; const g = buildModel({ground:S.ground}).root; g.traverse(o => { if (o.isMesh) meshes++; });
     // storia di annulla con una texture importata da 3 MB
     P = sampleProject(); P.materials = {imp:{nome:"foto", color:"#cccccc", mapData:"data:image/jpeg;base64," + "A".repeat(3_000_000)}}; commit();

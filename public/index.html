@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-pC307s2mfkirxgWcyuHsf2o2MOoUlkTcRB4io9eadn4=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-cv/rszmiQwWiZuJdYaYsSdBYRHMKDroEPICcVBzaX54=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1131,8 +1131,9 @@ function buildModel(opts={}){
   const buckets = new Map();
   const add = (lid, mat, cat, geo, room) => { const k = lid+"|"+mat+"|"+cat+(room ? "|"+room.id : ""); if (!buckets.has(k)) buckets.set(k, {lid, mat, cat, geos:[], tile:room?.tile}); buckets.get(k).geos.push(clean(geo)); };
   const parts = {};
-  const levelGroup = lid => parts[lid] || (parts[lid] = Object.assign(new THREE.Group(), {name: level(lid)?.name || lid}));
+  const levelGroup = lid => parts[lid] || (parts[lid] = Object.assign(new THREE.Group(), {name: level(lid)?.name || lid, userData:{lid}}));
   for (const L of P.levels){
+    if (opts.levels && !opts.levels.has(L.id)) continue;   // solo i piani richiesti (ricostruzione per piano, #63)
     const e0 = L.elev, base = e0 - L.slab;
     for (const w of wallsOf(L.id)){
       const {f, cuts, solids} = wallSolidRanges(w); if (f.len < .01) continue;
@@ -1216,7 +1217,7 @@ function buildModel(opts={}){
   }
   if (opts.objects !== false){
     for (const o of P.objects){
-      if (o.hidden) continue; const t = objTemplate(o), L = level(o.level); if (!t || !L) continue;
+      if (o.hidden || (opts.levels && !opts.levels.has(o.level))) continue; const t = objTemplate(o), L = level(o.level); if (!t || !L) continue;
       const c = t.clone(true); c.name = o.name || "Oggetto"; c.position.set(o.x, L.elev + (o.z||0), o.y); c.rotation.y = -THREE.MathUtils.degToRad(o.rot||0); c.scale.setScalar(o.scale||1);
       c.userData = {cat:"object", level:L.id, objId:o.id};
       c.traverse(m => { if (m.isMesh && m !== c) m.userData = {...m.userData, level:L.id, inObject:true}; });
@@ -1236,15 +1237,42 @@ function modelBox(){ const b = new THREE.Box3(); modelGroup.traverse(o => { if (
 function archBox(){ const b = new THREE.Box3(); modelGroup.traverse(o => { if (o.isMesh && ["wall","roof","floor","gable"].includes(o.userData.cat)) b.expandByObject(o); }); if (b.isEmpty()) return modelBox(); return b; }
 
 let rebuildQueued = false;
+/* Ricostruzione per piano (#63): ogni piano ha un'impronta dei dati che lo determinano (il piano, i suoi muri, locali,
+   aperture e oggetti, le scale di tutti i piani per i fori nei solai, quote e altezze dei piani, materiali, terreno);
+   si ricostruiscono solo i piani la cui impronta è cambiata e si riusano gli altri gruppi così come sono. */
+const LV3D = new Map();   // id del piano → {key, group, roofs:[mesh]}
+let ground3D = null;
+const longOut = (k, v) => typeof v === "string" && v.length > 256 ? v.length + ":" + v.slice(0, 64) + v.slice(-64) : v;
+function levelKeys(){
+  const stairs = P.objects.filter(o => o.kind === "lib" && LIBMAP[libRef(o.ref)]?.param?.kind === "stair");
+  const common = JSON.stringify([P.levels.map(l => [l.id, l.elev, l.height, l.slab]), stairs, P.materials], longOut);
+  const out = new Map();
+  for (const L of P.levels){ const ws = wallsOf(L.id), ids = new Set(ws.map(w => w.id));
+    out.set(L.id, common + JSON.stringify([L, ws, P.rooms.filter(r => r.level === L.id), P.openings.filter(o => ids.has(o.wall)), P.objects.filter(o => o.level === L.id).map(o => [o, objTemplate(o)?.uuid || null])], longOut)); }   // il modello può arrivare dopo (import, modelli realistici)
+  return out;
+}
+function disposeMeshes(g){ g.traverse(o => { if (o.isMesh && !o.userData.inObject && o.userData.cat && o.userData.cat !== "object") o.geometry?.dispose?.(); }); }
 function rebuild3D(){
   if (rebuildQueued) return; rebuildQueued = true;
-  requestAnimationFrame(() => {
-    rebuildQueued = false;
+  requestAnimationFrame(() => { rebuildQueued = false; rebuildNow(); });
+}
+function rebuildNow(){
+  {
     scene.remove(modelGroup);
-    modelGroup.traverse(o => { if (o.isMesh && !o.userData.inObject && o.userData.cat && o.userData.cat !== "object") o.geometry?.dispose?.(); });
-    modelGroup = buildModel({ground:S.ground}).root; scene.add(modelGroup);
+    const keys = levelKeys(), changed = new Set([...keys].filter(([id, k]) => LV3D.get(id)?.key !== k).map(([id]) => id));
+    for (const [id, c] of LV3D) if (!keys.has(id) || changed.has(id)){ disposeMeshes(c.group); for (const m of c.roofs) disposeMeshes(m); LV3D.delete(id); }
+    const fresh = changed.size || !ground3D !== !S.ground ? buildModel({ground:S.ground && !ground3D, levels:changed}).root : null;
+    if (fresh){ const roofG = fresh.children.find(c => c.name === "Copertura");
+      for (const id of changed){ const g = fresh.children.find(c => c !== roofG && c.userData.lid === id) || Object.assign(new THREE.Group(), {name:level(id)?.name || id});
+        g.userData.lid = id; LV3D.set(id, {key:keys.get(id), group:g, roofs:roofG ? roofG.children.filter(m => m.userData.level === id) : []}); }
+      const gr = fresh.children.find(c => c.userData.cat === "ground"); if (gr) ground3D = gr; }
+    if (!S.ground && ground3D){ ground3D.geometry.dispose(); ground3D = null; }
+    const root = new THREE.Group(); root.name = P.name || "Progetto"; const roof = new THREE.Group(); roof.name = "Copertura";
+    for (const L of P.levels){ const c = LV3D.get(L.id); if (!c) continue; root.add(c.group); for (const m of c.roofs) roof.add(m); }
+    if (roof.children.length) root.add(roof); if (ground3D) root.add(ground3D);
+    modelGroup = root; scene.add(modelGroup);
     applyVisibility(); placeSun(); render3D(); if (typeof afterRebuild3D === "function") afterRebuild3D();
-  });
+  }
 }
 function applyVisibility(){
   const cur = level(); const cut = S.show3d === "section";
