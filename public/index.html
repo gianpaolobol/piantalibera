@@ -323,6 +323,12 @@ body.compact .hud{bottom:52px}
 .f3row.sel{background:var(--accent-soft)}.f3row .note{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0}
 .btn.mini{min-height:30px;padding:2px 8px}
 .photo-ov{position:absolute;inset:0;pointer-events:none;display:flex;justify-content:center;z-index:2}.photo-ov img{height:100%;width:auto;max-width:none}
+/* revisione 11/2026 (U7, U10, U11): nome del progetto più largo, striscia degli strumenti con indizio di scorrimento, testi minimi più leggibili */
+#projName{width:clamp(170px, 18vw, 280px)!important}
+body.compact .tools{-webkit-mask-image:linear-gradient(90deg, #000 calc(100% - 28px), transparent);mask-image:linear-gradient(90deg, #000 calc(100% - 28px), transparent)}
+.statusbar,.statusbar .sb{font-size:11.5px}
+.hud{font-size:12px}
+.lbl{font-size:11px}
 </style>
 
 <div id="app">
