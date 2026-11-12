@@ -1,0 +1,126 @@
+name: Varianti
+# Stesso percorso di prova su tutte le varianti di Pianta Libera (handoff di revisione, sezione 4.1):
+# browser (Chromium, Firefox, WebKit) con profili computer, iPhone, iPad e Android; app Electron su
+# Linux, Windows e Mac; APK su emulatore Android; app iOS su simulatore iPhone e iPad.
+# Le app per telefono aprono il sito pubblicato in sola lettura (nessun render né analisi AI: nessuna quota usata).
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 1"
+permissions:
+  contents: read
+jobs:
+  browser:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { browser: chromium, progetti: "chromium-computer,chromium-1920,chromium-android,chromium-android-tablet" }
+          - { browser: firefox, progetti: "firefox-computer" }
+          - { browser: webkit, progetti: "webkit-mac,webkit-iphone,webkit-ipad-verticale,webkit-ipad-orizzontale" }
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Percorso di prova
+        env: { PROGETTI: "${{ matrix.progetti }}" }
+        run: npx playwright test -c playwright.varianti.config.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: "varianti-${{ matrix.browser }}", path: test-results/varianti/, retention-days: 14 }
+
+  electron:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm }
+      - run: npm ci
+      - run: npm ci
+        working-directory: app-desktop
+      - name: Servizio locale di prova
+        shell: bash
+        run: |
+          node server/mock-render-server.mjs > server.log 2>&1 &
+          for i in $(seq 1 40); do curl -sf http://127.0.0.1:8787/ >/dev/null && break; sleep 0.5; done
+      - name: App Electron (Linux, con schermo virtuale)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb > /dev/null
+          xvfb-run -a node scripts/smoke-electron.mjs
+      - name: App Electron
+        if: runner.os != 'Linux'
+        run: node scripts/smoke-electron.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: "varianti-electron-${{ matrix.os }}", path: test-results/varianti/, retention-days: 14 }
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: APK di prova dalla release app-latest
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh release download app-latest -p 'Pianta-Libera-Android.apk' -R "${{ github.repository }}"
+      - name: KVM per l'emulatore
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Emulatore Android (telefono), installazione e avvio
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: bash scripts/smoke-android.sh telefono
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: varianti-android, path: test-results/varianti/, retention-days: 14 }
+
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 75
+    defaults: { run: { working-directory: app-mobile } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24.3.0, cache: npm, cache-dependency-path: app-mobile/package-lock.json }
+      - run: npm ci
+      - run: npx expo prebuild --platform ios
+      - name: Compila per il simulatore
+        run: |
+          cd ios
+          ws=$(ls -d *.xcworkspace | head -1); scheme=$(basename "$ws" .xcworkspace)
+          xcodebuild -workspace "$ws" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tail -n 15
+      - name: Simulatori iPhone e iPad, installazione e avvio
+        working-directory: .
+        run: bash scripts/smoke-ios.sh "$(ls -d app-mobile/ios/build/Build/Products/Release-iphonesimulator/*.app | head -1)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: varianti-ios, path: test-results/varianti/, retention-days: 14 }
+
+  tabella:
+    if: always()
+    needs: [browser, electron, android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: esiti, pattern: "varianti-*" }
+      - name: Tabella funzione × variante
+        run: node scripts/tabella-varianti.mjs esiti >> "$GITHUB_STEP_SUMMARY"
