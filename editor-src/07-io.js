@@ -39,6 +39,10 @@ const EX = {ground:false, objects:true, scale:100, minMm:1.2, baseMm:2, split:tr
 function renderExport(){
   const pb = printBox();
   $("#panel-export").innerHTML = `
+  <div class="exp"><header><h4>Progetto</h4><span class="tag">.json</span></header>
+    <p class="note">Contiene tutto, compresi modelli e materiali importati. I modelli delle librerie online vengono riscaricati all'apertura. Tutti i progetti di questo browser sono nel pulsante <b>Progetti</b> in alto.</p><button class="btn" id="exJson">Salva progetto</button></div>
+  ${tavoleHTML()}${shareHTML()}
+  <h5 class="exp-sec">Per altri programmi</h5>
   <div class="exp"><header><h4>Per D5 Render e altri motori</h4><span class="tag">metri · Y in alto</span></header>
     <p class="note">Ogni materiale è un oggetto separato con un nome leggibile (es. <b>Muri · Intonaco bianco · Piano terra</b>), così in D5 lo sostituisci con un clic.</p>
     <label class="chk"><input type="checkbox" id="exObj" ${EX.objects?"checked":""}> Includi arredi, verde, persone e modelli importati</label>
@@ -60,9 +64,7 @@ function renderExport(){
     <button class="btn primary" id="exPrint">Esporta per la stampa${(EX.fmt3==="3mf"?zipNeeded("3mf"):zipNeeded("stl"))?" (.zip)":""}</button></div>
   <div class="exp"><header><h4>Pianta in DXF</h4><span class="tag">AutoCAD · Archicad · Revit</span></header>
     <p class="note">Piano corrente, in metri: layer MURI, APERTURE, LOCALI, ARREDI e TESTI.</p><button class="btn" id="exDxf">DXF del piano${zipNeeded("dxf")?" (.zip)":""}</button></div>
-  <div class="exp"><header><h4>Progetto</h4><span class="tag">.json</span></header>
-    <p class="note">Contiene tutto, compresi modelli e materiali importati. I modelli delle librerie online vengono riscaricati all'apertura. Tutti i progetti di questo browser sono nel pulsante <b>Progetti</b> in alto.</p><button class="btn" id="exJson">Salva progetto</button></div>
-  ${shareHTML()}${tavoleHTML()}${imagesExportHTML()}${moreExportHTML()}`;
+  ${imagesExportHTML()}${moreExportHTML()}`;
   $("#exRes").value = EX.res; afterRenderExportShare();
 }
 const PE = $("#panel-export");

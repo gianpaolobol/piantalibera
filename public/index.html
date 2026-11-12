@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-pC307s2mfkirxgWcyuHsf2o2MOoUlkTcRB4io9eadn4=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-eMFiB3bHfTma9NyJe9YgHuLg1XvVnniDQqstoqWgwsg=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -323,6 +323,7 @@ body.compact .hud{bottom:52px}
 .f3row.sel{background:var(--accent-soft)}.f3row .note{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0}
 .btn.mini{min-height:30px;padding:2px 8px}
 .photo-ov{position:absolute;inset:0;pointer-events:none;display:flex;justify-content:center;z-index:2}.photo-ov img{height:100%;width:auto;max-width:none}
+.exp-sec{margin:14px 2px 6px;font:600 10.5px var(--f-data);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 </style>
 
 <div id="app">
@@ -3184,6 +3185,10 @@ const EX = {ground:false, objects:true, scale:100, minMm:1.2, baseMm:2, split:tr
 function renderExport(){
   const pb = printBox();
   $("#panel-export").innerHTML = `
+  <div class="exp"><header><h4>Progetto</h4><span class="tag">.json</span></header>
+    <p class="note">Contiene tutto, compresi modelli e materiali importati. I modelli delle librerie online vengono riscaricati all'apertura. Tutti i progetti di questo browser sono nel pulsante <b>Progetti</b> in alto.</p><button class="btn" id="exJson">Salva progetto</button></div>
+  ${tavoleHTML()}${shareHTML()}
+  <h5 class="exp-sec">Per altri programmi</h5>
   <div class="exp"><header><h4>Per D5 Render e altri motori</h4><span class="tag">metri · Y in alto</span></header>
     <p class="note">Ogni materiale è un oggetto separato con un nome leggibile (es. <b>Muri · Intonaco bianco · Piano terra</b>), così in D5 lo sostituisci con un clic.</p>
     <label class="chk"><input type="checkbox" id="exObj" ${EX.objects?"checked":""}> Includi arredi, verde, persone e modelli importati</label>
@@ -3205,9 +3210,7 @@ function renderExport(){
     <button class="btn primary" id="exPrint">Esporta per la stampa${(EX.fmt3==="3mf"?zipNeeded("3mf"):zipNeeded("stl"))?" (.zip)":""}</button></div>
   <div class="exp"><header><h4>Pianta in DXF</h4><span class="tag">AutoCAD · Archicad · Revit</span></header>
     <p class="note">Piano corrente, in metri: layer MURI, APERTURE, LOCALI, ARREDI e TESTI.</p><button class="btn" id="exDxf">DXF del piano${zipNeeded("dxf")?" (.zip)":""}</button></div>
-  <div class="exp"><header><h4>Progetto</h4><span class="tag">.json</span></header>
-    <p class="note">Contiene tutto, compresi modelli e materiali importati. I modelli delle librerie online vengono riscaricati all'apertura. Tutti i progetti di questo browser sono nel pulsante <b>Progetti</b> in alto.</p><button class="btn" id="exJson">Salva progetto</button></div>
-  ${shareHTML()}${tavoleHTML()}${imagesExportHTML()}${moreExportHTML()}`;
+  ${imagesExportHTML()}${moreExportHTML()}`;
   $("#exRes").value = EX.res; afterRenderExportShare();
 }
 const PE = $("#panel-export");
