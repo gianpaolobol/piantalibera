@@ -69,6 +69,9 @@ jobs:
         with: { name: "varianti-electron-${{ matrix.os }}", path: test-results/varianti/, retention-days: 14 }
 
   android:
+    # l'APK apre il sito pubblicato: l'esito non dipende dalla PR. Gira su main, a mano e ogni lunedì; non blocca.
+    if: github.event_name != 'pull_request'
+    continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -94,6 +97,8 @@ jobs:
         with: { name: varianti-android, path: test-results/varianti/, retention-days: 14 }
 
   ios:
+    if: github.event_name != 'pull_request'   # come Android: l'app apre il sito pubblicato
+    continue-on-error: true
     runs-on: macos-latest
     timeout-minutes: 75
     defaults: { run: { working-directory: app-mobile } }
@@ -102,7 +107,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 24.3.0, cache: npm, cache-dependency-path: app-mobile/package-lock.json }
       - run: npm ci
-      - run: npx expo prebuild --platform ios
+      - name: "Prebuild, fino a 3 tentativi (CocoaPods a volte non risponde)"
+        run: for i in 1 2 3; do npx expo prebuild --platform ios && exit 0; sleep 20; done; exit 1
       - name: Compila per il simulatore
         run: |
           cd ios
