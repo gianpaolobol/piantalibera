@@ -27,7 +27,7 @@ test("correttezza: computo, copertura, IFC", async ({ page }) => {
   await open(page);
   const r = await page.evaluate(stanza).then(() => page.evaluate(() => {
     // lato interno: quello verso il locale; si ricava dal centro del locale
-    const inner = w => { const c = [2.5, 2], d = [w.b[0]-w.a[0], w.b[1]-w.a[1]], cr = d[0]*(c[1]-w.a[1]) - d[1]*(c[0]-w.a[0]); return cr > 0 ? "matB" : "matA"; };
+    const inner = w => { const c = [2.5, 2], d = [w.b[0]-w.a[0], w.b[1]-w.a[1]], cr = d[0]*(c[1]-w.a[1]) - d[1]*(c[0]-w.a[0]); return cr > 0 ? "matA" : "matB"; };   // lato A = normale (−uy, ux), verso sinistra del muro
     for (const w of P.walls){ w[inner(w)] = "intonaco_sab"; w[inner(w) === "matA" ? "matB" : "matA"] = "intonaco_gr"; }
     commit();
     const rows = computo(), q = re => rows.filter(x => re.test(x.voce) || re.test(x.cat)).reduce((s, x) => s + x.q, 0);
