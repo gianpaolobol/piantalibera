@@ -2,9 +2,16 @@
    Vista in pianta e interazione
    ============================================================ */
 let snap = null; const past = [], future = [];
-function commit(){ if (S.viewer){ if (snap) P = JSON.parse(snap); refresh(); return; } const s = JSON.stringify(P); if (s === snap) return; if (snap) past.push(snap); if (past.length > 80) past.shift(); future.length = 0; snap = s; save(); refresh(); }
-function undo(){ if (!past.length) return; future.push(snap); snap = past.pop(); P = JSON.parse(snap); afterLoad(); }
-function redo(){ if (!future.length) return; past.push(snap); snap = future.pop(); P = JSON.parse(snap); afterLoad(); }
+/* Storia di annulla: copie JSON del progetto in cui le immagini incorporate (data URL oltre 8 KB: texture importate,
+   foto, base di ricalco) sono sostituite da un riferimento; ogni immagine si tiene una volta sola (#55). */
+const BLOBS = new Map(), BLOB_OF = new Map();
+const blobRef = v => { let id = BLOBS.get(v); if (!id){ id = "\u0001blob:" + BLOBS.size; BLOBS.set(v, id); BLOB_OF.set(id, v); } return id; };
+const snapOf = p => JSON.stringify(p, (k, v) => typeof v === "string" && v.length > 8192 && v.startsWith("data:") ? blobRef(v) : v);
+const fromSnap = s => JSON.parse(s, (k, v) => typeof v === "string" && v.charCodeAt(0) === 1 && BLOB_OF.has(v) ? BLOB_OF.get(v) : v);
+function historyBytes(){ let n = (snap || "").length; for (const x of past) n += x.length; for (const x of future) n += x.length; for (const v of BLOBS.keys()) n += v.length; return n; }
+function commit(){ if (S.viewer){ if (snap) P = fromSnap(snap); refresh(); return; } const s = snapOf(P); if (s === snap) return; if (snap) past.push(snap); if (past.length > 80) past.shift(); future.length = 0; snap = s; save(); refresh(); }
+function undo(){ if (!past.length) return; future.push(snap); snap = past.pop(); P = fromSnap(snap); afterLoad(); }
+function redo(){ if (!future.length) return; past.push(snap); snap = future.pop(); P = fromSnap(snap); afterLoad(); }
 function afterLoad(){ for (const k of Object.keys(matCache)) if (!MATS[k]) invalidateMat(k); fixSel(); save(); refresh(); }
 function fixSel(){ if (!level(S.level)) S.level = P.levels[0].id; P.dims = P.dims || []; setSel(selList().filter(x => itemOf(x))); }
 let saveWarned = false;

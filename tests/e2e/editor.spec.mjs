@@ -669,3 +669,20 @@ test("riapertura: ogni scheda ritrova il suo progetto (#58)", async ({ page, con
   expect(await page.evaluate(() => P.name)).toBe("Progetto A");
 });
 
+// Revisione 11/2026, #55: le immagini incorporate non si copiano a ogni passo della storia di annulla
+test("storia di annulla: una texture importata si tiene una volta sola, annulla e ripristina la conservano", async ({ page }) => {
+  const errors = await open(page);
+  const r = await page.evaluate(() => {
+    const img = "data:image/jpeg;base64," + "A".repeat(3_000_000);
+    P.materials = {imp:{nome:"foto", color:"#cccccc", mapData:img}}; commit(); past.length = 0;
+    for (let i = 0; i < 20; i++){ P.walls[0].thick = .3 + i / 1000; commit(); }
+    const mb = historyBytes() / 1048576;
+    for (let i = 0; i < 20; i++) undo();
+    const dopoUndo = [P.walls[0].thick, P.materials.imp.mapData === img];
+    for (let i = 0; i < 20; i++) redo();
+    return {mb:+mb.toFixed(1), dopoUndo, dopoRedo:[+P.walls[0].thick.toFixed(3), P.materials.imp.mapData === img]};
+  });
+  expect(r.mb).toBeLessThan(5);
+  expect(r.dopoUndo).toEqual([.3, true]); expect(r.dopoRedo).toEqual([.319, true]);
+  expect(errors).toEqual([]);
+});
