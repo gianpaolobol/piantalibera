@@ -715,3 +715,56 @@ test("apertura di un progetto: muri nulli, spessori, altezze e aperture fuori ca
   expect(r).toEqual({ muri:true, spessori:true, altezze:true, piano:true, apertura:true, orfana:true });
   expect(errors).toEqual([]);
 });
+
+// Revisione 11/2026, #57: IFC con muri raccordati (volume = computo), materiali e Pset; DXF con la tabella dei layer
+test("IFC e DXF: volumi dei muri come il computo, materiali, Pset e layer dichiarati", async ({ page }) => {
+  const errors = await open(page);
+  const out = await page.evaluate(() => {
+    P = sampleProject(); P.walls = []; P.rooms = []; P.openings = []; P.objects = [];
+    const L = P.levels[0]; L.height = 2.7; L.roof = {type:"none", pitch:30, overhang:.5, mat:"tegole"};
+    const C = [[0, 0], [5, 0], [5, 4], [0, 4]];
+    for (let i = 0; i < 4; i++) P.walls.push({id:"w" + i, level:L.id, a:C[i], b:C[(i + 1) % 4], thick:.3, height:null, mat:"intonaco"});
+    P.rooms.push({id:"r", level:L.id, name:"Soggiorno", mat:"parquet", pts:[[.15, .15], [4.85, .15], [4.85, 3.85], [.15, 3.85]]});
+    P.openings.push({id:"d", wall:"w0", type:"door", t:2.5, w:.9, h:2.1, sill:0}, {id:"f", wall:"w2", type:"window", t:2.5, w:1.2, h:1.4, sill:.9}); commit();
+    return {ifc:exportIFC().text, dxf:exportDXF(), vol:computo().filter(x => /^Volume muri/.test(x.voce)).reduce((s, x) => s + x.q, 0)};
+  });
+  const W = await import("web-ifc"); const api = new W.IfcAPI(); await api.Init();
+  const id = api.OpenModel(new TextEncoder().encode(out.ifc)), ids = t => { const v = api.GetLineIDsWithType(id, t); return Array.from({length:v.size()}, (_, i) => v.get(i)); };
+  let vol = 0;
+  api.StreamMeshes(id, ids(W.IFCWALL), m => { for (let g = 0; g < m.geometries.size(); g++){ const pg = m.geometries.get(g), geo = api.GetGeometry(id, pg.geometryExpressID), v = api.GetVertexArray(geo.GetVertexData(), geo.GetVertexDataSize()), ix = api.GetIndexArray(geo.GetIndexData(), geo.GetIndexDataSize()), T = pg.flatTransformation;
+    const p = k => { const x = v[k*6], y = v[k*6+1], z = v[k*6+2]; return [T[0]*x + T[4]*y + T[8]*z + T[12], T[1]*x + T[5]*y + T[9]*z + T[13], T[2]*x + T[6]*y + T[10]*z + T[14]]; };
+    for (let t = 0; t < ix.length; t += 3){ const a = p(ix[t]), b = p(ix[t+1]), c = p(ix[t+2]); vol += (a[0]*(b[1]*c[2] - b[2]*c[1]) - a[1]*(b[0]*c[2] - b[2]*c[0]) + a[2]*(b[0]*c[1] - b[1]*c[0])) / 6; } } });
+  const psets = ids(W.IFCPROPERTYSET).map(i => api.GetLine(id, i).Name.value).sort();
+  expect(Math.abs(Math.abs(vol) - out.vol)).toBeLessThan(.01);
+  expect(psets.filter(n => n === "Pset_WallCommon").length).toBe(4);
+  expect(psets).toContain("Pset_DoorCommon"); expect(psets).toContain("Pset_WindowCommon");
+  expect(ids(W.IFCMATERIAL).length).toBeGreaterThan(1); expect(ids(W.IFCRELASSOCIATESMATERIAL).length).toBeGreaterThan(1);
+  api.CloseModel(id);
+  const used = new Set([...out.dxf.matchAll(/\n8\n([^\n]+)/g)].map(m => m[1])), declared = new Set([...out.dxf.matchAll(/\n0\nLAYER\n2\n([^\n]+)/g)].map(m => m[1]));
+  expect([...used].filter(l => !declared.has(l))).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+// Revisione 11/2026: rapporto aeroilluminante per locale e cartiglio con studio, committente e luogo
+test("elenco: rapporto aeroilluminante per locale; tavole: cartiglio con i dati dello studio", async ({ page }) => {
+  const errors = await open(page);
+  await page.evaluate(() => {
+    P = sampleProject(); P.walls = []; P.rooms = []; P.openings = []; P.objects = [];
+    const L = P.levels[0], C = [[0, 0], [5, 0], [5, 4], [0, 4]];
+    for (let i = 0; i < 4; i++) P.walls.push({id:"w" + i, level:L.id, a:C[i], b:C[(i + 1) % 4], thick:.3, height:null, mat:"intonaco"});
+    P.rooms.push({id:"r", level:L.id, name:"Soggiorno", mat:"parquet", pts:[[.15, .15], [4.85, .15], [4.85, 3.85], [.15, 3.85]]});
+    // 17,39 m² netti: una finestra 120×140 (1,68 m²) → 1/10,4 (insufficiente); con una portafinestra 140×240 (3,36 m²) → 1/3,5
+    P.openings.push({id:"f", wall:"w2", type:"window", t:2.5, w:1.2, h:1.4, sill:.9}); commit();
+  });
+  await page.click('[data-tab="list"]');
+  const row = page.locator('#panel-list tr[data-rid="r"]');
+  await expect(row).toContainText("1,68"); await expect(row).toContainText("1/10,4"); await expect(row).toContainText("⚠");
+  await page.evaluate(() => { P.openings.push({id:"p", wall:"w0", type:"door", style:"portafinestra", t:2.5, w:1.4, h:2.4, sill:0}); commit(); });
+  await expect(row).toContainText("5,04"); await expect(row).not.toContainText("⚠");
+  await page.click('[data-tab="export"]');
+  for (const [id, v] of [["#tvStudio", "Studio Prova Architettura"], ["#tvClient", "Famiglia Rossi"], ["#tvPlace", "Bologna, via Esempio 1"]]){ await page.fill(id, v); await page.locator(id).blur(); }
+  const svg = await page.evaluate(() => pageSVG(buildSheets().pages[0]));
+  expect(svg).toContain("Studio Prova Architettura"); expect(svg).toContain("Committente: Famiglia Rossi · Bologna, via Esempio 1");
+  expect(await page.evaluate(() => migrate(JSON.parse(JSON.stringify(P))).tav.info.committente)).toBe("Famiglia Rossi");
+  expect(errors).toEqual([]);
+});

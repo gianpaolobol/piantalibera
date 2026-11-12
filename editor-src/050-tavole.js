@@ -110,7 +110,7 @@ function pageDXF(pg){
       for (const s of it.sub){ if (s.pts.length < 2) continue; out.push("0","POLYLINE","8",lay,"66","1","70",s.closed ? "1" : "0"); for (const p of s.pts) out.push("0","VERTEX","8",lay,"10",p[0].toFixed(3),"20",Y(p[1]),"30","0"); out.push("0","SEQEND","8",lay); } }
     else { const b = textBox(it); out.push("0","TEXT","8","TESTI","10",b.x.toFixed(3),"20",Y(b.y),"30","0","40",(it.size * .72).toFixed(3),"1",it.text.replace(/[\r\n]/g, " "),"50",(-it.rot * 180 / Math.PI).toFixed(2)); }
   }
-  out.push("0","ENDSEC","0","EOF"); return out.join("\n");
+  out.push("0","ENDSEC","0","EOF"); return dxfWithLayers(out).join("\n");
 }
 
 /* ---------- impostazioni delle tavole ---------- */
@@ -219,7 +219,11 @@ function titleBlock(g, pg, title, scaleTxt, n, N){
   g.poly([[10, 10], [W - 10, 10], [W - 10, H - 10], [10, H - 10]], {stroke:"#111", lw:.5});
   g.poly([[bx, by], [bx + bw, by], [bx + bw, H - 10], [bx, H - 10]], {fill:"#fff", stroke:"#111", lw:.35});
   g.line([bx, by + 13], [bx + bw, by + 13], .2); g.line([bx + bw * .62, by], [bx + bw * .62, H - 10], .2); g.line([bx + bw * .62, by + 6.5], [bx + bw, by + 6.5], .15); g.line([bx + bw * .81, by + 13], [bx + bw * .81, H - 10], .15);
-  g.text(P.name || "Progetto", bx + 3, by + 6, 4, {bold:true}); g.text(title, bx + 3, by + 11, 3); g.text("Pianta Libera · elaborato generato dal modello: verificare le misure, non è un documento tecnico certificato", bx + 3, by + 19.5, 1.9, {col:"#555"});
+  const I = tav().info || {}, cut = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s, who = cut([I.committente && "Committente: " + I.committente, I.luogo].filter(Boolean).join(" · "), Math.round(bw * .62 / 1.25));
+  g.text(P.name || "Progetto", bx + 3, by + 6, 4, {bold:true}); g.text(title, bx + 3, by + 11, 3);
+  if (I.studio) g.text(cut(I.studio, Math.round(bw * .62 / 1.45)), bx + 3, by + 17.2, 2.6, {bold:true});
+  if (who) g.text(who, bx + 3, by + (I.studio ? 20.6 : 17.6), 2.2);
+  g.text("Pianta Libera · elaborato generato dal modello: verificare le misure, non è un documento tecnico certificato", bx + 3, by + (I.studio || who ? 24.4 : 19.5), I.studio || who ? 1.6 : 1.9, {col:"#555"});
   g.text("Scala", bx + bw * .62 + 2, by + 4, 1.8, {col:"#666"}); g.text(scaleTxt, bx + bw * .62 + 2, by + 6.2 + 4.6, 3.2, {bold:true});
   g.text("Data", bx + bw * .62 + 2, by + 17, 1.8, {col:"#666"}); g.text(new Date().toLocaleDateString("it-IT"), bx + bw * .62 + 2, by + 22.5, 2.8);
   g.text("Foglio", bx + bw * .81 + 2, by + 17, 1.8, {col:"#666"}); g.text(`${n}/${N}`, bx + bw * .81 + 2, by + 22.5, 2.8, {bold:true});
@@ -329,7 +333,7 @@ function wallFaceLengths(w, walls){
     for (const [P0, P1] of [[v.a, v.b], [v.b, v.a]]){ const q = projOnSeg(P0, w.a, w.b); if (q.d > EPS || q.t < 1e-4 || q.t > 1 - 1e-4) continue;
       const g = Math.hypot(P1[0]-P0[0], P1[1]-P0[1]) || 1, e = [(P1[0]-P0[0])/g, (P1[1]-P0[1])/g], sn = Math.abs(u[0]*e[1] - u[1]*e[0]); if (sn < 1e-6) continue;
       cut[n[0]*e[0] + n[1]*e[1] > 0 ? "A" : "B"] += v.thick / sn; } }
-  return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B)};
+  return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B), shift};
 }
 const STYLE_NAME = Object.fromEntries([...DOOR_STYLES, ...WIN_STYLES.map(([k, n]) => ["w_" + k, n])]);
 function computo(){
@@ -387,6 +391,7 @@ function tavoleHTML(){
       <div class="f"><span class="lbl">Scala</span><select id="tvScale" class="inp">${[50, 100, 200].map(s => `<option value="${s}" ${T.scale === s ? "selected" : ""}>1:${s}</option>`).join("")}</select></div>
       <div class="f"><span class="lbl">Sezione A-A</span><select id="tvAxis" class="inp"><option value="x" ${T.sec.axis === "x" ? "selected" : ""}>Verticale in pianta</option><option value="z" ${T.sec.axis === "z" ? "selected" : ""}>Orizzontale in pianta</option></select></div></div>
     <div class="row">${F("tvPos", T.sec.axis === "x" ? "Sezione a x = (m)" : "Sezione a y = (m)", fmt(T.sec.pos), 'inputmode="decimal"')}<div class="f"><span class="lbl">Guarda verso</span><select id="tvDir" class="inp"><option value="1" ${T.sec.dir > 0 ? "selected" : ""}>${T.sec.axis === "x" ? "Est" : "Sud"}</option><option value="-1" ${T.sec.dir < 0 ? "selected" : ""}>${T.sec.axis === "x" ? "Ovest" : "Nord"}</option></select></div></div>
+    <div class="row3">${F("tvStudio", "Studio / progettista", T.info?.studio || "", 'maxlength="80"')}${F("tvClient", "Committente", T.info?.committente || "", 'maxlength="80"')}${F("tvPlace", "Luogo", T.info?.luogo || "", 'maxlength="80"')}</div>
     <label class="chk"><input type="checkbox" id="tvChains" ${T.chains ? "checked" : ""}> Catene di quote esterne automatiche</label>
     <label class="chk"><input type="checkbox" id="tvFurn" ${T.furniture ? "checked" : ""}> Arredi in pianta</label>
     <label class="chk"><input type="checkbox" id="tvColor" ${T.color ? "checked" : ""}> Prospetti e sezioni a colori</label>
@@ -396,6 +401,7 @@ function tavoleHTML(){
 }
 $("#panel-export").addEventListener("change", e => { const t = e.target, T = tav(), v = num(t.value);
   const set = {tvPaper:() => T.paper = t.value, tvScale:() => T.scale = +t.value, tvAxis:() => { T.sec.axis = t.value; const b = planBounds(); if (b) T.sec.pos = +(t.value === "x" ? (b.x0 + b.x1) / 2 : (b.y0 + b.y1) / 2).toFixed(2); renderExport(); }, tvPos:() => { if (v !== null) T.sec.pos = v; }, tvDir:() => T.sec.dir = +t.value,
+    tvStudio:() => (T.info = {...T.info, studio:t.value.trim().slice(0, 80)}), tvClient:() => (T.info = {...T.info, committente:t.value.trim().slice(0, 80)}), tvPlace:() => (T.info = {...T.info, luogo:t.value.trim().slice(0, 80)}),
     tvChains:() => T.chains = t.checked, tvFurn:() => T.furniture = t.checked, tvColor:() => T.color = t.checked, tvComp:() => T.comp = t.checked}[t.id];
   if (set){ set(); save(); draw2D(); }
 });

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-tIqyxzwKXjqsnN4MhKVwMxGbyoccOkUvr8VCwCa5yJQ=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-hv58ySp2gmO3NUz55z5DCxYL41G1vsXFGrgKDm9KKyI=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -2131,6 +2131,16 @@ function offsetPoly(pts, d){
     return [p[0] + m[0]/ml*k, p[1] + m[1]/ml*k]; });
   const a = run(1); return Math.abs(polyArea(a)) > Math.abs(polyArea(pts)) ? a : run(-1);
 }
+/* Rapporto aeroilluminante (indicativo): superficie delle finestre e delle porte vetrate sul perimetro del locale
+   diviso la superficie netta. Il D.M. 5/7/1975 chiede almeno 1/8 per i locali abitabili. */
+const GLAZED_DOORS = new Set(["vetrata", "portafinestra"]);
+function roomGlazing(r){
+  let a = 0;
+  for (const o of P.openings){ if (o.type !== "window" && !GLAZED_DOORS.has(o.style)) continue; const w = wallById(o.wall); if (!w || w.level !== r.level) continue;
+    const c = ptOnWall(w, o.t); let near = Infinity; for (let i = 0; i < r.pts.length; i++) near = Math.min(near, projOnSeg(c, r.pts[i], r.pts[(i + 1) % r.pts.length]).d);
+    if (near < w.thick / 2 + .05) a += Math.max(0, o.w) * Math.max(0, o.h); }
+  return a;
+}
 function roomAreas(r){
   const net = Math.abs(polyArea(r.pts)); let per = 0, tsum = 0, lsum = 0;
   for (let i = 0; i < r.pts.length; i++){ const a = r.pts[i], b = r.pts[(i+1) % r.pts.length], L = Math.hypot(b[0]-a[0], b[1]-a[1]); per += L;
@@ -2327,9 +2337,11 @@ function renderList(){
   el.innerHTML = `<div class="sec"><h3>Oggetti (${rows.length})</h3><div class="tblwrap" tabindex="0" role="region" aria-label="Tabella"><table class="olist"><thead><tr>${th("name","Nome")}${th("cat","Categoria")}${th("w","L×P×H cm")}${th("lv","Piano")}<th><span class="sr">Visibile</span>👁</th><th><span class="sr">Bloccato</span>🔒</th></tr></thead><tbody>
     ${rows.map(x => `<tr data-oid="${x.o.id}" class="${isSelected(x.o.id) ? "on" : ""}${x.o.hidden ? " off" : ""}"><td>${esc(x.name)}</td><td>${esc(x.cat)}</td><td class="num">${Math.round(x.w*100)}×${Math.round(x.d*100)}×${Math.round(x.h*100)}</td><td>${esc(x.lv)}</td><td><button class="ic" data-ohide="${x.o.id}" aria-pressed="${!x.o.hidden}" aria-label="${x.o.hidden ? "Mostra" : "Nascondi"} ${esc(x.name)}">${x.o.hidden ? "◌" : "●"}</button></td><td><button class="ic" data-olock="${x.o.id}" aria-pressed="${!!x.o.locked}" aria-label="${x.o.locked ? "Sblocca" : "Blocca"} ${esc(x.name)}">${x.o.locked ? "■" : "□"}</button></td></tr>`).join("")}</tbody></table></div>
     <p class="note">Clic su una riga per selezionare (Maiusc per aggiungere), doppio clic per le proprietà. Gli oggetti bloccati non si spostano col mouse.</p></div>
-    <div class="sec"><h3>Locali (${rooms.length})</h3><div class="tblwrap" tabindex="0" role="region" aria-label="Tabella"><table class="olist"><thead><tr><th>Nome</th><th>Piano</th><th>Netta m²</th><th>Lorda m²</th><th>Perimetro m</th></tr></thead><tbody>
-    ${rooms.map(x => `<tr data-rid="${x.r.id}" class="${isSelected(x.r.id) ? "on" : ""}"><td>${esc(x.r.name || "Locale")}</td><td>${esc(x.lv)}</td><td class="num">${fmt(x.net)}</td><td class="num">${fmt(x.gross)}</td><td class="num">${fmt(x.per)}</td></tr>`).join("")}
-    ${rooms.length ? `<tr class="tot"><td>Totale</td><td></td><td class="num">${fmt(rooms.reduce((s, x) => s + x.net, 0))}</td><td class="num">${fmt(rooms.reduce((s, x) => s + x.gross, 0))}</td><td></td></tr>` : ""}</tbody></table></div>
+    <div class="sec"><h3>Locali (${rooms.length})</h3><div class="tblwrap" tabindex="0" role="region" aria-label="Tabella"><table class="olist"><thead><tr><th>Nome</th><th>Piano</th><th>Netta m²</th><th>Lorda m²</th><th>Perimetro m</th><th>Finestre m²</th><th><abbr title="Rapporto aeroilluminante: finestre / superficie netta">R.A.I.</abbr></th></tr></thead><tbody>
+    ${rooms.map(x => { const gl = roomGlazing(x.r), rai = x.net > 0 ? gl / x.net : 0, ok = rai >= 1/8 - 1e-9;
+      return `<tr data-rid="${x.r.id}" class="${isSelected(x.r.id) ? "on" : ""}"><td>${esc(x.r.name || "Locale")}</td><td>${esc(x.lv)}</td><td class="num">${fmt(x.net)}</td><td class="num">${fmt(x.gross)}</td><td class="num">${fmt(x.per)}</td><td class="num">${fmt(gl)}</td><td class="num ${ok ? "" : "warn"}" title="${ok ? "Almeno 1/8" : "Meno di 1/8: insufficiente per un locale abitabile"}">${rai > 0 ? "1/" + fmt(1 / rai, 1) : "—"}${ok ? "" : " ⚠"}</td></tr>`; }).join("")}
+    ${rooms.length ? `<tr class="tot"><td>Totale</td><td></td><td class="num">${fmt(rooms.reduce((s, x) => s + x.net, 0))}</td><td class="num">${fmt(rooms.reduce((s, x) => s + x.gross, 0))}</td><td></td><td></td><td></td></tr>` : ""}</tbody></table></div>
+    <p class="note">R.A.I. indicativo: finestre e porte vetrate sul perimetro del locale diviso la superficie netta. Per i locali abitabili il D.M. 5/7/1975 chiede almeno 1/8; bagni e ripostigli possono avere aerazione meccanica.</p>
     <div class="btns"><button class="btn" id="listCsv">Esporta elenco in CSV</button></div></div>${computoHTML()}`;
 }
 $("#panel-list")?.addEventListener("click", async e => {
@@ -3404,6 +3416,17 @@ async function exportPrint(){
   else if (pieces.length === 1) await saveFile(base + ".stl", new Blob([stlBinary(pieces[0].geo)]));
   else { const files = {}; pieces.forEach((pc,i) => files[`${String(i+1).padStart(2,"0")}-${slugify(pc.name)}.stl`] = stlBinary(pc.geo)); await saveFile(base + "-stl.zip", new Blob([fflate.zipSync(files)])); }
 }
+/* Tabella dei layer (DXF R12): ogni layer usato dalle entità viene dichiarato con colore e linea continua, così
+   anche i CAD che non creano i layer mancanti li mostrano (#57). Si inserisce dopo l'intestazione. */
+const DXF_COLORS = {MURI:7, APERTURE:4, LOCALI:3, TESTI:2, ARREDI:8, QUOTE:1, SEZIONE:6, CARTIGLIO:7};
+function dxfWithLayers(out){
+  const used = new Set(); for (let i = 0; i + 1 < out.length; i += 2) if (out[i] === "8") used.add(out[i + 1]);   // coppie codice/valore
+  used.add("0"); let at = -1; for (let i = 0; i + 1 < out.length; i += 2) if (out[i] === "0" && out[i + 1] === "ENDSEC"){ at = i + 2; break; } if (at < 0) return out;
+  const t = ["0","SECTION","2","TABLES","0","TABLE","2","LTYPE","70","1","0","LTYPE","2","CONTINUOUS","70","0","3","Continua","72","65","73","0","40","0.0","0","ENDTAB","0","TABLE","2","LAYER","70",String(used.size)];
+  let c = 1; for (const n of used) t.push("0","LAYER","2",n,"70","0","62",String(DXF_COLORS[n] || (c++ % 6) + 1),"6","CONTINUOUS");
+  t.push("0","ENDTAB","0","ENDSEC");
+  return [...out.slice(0, at), ...t, ...out.slice(at)];
+}
 function exportDXF(){
   const L = level(), out = ["0","SECTION","2","HEADER","9","$ACADVER","1","AC1009","9","$INSUNITS","70","6","0","ENDSEC","0","SECTION","2","ENTITIES"];
   const line = (lay, a, b) => out.push("0","LINE","8",lay,"10",a[0].toFixed(4),"20",(-a[1]).toFixed(4),"30","0","11",b[0].toFixed(4),"21",(-b[1]).toFixed(4),"31","0");
@@ -3416,7 +3439,7 @@ function exportDXF(){
         out.push("0","ARC","8","APERTURE","10",H[0].toFixed(4),"20",(-H[1]).toFixed(4),"30","0","40",o.w.toFixed(4),"50",((sa+360)%360).toFixed(3),"51",((ea+360)%360).toFixed(3)); } } }
   for (const r of P.rooms.filter(r=>r.level===L.id)){ r.pts.forEach((p,i)=>line("LOCALI", p, r.pts[(i+1)%r.pts.length])); const c = polyCentroid(r.pts); text("TESTI", c, .25, r.name || "Locale"); text("TESTI", [c[0], c[1]+.4], .18, fmt(Math.abs(polyArea(r.pts))) + " mq"); }
   for (const o of P.objects.filter(o=>o.level===L.id)){ const fp = objFootprint(o), a = THREE.MathUtils.degToRad(o.rot||0); const pts = [[-1,-1],[1,-1],[1,1],[-1,1]].map(([sx,sz]) => { const lx = fp.cx + sx*fp.w/2, lz = fp.cz + sz*fp.d/2; return [o.x + lx*Math.cos(a) + lz*Math.sin(a), o.y - lx*Math.sin(a) + lz*Math.cos(a)]; }); for (let i=0;i<4;i++) line("ARREDI", pts[i], pts[(i+1)%4]); }
-  out.push("0","ENDSEC","0","EOF"); return out.join("\n");
+  out.push("0","ENDSEC","0","EOF"); return dxfWithLayers(out).join("\n");
 }
 function projectData(){
   const data = JSON.parse(JSON.stringify(P)); data.imports = {};
@@ -5945,7 +5968,7 @@ function pageDXF(pg){
       for (const s of it.sub){ if (s.pts.length < 2) continue; out.push("0","POLYLINE","8",lay,"66","1","70",s.closed ? "1" : "0"); for (const p of s.pts) out.push("0","VERTEX","8",lay,"10",p[0].toFixed(3),"20",Y(p[1]),"30","0"); out.push("0","SEQEND","8",lay); } }
     else { const b = textBox(it); out.push("0","TEXT","8","TESTI","10",b.x.toFixed(3),"20",Y(b.y),"30","0","40",(it.size * .72).toFixed(3),"1",it.text.replace(/[\r\n]/g, " "),"50",(-it.rot * 180 / Math.PI).toFixed(2)); }
   }
-  out.push("0","ENDSEC","0","EOF"); return out.join("\n");
+  out.push("0","ENDSEC","0","EOF"); return dxfWithLayers(out).join("\n");
 }
 
 /* ---------- impostazioni delle tavole ---------- */
@@ -6054,7 +6077,11 @@ function titleBlock(g, pg, title, scaleTxt, n, N){
   g.poly([[10, 10], [W - 10, 10], [W - 10, H - 10], [10, H - 10]], {stroke:"#111", lw:.5});
   g.poly([[bx, by], [bx + bw, by], [bx + bw, H - 10], [bx, H - 10]], {fill:"#fff", stroke:"#111", lw:.35});
   g.line([bx, by + 13], [bx + bw, by + 13], .2); g.line([bx + bw * .62, by], [bx + bw * .62, H - 10], .2); g.line([bx + bw * .62, by + 6.5], [bx + bw, by + 6.5], .15); g.line([bx + bw * .81, by + 13], [bx + bw * .81, H - 10], .15);
-  g.text(P.name || "Progetto", bx + 3, by + 6, 4, {bold:true}); g.text(title, bx + 3, by + 11, 3); g.text("Pianta Libera · elaborato generato dal modello: verificare le misure, non è un documento tecnico certificato", bx + 3, by + 19.5, 1.9, {col:"#555"});
+  const I = tav().info || {}, cut = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s, who = cut([I.committente && "Committente: " + I.committente, I.luogo].filter(Boolean).join(" · "), Math.round(bw * .62 / 1.25));
+  g.text(P.name || "Progetto", bx + 3, by + 6, 4, {bold:true}); g.text(title, bx + 3, by + 11, 3);
+  if (I.studio) g.text(cut(I.studio, Math.round(bw * .62 / 1.45)), bx + 3, by + 17.2, 2.6, {bold:true});
+  if (who) g.text(who, bx + 3, by + (I.studio ? 20.6 : 17.6), 2.2);
+  g.text("Pianta Libera · elaborato generato dal modello: verificare le misure, non è un documento tecnico certificato", bx + 3, by + (I.studio || who ? 24.4 : 19.5), I.studio || who ? 1.6 : 1.9, {col:"#555"});
   g.text("Scala", bx + bw * .62 + 2, by + 4, 1.8, {col:"#666"}); g.text(scaleTxt, bx + bw * .62 + 2, by + 6.2 + 4.6, 3.2, {bold:true});
   g.text("Data", bx + bw * .62 + 2, by + 17, 1.8, {col:"#666"}); g.text(new Date().toLocaleDateString("it-IT"), bx + bw * .62 + 2, by + 22.5, 2.8);
   g.text("Foglio", bx + bw * .81 + 2, by + 17, 1.8, {col:"#666"}); g.text(`${n}/${N}`, bx + bw * .81 + 2, by + 22.5, 2.8, {bold:true});
@@ -6164,7 +6191,7 @@ function wallFaceLengths(w, walls){
     for (const [P0, P1] of [[v.a, v.b], [v.b, v.a]]){ const q = projOnSeg(P0, w.a, w.b); if (q.d > EPS || q.t < 1e-4 || q.t > 1 - 1e-4) continue;
       const g = Math.hypot(P1[0]-P0[0], P1[1]-P0[1]) || 1, e = [(P1[0]-P0[0])/g, (P1[1]-P0[1])/g], sn = Math.abs(u[0]*e[1] - u[1]*e[0]); if (sn < 1e-6) continue;
       cut[n[0]*e[0] + n[1]*e[1] > 0 ? "A" : "B"] += v.thick / sn; } }
-  return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B)};
+  return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B), shift};
 }
 const STYLE_NAME = Object.fromEntries([...DOOR_STYLES, ...WIN_STYLES.map(([k, n]) => ["w_" + k, n])]);
 function computo(){
@@ -6222,6 +6249,7 @@ function tavoleHTML(){
       <div class="f"><span class="lbl">Scala</span><select id="tvScale" class="inp">${[50, 100, 200].map(s => `<option value="${s}" ${T.scale === s ? "selected" : ""}>1:${s}</option>`).join("")}</select></div>
       <div class="f"><span class="lbl">Sezione A-A</span><select id="tvAxis" class="inp"><option value="x" ${T.sec.axis === "x" ? "selected" : ""}>Verticale in pianta</option><option value="z" ${T.sec.axis === "z" ? "selected" : ""}>Orizzontale in pianta</option></select></div></div>
     <div class="row">${F("tvPos", T.sec.axis === "x" ? "Sezione a x = (m)" : "Sezione a y = (m)", fmt(T.sec.pos), 'inputmode="decimal"')}<div class="f"><span class="lbl">Guarda verso</span><select id="tvDir" class="inp"><option value="1" ${T.sec.dir > 0 ? "selected" : ""}>${T.sec.axis === "x" ? "Est" : "Sud"}</option><option value="-1" ${T.sec.dir < 0 ? "selected" : ""}>${T.sec.axis === "x" ? "Ovest" : "Nord"}</option></select></div></div>
+    <div class="row3">${F("tvStudio", "Studio / progettista", T.info?.studio || "", 'maxlength="80"')}${F("tvClient", "Committente", T.info?.committente || "", 'maxlength="80"')}${F("tvPlace", "Luogo", T.info?.luogo || "", 'maxlength="80"')}</div>
     <label class="chk"><input type="checkbox" id="tvChains" ${T.chains ? "checked" : ""}> Catene di quote esterne automatiche</label>
     <label class="chk"><input type="checkbox" id="tvFurn" ${T.furniture ? "checked" : ""}> Arredi in pianta</label>
     <label class="chk"><input type="checkbox" id="tvColor" ${T.color ? "checked" : ""}> Prospetti e sezioni a colori</label>
@@ -6231,6 +6259,7 @@ function tavoleHTML(){
 }
 $("#panel-export").addEventListener("change", e => { const t = e.target, T = tav(), v = num(t.value);
   const set = {tvPaper:() => T.paper = t.value, tvScale:() => T.scale = +t.value, tvAxis:() => { T.sec.axis = t.value; const b = planBounds(); if (b) T.sec.pos = +(t.value === "x" ? (b.x0 + b.x1) / 2 : (b.y0 + b.y1) / 2).toFixed(2); renderExport(); }, tvPos:() => { if (v !== null) T.sec.pos = v; }, tvDir:() => T.sec.dir = +t.value,
+    tvStudio:() => (T.info = {...T.info, studio:t.value.trim().slice(0, 80)}), tvClient:() => (T.info = {...T.info, committente:t.value.trim().slice(0, 80)}), tvPlace:() => (T.info = {...T.info, luogo:t.value.trim().slice(0, 80)}),
     tvChains:() => T.chains = t.checked, tvFurn:() => T.furniture = t.checked, tvColor:() => T.color = t.checked, tvComp:() => T.comp = t.checked}[t.id];
   if (set){ set(); save(); draw2D(); }
 });
@@ -6612,6 +6641,14 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && VID.on) VI
 const IFC64 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$";
 function ifcGuid(){ const b = crypto.getRandomValues(new Uint8Array(16)); let n = 0n; for (const x of b) n = (n << 8n) | BigInt(x); let s = ""; for (let i = 21; i >= 0; i--) s += IFC64[Number((n >> BigInt(6 * i)) & 63n)]; return s; }
 function ifcStr(s){ let o = ""; for (const ch of String(s ?? "")){ const c = ch.codePointAt(0); if (ch === "'") o += "''"; else if (ch === "\\") o += "\\\\"; else if (c >= 32 && c < 127) o += ch; else o += `\\X2\\${c.toString(16).toUpperCase().padStart(4, "0")}\\X0\\`; } return `'${o}'`; }
+/* Muro esterno: da almeno un lato non c'è un locale del suo piano (prova a 20 cm dalla faccia, a metà muro);
+   senza locali disegnati si considera esterno. */
+function wallIsExternal(w, Lv){
+  const rooms = P.rooms.filter(r => r.level === Lv.id && r.pts.length > 2); if (!rooms.length) return true;
+  const f = wallFrame(w), m = [(w.a[0]+w.b[0])/2, (w.a[1]+w.b[1])/2], d = w.thick/2 + .2;
+  const side = s => rooms.some(r => inPoly([m[0] + f.nx*d*s, m[1] + f.ny*d*s], r.pts));
+  return !(side(1) && side(-1));
+}
 function exportIFC(){
   const L = [], add = s => { L.push(s); return "#" + L.length; }, R = v => { const x = Math.round(v * 1e6) / 1e6; return Number.isInteger(x) ? x + "." : String(x); };
   const pt3 = (x, y, z) => add(`IFCCARTESIANPOINT((${R(x)},${R(y)},${R(z)}))`), pt2 = (x, y) => add(`IFCCARTESIANPOINT((${R(x)},${R(y)}))`), dir = (x, y, z) => add(`IFCDIRECTION((${R(x)},${R(y)},${R(z)}))`);
@@ -6637,13 +6674,27 @@ function exportIFC(){
     if (!idx.length) return null;
     const list = add(`IFCCARTESIANPOINTLIST3D((${Array.from({length:pts.length / 3}, (_, i) => `(${R(pts[i*3])},${R(pts[i*3+1])},${R(pts[i*3+2])})`).join(",")}))`);
     return add(`IFCTRIANGULATEDFACESET(${list},$,$,(${idx.map(t => `(${t.join(",")})`).join(",")}),$)`); };
+  // materiali (uno per nome, associati agli elementi) e insiemi di proprietà e quantità standard (#57)
+  const bim = { mats:new Map(), matRel:new Map(),
+    mat(el, key){ const n = matName(key || "intonaco"); let m = this.mats.get(n); if (!m){ m = add(`IFCMATERIAL(${ifcStr(n)},$,$)`); this.mats.set(n, m); } (this.matRel.get(m) || this.matRel.set(m, []).get(m)).push(el); },
+    pset(el, name, props){ const ps = props.map(([k, t, v]) => add(`IFCPROPERTYSINGLEVALUE('${k}',$,${t === "bool" ? `IFCBOOLEAN(${v ? ".T." : ".F."})` : `IFCLABEL(${ifcStr(String(v))})`},$)`));
+      add(`IFCRELDEFINESBYPROPERTIES('${ifcGuid()}',$,$,$,(${el}),${add(`IFCPROPERTYSET('${ifcGuid()}',$,'${name}',$,(${ps.join(",")}))`)})`); },
+    qto(el, name, qs){ const T = {len:"IFCQUANTITYLENGTH", area:"IFCQUANTITYAREA", vol:"IFCQUANTITYVOLUME"};
+      add(`IFCRELDEFINESBYPROPERTIES('${ifcGuid()}',$,$,$,(${el}),${add(`IFCELEMENTQUANTITY('${ifcGuid()}',$,'${name}',$,$,(${qs.map(([k, t, v]) => add(`${T[t]}('${k}',$,$,${R(v)},$)`)).join(",")}))`)})`); } };
   for (const Lv of bySt){
     const sLP = lp(bLP, ax3(pt3(0, 0, Lv.elev))), st = add(`IFCBUILDINGSTOREY('${ifcGuid()}',$,${ifcStr(Lv.name)},$,$,${sLP},$,$,.ELEMENT.,${R(Lv.elev)})`); storeys.push(st);
     const elems = [], spaces = [];
     for (const w of wallsOf(Lv.id)){
       const f = wallFrame(w); if (f.len < .01) continue; const a = W2I(w.a), h = w.height || Lv.height;
       const wLP = lp(sLP, ax3(pt3(a[0], a[1], 0), Z, dir(f.ux, -f.uy, 0)));
-      const wall = add(`IFCWALL('${ifcGuid()}',$,${ifcStr(`Muro ${Math.round(w.thick * 100)} cm`)},${ifcStr(matName(w.mat))},$,${wLP},${rep([box(f.len / 2, 0, f.len + w.thick, w.thick, -Lv.slab, h + Lv.slab)])},$,.STANDARD.)`); elems.push(wall); counts.walls++;
+      // sagoma in pianta con gli angoli raccordati (nessuna sovrapposizione tra muri, #57); asse locale y = lato B
+      const sh = wallFaceLengths(w, P.walls).shift, t2 = w.thick / 2;
+      const quad = [[sh.A[0], -t2], [f.len - sh.A[1], -t2], [f.len - sh.B[1], t2], [sh.B[0], t2]];
+      const wprof = add(`IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,${add(`IFCPOLYLINE((${[...quad, quad[0]].map(q => pt2(q[0], q[1])).join(",")}))`)})`);
+      const wall = add(`IFCWALL('${ifcGuid()}',$,${ifcStr(`Muro ${Math.round(w.thick * 100)} cm`)},${ifcStr(matName(w.mat))},$,${wLP},${rep([add(`IFCEXTRUDEDAREASOLID(${wprof},${ax3(O)},${Z},${R(h)})`)])},$,.STANDARD.)`); elems.push(wall); counts.walls++;
+      const ext = wallIsExternal(w, Lv); bim.mat(wall, w.mat);
+      bim.pset(wall, "Pset_WallCommon", [["IsExternal", "bool", ext], ["LoadBearing", "bool", w.thick >= .25 || /portante|esterno/i.test(w.wtype || "")], ["Reference", "label", w.wtype || `Muro ${Math.round(w.thick * 100)} cm`]]);
+      bim.qto(wall, "Qto_WallBaseQuantities", [["Length", "len", f.len], ["Width", "len", w.thick], ["Height", "len", h], ["NetSideArea", "area", Math.max(0, f.len * h - openingArea(w))], ["NetVolume", "vol", Math.max(0, f.len * h - openingArea(w)) * w.thick]]);;
       for (const o of P.openings.filter(o => o.wall === w.id)){
         const bot = o.type === "door" ? 0 : o.sill, oh = Math.min(o.h, h - bot), oLP = lp(wLP, ax3(pt3(o.t, 0, bot)));
         const op = add(`IFCOPENINGELEMENT('${ifcGuid()}',$,'Vano',$,$,${oLP},${rep([box(0, 0, o.w, w.thick + .1, 0, oh)])},$,.OPENING.)`);
@@ -6652,11 +6703,13 @@ function exportIFC(){
         const el = o.type === "door" ? add(`IFCDOOR('${ifcGuid()}',$,${ifcStr("Porta " + (o.style || "battente"))},$,$,${fLP},${geo},$,${R(oh)},${R(o.w)},.DOOR.,${o.style === "doppia" || o.style === "portafinestra" ? ".DOUBLE_DOOR_SINGLE_SWING." : o.style === "scorrevole" || o.style === "scomparsa" ? ".SLIDING_TO_LEFT." : ".SINGLE_SWING_LEFT."},$)`)
           : add(`IFCWINDOW('${ifcGuid()}',$,${ifcStr("Finestra " + (o.style || "battente"))},$,$,${fLP},${geo},$,${R(oh)},${R(o.w)},.WINDOW.,${o.w > 1.3 && (o.style || "battente") === "battente" ? ".DOUBLE_PANEL_VERTICAL." : ".SINGLE_PANEL."},$)`);
         add(`IFCRELFILLSELEMENT('${ifcGuid()}',$,$,$,${op},${el})`); elems.push(el); counts[o.type === "door" ? "doors" : "windows"]++;
+        bim.pset(el, o.type === "door" ? "Pset_DoorCommon" : "Pset_WindowCommon", [["IsExternal", "bool", ext], ["Reference", "label", `${o.type === "door" ? "Porta" : "Finestra"} ${o.style || "battente"} ${Math.round(o.w * 100)}×${Math.round(oh * 100)}`]]);
+        bim.mat(el, o.type === "door" ? "legno" : "serramento");
       }
     }
     for (const r of P.rooms.filter(r => r.level === Lv.id && r.pts.length > 2)){
       const poly = r.pts.map(W2I), prof = () => add(`IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,${add(`IFCPOLYLINE((${[...poly, poly[0]].map(p => pt2(p[0], p[1])).join(",")}))`)})`);
-      const slab = add(`IFCSLAB('${ifcGuid()}',$,${ifcStr("Solaio " + (r.name || ""))},${ifcStr(matName(r.mat))},$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(pt3(0, 0, -Lv.slab))},${Z},${R(Lv.slab)})`)])},$,.FLOOR.)`); elems.push(slab); counts.slabs++;
+      const slab = add(`IFCSLAB('${ifcGuid()}',$,${ifcStr("Solaio " + (r.name || ""))},${ifcStr(matName(r.mat))},$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(pt3(0, 0, -Lv.slab))},${Z},${R(Lv.slab)})`)])},$,.FLOOR.)`); bim.mat(slab, r.mat); elems.push(slab); counts.slabs++;
       const sp = add(`IFCSPACE('${ifcGuid()}',$,${ifcStr(r.name || "Locale")},$,$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(O)},${Z},${R(r.ceilH || Lv.height)})`)])},${ifcStr(r.name || "Locale")},.ELEMENT.,.INTERNAL.,$)`); spaces.push(sp); counts.spaces++;
       const q = add(`IFCELEMENTQUANTITY('${ifcGuid()}',$,'Qto_SpaceBaseQuantities',$,$,(${add(`IFCQUANTITYAREA('NetFloorArea',$,$,${R(Math.abs(polyArea(r.pts)))},$)`)},${add(`IFCQUANTITYLENGTH('Height',$,$,${R(r.ceilH || Lv.height)},$)`)}))`);
       add(`IFCRELDEFINESBYPROPERTIES('${ifcGuid()}',$,$,$,(${sp}),${q})`);
@@ -6676,6 +6729,7 @@ function exportIFC(){
     if (spaces.length) add(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${st},(${spaces.join(",")}))`);
   }
   if (storeys.length) add(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${bld},(${storeys.join(",")}))`);
+  for (const [m, els] of bim.matRel) add(`IFCRELASSOCIATESMATERIAL('${ifcGuid()}',$,$,$,(${els.join(",")}),${m})`);
   const now = new Date().toISOString().slice(0, 19), name = slug() + ".ifc";
   const text = `ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('ViewDefinition [ReferenceView_V1.2]'),'2;1');\nFILE_NAME(${ifcStr(name)},'${now}',('Pianta Libera'),('Pianta Libera'),'Pianta Libera','Pianta Libera','');\nFILE_SCHEMA(('IFC4'));\nENDSEC;\nDATA;\n${L.map((s, i) => `#${i + 1}=${s};`).join("\n")}\nENDSEC;\nEND-ISO-10303-21;\n`;
   return {text, counts};
@@ -7049,7 +7103,7 @@ function sanitizeProject(p){
   if (p.site && typeof p.site === "object"){ const s = p.site; p.site = {auto:!!s.auto, city:T(s.city, 40), lat:N(s.lat, 44.494), lon:N(s.lon, 11.343), tz:N(s.tz, 1), dst:s.dst !== false, north:N(s.north), date:/^\d{4}-\d{2}-\d{2}$/.test(s.date || "") ? s.date : "2026-06-21", hour:N(s.hour, 16)}; }
   if (p.prices && typeof p.prices === "object"){ const q = {}; for (const [k, v] of Object.entries(p.prices)) if (Number.isFinite(Number(v))) q[T(k, 160)] = Number(v); p.prices = q; }
   if (p.share && typeof p.share === "object") p.share = ID_OK.test(p.share.id || "") ? {id:p.share.id, expires_at:T(p.share.expires_at, 40), mode:p.share.mode === "edit" ? "edit" : "view"} : undefined;
-  if (p.tav && typeof p.tav === "object"){ const t = p.tav; p.tav = {paper:["A4", "A3", "A2", "A1"].includes(t.paper) ? t.paper : "A3", scale:[50, 100, 200].includes(+t.scale) ? +t.scale : 100, color:!!t.color, chains:t.chains !== false, furniture:t.furniture !== false, comp:t.comp !== false, sec:{axis:t.sec?.axis === "z" ? "z" : "x", pos:N(t.sec?.pos, 5), dir:N(t.sec?.dir, 1) < 0 ? -1 : 1}}; }
+  if (p.tav && typeof p.tav === "object"){ const t = p.tav; p.tav = {paper:["A4", "A3", "A2", "A1"].includes(t.paper) ? t.paper : "A3", scale:[50, 100, 200].includes(+t.scale) ? +t.scale : 100, color:!!t.color, chains:t.chains !== false, furniture:t.furniture !== false, comp:t.comp !== false, sec:{axis:t.sec?.axis === "z" ? "z" : "x", pos:N(t.sec?.pos, 5), dir:N(t.sec?.dir, 1) < 0 ? -1 : 1}, ...(t.info && typeof t.info === "object" ? {info:{studio:T(t.info.studio, 80), committente:T(t.info.committente, 80), luogo:T(t.info.luogo, 80)}} : {})}; }
   if (p.lightsMode != null && !["auto", "on", "off"].includes(p.lightsMode)) p.lightsMode = "auto";
   return p;
 }
