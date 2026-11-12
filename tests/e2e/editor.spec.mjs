@@ -598,3 +598,19 @@ test("computo: finiture per lato, battiscopa e aperture coincidono con il calcol
   expect(q).toEqual({muro:45.03, interno:41.79, esterno:48.27, pavimento:17.39, battiscopa:15.9, muroConAperturaLarga:2.6});   // 2 × 2,70 − 2 × 1,40
   expect(errors).toEqual([]);
 });
+
+// Revisione 11/2026, #56: un progetto con valori fuori campo si apre corretto
+test("apertura di un progetto: muri nulli, spessori, altezze e aperture fuori campo vengono corretti", async ({ page }) => {
+  const errors = await open(page);
+  const r = await page.evaluate(async () => {
+    const p = sampleProject(); const n0 = p.walls.length;
+    p.walls[0].b = p.walls[0].a.slice(); p.walls[1].thick = -.3; p.walls[2].height = -1; p.levels[0].height = -3;
+    const w1 = p.walls[1].id; p.openings.push({id:"o1", wall:w1, type:"window", t:0, w:-1, h:0, sill:-2}, {id:"o2", wall:"inesistente", type:"door", t:1, w:.9, h:2.1, sill:0});
+    await openProjectData(p);
+    const o1 = P.openings.find(o => o.id === "o1"), L = (w => Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1]))(P.walls.find(w => w.id === w1));
+    return { muri:P.walls.length === n0 - 1, spessori:P.walls.every(w => w.thick > 0), altezze:P.walls.every(w => w.height == null || w.height > 0), piano:P.levels[0].height > 0,
+      apertura:o1.w > 0 && o1.h > 0 && o1.sill >= 0 && o1.t - o1.w / 2 >= -1e-9 && o1.t + o1.w / 2 <= L + 1e-9, orfana:!P.openings.some(o => o.id === "o2") };
+  });
+  expect(r).toEqual({ muri:true, spessori:true, altezze:true, piano:true, apertura:true, orfana:true });
+  expect(errors).toEqual([]);
+});
