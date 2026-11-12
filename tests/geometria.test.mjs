@@ -41,3 +41,14 @@ test("muri allineati e muro isolato: nessuna correzione", () => {
 test("muri di piani diversi non si raccordano", () => {
   const a = W("a", [0, 0], [5, 0]), b = { ...W("b", [5, 0], [5, 4]), level: "L1" }, r = wallFaceLengths(a, [a, b]); near(r.A, 5); near(r.B, 5);
 });
+
+import { roofRectsOf } from "../shared/geometria.js";
+const loop = (C, t = .3) => C.map((p, i) => ({ id: "w" + i, level: "L", a: p, b: C[(i + 1) % C.length], thick: t }));
+test("sagoma della copertura: rettangolo, L con superficie esatta e sporto, muri obliqui", () => {
+  const R1 = roofRectsOf(loop([[0, 0], [5, 0], [5, 4], [0, 4]])); assert.equal(R1.rects.length, 1); near(R1.area(0), 5.3 * 4.3); near(R1.area(.5), 6.3 * 5.3);
+  const RL = roofRectsOf(loop([[0, 0], [10, 0], [10, 4], [4, 4], [4, 10], [0, 10]])); assert.equal(RL.rects.length, 2); assert.equal(RL.ortho, true);
+  near(RL.area(0), 10.3 * 4.3 + 4.3 * 6.0); near(RL.area(.5), 11.3 * 5.3 + 5.3 * 6.0);
+  const RT = roofRectsOf(loop([[0, 0], [12, 0], [12, 4], [8, 4], [8, 10], [4, 10], [4, 4], [0, 4]])); near(RT.area(0), 12.3 * 4.3 + 4.3 * 6.0);
+  const RO = roofRectsOf(loop([[0, 0], [5, 0], [7, 3], [0, 3]])); assert.equal(RO.ortho, false); assert.equal(RO.rects.length, 1);
+  assert.equal(roofRectsOf([]), null);
+});

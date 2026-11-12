@@ -43,3 +43,40 @@ export function wallFaceLengths(w, walls){
       cut[n[0]*e[0] + n[1]*e[1] > 0 ? "A" : "B"] += v.thick / sn; } }
   return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B), shift};
 }
+
+/* Sagoma della copertura di un piano: rettangoli massimi (anche sovrapposti) che coprono l'ingombro dei muri,
+   compresi i loro spessori e le aree chiuse. Piante a L, T, U → più rettangoli; muri obliqui → un rettangolo
+   d'ingombro (ortho:false). area(o) = superficie in pianta con lo sporto o (unione esatta per le piante ortogonali). */
+export function roofRectsOf(ws){
+  if (!ws.length) return null;
+  let tMax = 0, ortho = true; const xs = new Set(), zs = new Set();
+  for (const w of ws){ tMax = Math.max(tMax, w.thick); const dx = w.b[0]-w.a[0], dz = w.b[1]-w.a[1]; if (Math.abs(dx) > 1e-3 && Math.abs(dz) > 1e-3) ortho = false;
+    for (const q of [w.a, w.b]){ xs.add(+(q[0]-w.thick/2).toFixed(3)); xs.add(+(q[0]+w.thick/2).toFixed(3)); zs.add(+(q[1]-w.thick/2).toFixed(3)); zs.add(+(q[1]+w.thick/2).toFixed(3)); } }
+  const X = [...xs].sort((a, b) => a - b), Z = [...zs].sort((a, b) => a - b);
+  const bbox = {x0:X[0], x1:X[X.length-1], z0:Z[0], z1:Z[Z.length-1]};
+  const rectArea = (rs, o) => { const ex = [...new Set(rs.flatMap(r => [r.x0-o, r.x1+o]))].sort((a, b) => a - b), ez = [...new Set(rs.flatMap(r => [r.z0-o, r.z1+o]))].sort((a, b) => a - b); let A = 0;
+    for (let i = 0; i < ex.length-1; i++) for (let j = 0; j < ez.length-1; j++){ const cx = (ex[i]+ex[i+1])/2, cz = (ez[j]+ez[j+1])/2; if (rs.some(r => cx > r.x0-o && cx < r.x1+o && cz > r.z0-o && cz < r.z1+o)) A += (ex[i+1]-ex[i])*(ez[j+1]-ez[j]); } return A; };
+  if (!ortho || X.length > 80 || Z.length > 80) return {rects:[bbox], bbox, tMax, ortho:false, area:o => rectArea([bbox], o)};
+  // celle della griglia: piene se dentro un muro o in un'area chiusa dai muri (riempimento dall'esterno)
+  const nx = X.length-1, nz = Z.length-1, inWall = (x, z) => ws.some(w => { const q = projOnSeg([x, z], w.a, w.b); return q.d <= w.thick/2 + 1e-4; });
+  const full = Array.from({length:nx}, (_, i) => Array.from({length:nz}, (_, j) => inWall((X[i]+X[i+1])/2, (Z[j]+Z[j+1])/2)));
+  const out = Array.from({length:nx}, () => Array(nz).fill(false)), st = [];
+  for (let i = 0; i < nx; i++) for (const j of [0, nz-1]) if (!full[i][j]) st.push([i, j]);
+  for (let j = 0; j < nz; j++) for (const i of [0, nx-1]) if (!full[i][j]) st.push([i, j]);
+  while (st.length){ const [i, j] = st.pop(); if (i < 0 || j < 0 || i >= nx || j >= nz || out[i][j] || full[i][j]) continue; out[i][j] = true; st.push([i+1, j], [i-1, j], [i, j+1], [i, j-1]); }
+  const cov = (i0, i1, j0, j1) => { for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) if (out[i][j]) return false; return true; };
+  // rettangoli massimi: per ogni coppia di colonne, le strisce di righe coperte; si tengono quelli non contenuti in altri
+  const cand = [];
+  for (let i0 = 0; i0 < nx; i0++) for (let i1 = i0; i1 < nx; i1++){ let j0 = null;
+    for (let j = 0; j <= nz; j++){ const ok = j < nz && cov(i0, i1, j, j); if (ok && j0 === null) j0 = j; if (!ok && j0 !== null){ cand.push({i0, i1, j0, j1:j-1}); j0 = null; } } }
+  const maxi = cand.filter(r => !cand.some(q => q !== r && q.i0 <= r.i0 && q.i1 >= r.i1 && q.j0 <= r.j0 && q.j1 >= r.j1));
+  const area = r => (X[r.i1+1]-X[r.i0])*(Z[r.j1+1]-Z[r.j0]);
+  // copertura avida: il rettangolo che copre più celle ancora scoperte (in superficie), finché tutto è coperto; strisce sotto 1 m scartate se già coperte
+  const left = new Set(); for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) if (!out[i][j]) left.add(i*nz + j);
+  const pick = [];
+  while (left.size){ let best = null, bv = 0;
+    for (const r of maxi){ let v = 0; for (let i = r.i0; i <= r.i1; i++) for (let j = r.j0; j <= r.j1; j++) if (left.has(i*nz + j)) v += (X[i+1]-X[i])*(Z[j+1]-Z[j]); const sc = v + area(r)*1e-3; if (v > 0 && sc > bv){ bv = sc; best = r; } }
+    if (!best) break; pick.push(best); for (let i = best.i0; i <= best.i1; i++) for (let j = best.j0; j <= best.j1; j++) left.delete(i*nz + j); }
+  const rects = pick.map(r => ({x0:X[r.i0], x1:X[r.i1+1], z0:Z[r.j0], z1:Z[r.j1+1]}));
+  return {rects:rects.length ? rects : [bbox], bbox, tMax, ortho:true, area:o => rectArea(rects.length ? rects : [bbox], o)};
+}
