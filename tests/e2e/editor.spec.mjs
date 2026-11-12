@@ -574,3 +574,44 @@ test("nuova versione pubblicata: avviso con Aggiorna", async ({ page }) => {
   await page.evaluate(() => checkNewVersion(true)); await page.waitForTimeout(500);
   await expect(page.locator("#newVersion")).toHaveCount(0);
 });
+
+// Revisione 11/2026, #51 #58 #69: la riapertura non perde mai la versione più recente né i modelli importati
+const OBJ_CUBO = "v 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nv 0 0 1\nv 1 0 1\nv 1 1 1\nv 0 1 1\nf 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
+const ready = page => page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function" && idbReady);
+const inRaccolta = (page, fn) => page.waitForFunction(async f => { try { const r = await projGet(P.pid); return r && new Function("d", "return " + f)(JSON.parse(r.data)); } catch { return false; } }, fn, { timeout: 20_000, polling: 300 });
+test("riapertura: salvataggio rapido pieno, si riapre la versione più recente dalla raccolta (#51)", async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors = await open(page); await ready(page);
+  await page.evaluate(() => { P.name = "Versione A"; commit(); }); await page.waitForTimeout(2200);
+  await page.evaluate(() => { const o = Storage.prototype.setItem; Storage.prototype.setItem = function(k, v){ if (k === "pianta-libera-v2") throw new DOMException("pieno", "QuotaExceededError"); return o.call(this, k, v); };
+    P.name = "Versione B"; P.walls.push({id:"nuovo", level:P.levels[0].id, a:[20, 20], b:[25, 20], thick:.3, height:null, mat:"intonaco"}); commit(); });
+  await inRaccolta(page, 'd.name === "Versione B"');
+  await page.reload(); await ready(page); await page.waitForTimeout(3500);
+  expect(await page.evaluate(async () => [P.name, P.walls.some(w => w.id === "nuovo"), JSON.parse((await projGet(P.pid)).data).name])).toEqual(["Versione B", true, "Versione B"]);
+  expect(errors).toEqual([]);
+});
+test("riapertura: il modello importato resta, nel 3D e nella raccolta (#69)", async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors = await open(page); await ready(page);
+  await page.click('[data-tab="import"]');
+  await page.setInputFiles("#fModel", { name: "cubo.obj", mimeType: "text/plain", buffer: Buffer.from(OBJ_CUBO) });
+  await page.waitForFunction(() => P.objects.some(o => o.kind === "import"), null, { timeout: 30_000 });
+  await inRaccolta(page, "Object.keys(d.imports).length === 1");
+  await page.reload(); await ready(page);
+  await page.waitForFunction(() => { const o = P.objects.find(o => o.kind === "import"); return o && importStore[o.ref]; }, null, { timeout: 20_000 });
+  await page.waitForTimeout(2500);
+  expect(await page.evaluate(async () => Object.keys(JSON.parse((await projGet(P.pid)).data).imports).length)).toBe(1);
+  expect(errors).toEqual([]);
+});
+test("riapertura: ogni scheda ritrova il suo progetto (#58)", async ({ page, context }) => {
+  test.setTimeout(180_000);
+  await open(page); await ready(page);
+  await page.evaluate(() => { P.name = "Progetto A"; commit(); }); await inRaccolta(page, 'd.name === "Progetto A"');
+  const b = await context.newPage(); await routeLocal(b); await b.goto("/"); await ready(b);
+  await b.evaluate(async () => { const p = sampleProject(); p.name = "Progetto B"; await openProjectData(p); }); await inRaccolta(b, 'd.name === "Progetto B"');
+  await page.evaluate(() => { P.walls.pop(); commit(); }); await page.waitForTimeout(2000);   // la scheda A scrive per ultima
+  await b.reload(); await ready(b); await b.waitForTimeout(2500);
+  expect(await b.evaluate(() => P.name)).toBe("Progetto B");
+  await page.reload(); await ready(page); await page.waitForTimeout(2500);
+  expect(await page.evaluate(() => P.name)).toBe("Progetto A");
+});
