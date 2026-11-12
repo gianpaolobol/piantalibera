@@ -89,13 +89,14 @@ test("prestazioni: modifica su edificio grande, storia di annulla", async ({ pag
         for (const ref of ["divano", "tavolo", "letto"]) P.objects.push({id:`o${l}_${i}_${j}_${ref}`, level:L.id, kind:"lib", ref, x:x+2, y:y+2, z:0, rot:0, scale:1}); } }
     S.level = "L0"; commit(); if (typeof rebuildNow === "function") rebuildNow();
     // modifica di un muro e ricostruzione del 3D come la fa l'editor (rebuildNow se c'è, altrimenti costruzione intera)
-    const runs = []; for (let i = 0; i < 3; i++){ const t = performance.now(); P.walls[0].thick = .2 + i/100; commit(); if (typeof rebuildNow === "function") rebuildNow(); else buildModel({ground:S.ground}); runs.push(performance.now() - t); }
+    const runs = []; for (let i = 0; i < 9; i++){   // mediana di 9: sulla CI condivisa un solo campione varia da 60 a 200 ms
+      const t = performance.now(); P.walls[0].thick = .2 + i/100; commit(); if (typeof rebuildNow === "function") rebuildNow(); else buildModel({ground:S.ground}); runs.push(performance.now() - t); }
     let meshes = 0, calls = 0; const g = buildModel({ground:S.ground}).root; g.traverse(o => { if (o.isMesh) meshes++; });
     // storia di annulla con una texture importata da 3 MB
     P = sampleProject(); P.materials = {imp:{nome:"foto", color:"#cccccc", mapData:"data:image/jpeg;base64," + "A".repeat(3_000_000)}}; commit();
     past.length = 0; for (let i = 0; i < 20; i++){ P.walls[0].thick = .3 + i/1000; commit(); }
     const hist = typeof historyBytes === "function" ? historyBytes() : past.reduce((s, x) => s + (typeof x === "string" ? x.length : JSON.stringify(x).length), 0);
-    return { modifica_edificio_grande_ms: Math.round(runs.sort((a, b) => a - b)[1]), mesh_edificio_grande: meshes, storia_annulla_MB: +(hist / 1048576).toFixed(1) };
+    return { modifica_edificio_grande_ms: Math.round(runs.sort((a, b) => a - b)[4]), mesh_edificio_grande: meshes, storia_annulla_MB: +(hist / 1048576).toFixed(1) };
   }));
 });
 

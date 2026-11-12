@@ -44,7 +44,7 @@ un'iterazione con la precedente sulla stessa macchina.
 
 | Indicatore | Metodo | Attuale | Livello | Motivo |
 |---|---|---|---|---|
-| Modifica di un muro nell'edificio di prova (4 piani, 400 locali, 1.200 arredi) | L `modifica_edificio_grande_ms` | 99 ms con la ricostruzione per piano (#77; prima 266–381 ms secondo il carico) | **≤ 100 ms** | oltre 100 ms la modifica non sembra più immediata |
+| Modifica di un muro nell'edificio di prova (4 piani, 400 locali, 1.200 arredi) | L `modifica_edificio_grande_ms` | 68 ms in locale, mediana di 9 modifiche (#91; ricostruzione per piano #77; prima 266–381 ms). Sulla CI condivisa un singolo campione andava da 58 a 200 ms: per questo la misura è ora la mediana di 9 | **≤ 100 ms** | oltre 100 ms la modifica non sembra più immediata |
 | Mesh dell'edificio di prova | L `mesh_edificio_grande` | 2.425 (prima 9.625; #88, pezzi degli arredi uniti per materiale) | **≤ 2.500** | meno chiamate di disegno: vista 3D fluida anche su computer modesti |
 | Storia di annulla dopo 20 modifiche con una texture da 3 MB | L `storia_annulla_MB` | 2,9 MB (prima 54,4 MB) | **≤ 5 MB** | #55; i telefoni hanno poca memoria per pagina |
 | Primo disegno | Lighthouse o L (FCP) | 0,3–0,4 s | **≤ 1,0 s** (mantenere) | |
@@ -155,3 +155,4 @@ Punteggio 0–4 sull'editor completo (pianta, 3D, pannello, telefono); motivo in
 | 12/11/2026 | #88 | mesh dell'edificio di prova 9.625 → 2.425 (livello ≤ 2.500) |
 | 12/11/2026 | #89 | U1–U12 11 → 12 su 12; Nielsen 3,3 → 3,4 |
 | 12/11/2026 | #90 | funzioni di calcolo con node --test 3 → 4 su 4 |
+| 12/11/2026 | #91 | misura della modifica sull'edificio grande: mediana di 9 campioni invece di 3 (68 ms in locale) |
