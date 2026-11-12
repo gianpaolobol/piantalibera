@@ -18,8 +18,8 @@ const stanza = () => {
   // percorso antiorario in pianta (y in basso sullo schermo): il lato interno è quello a destra (B)
   for (let i = 0; i < 4; i++) P.walls.push({id:"w"+i, level:L.id, a:C[i].slice(), b:C[(i+1)%4].slice(), thick:.3, height:null, mat:"intonaco"});
   P.rooms.push({id:"r1", level:L.id, name:"Soggiorno", mat:"parquet", pts:[[.15,.15],[4.85,.15],[4.85,3.85],[.15,3.85]], skirt:{h:.08, mat:"bianco"}});
-  P.openings.push({id:"d1", wall:"w0", type:"door", t:.3, w:.9, h:2.1, sill:0});
-  P.openings.push({id:"f1", wall:"w2", type:"window", t:.5, w:1.2, h:1.4, sill:.9});
+  P.openings.push({id:"d1", wall:"w0", type:"door", t:2.5, w:.9, h:2.1, sill:0});
+  P.openings.push({id:"f1", wall:"w2", type:"window", t:2.5, w:1.2, h:1.4, sill:.9});
   commit();
 };
 
