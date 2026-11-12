@@ -599,6 +599,123 @@ test("computo: finiture per lato, battiscopa e aperture coincidono con il calcol
   expect(errors).toEqual([]);
 });
 
+// Revisione 11/2026, #52: coperture sulla sagoma della pianta, non sul rettangolo d'ingombro
+test("coperture su pianta a L: il tetto segue la sagoma, computo esatto", async ({ page }) => {
+  const errors = await open(page);
+  const r = await page.evaluate(() => {
+    const out = {};
+    for (const type of ["flat", "gable", "hip", "shed"]){
+      P = sampleProject(); P.walls = []; P.rooms = []; P.openings = []; P.objects = [];
+      const L = P.levels[0]; L.roof = {type, pitch:30, overhang:type === "flat" ? 0 : .5, mat:"tegole"};
+      const C = [[0, 0], [10, 0], [10, 4], [4, 4], [4, 10], [0, 10]];
+      for (let i = 0; i < C.length; i++) P.walls.push({id:"w" + i, level:L.id, a:C[i], b:C[(i + 1) % C.length], thick:.3, height:null, mat:"intonaco"});
+      commit();
+      const root = buildModel({ground:false}).root; root.updateMatrixWorld(true);
+      const roofs = []; root.traverse(o => { if (o.isMesh && o.userData.cat === "roof") roofs.push(o); });
+      const hit = (x, z) => new THREE.Raycaster(new THREE.Vector3(x, 50, z), new THREE.Vector3(0, -1, 0)).intersectObjects(roofs, false).length > 0;
+      out[type] = {area:+(computo().find(x => x.cat === "Copertura")?.q || 0).toFixed(2), sopraIlCortile:hit(7, 7), sopraLaCasa:[hit(2, 2), hit(8, 2), hit(2, 8)].every(Boolean)};
+    }
+    return out;
+  });
+  // piano senza sporto: 10,3 × 4,3 + 4,3 × 6,0 = 70,09 m²; con sporto 0,50 la sagoma dilatata è 11,3 × 5,3 + 5,3 × 6,0 = 91,69 m², a 30° ÷ cos 30°
+  const falda = +(91.69 / Math.cos(Math.PI / 6)).toFixed(2);
+  expect(r).toEqual({ flat:{area:70.09, sopraIlCortile:false, sopraLaCasa:true}, gable:{area:falda, sopraIlCortile:false, sopraLaCasa:true},
+    hip:{area:falda, sopraIlCortile:false, sopraLaCasa:true}, shed:{area:falda, sopraIlCortile:false, sopraLaCasa:true} });
+  expect(errors).toEqual([]);
+});
+
+// Revisione 11/2026, #51 #58 #69: la riapertura non perde mai la versione più recente né i modelli importati
+const OBJ_CUBO = "v 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nv 0 0 1\nv 1 0 1\nv 1 1 1\nv 0 1 1\nf 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
+const ready = page => page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function" && idbReady);
+// attende che la raccolta Progetti (IndexedDB) contenga il progetto corrente con la condizione data
+async function inRaccolta(page, cond){
+  for (let i = 0; i < 60; i++){ if (await page.evaluate(async c => { const r = await projGet(P.pid); return !!r && new Function("d", "return " + c)(JSON.parse(r.data)); }, cond)) return; await page.waitForTimeout(300); }
+  throw new Error("la raccolta non contiene: " + cond);
+}
+test("riapertura: salvataggio rapido pieno, si riapre la versione più recente dalla raccolta (#51)", async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors = await open(page); await ready(page);
+  await page.evaluate(() => { P.name = "Versione A"; commit(); }); await page.waitForTimeout(2200);
+  await page.evaluate(() => { const o = Storage.prototype.setItem; Storage.prototype.setItem = function(k, v){ if (k === "pianta-libera-v2") throw new DOMException("pieno", "QuotaExceededError"); return o.call(this, k, v); };
+    P.name = "Versione B"; P.walls.push({id:"nuovo", level:P.levels[0].id, a:[20, 20], b:[25, 20], thick:.3, height:null, mat:"intonaco"}); commit(); });
+  await inRaccolta(page, 'd.name === "Versione B"');
+  await page.reload(); await ready(page); await page.waitForTimeout(3500);
+  expect(await page.evaluate(async () => [P.name, P.walls.some(w => w.id === "nuovo"), JSON.parse((await projGet(P.pid)).data).name])).toEqual(["Versione B", true, "Versione B"]);
+  expect(errors).toEqual([]);
+});
+test("riapertura: il modello importato resta, nel 3D e nella raccolta (#69)", async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors = await open(page); await ready(page);
+  await page.click('[data-tab="import"]');
+  await page.setInputFiles("#fModel", { name: "cubo.obj", mimeType: "text/plain", buffer: Buffer.from(OBJ_CUBO) });
+  await page.waitForFunction(() => P.objects.some(o => o.kind === "import"), null, { timeout: 30_000 });
+  await inRaccolta(page, "Object.keys(d.imports).length === 1");
+  await page.reload(); await ready(page);
+  await page.waitForFunction(() => { const o = P.objects.find(o => o.kind === "import"); return o && importStore[o.ref]; }, null, { timeout: 20_000 });
+  await page.waitForTimeout(2500);
+  expect(await page.evaluate(async () => Object.keys(JSON.parse((await projGet(P.pid)).data).imports).length)).toBe(1);
+  expect(errors).toEqual([]);
+});
+test("riapertura: ogni scheda ritrova il suo progetto (#58)", async ({ page, context }) => {
+  test.setTimeout(180_000);
+  await open(page); await ready(page);
+  await page.evaluate(() => { P.name = "Progetto A"; commit(); }); await inRaccolta(page, 'd.name === "Progetto A"');
+  const b = await context.newPage(); await routeLocal(b); await b.goto("/"); await ready(b);
+  await b.evaluate(async () => { const p = sampleProject(); p.name = "Progetto B"; await openProjectData(p); }); await inRaccolta(b, 'd.name === "Progetto B"');
+  await page.evaluate(() => { P.walls.pop(); commit(); }); await page.waitForTimeout(2000);   // la scheda A scrive per ultima
+  await b.reload(); await ready(b); await b.waitForTimeout(2500);
+  expect(await b.evaluate(() => P.name)).toBe("Progetto B");
+  await page.reload(); await ready(page); await page.waitForTimeout(2500);
+  expect(await page.evaluate(() => P.name)).toBe("Progetto A");
+});
+
+// Revisione 11/2026, #55: le immagini incorporate non si copiano a ogni passo della storia di annulla
+test("storia di annulla: una texture importata si tiene una volta sola, annulla e ripristina la conservano", async ({ page }) => {
+  const errors = await open(page);
+  const r = await page.evaluate(() => {
+    const img = "data:image/jpeg;base64," + "A".repeat(3_000_000);
+    P.materials = {imp:{nome:"foto", color:"#cccccc", mapData:img}}; commit(); past.length = 0;
+    for (let i = 0; i < 20; i++){ P.walls[0].thick = .3 + i / 1000; commit(); }
+    const mb = historyBytes() / 1048576;
+    for (let i = 0; i < 20; i++) undo();
+    const dopoUndo = [P.walls[0].thick, P.materials.imp.mapData === img];
+    for (let i = 0; i < 20; i++) redo();
+    return {mb:+mb.toFixed(1), dopoUndo, dopoRedo:[+P.walls[0].thick.toFixed(3), P.materials.imp.mapData === img]};
+  });
+  expect(r.mb).toBeLessThan(5);
+  expect(r.dopoUndo).toEqual([.3, true]); expect(r.dopoRedo).toEqual([.319, true]);
+  expect(errors).toEqual([]);
+});
+
+// Revisione 11/2026, #62: nessuna violazione axe critica o seria (WCAG 2.2 AA) nelle cinque schede
+test("accessibilità: nessuna violazione axe critica o seria nelle schede del pannello", async ({ page }) => {
+  await open(page);
+  await page.evaluate(src => (0, eval)(src), readFileSync("node_modules/axe-core/axe.min.js", "utf8"));
+  const found = [];
+  for (const tab of ["props", "list", "import", "export", "ai"]){
+    await page.click(`[data-tab="${tab}"]`); await page.waitForTimeout(300);
+    found.push(...await page.evaluate(async () => (await axe.run(document, { runOnly: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] })).violations
+      .filter(v => ["critical", "serious"].includes(v.impact)).flatMap(v => v.nodes.map(n => `${v.id} ${n.target.join(" ")}`))));
+  }
+  expect([...new Set(found)]).toEqual([]);
+});
+
+// Revisione 11/2026, #56: un progetto con valori fuori campo si apre corretto
+test("apertura di un progetto: muri nulli, spessori, altezze e aperture fuori campo vengono corretti", async ({ page }) => {
+  const errors = await open(page);
+  const r = await page.evaluate(async () => {
+    const p = sampleProject(); const n0 = p.walls.length;
+    p.walls[0].b = p.walls[0].a.slice(); p.walls[1].thick = -.3; p.walls[2].height = -1; p.levels[0].height = -3;
+    const w1 = p.walls[1].id; p.openings.push({id:"o1", wall:w1, type:"window", t:0, w:-1, h:0, sill:-2}, {id:"o2", wall:"inesistente", type:"door", t:1, w:.9, h:2.1, sill:0});
+    await openProjectData(p);
+    const o1 = P.openings.find(o => o.id === "o1"), L = (w => Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1]))(P.walls.find(w => w.id === w1));
+    return { muri:P.walls.length === n0 - 1, spessori:P.walls.every(w => w.thick > 0), altezze:P.walls.every(w => w.height == null || w.height > 0), piano:P.levels[0].height > 0,
+      apertura:o1.w > 0 && o1.h > 0 && o1.sill >= 0 && o1.t - o1.w / 2 >= -1e-9 && o1.t + o1.w / 2 <= L + 1e-9, orfana:!P.openings.some(o => o.id === "o2") };
+  });
+  expect(r).toEqual({ muri:true, spessori:true, altezze:true, piano:true, apertura:true, orfana:true });
+  expect(errors).toEqual([]);
+});
+
 // Revisione 11/2026, #57: IFC con muri raccordati (volume = computo), materiali e Pset; DXF con la tabella dei layer
 test("IFC e DXF: volumi dei muri come il computo, materiali, Pset e layer dichiarati", async ({ page }) => {
   const errors = await open(page);

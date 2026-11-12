@@ -133,7 +133,7 @@ async function enterViewer(id){
   try {
     const d = await shareFetch("/" + encodeURIComponent(id)); await shareConfig();
     P = migrate(d.project); P.pid = "condiviso-" + id; S.viewer.name = d.name; S.viewer.expires = d.expires_at; S.viewer.updated = d.updated_at; S.comments = d.comments || [];
-    S.level = P.levels[0].id; setSel([]); snap = JSON.stringify(P); past.length = 0; future.length = 0;
+    S.level = P.levels[0].id; setSel([]); snap = snapOf(P); past.length = 0; future.length = 0;
     $("#projName").value = d.name; $("#projName").readOnly = true; S.tab = "props"; renderTabs(); setTool("select");
     refresh(); fitPlan(); applySky(); camPreset("ext"); $("#tag2d")?.insertAdjacentHTML("beforeend", `<span class="viewtag">sola lettura</span>`);
   } catch(e){ S.viewer.error = e.message; renderInspector(); }
@@ -211,7 +211,7 @@ async function enterGuest(id, key){
     const resume = local?.project && local.base === d.updated_at;
     if (resume) S.guest.sent = local.sent || null;
     P = migrate(resume ? local.project : d.project); P.pid = "ospite-" + id; delete P.share;
-    S.level = P.levels[0].id; setSel([]); snap = JSON.stringify(P); past.length = 0; future.length = 0;
+    S.level = P.levels[0].id; setSel([]); snap = snapOf(P); past.length = 0; future.length = 0;
     $("#projName").value = d.name; refresh(); fitPlan(); applySky(); camPreset("ext");
     $("#tag2d")?.insertAdjacentHTML("beforeend", `<button class="viewtag" id="guestTag" title="Invia le modifiche al progettista">modifiche per il progettista</button>`);
     $("#guestTag")?.addEventListener("click", () => { S.tab = "export"; renderTabs(); renderExport(); });

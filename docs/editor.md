@@ -54,6 +54,11 @@ Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, ve
 - Export: GLB e OBJ per D5 Render (un oggetto per materiale, nomi leggibili), 3MF/STL per la stampa 3D in scala con parete minima, basamento e piani separati, DXF della pianta, PNG, pacchetto AI, progetto JSON (schema versione 2 con migrazione dalla 1).
 - Render AI: preset «Backend Pianta Libera» sul contratto `/api/render` (vista + profondità + contorni + camera), modalità fedele/creativo, polling dei lavori, galleria con confronto. Preset diretti verso servizi esterni solo per prove locali.
 
+- **Progetti aperti da file** (revisione 11/2026, #56): oltre alla sanificazione dei testi e degli identificativi si correggono i valori fisici: muri più corti di 1 cm tolti, spessori e altezze non positivi riportati ai valori predefiniti, aperture con misure positive e dentro il loro muro, aperture senza muro tolte.
+- **Accessibilità** (revisione 11/2026, #62): ogni campo dei pannelli prende il nome dall'etichetta visibile (`autoLabel`, anche nei pannelli ridisegnati); lista delle schede con soli figli `tab` (il pulsante «Stacca» è accanto); ordinamento annunciato sulle intestazioni di colonna; tabelle scorrevoli raggiungibili da tastiera; messaggi annunciati (`aria-live`). Prova axe (WCAG 2.2 AA) nelle prove nel browser.
+- **Storia di annulla leggera** (revisione 11/2026, #55): le immagini incorporate nel progetto (texture importate, foto, basi di ricalco oltre 8 KB) si tengono una volta sola; la storia conserva solo riferimenti (`snapOf`, `fromSnap`, `historyBytes` in `04-plan.js`).
+- **Senza WebGL** (revisione 11/2026, #67): se il browser non può usare la grafica 3D (PC senza accelerazione, macchine virtuali, desktop remoto) l'editor si apre lo stesso; la vista 3D mostra un messaggio con le possibili soluzioni e funzionano pianta, tavole, computo ed esportazioni. Il renderer diventa un oggetto inerte (`inertObject`, `03-model.js`); visore 360° e anteprima di stampa avvisano.
+
 ## Pianta di precisione (fase 1 della roadmap d'interfaccia)
 
 - **Selezione**: clic, Maiusc+clic per aggiungere/togliere, trascinamento nel vuoto = selezione a riquadro (su touch sposta la vista), Ctrl+A. Più elementi si spostano insieme trascinandone uno o con le frecce (Maiusc ×10); i muri non selezionati collegati seguono.
@@ -95,10 +100,11 @@ Fase 1 completata.
 - **Sole da luogo, data e ora** (`P.site`): città o coordinate, fuso, ora legale europea, nord della pianta (ruota anche la bussola); di notte niente sole né riflessi del cielo.
 - **Porte**: a battente, a due ante, a vetro, portafinestra, scorrevole esterna, a scomparsa, basculante. **Finestre**: a battente, vasistas, scorrevole, fissa; oscuranti: persiane o tapparella sul lato esterno (riconosciuto dai locali, invertibile). Simboli di pianta per ogni modello (`o.style`, `o.shut`).
 - **Scale** parametriche (una rampa, a L, a U, a chiocciola): dislivello dal piano sopra, alzate, pedata, larghezza, svolta, corrimano e ringhiera a montanti o vetro, verifica 2a + p; il solaio del piano sopra e il soffitto vengono forati sull'ingombro. **Ringhiere/parapetti** a montanti, vetro o muratura (`o.p`).
-- **Tetti** a padiglione e a una falda (con la direzione della falda e i tamponamenti dei muri), oltre a piano e a due falde.
+- **Tetti** a padiglione e a una falda (con la direzione della falda e i tamponamenti dei muri), oltre a piano e a due falde. Dalla revisione 11/2026 (#52) le coperture seguono la sagoma della pianta: su piante a L, T, U si costruisce un tetto per ogni rettangolo massimo della sagoma e i tetti si incontrano nei compluvi (la falda unica resta un solo piano su tutta la sagoma); il computo misura la sagoma con lo sporto. Con muri obliqui resta il rettangolo d'ingombro (`roofRects`, `03-model.js`).
 - **Immagini**: vista in 4K, panorama 360° equirettangolare con visore e JPG con metadati GPano, tutte le camere salvate in 4K in uno zip.
 - **Coda di render AI**: vista corrente e camere salvate in coda, elaborate una alla volta; si ferma a errore o quota esaurita.
 - **Progetti**: pulsante in alto con tutti i progetti di questo browser (IndexedDB, salvataggio automatico con anteprima): nuovo, apri, duplica, rinomina, scarica .json, elimina con conferma.
+- **Riapertura sicura** (revisione 11/2026, #51 #58 #69): il salvataggio rapido (`localStorage`) tiene l'ora dell'ultima scrittura; alla riapertura si confronta con la raccolta Progetti e si apre la versione più recente. Se il progetto è troppo grande per il salvataggio rapido, la copia vecchia si toglie e alla riapertura si legge la raccolta. Ogni scheda del browser ricorda il suo progetto (`sessionStorage`). I modelli importati (DAE, OBJ, FBX…) si ricaricano dalla raccolta e non si perdono più. Uscendo dalla pagina la raccolta si scrive subito.
 - Anteprime del catalogo: `npm run build:anteprime -- --mancanti` genera solo quelle nuove.
 
 ## Avanguardia (fase 4)
