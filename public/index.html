@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ka4VHl9DvjYBYfvXcYsPtXXP5pQeKC74lERCV5vQPcc=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-RsX4xPrNm4Lxs62m04R9jBmfyOikAN/mRB/EKgCUG+A=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1138,6 +1138,42 @@ function wallSolidRanges(w){
 
 /* ---------- Costruzione del modello ----------
    opts: {print, minThick(m), noFill, objects(bool), roof(bool), ground(bool)} */
+/* Sagoma della copertura di un piano: rettangoli massimi (anche sovrapposti) che coprono l'ingombro dei muri,
+   compresi i loro spessori e le aree chiuse. Piante a L, T, U → più rettangoli; muri obliqui → un rettangolo
+   d'ingombro (ortho:false). area(o) = superficie in pianta con lo sporto o (unione esatta per le piante ortogonali). */
+function roofRects(lid){
+  const ws = wallsOf(lid); if (!ws.length) return null;
+  let tMax = 0, ortho = true; const xs = new Set(), zs = new Set();
+  for (const w of ws){ tMax = Math.max(tMax, w.thick); const dx = w.b[0]-w.a[0], dz = w.b[1]-w.a[1]; if (Math.abs(dx) > 1e-3 && Math.abs(dz) > 1e-3) ortho = false;
+    for (const q of [w.a, w.b]){ xs.add(+(q[0]-w.thick/2).toFixed(3)); xs.add(+(q[0]+w.thick/2).toFixed(3)); zs.add(+(q[1]-w.thick/2).toFixed(3)); zs.add(+(q[1]+w.thick/2).toFixed(3)); } }
+  const X = [...xs].sort((a, b) => a - b), Z = [...zs].sort((a, b) => a - b);
+  const bbox = {x0:X[0], x1:X[X.length-1], z0:Z[0], z1:Z[Z.length-1]};
+  const rectArea = (rs, o) => { const ex = [...new Set(rs.flatMap(r => [r.x0-o, r.x1+o]))].sort((a, b) => a - b), ez = [...new Set(rs.flatMap(r => [r.z0-o, r.z1+o]))].sort((a, b) => a - b); let A = 0;
+    for (let i = 0; i < ex.length-1; i++) for (let j = 0; j < ez.length-1; j++){ const cx = (ex[i]+ex[i+1])/2, cz = (ez[j]+ez[j+1])/2; if (rs.some(r => cx > r.x0-o && cx < r.x1+o && cz > r.z0-o && cz < r.z1+o)) A += (ex[i+1]-ex[i])*(ez[j+1]-ez[j]); } return A; };
+  if (!ortho || X.length > 80 || Z.length > 80) return {rects:[bbox], bbox, tMax, ortho:false, area:o => rectArea([bbox], o)};
+  // celle della griglia: piene se dentro un muro o in un'area chiusa dai muri (riempimento dall'esterno)
+  const nx = X.length-1, nz = Z.length-1, inWall = (x, z) => ws.some(w => { const q = projOnSeg([x, z], w.a, w.b); return q.d <= w.thick/2 + 1e-4; });
+  const full = Array.from({length:nx}, (_, i) => Array.from({length:nz}, (_, j) => inWall((X[i]+X[i+1])/2, (Z[j]+Z[j+1])/2)));
+  const out = Array.from({length:nx}, () => Array(nz).fill(false)), st = [];
+  for (let i = 0; i < nx; i++) for (const j of [0, nz-1]) if (!full[i][j]) st.push([i, j]);
+  for (let j = 0; j < nz; j++) for (const i of [0, nx-1]) if (!full[i][j]) st.push([i, j]);
+  while (st.length){ const [i, j] = st.pop(); if (i < 0 || j < 0 || i >= nx || j >= nz || out[i][j] || full[i][j]) continue; out[i][j] = true; st.push([i+1, j], [i-1, j], [i, j+1], [i, j-1]); }
+  const cov = (i0, i1, j0, j1) => { for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) if (out[i][j]) return false; return true; };
+  // rettangoli massimi: per ogni coppia di colonne, le strisce di righe coperte; si tengono quelli non contenuti in altri
+  const cand = [];
+  for (let i0 = 0; i0 < nx; i0++) for (let i1 = i0; i1 < nx; i1++){ let j0 = null;
+    for (let j = 0; j <= nz; j++){ const ok = j < nz && cov(i0, i1, j, j); if (ok && j0 === null) j0 = j; if (!ok && j0 !== null){ cand.push({i0, i1, j0, j1:j-1}); j0 = null; } } }
+  const maxi = cand.filter(r => !cand.some(q => q !== r && q.i0 <= r.i0 && q.i1 >= r.i1 && q.j0 <= r.j0 && q.j1 >= r.j1));
+  const area = r => (X[r.i1+1]-X[r.i0])*(Z[r.j1+1]-Z[r.j0]);
+  // copertura avida: il rettangolo che copre più celle ancora scoperte (in superficie), finché tutto è coperto; strisce sotto 1 m scartate se già coperte
+  const left = new Set(); for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) if (!out[i][j]) left.add(i*nz + j);
+  const pick = [];
+  while (left.size){ let best = null, bv = 0;
+    for (const r of maxi){ let v = 0; for (let i = r.i0; i <= r.i1; i++) for (let j = r.j0; j <= r.j1; j++) if (left.has(i*nz + j)) v += (X[i+1]-X[i])*(Z[j+1]-Z[j]); const sc = v + area(r)*1e-3; if (v > 0 && sc > bv){ bv = sc; best = r; } }
+    if (!best) break; pick.push(best); for (let i = best.i0; i <= best.i1; i++) for (let j = best.j0; j <= best.j1; j++) left.delete(i*nz + j); }
+  const rects = pick.map(r => ({x0:X[r.i0], x1:X[r.i1+1], z0:Z[r.j0], z1:Z[r.j1+1]}));
+  return {rects:rects.length ? rects : [bbox], bbox, tMax, ortho:true, area:o => rectArea(rects.length ? rects : [bbox], o)};
+}
 function buildModel(opts={}){
   const root = new THREE.Group(); root.name = P.name || "Progetto";
   const buckets = new Map();
@@ -1185,15 +1221,15 @@ function buildModel(opts={}){
       if (!opts.print && r.skirt) for (const sg of skirtGeos(r, L)) add(L.id, r.skirt.mat || "bianco", "skirt", sg);
     }
     if (L.roof && L.roof.type !== "none" && opts.roof !== false){
-      const ws = wallsOf(L.id); if (ws.length){
-        let x0=Infinity,x1=-Infinity,z0=Infinity,z1=-Infinity, tMax=0;
-        for (const w of ws){ for (const p of [w.a,w.b]){ x0=Math.min(x0,p[0]-w.thick/2); x1=Math.max(x1,p[0]+w.thick/2); z0=Math.min(z0,p[1]-w.thick/2); z1=Math.max(z1,p[1]+w.thick/2);} tMax=Math.max(tMax,w.thick); }
+      const ws = wallsOf(L.id), RR = roofRects(L.id); if (ws.length && RR) for (const rr of RR.rects){
+        // una copertura per ogni rettangolo massimo della sagoma: sulle piante a L, T, U i tetti si incontrano nei compluvi
+        const {x0, x1, z0, z1} = rr, tMax = RR.tMax, single = RR.rects.length === 1;
         const topY = e0 + L.height, o = L.roof.overhang, th = .22, rm = L.roof.mat, lid = "roof:"+L.id;
-        if (L.roof.type === "hip" || L.roof.type === "shed") buildRoofX(L, {x0, x1, z0, z1, tMax, topY, o, lid, rm}, add, opts);
+        if (L.roof.type === "hip" || L.roof.type === "shed") buildRoofX(L, {x0, x1, z0, z1, tMax, topY, o, lid, rm, all:RR.bbox, others:RR.rects.filter(q => q !== rr)}, add, opts);
         else if (L.roof.type === "flat"){
           add(lid, rm, "roof", boxGeo((x0+x1)/2, topY+th/2, (z0+z1)/2, x1-x0+2*o, th, z1-z0+2*o));
         } else {
-          const p = THREE.MathUtils.degToRad(clamp(L.roof.pitch, 5, 60)), along = L.roof.ridge === "x" ? true : L.roof.ridge === "y" ? false : (x1-x0) >= (z1-z0);
+          const p = THREE.MathUtils.degToRad(clamp(L.roof.pitch, 5, 60)), along = single && L.roof.ridge === "x" ? true : single && L.roof.ridge === "y" ? false : (x1-x0) >= (z1-z0);
           const W0 = along ? z1-z0 : x1-x0, Lr = (along ? x1-x0 : z1-z0) + 2*o, cx=(x0+x1)/2, cz=(z0+z1)/2;
           const rise0 = W0/2*Math.tan(p), half = W0/2 + o, sl = half/Math.cos(p), eave = topY - o*Math.tan(p), midY = eave + half*Math.tan(p)/2;
           if (along){
@@ -1356,7 +1392,17 @@ function redo(){ if (!future.length) return; past.push(snap); snap = future.pop(
 function afterLoad(){ for (const k of Object.keys(matCache)) if (!MATS[k]) invalidateMat(k); fixSel(); save(); refresh(); }
 function fixSel(){ if (!level(S.level)) S.level = P.levels[0].id; P.dims = P.dims || []; setSel(selList().filter(x => itemOf(x))); }
 let saveWarned = false;
-function save(){ if (S.viewer) return; if (S.guest) return guestSave(); try { localStorage.setItem("pianta-libera-v2", JSON.stringify(P)); savedAt = new Date(); updateStatusInfo(); } catch(e){ if (!saveWarned && e?.name === "QuotaExceededError"){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio nel browser: resta nella raccolta Progetti, ma conviene anche Esporta → Salva progetto", true); } } queueIdbSave(); }
+/* Salvataggio nel browser. localStorage tiene l'ultima versione con l'ora (LS_T); sessionStorage ricorda il progetto
+   di questa scheda. Se localStorage è pieno, la copia vecchia si toglie e resta solo il riferimento al progetto:
+   alla riapertura si legge la raccolta Progetti (IndexedDB), che è più recente (09-init.js, restoreFromIdb). */
+const LS_P = "pianta-libera-v2", LS_T = "pianta-libera-t", LS_LAST = "pianta-libera-ultimo", SS_PID = "pianta-libera-pid";
+function save(){ if (S.viewer) return; if (S.guest) return guestSave();
+  try { sessionStorage.setItem(SS_PID, P.pid); } catch(e){}
+  try { localStorage.setItem(LS_P, JSON.stringify(P)); localStorage.setItem(LS_T, String(Date.now())); localStorage.removeItem(LS_LAST); savedAt = new Date(); updateStatusInfo(); }
+  catch(e){ try { localStorage.removeItem(LS_P); localStorage.removeItem(LS_T); localStorage.setItem(LS_LAST, P.pid); } catch(_){}
+    if (!saveWarned){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio rapido del browser: resta nella raccolta Progetti. Per sicurezza usa anche Esporta → Salva progetto", true); }
+    if (idbReady){ saveToIdb(); return; } }   // senza copia rapida la raccolta si scrive subito
+  queueIdbSave(); }
 function findSel(){ if (!S.sel) return null; const k = {wall:"walls", opening:"openings", room:"rooms", object:"objects", dim:"dims"}[S.sel.type]; return P[k]?.find(x => x.id === S.sel.id) || null; }
 
 const c2d = $("#c2d"), ctx = c2d.getContext("2d");
@@ -2750,20 +2796,28 @@ function buildRoofX(L, R, add, opts){
         add(lid, rm, "roof", slabGeo(f, dv)); }
     return;
   }
-  // una falda: "dir" è il lato verso cui scende l'acqua (s, n, e, o)
+  // una falda: "dir" è il lato verso cui scende l'acqua (s, n, e, o). Un solo piano per tutta la sagoma (R.all = rettangolo
+  // d'ingombro, R.others = gli altri rettangoli della sagoma): su una pianta a L le falde dei rettangoli combaciano.
   const thv = th / Math.cos(p), dir = L.roof.dir || "s", gt = Math.max(tMax, opts.print ? opts.minThick || 0 : 0), wm = wallsOf(L.id)[0]?.mat || "intonaco";
-  const alongZ = dir === "s" || dir === "n", D = alongZ ? z1 - z0 : x1 - x0, Yh = topY + (D + o)*tn, rise = D*tn;
-  let face, infill = [];
-  if (dir === "s"){ face = [V(X0, Yh, Z0), V(X1, Yh, Z0), V(X1, Ye, Z1), V(X0, Ye, Z1)];
-    infill = [[V(x0, topY, z0), V(x1, topY, z0), V(x1, topY + rise - thv, z0), V(x0, topY + rise - thv, z0), V(0, 0, gt)], [V(x0, topY, z0), V(x0, topY + rise - thv, z0), V(x0, topY, z1), V(gt, 0, 0)], [V(x1, topY, z0), V(x1, topY + rise - thv, z0), V(x1, topY, z1), V(-gt, 0, 0)]]; }
-  else if (dir === "n"){ face = [V(X0, Ye, Z0), V(X1, Ye, Z0), V(X1, Yh, Z1), V(X0, Yh, Z1)];
-    infill = [[V(x0, topY, z1), V(x1, topY, z1), V(x1, topY + rise - thv, z1), V(x0, topY + rise - thv, z1), V(0, 0, -gt)], [V(x0, topY, z1), V(x0, topY + rise - thv, z1), V(x0, topY, z0), V(gt, 0, 0)], [V(x1, topY, z1), V(x1, topY + rise - thv, z1), V(x1, topY, z0), V(-gt, 0, 0)]]; }
-  else if (dir === "e"){ face = [V(X0, Yh, Z0), V(X0, Yh, Z1), V(X1, Ye, Z1), V(X1, Ye, Z0)];
-    infill = [[V(x0, topY, z0), V(x0, topY, z1), V(x0, topY + rise - thv, z1), V(x0, topY + rise - thv, z0), V(gt, 0, 0)], [V(x0, topY, z0), V(x0, topY + rise - thv, z0), V(x1, topY, z0), V(0, 0, gt)], [V(x0, topY, z1), V(x0, topY + rise - thv, z1), V(x1, topY, z1), V(0, 0, -gt)]]; }
-  else { face = [V(X0, Ye, Z0), V(X0, Ye, Z1), V(X1, Yh, Z1), V(X1, Yh, Z0)];
-    infill = [[V(x1, topY, z0), V(x1, topY, z1), V(x1, topY + rise - thv, z1), V(x1, topY + rise - thv, z0), V(-gt, 0, 0)], [V(x1, topY, z0), V(x1, topY + rise - thv, z0), V(x0, topY, z0), V(0, 0, gt)], [V(x1, topY, z1), V(x1, topY + rise - thv, z1), V(x0, topY, z1), V(0, 0, -gt)]]; }
+  const G = R.all || {x0, x1, z0, z1}, others = R.others || [];
+  const t = (x, z) => dir === "s" ? G.z1 - z : dir === "n" ? z - G.z0 : dir === "e" ? G.x1 - x : x - G.x0;   // distanza dal filo basso
+  const Y = (x, z) => topY + t(x, z)*tn;
+  const face = (dir === "s" || dir === "n" ? [[X0, Z0], [X1, Z0], [X1, Z1], [X0, Z1]] : [[X0, Z0], [X0, Z1], [X1, Z1], [X1, Z0]]).map(([x, z]) => V(x, Y(x, z), z));
   add(lid, rm, "roof", slabGeo(face, dv));
-  for (const f of infill){ const d = f.pop(); add(lid, wm, "gable", slabGeo(f, d)); }
+  // tamponamenti sotto la falda lungo i quattro fili del rettangolo, solo dove il filo è sul bordo della sagoma
+  const inside = (x, z) => others.some(q => x > q.x0 + 1e-3 && x < q.x1 - 1e-3 && z > q.z0 + 1e-3 && z < q.z1 - 1e-3);
+  const edges = [[[x0, z0], [x1, z0], [0, 0, gt], [0, -1]], [[x0, z1], [x1, z1], [0, 0, -gt], [0, 1]], [[x0, z0], [x0, z1], [gt, 0, 0], [-1, 0]], [[x1, z0], [x1, z1], [-gt, 0, 0], [1, 0]]];
+  for (const [A, B, d, out] of edges){
+    const cuts = [0, 1]; for (const q of others) for (const c of (A[0] === B[0] ? [q.z0, q.z1].map(v => (v - A[1]) / (B[1] - A[1])) : [q.x0, q.x1].map(v => (v - A[0]) / (B[0] - A[0])))) if (c > 1e-4 && c < 1 - 1e-4) cuts.push(c);
+    cuts.sort((m, n) => m - n);
+    for (let i = 0; i < cuts.length - 1; i++){
+      const P0 = [A[0] + (B[0]-A[0])*cuts[i], A[1] + (B[1]-A[1])*cuts[i]], P1 = [A[0] + (B[0]-A[0])*cuts[i+1], A[1] + (B[1]-A[1])*cuts[i+1]], m = [(P0[0]+P1[0])/2 + out[0]*.02, (P0[1]+P1[1])/2 + out[1]*.02];
+      if (inside(m[0], m[1])) continue;
+      const h0 = Y(P0[0], P0[1]) - thv, h1 = Y(P1[0], P1[1]) - thv; if (Math.max(h0, h1) <= topY + 1e-3) continue;
+      const poly = [V(P0[0], topY, P0[1]), V(P1[0], topY, P1[1])]; if (h1 > topY + 1e-3) poly.push(V(P1[0], h1, P1[1])); if (h0 > topY + 1e-3) poly.push(V(P0[0], h0, P0[1]));
+      add(lid, wm, "gable", slabGeo(poly, V(...d)));
+    }
+  }
 }
 
 /* ---------- eventi dell'ispettore ---------- */
@@ -3354,10 +3408,13 @@ function exportDXF(){
 function projectData(){
   const data = JSON.parse(JSON.stringify(P)); data.imports = {};
   for (const [id, it] of Object.entries(importStore)) if (P.objects.some(o => o.kind === "import" && o.ref === id)) data.imports[id] = {file:it.file, opts:it.opts, source:it.source};
+  // modelli non ancora ricaricati (o non leggibili) dopo la riapertura: si conservano così come erano nella raccolta
+  for (const o of P.objects) if (o.kind === "import" && !data.imports[o.ref] && pendingImports[o.ref]) data.imports[o.ref] = pendingImports[o.ref];
   data.app = "Pianta Libera"; data.version = SCHEMA_VERSION; return data;
 }
 async function exportProject(){ await saveFile(slug() + ".json", JSON.stringify(projectData())); }
 /* apre un progetto (file .json o raccolta): keepPid tiene l'identità del progetto nella raccolta */
+const pendingImports = {};   // file dei modelli importati letti dalla raccolta e non ancora in importStore
 async function openProjectData(data, opts = {}){
   if (!data?.levels || !data.walls) throw new Error("non è un progetto di Pianta Libera");
   const imports = data.imports || {}; delete data.imports; delete data.app; if (!opts.keepPid || !data.pid) data.pid = uid();
@@ -3597,7 +3654,7 @@ $("#fModel").addEventListener("change", async e => { const files = [...e.target.
     const label = (main?.name || files[0].name).split(/[\\/]/).pop().replace(/\.[^.]+$/,"");
     const single = entries.length === 1;
     const file = single ? {name:entries[0].name, ext:entries[0].name.split(".").pop().toLowerCase(), b64:b64(entries[0].data)} : {name:label + ".zip", ext:"zip", b64:b64(fflate.zipSync(Object.fromEntries(entries.map(en => [en.name, en.data]))))};
-    const id = "m" + uid(); await registerImport(id, file, {unit:$("#imUnit").value, up:$("#imUp").value});
+    const id = "m" + uid(); await registerImport(id, file, {unit:$("#imUnit")?.value || "auto", up:$("#imUp")?.value || "auto"});
     let nm = 0; if ($("#imMats")?.checked) nm = harvestMaterials(id, label).length;
     const o = {id:uid(), level:S.level, kind:"import", ref:id, name:label, x:Math.round(V.cx*20)/20, y:Math.round(V.cy*20)/20, rot:0, scale:1, z:0};
     P.objects.push(o); S.sel = {type:"object", id:o.id}; busy(""); commit(); S.tab = "props"; renderTabs();
@@ -5706,8 +5763,12 @@ const projDel = id => idbDo("readwrite", s => s.delete(id));
 function projThumb(){ try { const w = 240, h = 150, c = document.createElement("canvas"); c.width = w; c.height = h; const k = Math.max(w / c3d.width, h / c3d.height), sw = w / k, sh = h / k; c.getContext("2d").drawImage(c3d, (c3d.width - sw) / 2, (c3d.height - sh) / 2, sw, sh, 0, 0, w, h); return c.toDataURL("image/jpeg", .7); } catch(e){ return ""; } }
 let idbTimer = 0, idbWarned = false;
 function queueIdbSave(){ clearTimeout(idbTimer); idbTimer = setTimeout(saveToIdb, 1500); }
+// uscendo dalla pagina o passando a un'altra app si scrive subito, senza aspettare il ritardo di queueIdbSave
+addEventListener("pagehide", () => { if (idbTimer) saveToIdb(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && idbTimer) saveToIdb(); });
+let idbReady = false;   // diventa vero dopo restoreFromIdb: prima non si scrive nella raccolta
 async function saveToIdb(){
-  clearTimeout(idbTimer); if (!P?.pid || !window.indexedDB) return;
+  clearTimeout(idbTimer); idbTimer = 0; if (!P?.pid || !window.indexedDB) return; if (!idbReady){ queueIdbSave(); return; }
   try { await projPut({id:P.pid, name:P.name || "Progetto", updated:Date.now(), thumb:projThumb(), data:JSON.stringify(projectData())}); if (document.getElementById("projBox")) renderProjects(); }
   catch(e){ if (!idbWarned){ idbWarned = true; console.warn("raccolta progetti", e); } }
 }
@@ -6054,14 +6115,52 @@ function secMark(g){
 }
 
 /* ---------- computo delle quantità ---------- */
-function openingArea(w){ return P.openings.filter(o => o.wall === w.id).reduce((s, o) => s + o.w * Math.min(o.h, (w.height || level(w.level).height) - (o.type === "door" ? 0 : o.sill)), 0); }
+// superficie delle aperture di un muro, limitata al muro (larghezza fino alla lunghezza, altezza fino al muro)
+function openingArea(w){ const len = wallFrame(w).len, H = w.height || level(w.level).height;
+  return Math.min(len * H, P.openings.filter(o => o.wall === w.id).reduce((s, o) => s + clamp(o.w, 0, len) * clamp(Math.min(o.h, H - (o.type === "door" ? 0 : o.sill)), 0, H), 0)); }
+/* Lunghezza delle due facce di un muro (A = lato +n, B = lato −n), raccordate con i muri collegati:
+   all'angolo la faccia interna si accorcia e quella esterna si allunga fino all'incontro con le facce dell'altro muro;
+   all'innesto a T la faccia si ferma sul filo del muro passante. Senza collegamenti vale la lunghezza in asse. */
+function wallFaceLengths(w, walls){
+  const f = wallFrame(w), len = f.len, u = [f.ux, f.uy], n = [f.nx, f.ny], EPS = 1e-3;
+  const shift = {A:[0, 0], B:[0, 0]};   // di quanto la faccia rientra (positivo) o sporge (negativo) a ciascun estremo
+  for (const [ei, E, dir] of [[0, w.a, u], [1, w.b, [-u[0], -u[1]]]]){
+    const conns = [];   // direzioni dei muri collegati, uscenti dal punto di giunzione
+    for (const v of walls){ if (v === w || v.level !== w.level) continue;
+      const g = wallFrame(v), ev = [g.ux, g.uy];
+      if (Math.hypot(v.a[0]-E[0], v.a[1]-E[1]) < EPS) conns.push({e:ev, t:v.thick});
+      else if (Math.hypot(v.b[0]-E[0], v.b[1]-E[1]) < EPS) conns.push({e:[-ev[0], -ev[1]], t:v.thick});
+      else { const q = projOnSeg(E, v.a, v.b); if (q.d < EPS && q.t > 1e-4 && q.t < 1 - 1e-4){ conns.push({e:ev, t:v.thick}); conns.push({e:[-ev[0], -ev[1]], t:v.thick}); } } }
+    for (const [side, sg] of [["A", 1], ["B", -1]]){
+      let best = null; const nn = [n[0]*sg, n[1]*sg];   // normale verso la faccia
+      for (const c of conns){
+        const m = [-c.e[1], c.e[0]], cr = dir[0]*c.e[1] - dir[1]*c.e[0]; if (Math.abs(cr) < 1e-6) continue;   // muri allineati: la faccia prosegue
+        const toward = nn[0]*c.e[0] + nn[1]*c.e[1] > 0;   // la faccia guarda verso il muro collegato?
+        const sm = (m[0]*dir[0] + m[1]*dir[1] > 0 ? 1 : -1) * (toward ? 1 : -1);   // faccia dell'altro muro: verso questo muro se «toward»
+        // retta della faccia: E + nn·t/2 + dir·λ ; faccia dell'altro muro: E + m·sm·tv/2 + e·μ
+        const p0 = [nn[0]*w.thick/2 - m[0]*sm*c.t/2, nn[1]*w.thick/2 - m[1]*sm*c.t/2];
+        const lam = (c.e[0]*p0[1] - c.e[1]*p0[0]) / (dir[0]*c.e[1] - dir[1]*c.e[0]);
+        if (best === null || lam > best) best = lam;
+      }
+      shift[side][ei] = best ?? 0;
+    }
+  }
+  // muri che s'innestano a metà di questo (T): la faccia da quel lato è interrotta dallo spessore del muro innestato
+  const cut = {A:0, B:0};
+  for (const v of walls){ if (v === w || v.level !== w.level) continue;
+    for (const [P0, P1] of [[v.a, v.b], [v.b, v.a]]){ const q = projOnSeg(P0, w.a, w.b); if (q.d > EPS || q.t < 1e-4 || q.t > 1 - 1e-4) continue;
+      const g = Math.hypot(P1[0]-P0[0], P1[1]-P0[1]) || 1, e = [(P1[0]-P0[0])/g, (P1[1]-P0[1])/g], sn = Math.abs(u[0]*e[1] - u[1]*e[0]); if (sn < 1e-6) continue;
+      cut[n[0]*e[0] + n[1]*e[1] > 0 ? "A" : "B"] += v.thick / sn; } }
+  return {A:Math.max(0, len - shift.A[0] - shift.A[1] - cut.A), B:Math.max(0, len - shift.B[0] - shift.B[1] - cut.B)};
+}
 const STYLE_NAME = Object.fromEntries([...DOOR_STYLES, ...WIN_STYLES.map(([k, n]) => ["w_" + k, n])]);
 function computo(){
   const R = new Map(), add = (key, cat, voce, um, q) => { if (!(q > 1e-6)) return; const r = R.get(key) || {key, cat, voce, um, q:0}; r.q += q; R.set(key, r); };
   for (const w of P.walls){ const L = level(w.level); if (!L) continue; const len = wallFrame(w).len, h = w.height || L.height, net = len * h - openingArea(w);
     add(`muro:${w.thick}:${w.mat}`, "Murature", `Muro sp. ${Math.round(w.thick * 100)} cm (${matName(w.mat).toLowerCase()})`, "m²", net);
     add(`muro_v:${w.thick}`, "Murature", `Volume muri sp. ${Math.round(w.thick * 100)} cm`, "m³", net * w.thick);
-    for (const [k, side] of [["matA", "A"], ["matB", "B"]]) add(`fin:${w[k] || w.mat}`, "Finiture pareti", `Finitura ${matName(w[k] || w.mat).toLowerCase()} (per lato)`, "m²", net); }
+    const fl = wallFaceLengths(w, P.walls), op = openingArea(w);
+    for (const [k, side] of [["matA", "A"], ["matB", "B"]]) add(`fin:${w[k] || w.mat}`, "Finiture pareti", `Finitura ${matName(w[k] || w.mat).toLowerCase()}`, "m²", Math.max(0, fl[side] * h - op)); }
   for (const r of P.rooms){ const L = level(r.level); if (!L) continue; const a = Math.abs(polyArea(r.pts));
     add(`pav:${r.mat}`, "Pavimenti", `Pavimento ${matName(r.mat).toLowerCase()}`, "m²", a);
     if (r.skirt){ let per = 0; for (let i = 0; i < r.pts.length; i++){ const p = r.pts[i], q = r.pts[(i + 1) % r.pts.length]; per += Math.hypot(q[0]-p[0], q[1]-p[1]); }
@@ -6069,9 +6168,10 @@ function computo(){
       add(`bat:${r.skirt.mat || "bianco"}`, "Finiture", `Battiscopa ${matName(r.skirt.mat || "bianco").toLowerCase()} h ${Math.round((r.skirt.h || .08) * 100)} cm`, "m", doors || per); }
     if (r.ceilH) add("controsoffitto", "Finiture", "Controsoffitto in cartongesso", "m²", a); else if (!r.noCeiling) add("soffitto", "Finiture", "Tinteggiatura soffitti", "m²", a); }
   for (const o of P.openings){ const w = wallById(o.wall); if (!w) continue; const st = o.type === "door" ? (STYLE_NAME[o.style || "battente"] || "A battente") : (STYLE_NAME["w_" + (o.style || "battente")] || "A battente");
-    add(`ap:${o.type}:${o.style || ""}:${o.w}:${o.h}`, o.type === "door" ? "Porte" : "Finestre", `${o.type === "door" ? "Porta" : "Finestra"} ${st.toLowerCase()} ${Math.round(o.w * 100)}×${Math.round(o.h * 100)}`, "n.", 1);
+    add(`ap:${o.type}:${o.style || ""}:${Math.round(o.w * 100)}:${Math.round(o.h * 100)}`, o.type === "door" ? "Porte" : "Finestre", `${o.type === "door" ? "Porta" : "Finestra"} ${st.toLowerCase()} ${Math.round(o.w * 100)}×${Math.round(o.h * 100)}`, "n.", 1);
     if (o.shut) add(`osc:${o.shut}`, "Finestre", o.shut === "persiane" ? "Persiane (coppie)" : "Tapparelle", "n.", 1); }
-  for (const L of P.levels){ if (!L.roof || L.roof.type === "none") continue; const b = planBounds(L.id); if (!b) continue; const o = L.roof.overhang || 0, A = (b.x1 - b.x0 + 2*o) * (b.y1 - b.y0 + 2*o), p = THREE.MathUtils.degToRad(clamp(L.roof.pitch || 0, 0, 60));
+  // superficie della copertura: proiezione in pianta della sagoma con lo sporto, divisa per il coseno della pendenza (falde tutte uguali)
+  for (const L of P.levels){ if (!L.roof || L.roof.type === "none") continue; const RR = roofRects(L.id); if (!RR) continue; const o = L.roof.overhang || 0, A = RR.area(o), p = THREE.MathUtils.degToRad(clamp(L.roof.pitch || 0, 0, 60));
     add(`tetto:${L.roof.mat}`, "Copertura", `Copertura ${({flat:"piana", gable:"a due falde", hip:"a padiglione", shed:"a una falda"})[L.roof.type]} in ${matName(L.roof.mat).toLowerCase()}`, "m²", L.roof.type === "flat" ? A : A / Math.cos(p)); }
   for (const o of P.objects){ const it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null; if (it?.cat === "Persone") continue;
     if (it?.param?.kind === "rail") add("ringhiera", "Scale e parapetti", "Ringhiera / parapetto", "m", paramsOf(o, it).len * (o.scale || 1));
@@ -6949,9 +7049,34 @@ function migrate(p){
   if (!p.pid) p.pid = uid();
   p.version = SCHEMA_VERSION; return p;
 }
+/* Alla riapertura la raccolta Progetti (IndexedDB) può essere più aggiornata di localStorage: salvataggio rapido
+   fallito per spazio, altra scheda che ha scritto localStorage, modelli importati (che localStorage non contiene).
+   Si apre la versione più recente del progetto di questa scheda e si ricaricano i modelli importati. */
+async function restoreFromIdb(wantPid, savedT){
+  if (!window.indexedDB) return;
+  try {
+    const before = snap, pid = wantPid || P.pid, rec = await projGet(pid); if (!rec?.data) return;
+    if (snap !== before) return;   // l'utente ha già cominciato a modificare: non si cambia il progetto sotto le mani
+    const data = JSON.parse(rec.data);
+    if (pid !== P.pid || (rec.updated || 0) > savedT + 1000){
+      await openProjectData(data, {keepPid:true});
+      if (savedT && pid === P.pid) toast("Riaperta la versione più recente dalla raccolta Progetti");
+      return;
+    }
+    let n = 0;
+    for (const [id, it] of Object.entries(data.imports || {})){
+      if (importStore[id] || !P.objects.some(o => o.kind === "import" && o.ref === id)) continue;
+      pendingImports[id] = it;
+      try { if (it.file) await registerImport(id, it.file, it.opts || {unit:"auto", up:"auto"}); else if (it.source) await restoreRemote(id, it.source); delete pendingImports[id]; n++; } catch(err){ console.warn("modello importato", err); }
+    }
+    if (n){ draw2D(); rebuild3D(); }
+  } catch(e){ console.warn("raccolta progetti", e); }
+}
 function readCanvasColors(){ readColors(); draw2D(); render3D(); }
 function init(){
-  let saved = null; try { saved = JSON.parse(localStorage.getItem("pianta-libera-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v1")); } catch(e){}
+  let saved = null, savedT = 0, tabPid = null, lastPid = null;
+  try { saved = JSON.parse(localStorage.getItem(LS_P)) || JSON.parse(localStorage.getItem("pianta-aperta-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v1")); savedT = +localStorage.getItem(LS_T) || 0; lastPid = localStorage.getItem(LS_LAST); } catch(e){}
+  try { tabPid = sessionStorage.getItem(SS_PID); } catch(e){}
   P = migrate(saved?.levels?.length ? saved : sampleProject()); S.level = P.levels[0].id; snap = JSON.stringify(P);
   $("#projName").value = P.name; readColors(); setTool("select"); renderStatus();
   if (!saved?.levels?.length && !new URLSearchParams(location.search).get("condividi")) save();   // l'identità del progetto (pid) resta tra un'apertura e l'altra
@@ -6964,7 +7089,8 @@ function init(){
   loadPersonalIndex();
   const shareId = new URLSearchParams(location.search).get("condividi");
   const editKey = (location.hash.match(/(?:^#|&)modifica=([a-f0-9]{48})/) || [])[1];
-  if (shareId && editKey) enterGuest(shareId, editKey); else if (shareId) enterViewer(shareId); else { setTimeout(queueIdbSave, 2500); loadGallery(); }
+  if (shareId && editKey) enterGuest(shareId, editKey); else if (shareId) enterViewer(shareId);
+  else { restoreFromIdb(tabPid || lastPid, savedT).finally(() => { idbReady = true; setTimeout(queueIdbSave, 2500); }); loadGallery(); }
 }
 init();
 

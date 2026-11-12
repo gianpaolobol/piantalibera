@@ -452,20 +452,28 @@ function buildRoofX(L, R, add, opts){
         add(lid, rm, "roof", slabGeo(f, dv)); }
     return;
   }
-  // una falda: "dir" è il lato verso cui scende l'acqua (s, n, e, o)
+  // una falda: "dir" è il lato verso cui scende l'acqua (s, n, e, o). Un solo piano per tutta la sagoma (R.all = rettangolo
+  // d'ingombro, R.others = gli altri rettangoli della sagoma): su una pianta a L le falde dei rettangoli combaciano.
   const thv = th / Math.cos(p), dir = L.roof.dir || "s", gt = Math.max(tMax, opts.print ? opts.minThick || 0 : 0), wm = wallsOf(L.id)[0]?.mat || "intonaco";
-  const alongZ = dir === "s" || dir === "n", D = alongZ ? z1 - z0 : x1 - x0, Yh = topY + (D + o)*tn, rise = D*tn;
-  let face, infill = [];
-  if (dir === "s"){ face = [V(X0, Yh, Z0), V(X1, Yh, Z0), V(X1, Ye, Z1), V(X0, Ye, Z1)];
-    infill = [[V(x0, topY, z0), V(x1, topY, z0), V(x1, topY + rise - thv, z0), V(x0, topY + rise - thv, z0), V(0, 0, gt)], [V(x0, topY, z0), V(x0, topY + rise - thv, z0), V(x0, topY, z1), V(gt, 0, 0)], [V(x1, topY, z0), V(x1, topY + rise - thv, z0), V(x1, topY, z1), V(-gt, 0, 0)]]; }
-  else if (dir === "n"){ face = [V(X0, Ye, Z0), V(X1, Ye, Z0), V(X1, Yh, Z1), V(X0, Yh, Z1)];
-    infill = [[V(x0, topY, z1), V(x1, topY, z1), V(x1, topY + rise - thv, z1), V(x0, topY + rise - thv, z1), V(0, 0, -gt)], [V(x0, topY, z1), V(x0, topY + rise - thv, z1), V(x0, topY, z0), V(gt, 0, 0)], [V(x1, topY, z1), V(x1, topY + rise - thv, z1), V(x1, topY, z0), V(-gt, 0, 0)]]; }
-  else if (dir === "e"){ face = [V(X0, Yh, Z0), V(X0, Yh, Z1), V(X1, Ye, Z1), V(X1, Ye, Z0)];
-    infill = [[V(x0, topY, z0), V(x0, topY, z1), V(x0, topY + rise - thv, z1), V(x0, topY + rise - thv, z0), V(gt, 0, 0)], [V(x0, topY, z0), V(x0, topY + rise - thv, z0), V(x1, topY, z0), V(0, 0, gt)], [V(x0, topY, z1), V(x0, topY + rise - thv, z1), V(x1, topY, z1), V(0, 0, -gt)]]; }
-  else { face = [V(X0, Ye, Z0), V(X0, Ye, Z1), V(X1, Yh, Z1), V(X1, Yh, Z0)];
-    infill = [[V(x1, topY, z0), V(x1, topY, z1), V(x1, topY + rise - thv, z1), V(x1, topY + rise - thv, z0), V(-gt, 0, 0)], [V(x1, topY, z0), V(x1, topY + rise - thv, z0), V(x0, topY, z0), V(0, 0, gt)], [V(x1, topY, z1), V(x1, topY + rise - thv, z1), V(x0, topY, z1), V(0, 0, -gt)]]; }
+  const G = R.all || {x0, x1, z0, z1}, others = R.others || [];
+  const t = (x, z) => dir === "s" ? G.z1 - z : dir === "n" ? z - G.z0 : dir === "e" ? G.x1 - x : x - G.x0;   // distanza dal filo basso
+  const Y = (x, z) => topY + t(x, z)*tn;
+  const face = (dir === "s" || dir === "n" ? [[X0, Z0], [X1, Z0], [X1, Z1], [X0, Z1]] : [[X0, Z0], [X0, Z1], [X1, Z1], [X1, Z0]]).map(([x, z]) => V(x, Y(x, z), z));
   add(lid, rm, "roof", slabGeo(face, dv));
-  for (const f of infill){ const d = f.pop(); add(lid, wm, "gable", slabGeo(f, d)); }
+  // tamponamenti sotto la falda lungo i quattro fili del rettangolo, solo dove il filo è sul bordo della sagoma
+  const inside = (x, z) => others.some(q => x > q.x0 + 1e-3 && x < q.x1 - 1e-3 && z > q.z0 + 1e-3 && z < q.z1 - 1e-3);
+  const edges = [[[x0, z0], [x1, z0], [0, 0, gt], [0, -1]], [[x0, z1], [x1, z1], [0, 0, -gt], [0, 1]], [[x0, z0], [x0, z1], [gt, 0, 0], [-1, 0]], [[x1, z0], [x1, z1], [-gt, 0, 0], [1, 0]]];
+  for (const [A, B, d, out] of edges){
+    const cuts = [0, 1]; for (const q of others) for (const c of (A[0] === B[0] ? [q.z0, q.z1].map(v => (v - A[1]) / (B[1] - A[1])) : [q.x0, q.x1].map(v => (v - A[0]) / (B[0] - A[0])))) if (c > 1e-4 && c < 1 - 1e-4) cuts.push(c);
+    cuts.sort((m, n) => m - n);
+    for (let i = 0; i < cuts.length - 1; i++){
+      const P0 = [A[0] + (B[0]-A[0])*cuts[i], A[1] + (B[1]-A[1])*cuts[i]], P1 = [A[0] + (B[0]-A[0])*cuts[i+1], A[1] + (B[1]-A[1])*cuts[i+1]], m = [(P0[0]+P1[0])/2 + out[0]*.02, (P0[1]+P1[1])/2 + out[1]*.02];
+      if (inside(m[0], m[1])) continue;
+      const h0 = Y(P0[0], P0[1]) - thv, h1 = Y(P1[0], P1[1]) - thv; if (Math.max(h0, h1) <= topY + 1e-3) continue;
+      const poly = [V(P0[0], topY, P0[1]), V(P1[0], topY, P1[1])]; if (h1 > topY + 1e-3) poly.push(V(P1[0], h1, P1[1])); if (h0 > topY + 1e-3) poly.push(V(P0[0], h0, P0[1]));
+      add(lid, wm, "gable", slabGeo(poly, V(...d)));
+    }
+  }
 }
 
 /* ---------- eventi dell'ispettore ---------- */
