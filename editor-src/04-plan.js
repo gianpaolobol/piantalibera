@@ -2,13 +2,30 @@
    Vista in pianta e interazione
    ============================================================ */
 let snap = null; const past = [], future = [];
-function commit(){ if (S.viewer){ if (snap) P = JSON.parse(snap); refresh(); return; } const s = JSON.stringify(P); if (s === snap) return; if (snap) past.push(snap); if (past.length > 80) past.shift(); future.length = 0; snap = s; save(); refresh(); }
-function undo(){ if (!past.length) return; future.push(snap); snap = past.pop(); P = JSON.parse(snap); afterLoad(); }
-function redo(){ if (!future.length) return; past.push(snap); snap = future.pop(); P = JSON.parse(snap); afterLoad(); }
+/* Storia di annulla: copie JSON del progetto in cui le immagini incorporate (data URL oltre 8 KB: texture importate,
+   foto, base di ricalco) sono sostituite da un riferimento; ogni immagine si tiene una volta sola (#55). */
+const BLOBS = new Map(), BLOB_OF = new Map();
+const blobRef = v => { let id = BLOBS.get(v); if (!id){ id = "\u0001blob:" + BLOBS.size; BLOBS.set(v, id); BLOB_OF.set(id, v); } return id; };
+const snapOf = p => JSON.stringify(p, (k, v) => typeof v === "string" && v.length > 8192 && v.startsWith("data:") ? blobRef(v) : v);
+const fromSnap = s => JSON.parse(s, (k, v) => typeof v === "string" && v.charCodeAt(0) === 1 && BLOB_OF.has(v) ? BLOB_OF.get(v) : v);
+function historyBytes(){ let n = (snap || "").length; for (const x of past) n += x.length; for (const x of future) n += x.length; for (const v of BLOBS.keys()) n += v.length; return n; }
+function commit(){ if (S.viewer){ if (snap) P = fromSnap(snap); refresh(); return; } const s = snapOf(P); if (s === snap) return; if (snap) past.push(snap); if (past.length > 80) past.shift(); future.length = 0; snap = s; save(); refresh(); }
+function undo(){ if (!past.length) return; future.push(snap); snap = past.pop(); P = fromSnap(snap); afterLoad(); }
+function redo(){ if (!future.length) return; past.push(snap); snap = future.pop(); P = fromSnap(snap); afterLoad(); }
 function afterLoad(){ for (const k of Object.keys(matCache)) if (!MATS[k]) invalidateMat(k); fixSel(); save(); refresh(); }
 function fixSel(){ if (!level(S.level)) S.level = P.levels[0].id; P.dims = P.dims || []; setSel(selList().filter(x => itemOf(x))); }
 let saveWarned = false;
-function save(){ if (S.viewer) return; if (S.guest) return guestSave(); try { localStorage.setItem("pianta-libera-v2", JSON.stringify(P)); savedAt = new Date(); updateStatusInfo(); } catch(e){ if (!saveWarned && e?.name === "QuotaExceededError"){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio nel browser: resta nella raccolta Progetti, ma conviene anche Esporta → Salva progetto", true); } } queueIdbSave(); }
+/* Salvataggio nel browser. localStorage tiene l'ultima versione con l'ora (LS_T); sessionStorage ricorda il progetto
+   di questa scheda. Se localStorage è pieno, la copia vecchia si toglie e resta solo il riferimento al progetto:
+   alla riapertura si legge la raccolta Progetti (IndexedDB), che è più recente (09-init.js, restoreFromIdb). */
+const LS_P = "pianta-libera-v2", LS_T = "pianta-libera-t", LS_LAST = "pianta-libera-ultimo", SS_PID = "pianta-libera-pid";
+function save(){ if (S.viewer) return; if (S.guest) return guestSave();
+  try { sessionStorage.setItem(SS_PID, P.pid); } catch(e){}
+  try { localStorage.setItem(LS_P, JSON.stringify(P)); localStorage.setItem(LS_T, String(Date.now())); localStorage.removeItem(LS_LAST); savedAt = new Date(); updateStatusInfo(); }
+  catch(e){ try { localStorage.removeItem(LS_P); localStorage.removeItem(LS_T); localStorage.setItem(LS_LAST, P.pid); } catch(_){}
+    if (!saveWarned){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio rapido del browser: resta nella raccolta Progetti. Per sicurezza usa anche Esporta → Salva progetto", true); }
+    if (idbReady){ saveToIdb(); return; } }   // senza copia rapida la raccolta si scrive subito
+  queueIdbSave(); }
 function findSel(){ if (!S.sel) return null; const k = {wall:"walls", opening:"openings", room:"rooms", object:"objects", dim:"dims"}[S.sel.type]; return P[k]?.find(x => x.id === S.sel.id) || null; }
 
 const c2d = $("#c2d"), ctx = c2d.getContext("2d");
