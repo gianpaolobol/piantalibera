@@ -69,7 +69,8 @@ jobs:
         with: { name: "varianti-electron-${{ matrix.os }}", path: test-results/varianti/, retention-days: 14 }
 
   android:
-    # l'APK apre il sito pubblicato: l'esito non dipende dalla PR, quindi non la blocca (resta nella tabella)
+    # l'APK apre il sito pubblicato: l'esito non dipende dalla PR. Gira su main, a mano e ogni lunedì; non blocca.
+    if: github.event_name != 'pull_request'
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -96,7 +97,8 @@ jobs:
         with: { name: varianti-android, path: test-results/varianti/, retention-days: 14 }
 
   ios:
-    continue-on-error: true   # come Android: l'app apre il sito pubblicato
+    if: github.event_name != 'pull_request'   # come Android: l'app apre il sito pubblicato
+    continue-on-error: true
     runs-on: macos-latest
     timeout-minutes: 75
     defaults: { run: { working-directory: app-mobile } }
