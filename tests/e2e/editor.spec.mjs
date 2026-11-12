@@ -282,7 +282,8 @@ test("fase 3: porte e finestre, scala con foro nel solaio, tetti, luci e sole da
   for (const t of ["hip", "shed"]){ await page.evaluate(t => { setSel([]); P.levels[0].roof.type = t; commit(); }, t); await page.waitForTimeout(300);
     expect(await page.evaluate(() => { let n = 0; modelGroup.traverse(o => { if (o.userData?.cat === "roof") n += o.geometry.attributes.position.count; }); return n; })).toBeGreaterThan(20); }
   // scala dal catalogo con un piano sopra
-  await page.click("#addLevel");
+  await expect(page.locator("#levelSel")).toBeHidden();               // U8: con la pianta visibile si usano le schede
+  await page.click('#tag2d [data-lvl="+"]');
   await page.evaluate(() => { P.rooms.push({id:"rs", level:P.levels[1].id, name:"Sopra", mat:"parquet", pts:[[.15,.15],[10.85,.15],[10.85,7.85],[.15,7.85]]}); S.level = P.levels[0].id; commit(); renderLevels(); S.furnSrc = "lib"; S.furn = "scala_dritta"; placeFurniture([4, 4]); });
   const st = await page.evaluate(() => { const o = P.objects.at(-1); return {H:o.p.H, n:o.p.n, holes:stairHoles(o.level).length}; });
   expect(st.H).toBeCloseTo(3.15, 2); expect(st.n).toBe(18); expect(st.holes).toBe(1);
@@ -778,4 +779,17 @@ test("primi passi: disegna una stanza, importa, progetto vuoto; chiusi restano c
   await page.reload(); await page.waitForFunction(() => typeof P !== "undefined" && P);
   await expect(page.locator("#panel-props .intro")).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+test("un solo selettore del piano: schede sulla pianta, select in alto solo in vista 3D (U8)", async ({ page }) => {
+  await open(page);
+  await expect(page.locator("#tag2d .lvl").first()).toBeVisible();
+  await expect(page.locator("#levelSel")).toBeHidden();
+  await page.click('#viewSeg [data-v="3d"]');
+  await expect(page.locator("#levelSel")).toBeVisible();
+  await page.click('#viewSeg [data-v="2d"]');
+  await expect(page.locator("#levelSel")).toBeHidden();
+  await page.click('#tag2d [data-lvl="+"]');
+  expect(await page.evaluate(() => P.levels.length)).toBe(2);
+  await expect(page.locator("#tag2d .lvl:not([data-lvl='+'])")).toHaveCount(2);
 });
