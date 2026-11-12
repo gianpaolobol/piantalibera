@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-THOMjLMquzz4fX4rEd37BC2A/abJhkudTwIU5nnPEgI=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-tIqyxzwKXjqsnN4MhKVwMxGbyoccOkUvr8VCwCa5yJQ=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -143,7 +143,7 @@ canvas{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-web
 .side{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden;position:relative}
 .side-grip{position:absolute;left:0;top:0;bottom:0;width:6px;cursor:ew-resize;z-index:3;touch-action:none}.side-grip:hover{background:var(--accent-soft)}
 .side-head{display:none;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px;border-bottom:1px solid var(--line);cursor:move;font-size:12px;color:var(--muted);touch-action:none}.side-head .btn{padding:2px 8px;font-size:12px}
-.tabs .tab-ic{flex:0 0 26px;font-size:13px}.tabs button{white-space:nowrap}
+.tabs .tab-ic{flex:0 0 26px;font-size:13px}.tabs-in{display:contents}.tabs button{white-space:nowrap}
 body.side-float .main{grid-template-columns:auto 1fr}
 body.side-float .side{position:fixed;z-index:45;resize:both;box-shadow:0 12px 32px rgba(0,0,0,.22);min-width:260px;min-height:220px;max-width:90vw;max-height:90vh}
 body.side-float .side-head{display:flex}body.side-float .side-grip,body.side-float #sideFloat{display:none}
@@ -373,12 +373,12 @@ body.compact .hud{bottom:52px}
     </section>
 
     <aside class="side">
-      <div class="tabs" role="tablist">
+      <div class="tabs"><div class="tabs-in" role="tablist" aria-label="Pannello">
         <button role="tab" data-tab="props" aria-selected="true">Proprietà</button>
         <button role="tab" data-tab="list" aria-selected="false">Elenco</button><button role="tab" data-tab="import" aria-selected="false">Importa</button>
         <button role="tab" data-tab="export" aria-selected="false">Esporta</button>
         <button role="tab" data-tab="ai" aria-selected="false">Render AI</button>
-      </div>
+      </div></div>
       <div class="panel" id="panel-props"></div>
       <div class="panel" id="panel-import" hidden></div>
       <div class="panel" id="panel-export" hidden></div>
@@ -386,7 +386,7 @@ body.compact .hud{bottom:52px}
       <div class="panel" id="panel-ai" hidden></div>
     </aside>
   </div>
-  <div id="toast" role="status"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
   <input type="file" id="fPlan" accept=".dxf,.dwg,.pdf,.png,.jpg,.jpeg,.webp" hidden>
   <input type="file" id="fA3" accept=".dxf,.dwg" multiple hidden>
   <input type="file" id="fF3" accept="image/*" hidden>
@@ -2322,12 +2322,12 @@ function objRows(){
 function renderList(){
   const el = $("#panel-list"); if (!el) return; const {k, dir} = S.listSort;
   const rows = objRows().sort((a, b) => { const x = a[k], y = b[k]; return (typeof x === "number" ? x - y : String(x).localeCompare(String(y), "it")) * dir; });
-  const th = (key, n) => `<th><button data-sort="${key}" aria-sort="${k === key ? (dir > 0 ? "ascending" : "descending") : "none"}">${n}${k === key ? (dir > 0 ? " ▲" : " ▼") : ""}</button></th>`;
+  const th = (key, n) => `<th aria-sort="${k === key ? (dir > 0 ? "ascending" : "descending") : "none"}"><button data-sort="${key}">${n}${k === key ? (dir > 0 ? " ▲" : " ▼") : ""}</button></th>`;
   const rooms = P.rooms.map(r => ({r, ...roomAreas(r), lv:level(r.level)?.name || ""}));
-  el.innerHTML = `<div class="sec"><h3>Oggetti (${rows.length})</h3><div class="tblwrap"><table class="olist"><thead><tr>${th("name","Nome")}${th("cat","Categoria")}${th("w","L×P×H cm")}${th("lv","Piano")}<th><span class="sr">Visibile</span>👁</th><th><span class="sr">Bloccato</span>🔒</th></tr></thead><tbody>
+  el.innerHTML = `<div class="sec"><h3>Oggetti (${rows.length})</h3><div class="tblwrap" tabindex="0" role="region" aria-label="Tabella"><table class="olist"><thead><tr>${th("name","Nome")}${th("cat","Categoria")}${th("w","L×P×H cm")}${th("lv","Piano")}<th><span class="sr">Visibile</span>👁</th><th><span class="sr">Bloccato</span>🔒</th></tr></thead><tbody>
     ${rows.map(x => `<tr data-oid="${x.o.id}" class="${isSelected(x.o.id) ? "on" : ""}${x.o.hidden ? " off" : ""}"><td>${esc(x.name)}</td><td>${esc(x.cat)}</td><td class="num">${Math.round(x.w*100)}×${Math.round(x.d*100)}×${Math.round(x.h*100)}</td><td>${esc(x.lv)}</td><td><button class="ic" data-ohide="${x.o.id}" aria-pressed="${!x.o.hidden}" aria-label="${x.o.hidden ? "Mostra" : "Nascondi"} ${esc(x.name)}">${x.o.hidden ? "◌" : "●"}</button></td><td><button class="ic" data-olock="${x.o.id}" aria-pressed="${!!x.o.locked}" aria-label="${x.o.locked ? "Sblocca" : "Blocca"} ${esc(x.name)}">${x.o.locked ? "■" : "□"}</button></td></tr>`).join("")}</tbody></table></div>
     <p class="note">Clic su una riga per selezionare (Maiusc per aggiungere), doppio clic per le proprietà. Gli oggetti bloccati non si spostano col mouse.</p></div>
-    <div class="sec"><h3>Locali (${rooms.length})</h3><div class="tblwrap"><table class="olist"><thead><tr><th>Nome</th><th>Piano</th><th>Netta m²</th><th>Lorda m²</th><th>Perimetro m</th></tr></thead><tbody>
+    <div class="sec"><h3>Locali (${rooms.length})</h3><div class="tblwrap" tabindex="0" role="region" aria-label="Tabella"><table class="olist"><thead><tr><th>Nome</th><th>Piano</th><th>Netta m²</th><th>Lorda m²</th><th>Perimetro m</th></tr></thead><tbody>
     ${rooms.map(x => `<tr data-rid="${x.r.id}" class="${isSelected(x.r.id) ? "on" : ""}"><td>${esc(x.r.name || "Locale")}</td><td>${esc(x.lv)}</td><td class="num">${fmt(x.net)}</td><td class="num">${fmt(x.gross)}</td><td class="num">${fmt(x.per)}</td></tr>`).join("")}
     ${rooms.length ? `<tr class="tot"><td>Totale</td><td></td><td class="num">${fmt(rooms.reduce((s, x) => s + x.net, 0))}</td><td class="num">${fmt(rooms.reduce((s, x) => s + x.gross, 0))}</td><td></td></tr>` : ""}</tbody></table></div>
     <div class="btns"><button class="btn" id="listCsv">Esporta elenco in CSV</button></div></div>${computoHTML()}`;
@@ -3100,6 +3100,12 @@ $$("[data-cam]").forEach(b => b.addEventListener("click", () => camPreset(b.data
 $(".tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (!b) return; S.tab = b.dataset.tab; renderTabs(); });
 function renderTabs(){ $$(".tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === S.tab)); for (const t of ["props","list","import","export","ai"]) $("#panel-"+t).hidden = S.tab !== t; if (S.tab === "list") renderList(); if (S.tab === "export") renderExport(); if (S.tab === "import") renderImport(); if (S.tab === "ai") renderAI(); }
 $("#undoBtn").addEventListener("click", undo); $("#redoBtn").addEventListener("click", redo);
+/* Accessibilità (#62): i campi dei pannelli hanno l'etichetta visibile in <span class="lbl"> accanto; qui la si collega
+   come nome accessibile (aria-label) a ogni select, input e textarea che non ne ha uno, anche nei pannelli ridisegnati. */
+function autoLabel(root){ for (const el of root.querySelectorAll("select, input:not([type=hidden]), textarea")){
+  if (el.getAttribute("aria-label") || el.getAttribute("aria-labelledby") || el.labels?.length) continue;
+  const t = (el.closest(".f, label, .row")?.querySelector(".lbl")?.textContent || el.getAttribute("title") || el.getAttribute("placeholder") || "").trim(); if (t) el.setAttribute("aria-label", t); } }
+let autoLabelQ = 0; new MutationObserver(() => { if (!autoLabelQ) autoLabelQ = requestAnimationFrame(() => { autoLabelQ = 0; autoLabel(document.body); }); }).observe(document.body, {childList:true, subtree:true});
 function refresh(){ renderLevels(); renderInspector(); draw2D(); rebuild3D(); $("#undoBtn").disabled = !past.length; $("#redoBtn").disabled = !future.length; if (S.tab === "export") renderExport(); if (S.tab === "list") renderList(); renderCamSel(); }
 
 /* ---- 06-online.js ---- */
@@ -6194,7 +6200,7 @@ function computoHTML(){
   const body = rows.map(r => { const p = pr[r.key], imp = p != null ? p * r.q : null; if (imp != null) tot += imp; const head = r.cat !== cat ? `<tr class="cat"><td colspan="5">${esc(cat = r.cat)}</td></tr>` : "";
     return head + `<tr><td>${esc(r.voce)}</td><td>${esc(r.um)}</td><td class="num">${fmt(r.q, r.um === "n." ? 0 : 2)}</td><td><input class="inp price" data-price="${esc(r.key)}" value="${p != null ? fmt(p, 2) : ""}" inputmode="decimal" aria-label="Prezzo unitario ${esc(r.voce)}" placeholder="€"></td><td class="num">${imp != null ? eur(imp) : ""}</td></tr>`; }).join("");
   return `<div class="sec"><h3>Computo delle quantità</h3><p class="note">Quantità ricavate dal modello: muri in asse al netto delle aperture, pavimenti netti, coperture in falda. Scrivi i prezzi unitari (€) del tuo listino per avere gli importi: restano nel progetto.</p>
-    <div class="tblwrap"><table class="olist comp"><thead><tr><th>Voce</th><th>u.m.</th><th>Quantità</th><th>€/u.m.</th><th>Importo €</th></tr></thead><tbody>${body}
+    <div class="tblwrap" tabindex="0" role="region" aria-label="Tabella"><table class="olist comp"><thead><tr><th>Voce</th><th>u.m.</th><th>Quantità</th><th>€/u.m.</th><th>Importo €</th></tr></thead><tbody>${body}
     <tr class="tot"><td>Totale</td><td></td><td></td><td></td><td class="num">${eur(tot)}</td></tr></tbody></table></div>
     <div class="btns"><button class="btn" id="compCsv">Esporta computo in CSV</button></div></div>`;
 }
@@ -7014,12 +7020,19 @@ function sanitizeProject(p){
   for (const L of arr("levels")){ L.id = fix(L.id); L.name = T(L.name, 80) || "Piano"; L.elev = N(L.elev); L.height = N(L.height, 2.7) || 2.7; L.slab = N(L.slab, .25);
     if (L.roof && typeof L.roof === "object"){ L.roof = {type:["none", "flat", "gable", "hip", "shed"].includes(L.roof.type) ? L.roof.type : "none", pitch:N(L.roof.pitch, 30), overhang:N(L.roof.overhang, .5), mat:K(L.roof.mat) || "tegole", ...(L.roof.ridge === "x" || L.roof.ridge === "y" ? {ridge:L.roof.ridge} : {}), ...(["s", "n", "e", "o"].includes(L.roof.dir) ? {dir:L.roof.dir} : {})}; } else L.roof = null;
     if (L.underlay && typeof L.underlay === "object"){ const U = L.underlay; if (U.kind === "img" && !okUrl(U.src)) L.underlay = null; else for (const k of ["ox", "oy", "mpp", "k", "opacity"]) if (k in U) U[k] = N(U[k]); } }
+  // valori fisici (#56): altezze e spessori positivi, muri non nulli, aperture con misure positive dentro il muro
+  for (const L of p.levels){ if (!(L.height > 0)) L.height = 2.7; if (!(L.slab >= 0)) L.slab = .25; }
   if (!p.levels.length) p.levels.push({id:"L0", name:"Piano terra", elev:0, height:2.9, slab:.25, roof:null, underlay:null});
   for (const w of arr("walls")){ w.id = fix(w.id); w.level = fix(w.level); w.a = pt(w.a); w.b = pt(w.b); w.thick = N(w.thick, .3) || .3; w.height = Nn(w.height); for (const k of ["mat", "matA", "matB"]) if (w[k] != null) w[k] = K(w[k]); if (w.wtype != null) w.wtype = K(w.wtype); if (w.layers) w.layers = {core:N(w.layers.core), insul:N(w.layers.insul)};
     if (w.arc){ w.arc = {g:fix(w.arc.g), i:N(w.arc.i), h:N(w.arc.h), A:pt(w.arc.A), B:pt(w.arc.B)}; } }
+  p.walls = p.walls.filter(w => Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1]) >= .01);
+  for (const w of p.walls){ if (!(w.thick > 0)) w.thick = .3; w.thick = Math.min(w.thick, 3); if (w.height != null && !(w.height > 0)) w.height = null; }
   for (const r of arr("rooms")){ r.id = fix(r.id); r.level = fix(r.level); r.pts = Array.isArray(r.pts) ? r.pts.map(pt) : []; r.name = T(r.name, 80); r.mat = K(r.mat); if (r.lab) r.lab = pt(r.lab);
     if (r.ceilH != null) r.ceilH = Nn(r.ceilH); if (r.ceilMat != null) r.ceilMat = K(r.ceilMat); if (r.tile) r.tile = {scale:N(r.tile.scale, 1), rot:N(r.tile.rot), ox:N(r.tile.ox), oy:N(r.tile.oy)}; if (r.skirt) r.skirt = {h:N(r.skirt.h, .08), mat:K(r.skirt.mat) || "bianco"}; }
   for (const o of arr("openings")){ o.id = fix(o.id); o.wall = fix(o.wall); for (const k of ["t", "w", "h", "sill"]) o[k] = N(o[k]); o.type = o.type === "door" ? "door" : "window"; o.flip = N(o.flip) | 0; if (o.style != null) o.style = K(o.style); if (o.shut != null) o.shut = K(o.shut); }
+  { const len = new Map(p.walls.map(w => [w.id, Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1])]));
+    p.openings = p.openings.filter(o => len.has(o.wall));
+    for (const o of p.openings){ const L = len.get(o.wall); if (!(o.w > 0)) o.w = Math.min(.9, L); o.w = Math.min(o.w, L); if (!(o.h > 0)) o.h = o.type === "door" ? 2.1 : 1.2; if (!(o.sill >= 0)) o.sill = o.type === "door" ? 0 : .9; o.t = clamp(o.t, o.w / 2, Math.max(o.w / 2, L - o.w / 2)); } }
   for (const o of arr("objects")){ o.id = fix(o.id); o.level = fix(o.level); o.kind = K(o.kind) || "lib"; o.ref = K(o.ref); o.name = T(o.name, 120); for (const k of ["x", "y", "z", "rot"]) o[k] = N(o[k]); o.scale = N(o.scale, 1) || 1;
     if (o.p && typeof o.p === "object") for (const [k, v] of Object.entries(o.p)) o.p[k] = typeof v === "number" ? N(v) : typeof v === "boolean" ? v : K(v);
     if (o.light && typeof o.light === "object") o.light = {on:o.light.on !== false, ...(o.light.lm != null ? {lm:N(o.light.lm, 800)} : {}), ...(o.light.k != null ? {k:N(o.light.k, 3000)} : {})}; }

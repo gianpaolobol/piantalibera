@@ -686,3 +686,32 @@ test("storia di annulla: una texture importata si tiene una volta sola, annulla 
   expect(r.dopoUndo).toEqual([.3, true]); expect(r.dopoRedo).toEqual([.319, true]);
   expect(errors).toEqual([]);
 });
+
+// Revisione 11/2026, #62: nessuna violazione axe critica o seria (WCAG 2.2 AA) nelle cinque schede
+test("accessibilità: nessuna violazione axe critica o seria nelle schede del pannello", async ({ page }) => {
+  await open(page);
+  await page.evaluate(src => (0, eval)(src), readFileSync("node_modules/axe-core/axe.min.js", "utf8"));
+  const found = [];
+  for (const tab of ["props", "list", "import", "export", "ai"]){
+    await page.click(`[data-tab="${tab}"]`); await page.waitForTimeout(300);
+    found.push(...await page.evaluate(async () => (await axe.run(document, { runOnly: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] })).violations
+      .filter(v => ["critical", "serious"].includes(v.impact)).flatMap(v => v.nodes.map(n => `${v.id} ${n.target.join(" ")}`))));
+  }
+  expect([...new Set(found)]).toEqual([]);
+});
+
+// Revisione 11/2026, #56: un progetto con valori fuori campo si apre corretto
+test("apertura di un progetto: muri nulli, spessori, altezze e aperture fuori campo vengono corretti", async ({ page }) => {
+  const errors = await open(page);
+  const r = await page.evaluate(async () => {
+    const p = sampleProject(); const n0 = p.walls.length;
+    p.walls[0].b = p.walls[0].a.slice(); p.walls[1].thick = -.3; p.walls[2].height = -1; p.levels[0].height = -3;
+    const w1 = p.walls[1].id; p.openings.push({id:"o1", wall:w1, type:"window", t:0, w:-1, h:0, sill:-2}, {id:"o2", wall:"inesistente", type:"door", t:1, w:.9, h:2.1, sill:0});
+    await openProjectData(p);
+    const o1 = P.openings.find(o => o.id === "o1"), L = (w => Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1]))(P.walls.find(w => w.id === w1));
+    return { muri:P.walls.length === n0 - 1, spessori:P.walls.every(w => w.thick > 0), altezze:P.walls.every(w => w.height == null || w.height > 0), piano:P.levels[0].height > 0,
+      apertura:o1.w > 0 && o1.h > 0 && o1.sill >= 0 && o1.t - o1.w / 2 >= -1e-9 && o1.t + o1.w / 2 <= L + 1e-9, orfana:!P.openings.some(o => o.id === "o2") };
+  });
+  expect(r).toEqual({ muri:true, spessori:true, altezze:true, piano:true, apertura:true, orfana:true });
+  expect(errors).toEqual([]);
+});
