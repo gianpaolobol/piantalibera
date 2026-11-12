@@ -348,7 +348,8 @@ function computo(){
   for (const o of P.openings){ const w = wallById(o.wall); if (!w) continue; const st = o.type === "door" ? (STYLE_NAME[o.style || "battente"] || "A battente") : (STYLE_NAME["w_" + (o.style || "battente")] || "A battente");
     add(`ap:${o.type}:${o.style || ""}:${Math.round(o.w * 100)}:${Math.round(o.h * 100)}`, o.type === "door" ? "Porte" : "Finestre", `${o.type === "door" ? "Porta" : "Finestra"} ${st.toLowerCase()} ${Math.round(o.w * 100)}×${Math.round(o.h * 100)}`, "n.", 1);
     if (o.shut) add(`osc:${o.shut}`, "Finestre", o.shut === "persiane" ? "Persiane (coppie)" : "Tapparelle", "n.", 1); }
-  for (const L of P.levels){ if (!L.roof || L.roof.type === "none") continue; const b = planBounds(L.id); if (!b) continue; const o = L.roof.overhang || 0, A = (b.x1 - b.x0 + 2*o) * (b.y1 - b.y0 + 2*o), p = THREE.MathUtils.degToRad(clamp(L.roof.pitch || 0, 0, 60));
+  // superficie della copertura: proiezione in pianta della sagoma con lo sporto, divisa per il coseno della pendenza (falde tutte uguali)
+  for (const L of P.levels){ if (!L.roof || L.roof.type === "none") continue; const RR = roofRects(L.id); if (!RR) continue; const o = L.roof.overhang || 0, A = RR.area(o), p = THREE.MathUtils.degToRad(clamp(L.roof.pitch || 0, 0, 60));
     add(`tetto:${L.roof.mat}`, "Copertura", `Copertura ${({flat:"piana", gable:"a due falde", hip:"a padiglione", shed:"a una falda"})[L.roof.type]} in ${matName(L.roof.mat).toLowerCase()}`, "m²", L.roof.type === "flat" ? A : A / Math.cos(p)); }
   for (const o of P.objects){ const it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null; if (it?.cat === "Persone") continue;
     if (it?.param?.kind === "rail") add("ringhiera", "Scale e parapetti", "Ringhiera / parapetto", "m", paramsOf(o, it).len * (o.scale || 1));
@@ -364,7 +365,7 @@ function computoHTML(){
   const body = rows.map(r => { const p = pr[r.key], imp = p != null ? p * r.q : null; if (imp != null) tot += imp; const head = r.cat !== cat ? `<tr class="cat"><td colspan="5">${esc(cat = r.cat)}</td></tr>` : "";
     return head + `<tr><td>${esc(r.voce)}</td><td>${esc(r.um)}</td><td class="num">${fmt(r.q, r.um === "n." ? 0 : 2)}</td><td><input class="inp price" data-price="${esc(r.key)}" value="${p != null ? fmt(p, 2) : ""}" inputmode="decimal" aria-label="Prezzo unitario ${esc(r.voce)}" placeholder="€"></td><td class="num">${imp != null ? eur(imp) : ""}</td></tr>`; }).join("");
   return `<div class="sec"><h3>Computo delle quantità</h3><p class="note">Quantità ricavate dal modello: muri in asse al netto delle aperture, pavimenti netti, coperture in falda. Scrivi i prezzi unitari (€) del tuo listino per avere gli importi: restano nel progetto.</p>
-    <div class="tblwrap"><table class="olist comp"><thead><tr><th>Voce</th><th>u.m.</th><th>Quantità</th><th>€/u.m.</th><th>Importo €</th></tr></thead><tbody>${body}
+    <div class="tblwrap" tabindex="0" role="region" aria-label="Tabella"><table class="olist comp"><thead><tr><th>Voce</th><th>u.m.</th><th>Quantità</th><th>€/u.m.</th><th>Importo €</th></tr></thead><tbody>${body}
     <tr class="tot"><td>Totale</td><td></td><td></td><td></td><td class="num">${eur(tot)}</td></tr></tbody></table></div>
     <div class="btns"><button class="btn" id="compCsv">Esporta computo in CSV</button></div></div>`;
 }
