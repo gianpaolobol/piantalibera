@@ -40,6 +40,7 @@ Avvio: `npm install` → `npm run dev` → apri `http://localhost:8787/`.
 | `051-condivisione.js` | link per il cliente, modalità di sola lettura, commenti in pianta |
 | `052-avanguardia.js` | ritocco AI con maschera e galleria nel progetto, video, IFC4, anteprima di stampa 3D, pannello staccabile, tablet |
 | `09-init.js` | progetto di esempio, migrazione dello schema, avvio |
+| `../shared/geometria.js` | geometria pura della pianta (asse dei muri, proiezioni, superfici, facce raccordate), incorporata nell'editor e provata con `node --test` (#64) |
 
 Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, versioni fissate), fflate, dxf-parser e pdf.js caricati su richiesta.
 

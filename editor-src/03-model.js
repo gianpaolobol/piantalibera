@@ -93,12 +93,6 @@ function worldUV(geo, size=1){
 function clean(g){ g = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(g.attributes)) if (k !== "position") g.deleteAttribute(k); return g; }
 
 /* ---------- Geometria di pianta ---------- */
-function wallFrame(w){ const dx=w.b[0]-w.a[0], dy=w.b[1]-w.a[1], len=Math.hypot(dx,dy)||1e-9; const ux=dx/len, uy=dy/len; return {len, ux, uy, nx:-uy, ny:ux}; }
-const ptOnWall = (w, s, off=0) => { const f = wallFrame(w); return [w.a[0]+f.ux*s+f.nx*off, w.a[1]+f.uy*s+f.ny*off]; };
-function projOnSeg(p, a, b){ const dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy||1e-9; const t=clamp(((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2,0,1); const q=[a[0]+dx*t, a[1]+dy*t]; return {t, q, d:Math.hypot(p[0]-q[0], p[1]-q[1])}; }
-function polyArea(pts){ let a=0; for(let i=0;i<pts.length;i++){ const p=pts[i], q=pts[(i+1)%pts.length]; a += p[0]*q[1]-q[0]*p[1]; } return a/2; }
-function polyCentroid(pts){ let x=0,y=0,a=0; for(let i=0;i<pts.length;i++){ const p=pts[i], q=pts[(i+1)%pts.length], c=p[0]*q[1]-q[0]*p[1]; a+=c; x+=(p[0]+q[0])*c; y+=(p[1]+q[1])*c; } if (Math.abs(a)<1e-9) return pts[0]; return [x/(3*a), y/(3*a)]; }
-function inPoly(p, pts){ let ins=false; for(let i=0,j=pts.length-1;i<pts.length;j=i++){ const a=pts[i], b=pts[j]; if(((a[1]>p[1])!==(b[1]>p[1])) && (p[0] < (b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])) ins=!ins; } return ins; }
 function wallSolidRanges(w){
   const f = wallFrame(w), ext = w.thick/2;
   const cuts = P.openings.filter(o=>o.wall===w.id).map(o=>({s0:Math.max(.02,o.t-o.w/2), s1:Math.min(f.len-.02,o.t+o.w/2), o})).filter(c=>c.s1>c.s0).sort((a,b)=>a.s0-b.s0);
