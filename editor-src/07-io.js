@@ -197,10 +197,13 @@ function exportDXF(){
 function projectData(){
   const data = JSON.parse(JSON.stringify(P)); data.imports = {};
   for (const [id, it] of Object.entries(importStore)) if (P.objects.some(o => o.kind === "import" && o.ref === id)) data.imports[id] = {file:it.file, opts:it.opts, source:it.source};
+  // modelli non ancora ricaricati (o non leggibili) dopo la riapertura: si conservano così come erano nella raccolta
+  for (const o of P.objects) if (o.kind === "import" && !data.imports[o.ref] && pendingImports[o.ref]) data.imports[o.ref] = pendingImports[o.ref];
   data.app = "Pianta Libera"; data.version = SCHEMA_VERSION; return data;
 }
 async function exportProject(){ await saveFile(slug() + ".json", JSON.stringify(projectData())); }
 /* apre un progetto (file .json o raccolta): keepPid tiene l'identità del progetto nella raccolta */
+const pendingImports = {};   // file dei modelli importati letti dalla raccolta e non ancora in importStore
 async function openProjectData(data, opts = {}){
   if (!data?.levels || !data.walls) throw new Error("non è un progetto di Pianta Libera");
   const imports = data.imports || {}; delete data.imports; delete data.app; if (!opts.keepPid || !data.pid) data.pid = uid();
@@ -440,7 +443,7 @@ $("#fModel").addEventListener("change", async e => { const files = [...e.target.
     const label = (main?.name || files[0].name).split(/[\\/]/).pop().replace(/\.[^.]+$/,"");
     const single = entries.length === 1;
     const file = single ? {name:entries[0].name, ext:entries[0].name.split(".").pop().toLowerCase(), b64:b64(entries[0].data)} : {name:label + ".zip", ext:"zip", b64:b64(fflate.zipSync(Object.fromEntries(entries.map(en => [en.name, en.data]))))};
-    const id = "m" + uid(); await registerImport(id, file, {unit:$("#imUnit").value, up:$("#imUp").value});
+    const id = "m" + uid(); await registerImport(id, file, {unit:$("#imUnit")?.value || "auto", up:$("#imUp")?.value || "auto"});
     let nm = 0; if ($("#imMats")?.checked) nm = harvestMaterials(id, label).length;
     const o = {id:uid(), level:S.level, kind:"import", ref:id, name:label, x:Math.round(V.cx*20)/20, y:Math.round(V.cy*20)/20, rot:0, scale:1, z:0};
     P.objects.push(o); S.sel = {type:"object", id:o.id}; busy(""); commit(); S.tab = "props"; renderTabs();

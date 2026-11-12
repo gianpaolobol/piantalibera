@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-rUI/pu+2uqWP5RZIUiC1c+vzLsQEkChP0PWgSV8I8p0=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-znK4FygZ6sIpJg6h5kwvkyWhDPcm1Z6Ssg1M6blTlcw=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1380,7 +1380,17 @@ function redo(){ if (!future.length) return; past.push(snap); snap = future.pop(
 function afterLoad(){ for (const k of Object.keys(matCache)) if (!MATS[k]) invalidateMat(k); fixSel(); save(); refresh(); }
 function fixSel(){ if (!level(S.level)) S.level = P.levels[0].id; P.dims = P.dims || []; setSel(selList().filter(x => itemOf(x))); }
 let saveWarned = false;
-function save(){ if (S.viewer) return; if (S.guest) return guestSave(); try { localStorage.setItem("pianta-libera-v2", JSON.stringify(P)); savedAt = new Date(); updateStatusInfo(); } catch(e){ if (!saveWarned && e?.name === "QuotaExceededError"){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio nel browser: resta nella raccolta Progetti, ma conviene anche Esporta → Salva progetto", true); } } queueIdbSave(); }
+/* Salvataggio nel browser. localStorage tiene l'ultima versione con l'ora (LS_T); sessionStorage ricorda il progetto
+   di questa scheda. Se localStorage è pieno, la copia vecchia si toglie e resta solo il riferimento al progetto:
+   alla riapertura si legge la raccolta Progetti (IndexedDB), che è più recente (09-init.js, restoreFromIdb). */
+const LS_P = "pianta-libera-v2", LS_T = "pianta-libera-t", LS_LAST = "pianta-libera-ultimo", SS_PID = "pianta-libera-pid";
+function save(){ if (S.viewer) return; if (S.guest) return guestSave();
+  try { sessionStorage.setItem(SS_PID, P.pid); } catch(e){}
+  try { localStorage.setItem(LS_P, JSON.stringify(P)); localStorage.setItem(LS_T, String(Date.now())); localStorage.removeItem(LS_LAST); savedAt = new Date(); updateStatusInfo(); }
+  catch(e){ try { localStorage.removeItem(LS_P); localStorage.removeItem(LS_T); localStorage.setItem(LS_LAST, P.pid); } catch(_){}
+    if (!saveWarned){ saveWarned = true; toast("Il progetto è troppo grande per il salvataggio rapido del browser: resta nella raccolta Progetti. Per sicurezza usa anche Esporta → Salva progetto", true); }
+    if (idbReady){ saveToIdb(); return; } }   // senza copia rapida la raccolta si scrive subito
+  queueIdbSave(); }
 function findSel(){ if (!S.sel) return null; const k = {wall:"walls", opening:"openings", room:"rooms", object:"objects", dim:"dims"}[S.sel.type]; return P[k]?.find(x => x.id === S.sel.id) || null; }
 
 const c2d = $("#c2d"), ctx = c2d.getContext("2d");
@@ -3386,10 +3396,13 @@ function exportDXF(){
 function projectData(){
   const data = JSON.parse(JSON.stringify(P)); data.imports = {};
   for (const [id, it] of Object.entries(importStore)) if (P.objects.some(o => o.kind === "import" && o.ref === id)) data.imports[id] = {file:it.file, opts:it.opts, source:it.source};
+  // modelli non ancora ricaricati (o non leggibili) dopo la riapertura: si conservano così come erano nella raccolta
+  for (const o of P.objects) if (o.kind === "import" && !data.imports[o.ref] && pendingImports[o.ref]) data.imports[o.ref] = pendingImports[o.ref];
   data.app = "Pianta Libera"; data.version = SCHEMA_VERSION; return data;
 }
 async function exportProject(){ await saveFile(slug() + ".json", JSON.stringify(projectData())); }
 /* apre un progetto (file .json o raccolta): keepPid tiene l'identità del progetto nella raccolta */
+const pendingImports = {};   // file dei modelli importati letti dalla raccolta e non ancora in importStore
 async function openProjectData(data, opts = {}){
   if (!data?.levels || !data.walls) throw new Error("non è un progetto di Pianta Libera");
   const imports = data.imports || {}; delete data.imports; delete data.app; if (!opts.keepPid || !data.pid) data.pid = uid();
@@ -3629,7 +3642,7 @@ $("#fModel").addEventListener("change", async e => { const files = [...e.target.
     const label = (main?.name || files[0].name).split(/[\\/]/).pop().replace(/\.[^.]+$/,"");
     const single = entries.length === 1;
     const file = single ? {name:entries[0].name, ext:entries[0].name.split(".").pop().toLowerCase(), b64:b64(entries[0].data)} : {name:label + ".zip", ext:"zip", b64:b64(fflate.zipSync(Object.fromEntries(entries.map(en => [en.name, en.data]))))};
-    const id = "m" + uid(); await registerImport(id, file, {unit:$("#imUnit").value, up:$("#imUp").value});
+    const id = "m" + uid(); await registerImport(id, file, {unit:$("#imUnit")?.value || "auto", up:$("#imUp")?.value || "auto"});
     let nm = 0; if ($("#imMats")?.checked) nm = harvestMaterials(id, label).length;
     const o = {id:uid(), level:S.level, kind:"import", ref:id, name:label, x:Math.round(V.cx*20)/20, y:Math.round(V.cy*20)/20, rot:0, scale:1, z:0};
     P.objects.push(o); S.sel = {type:"object", id:o.id}; busy(""); commit(); S.tab = "props"; renderTabs();
@@ -5738,8 +5751,12 @@ const projDel = id => idbDo("readwrite", s => s.delete(id));
 function projThumb(){ try { const w = 240, h = 150, c = document.createElement("canvas"); c.width = w; c.height = h; const k = Math.max(w / c3d.width, h / c3d.height), sw = w / k, sh = h / k; c.getContext("2d").drawImage(c3d, (c3d.width - sw) / 2, (c3d.height - sh) / 2, sw, sh, 0, 0, w, h); return c.toDataURL("image/jpeg", .7); } catch(e){ return ""; } }
 let idbTimer = 0, idbWarned = false;
 function queueIdbSave(){ clearTimeout(idbTimer); idbTimer = setTimeout(saveToIdb, 1500); }
+// uscendo dalla pagina o passando a un'altra app si scrive subito, senza aspettare il ritardo di queueIdbSave
+addEventListener("pagehide", () => { if (idbTimer) saveToIdb(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && idbTimer) saveToIdb(); });
+let idbReady = false;   // diventa vero dopo restoreFromIdb: prima non si scrive nella raccolta
 async function saveToIdb(){
-  clearTimeout(idbTimer); if (!P?.pid || !window.indexedDB) return;
+  clearTimeout(idbTimer); idbTimer = 0; if (!P?.pid || !window.indexedDB) return; if (!idbReady){ queueIdbSave(); return; }
   try { await projPut({id:P.pid, name:P.name || "Progetto", updated:Date.now(), thumb:projThumb(), data:JSON.stringify(projectData())}); if (document.getElementById("projBox")) renderProjects(); }
   catch(e){ if (!idbWarned){ idbWarned = true; console.warn("raccolta progetti", e); } }
 }
@@ -7017,9 +7034,34 @@ function migrate(p){
   if (!p.pid) p.pid = uid();
   p.version = SCHEMA_VERSION; return p;
 }
+/* Alla riapertura la raccolta Progetti (IndexedDB) può essere più aggiornata di localStorage: salvataggio rapido
+   fallito per spazio, altra scheda che ha scritto localStorage, modelli importati (che localStorage non contiene).
+   Si apre la versione più recente del progetto di questa scheda e si ricaricano i modelli importati. */
+async function restoreFromIdb(wantPid, savedT){
+  if (!window.indexedDB) return;
+  try {
+    const before = snap, pid = wantPid || P.pid, rec = await projGet(pid); if (!rec?.data) return;
+    if (snap !== before) return;   // l'utente ha già cominciato a modificare: non si cambia il progetto sotto le mani
+    const data = JSON.parse(rec.data);
+    if (pid !== P.pid || (rec.updated || 0) > savedT + 1000){
+      await openProjectData(data, {keepPid:true});
+      if (savedT && pid === P.pid) toast("Riaperta la versione più recente dalla raccolta Progetti");
+      return;
+    }
+    let n = 0;
+    for (const [id, it] of Object.entries(data.imports || {})){
+      if (importStore[id] || !P.objects.some(o => o.kind === "import" && o.ref === id)) continue;
+      pendingImports[id] = it;
+      try { if (it.file) await registerImport(id, it.file, it.opts || {unit:"auto", up:"auto"}); else if (it.source) await restoreRemote(id, it.source); delete pendingImports[id]; n++; } catch(err){ console.warn("modello importato", err); }
+    }
+    if (n){ draw2D(); rebuild3D(); }
+  } catch(e){ console.warn("raccolta progetti", e); }
+}
 function readCanvasColors(){ readColors(); draw2D(); render3D(); }
 function init(){
-  let saved = null; try { saved = JSON.parse(localStorage.getItem("pianta-libera-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v1")); } catch(e){}
+  let saved = null, savedT = 0, tabPid = null, lastPid = null;
+  try { saved = JSON.parse(localStorage.getItem(LS_P)) || JSON.parse(localStorage.getItem("pianta-aperta-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v1")); savedT = +localStorage.getItem(LS_T) || 0; lastPid = localStorage.getItem(LS_LAST); } catch(e){}
+  try { tabPid = sessionStorage.getItem(SS_PID); } catch(e){}
   P = migrate(saved?.levels?.length ? saved : sampleProject()); S.level = P.levels[0].id; snap = JSON.stringify(P);
   $("#projName").value = P.name; readColors(); setTool("select"); renderStatus();
   if (!saved?.levels?.length && !new URLSearchParams(location.search).get("condividi")) save();   // l'identità del progetto (pid) resta tra un'apertura e l'altra
@@ -7032,7 +7074,8 @@ function init(){
   loadPersonalIndex();
   const shareId = new URLSearchParams(location.search).get("condividi");
   const editKey = (location.hash.match(/(?:^#|&)modifica=([a-f0-9]{48})/) || [])[1];
-  if (shareId && editKey) enterGuest(shareId, editKey); else if (shareId) enterViewer(shareId); else { setTimeout(queueIdbSave, 2500); loadGallery(); }
+  if (shareId && editKey) enterGuest(shareId, editKey); else if (shareId) enterViewer(shareId);
+  else { restoreFromIdb(tabPid || lastPid, savedT).finally(() => { idbReady = true; setTimeout(queueIdbSave, 2500); }); loadGallery(); }
 }
 init();
 

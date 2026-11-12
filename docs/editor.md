@@ -99,6 +99,7 @@ Fase 1 completata.
 - **Immagini**: vista in 4K, panorama 360° equirettangolare con visore e JPG con metadati GPano, tutte le camere salvate in 4K in uno zip.
 - **Coda di render AI**: vista corrente e camere salvate in coda, elaborate una alla volta; si ferma a errore o quota esaurita.
 - **Progetti**: pulsante in alto con tutti i progetti di questo browser (IndexedDB, salvataggio automatico con anteprima): nuovo, apri, duplica, rinomina, scarica .json, elimina con conferma.
+- **Riapertura sicura** (revisione 11/2026, #51 #58 #69): il salvataggio rapido (`localStorage`) tiene l'ora dell'ultima scrittura; alla riapertura si confronta con la raccolta Progetti e si apre la versione più recente. Se il progetto è troppo grande per il salvataggio rapido, la copia vecchia si toglie e alla riapertura si legge la raccolta. Ogni scheda del browser ricorda il suo progetto (`sessionStorage`). I modelli importati (DAE, OBJ, FBX…) si ricaricano dalla raccolta e non si perdono più. Uscendo dalla pagina la raccolta si scrive subito.
 - Anteprime del catalogo: `npm run build:anteprime -- --mancanti` genera solo quelle nuove.
 
 ## Avanguardia (fase 4)
