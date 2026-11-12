@@ -56,6 +56,7 @@ Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, ve
 - Render AI: preset «Backend Pianta Libera» sul contratto `/api/render` (vista + profondità + contorni + camera), modalità fedele/creativo, polling dei lavori, galleria con confronto. Preset diretti verso servizi esterni solo per prove locali.
 
 - **Ricostruzione del 3D per piano** (revisione 11/2026, #63): a ogni modifica si ricostruiscono solo i piani i cui dati sono cambiati (impronta per piano in `levelKeys`, gruppi riusati in `LV3D`); `rebuildNow()` è la ricostruzione immediata, `rebuild3D()` la mette al fotogramma successivo.
+- **Arredi più leggeri nel 3D** (revisione 11/2026, #63): quando un modello pronto viene preparato (`finishTpl` → `mergeTplMeshes`, `02-lib.js`) i suoi pezzi con lo stesso materiale e le stesse ombre si uniscono in una sola mesh; sagoma, materiali e selezione restano identici. Edificio grande di prova: da 9.625 a 2.425 mesh.
 - **Quote dei muri visibili dall'inizio** (revisione 11/2026, #61): la lunghezza di tutti i muri («Quote» nella barra di stato) è accesa per impostazione; chi l'ha spenta la ritrova spenta.
 
 - **Per iniziare** (revisione 11/2026, U12): finché non si chiude, il pannello senza selezione mostra tre punti di partenza (disegna una stanza, importa una pianta, progetto vuoto); la scelta resta nelle preferenze del browser (`PREFS.introDone`).
