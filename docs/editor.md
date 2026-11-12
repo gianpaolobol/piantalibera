@@ -40,6 +40,7 @@ Avvio: `npm install` → `npm run dev` → apri `http://localhost:8787/`.
 | `051-condivisione.js` | link per il cliente, modalità di sola lettura, commenti in pianta |
 | `052-avanguardia.js` | ritocco AI con maschera e galleria nel progetto, video, IFC4, anteprima di stampa 3D, pannello staccabile, tablet |
 | `09-init.js` | progetto di esempio, migrazione dello schema, avvio |
+| `../shared/geometria.js` | geometria pura della pianta (asse dei muri, proiezioni, superfici, facce raccordate), incorporata nell'editor e provata con `node --test` (#64) |
 
 Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, versioni fissate), fflate, dxf-parser e pdf.js caricati su richiesta.
 
@@ -55,6 +56,17 @@ Tecnologie: JavaScript senza framework, Three.js r147 (build UMD da jsDelivr, ve
 - Render AI: preset «Backend Pianta Libera» sul contratto `/api/render` (vista + profondità + contorni + camera), modalità fedele/creativo, polling dei lavori, galleria con confronto. Preset diretti verso servizi esterni solo per prove locali.
 
 - **Ricostruzione del 3D per piano** (revisione 11/2026, #63): a ogni modifica si ricostruiscono solo i piani i cui dati sono cambiati (impronta per piano in `levelKeys`, gruppi riusati in `LV3D`); `rebuildNow()` è la ricostruzione immediata, `rebuild3D()` la mette al fotogramma successivo.
+- **Quote dei muri visibili dall'inizio** (revisione 11/2026, #61): la lunghezza di tutti i muri («Quote» nella barra di stato) è accesa per impostazione; chi l'ha spenta la ritrova spenta.
+
+- **Per iniziare** (revisione 11/2026, U12): finché non si chiude, il pannello senza selezione mostra tre punti di partenza (disegna una stanza, importa una pianta, progetto vuoto); la scelta resta nelle preferenze del browser (`PREFS.introDone`).
+- **Scheda Esporta riordinata** (revisione 11/2026, #60): in cima Salva progetto, Tavole tecniche e Condividi con il cliente; sotto «Per altri programmi» D5/Blender, pacchetto AI, stampa 3D, DXF, immagini e IFC.
+- **Intestazione compatta** (revisione 11/2026, #59): sul computer una sola riga (annulla e ripristina come icone, senza slogan); il suggerimento dello strumento sta sopra la barra di stato e va a capo invece di troncarsi; «Scala rif.» e «Sposta rif.» compaiono solo se il piano ha una base di ricalco; il menu «Camere…» ha sempre la sua etichetta.
+- **Rapporto aeroilluminante** (revisione 11/2026): nella tabella dei locali (scheda Elenco) superficie delle finestre e delle porte vetrate sul perimetro e R.A.I. (finestre / superficie netta), con ⚠ sotto 1/8 (D.M. 5/7/1975, verifica indicativa).
+- **Cartiglio con i dati dello studio** (revisione 11/2026): Esporta → Tavole tecniche, campi «Studio / progettista», «Committente» e «Luogo» (`P.tav.info`), scritti nel cartiglio di ogni foglio.
+- **Progetti aperti da file** (revisione 11/2026, #56): oltre alla sanificazione dei testi e degli identificativi si correggono i valori fisici: muri più corti di 1 cm tolti, spessori e altezze non positivi riportati ai valori predefiniti, aperture con misure positive e dentro il loro muro, aperture senza muro tolte.
+- **Accessibilità** (revisione 11/2026, #62): ogni campo dei pannelli prende il nome dall'etichetta visibile (`autoLabel`, anche nei pannelli ridisegnati); lista delle schede con soli figli `tab` (il pulsante «Stacca» è accanto); ordinamento annunciato sulle intestazioni di colonna; tabelle scorrevoli raggiungibili da tastiera; messaggi annunciati (`aria-live`). Prova axe (WCAG 2.2 AA) nelle prove nel browser.
+- **Storia di annulla leggera** (revisione 11/2026, #55): le immagini incorporate nel progetto (texture importate, foto, basi di ricalco oltre 8 KB) si tengono una volta sola; la storia conserva solo riferimenti (`snapOf`, `fromSnap`, `historyBytes` in `04-plan.js`).
+- **Senza WebGL** (revisione 11/2026, #67): se il browser non può usare la grafica 3D (PC senza accelerazione, macchine virtuali, desktop remoto) l'editor si apre lo stesso; la vista 3D mostra un messaggio con le possibili soluzioni e funzionano pianta, tavole, computo ed esportazioni. Il renderer diventa un oggetto inerte (`inertObject`, `03-model.js`); visore 360° e anteprima di stampa avvisano.
 
 ## Pianta di precisione (fase 1 della roadmap d'interfaccia)
 
@@ -97,10 +109,11 @@ Fase 1 completata.
 - **Sole da luogo, data e ora** (`P.site`): città o coordinate, fuso, ora legale europea, nord della pianta (ruota anche la bussola); di notte niente sole né riflessi del cielo.
 - **Porte**: a battente, a due ante, a vetro, portafinestra, scorrevole esterna, a scomparsa, basculante. **Finestre**: a battente, vasistas, scorrevole, fissa; oscuranti: persiane o tapparella sul lato esterno (riconosciuto dai locali, invertibile). Simboli di pianta per ogni modello (`o.style`, `o.shut`).
 - **Scale** parametriche (una rampa, a L, a U, a chiocciola): dislivello dal piano sopra, alzate, pedata, larghezza, svolta, corrimano e ringhiera a montanti o vetro, verifica 2a + p; il solaio del piano sopra e il soffitto vengono forati sull'ingombro. **Ringhiere/parapetti** a montanti, vetro o muratura (`o.p`).
-- **Tetti** a padiglione e a una falda (con la direzione della falda e i tamponamenti dei muri), oltre a piano e a due falde.
+- **Tetti** a padiglione e a una falda (con la direzione della falda e i tamponamenti dei muri), oltre a piano e a due falde. Dalla revisione 11/2026 (#52) le coperture seguono la sagoma della pianta: su piante a L, T, U si costruisce un tetto per ogni rettangolo massimo della sagoma e i tetti si incontrano nei compluvi (la falda unica resta un solo piano su tutta la sagoma); il computo misura la sagoma con lo sporto. Con muri obliqui resta il rettangolo d'ingombro (`roofRects`, `03-model.js`).
 - **Immagini**: vista in 4K, panorama 360° equirettangolare con visore e JPG con metadati GPano, tutte le camere salvate in 4K in uno zip.
 - **Coda di render AI**: vista corrente e camere salvate in coda, elaborate una alla volta; si ferma a errore o quota esaurita.
 - **Progetti**: pulsante in alto con tutti i progetti di questo browser (IndexedDB, salvataggio automatico con anteprima): nuovo, apri, duplica, rinomina, scarica .json, elimina con conferma.
+- **Riapertura sicura** (revisione 11/2026, #51 #58 #69): il salvataggio rapido (`localStorage`) tiene l'ora dell'ultima scrittura; alla riapertura si confronta con la raccolta Progetti e si apre la versione più recente. Se il progetto è troppo grande per il salvataggio rapido, la copia vecchia si toglie e alla riapertura si legge la raccolta. Ogni scheda del browser ricorda il suo progetto (`sessionStorage`). I modelli importati (DAE, OBJ, FBX…) si ricaricano dalla raccolta e non si perdono più. Uscendo dalla pagina la raccolta si scrive subito.
 - Anteprime del catalogo: `npm run build:anteprime -- --mancanti` genera solo quelle nuove.
 
 ## Avanguardia (fase 4)
@@ -110,7 +123,7 @@ Fase 1 completata.
 - **Link per il cliente** (Esporta → Condividi con il cliente): link di 30 giorni, sola lettura (`?condividi=<id>`), commenti puntati in pianta con la vista 3D allegata, lettura e «risolto» lato progettista, aggiornamento del link con le modifiche. API in `shared/share.js`, privacy in `docs/privacy.md`.
 - **AI nel progetto**: i render restano nella galleria del progetto (IndexedDB); **Ritocca una zona**: si dipinge una maschera sul render e si scrive la modifica; il risultato del servizio si incolla solo nella zona dipinta, con bordi sfumati, così il resto resta identico.
 - **Video**: giro attorno all'edificio o volo tra le camere salvate (curva morbida), 360p/720p/1080p, MP4 o WebM secondo il browser; registra in tempo reale.
-- **IFC4**: muri con vani, porte e finestre, solai, locali con superficie netta, piani, copertura, scale, ringhiere, luci e arredi (superfici triangolate). Verificato con web-ifc nelle prove.
+- **IFC4**: muri con vani, porte e finestre, solai, locali con superficie netta, piani, copertura, scale, ringhiere, luci e arredi (superfici triangolate). Verificato con web-ifc nelle prove. Dalla revisione 11/2026 (#57): muri con gli angoli raccordati (nessuna sovrapposizione, volume uguale al computo) e altezza del piano; materiali (`IfcMaterial`) su muri, solai, porte e finestre; `Pset_WallCommon` (IsExternal, LoadBearing, Reference), `Pset_DoorCommon`, `Pset_WindowCommon`, `Qto_WallBaseQuantities`. Il DXF della pianta e delle tavole dichiara la tabella dei layer.
 - **Anteprima di stampa 3D**: piatto della stampante scelta a grandezza reale, pezzi disposti, misure, volume, PLA stimato, pezzi troppo grandi in rosso.
 - **Pannello laterale**: si allarga trascinando il bordo, si stacca e si sposta (ridimensionabile), si nasconde dal pulsante «Pannello»; preferenze salvate nel browser.
 - **Tablet**: tocco prolungato in pianta = menu contestuale, prese più larghe per maniglie e muri, tasti a schermo per camminare nella visita a piedi, controlli più grandi con il dito.
