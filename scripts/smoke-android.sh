@@ -12,13 +12,13 @@ if adb install -r "$APK" >/dev/null 2>&1; then E+=("$(esito installazione ok)");
 t0=$(date +%s)
 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 trovato=""
-for i in $(seq 1 60); do
+for i in $(seq 1 100); do   # fino a 5 minuti: il primo avvio della WebView sull'emulatore è lento
   sleep 3
   adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 && adb pull /sdcard/ui.xml "$OUT/$NOME-ui.xml" >/dev/null 2>&1
   if grep -qE 'Seleziona|Pianta Libera|Progetti' "$OUT/$NOME-ui.xml" 2>/dev/null; then trovato=1; break; fi
 done
 pronto=$(( ($(date +%s) - t0) * 1000 ))
-[ -n "$trovato" ] && E+=("$(esito 'editor nella WebView' ok)") || E+=("$(esito 'editor nella WebView' 'difetto: testi dell editor non trovati in 180 s')")
+[ -n "$trovato" ] && E+=("$(esito 'editor nella WebView' ok)") || E+=("$(esito 'editor nella WebView' 'difetto: testi dell editor non trovati in 300 s')")
 adb exec-out screencap -p > "$OUT/$NOME.png"
 if adb shell pidof "$PKG" >/dev/null 2>&1; then E+=("$(esito 'app ancora attiva' ok)"); else E+=("$(esito 'app ancora attiva' 'difetto: processo chiuso')"); fi
 # rotazione in orizzontale e ritorno
