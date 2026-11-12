@@ -180,6 +180,17 @@ async function exportPrint(){
   else if (pieces.length === 1) await saveFile(base + ".stl", new Blob([stlBinary(pieces[0].geo)]));
   else { const files = {}; pieces.forEach((pc,i) => files[`${String(i+1).padStart(2,"0")}-${slugify(pc.name)}.stl`] = stlBinary(pc.geo)); await saveFile(base + "-stl.zip", new Blob([fflate.zipSync(files)])); }
 }
+/* Tabella dei layer (DXF R12): ogni layer usato dalle entità viene dichiarato con colore e linea continua, così
+   anche i CAD che non creano i layer mancanti li mostrano (#57). Si inserisce dopo l'intestazione. */
+const DXF_COLORS = {MURI:7, APERTURE:4, LOCALI:3, TESTI:2, ARREDI:8, QUOTE:1, SEZIONE:6, CARTIGLIO:7};
+function dxfWithLayers(out){
+  const used = new Set(); for (let i = 0; i + 1 < out.length; i += 2) if (out[i] === "8") used.add(out[i + 1]);   // coppie codice/valore
+  used.add("0"); let at = -1; for (let i = 0; i + 1 < out.length; i += 2) if (out[i] === "0" && out[i + 1] === "ENDSEC"){ at = i + 2; break; } if (at < 0) return out;
+  const t = ["0","SECTION","2","TABLES","0","TABLE","2","LTYPE","70","1","0","LTYPE","2","CONTINUOUS","70","0","3","Continua","72","65","73","0","40","0.0","0","ENDTAB","0","TABLE","2","LAYER","70",String(used.size)];
+  let c = 1; for (const n of used) t.push("0","LAYER","2",n,"70","0","62",String(DXF_COLORS[n] || (c++ % 6) + 1),"6","CONTINUOUS");
+  t.push("0","ENDTAB","0","ENDSEC");
+  return [...out.slice(0, at), ...t, ...out.slice(at)];
+}
 function exportDXF(){
   const L = level(), out = ["0","SECTION","2","HEADER","9","$ACADVER","1","AC1009","9","$INSUNITS","70","6","0","ENDSEC","0","SECTION","2","ENTITIES"];
   const line = (lay, a, b) => out.push("0","LINE","8",lay,"10",a[0].toFixed(4),"20",(-a[1]).toFixed(4),"30","0","11",b[0].toFixed(4),"21",(-b[1]).toFixed(4),"31","0");
@@ -192,15 +203,18 @@ function exportDXF(){
         out.push("0","ARC","8","APERTURE","10",H[0].toFixed(4),"20",(-H[1]).toFixed(4),"30","0","40",o.w.toFixed(4),"50",((sa+360)%360).toFixed(3),"51",((ea+360)%360).toFixed(3)); } } }
   for (const r of P.rooms.filter(r=>r.level===L.id)){ r.pts.forEach((p,i)=>line("LOCALI", p, r.pts[(i+1)%r.pts.length])); const c = polyCentroid(r.pts); text("TESTI", c, .25, r.name || "Locale"); text("TESTI", [c[0], c[1]+.4], .18, fmt(Math.abs(polyArea(r.pts))) + " mq"); }
   for (const o of P.objects.filter(o=>o.level===L.id)){ const fp = objFootprint(o), a = THREE.MathUtils.degToRad(o.rot||0); const pts = [[-1,-1],[1,-1],[1,1],[-1,1]].map(([sx,sz]) => { const lx = fp.cx + sx*fp.w/2, lz = fp.cz + sz*fp.d/2; return [o.x + lx*Math.cos(a) + lz*Math.sin(a), o.y - lx*Math.sin(a) + lz*Math.cos(a)]; }); for (let i=0;i<4;i++) line("ARREDI", pts[i], pts[(i+1)%4]); }
-  out.push("0","ENDSEC","0","EOF"); return out.join("\n");
+  out.push("0","ENDSEC","0","EOF"); return dxfWithLayers(out).join("\n");
 }
 function projectData(){
   const data = JSON.parse(JSON.stringify(P)); data.imports = {};
   for (const [id, it] of Object.entries(importStore)) if (P.objects.some(o => o.kind === "import" && o.ref === id)) data.imports[id] = {file:it.file, opts:it.opts, source:it.source};
+  // modelli non ancora ricaricati (o non leggibili) dopo la riapertura: si conservano così come erano nella raccolta
+  for (const o of P.objects) if (o.kind === "import" && !data.imports[o.ref] && pendingImports[o.ref]) data.imports[o.ref] = pendingImports[o.ref];
   data.app = "Pianta Libera"; data.version = SCHEMA_VERSION; return data;
 }
 async function exportProject(){ await saveFile(slug() + ".json", JSON.stringify(projectData())); }
 /* apre un progetto (file .json o raccolta): keepPid tiene l'identità del progetto nella raccolta */
+const pendingImports = {};   // file dei modelli importati letti dalla raccolta e non ancora in importStore
 async function openProjectData(data, opts = {}){
   if (!data?.levels || !data.walls) throw new Error("non è un progetto di Pianta Libera");
   const imports = data.imports || {}; delete data.imports; delete data.app; if (!opts.keepPid || !data.pid) data.pid = uid();
@@ -440,7 +454,7 @@ $("#fModel").addEventListener("change", async e => { const files = [...e.target.
     const label = (main?.name || files[0].name).split(/[\\/]/).pop().replace(/\.[^.]+$/,"");
     const single = entries.length === 1;
     const file = single ? {name:entries[0].name, ext:entries[0].name.split(".").pop().toLowerCase(), b64:b64(entries[0].data)} : {name:label + ".zip", ext:"zip", b64:b64(fflate.zipSync(Object.fromEntries(entries.map(en => [en.name, en.data]))))};
-    const id = "m" + uid(); await registerImport(id, file, {unit:$("#imUnit").value, up:$("#imUp").value});
+    const id = "m" + uid(); await registerImport(id, file, {unit:$("#imUnit")?.value || "auto", up:$("#imUp")?.value || "auto"});
     let nm = 0; if ($("#imMats")?.checked) nm = harvestMaterials(id, label).length;
     const o = {id:uid(), level:S.level, kind:"import", ref:id, name:label, x:Math.round(V.cx*20)/20, y:Math.round(V.cy*20)/20, rot:0, scale:1, z:0};
     P.objects.push(o); S.sel = {type:"object", id:o.id}; busy(""); commit(); S.tab = "props"; renderTabs();

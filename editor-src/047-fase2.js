@@ -67,6 +67,16 @@ function offsetPoly(pts, d){
     return [p[0] + m[0]/ml*k, p[1] + m[1]/ml*k]; });
   const a = run(1); return Math.abs(polyArea(a)) > Math.abs(polyArea(pts)) ? a : run(-1);
 }
+/* Rapporto aeroilluminante (indicativo): superficie delle finestre e delle porte vetrate sul perimetro del locale
+   diviso la superficie netta. Il D.M. 5/7/1975 chiede almeno 1/8 per i locali abitabili. */
+const GLAZED_DOORS = new Set(["vetrata", "portafinestra"]);
+function roomGlazing(r){
+  let a = 0;
+  for (const o of P.openings){ if (o.type !== "window" && !GLAZED_DOORS.has(o.style)) continue; const w = wallById(o.wall); if (!w || w.level !== r.level) continue;
+    const c = ptOnWall(w, o.t); let near = Infinity; for (let i = 0; i < r.pts.length; i++) near = Math.min(near, projOnSeg(c, r.pts[i], r.pts[(i + 1) % r.pts.length]).d);
+    if (near < w.thick / 2 + .05) a += Math.max(0, o.w) * Math.max(0, o.h); }
+  return a;
+}
 function roomAreas(r){
   const net = Math.abs(polyArea(r.pts)); let per = 0, tsum = 0, lsum = 0;
   for (let i = 0; i < r.pts.length; i++){ const a = r.pts[i], b = r.pts[(i+1) % r.pts.length], L = Math.hypot(b[0]-a[0], b[1]-a[1]); per += L;
@@ -258,14 +268,16 @@ function objRows(){
 function renderList(){
   const el = $("#panel-list"); if (!el) return; const {k, dir} = S.listSort;
   const rows = objRows().sort((a, b) => { const x = a[k], y = b[k]; return (typeof x === "number" ? x - y : String(x).localeCompare(String(y), "it")) * dir; });
-  const th = (key, n) => `<th><button data-sort="${key}" aria-sort="${k === key ? (dir > 0 ? "ascending" : "descending") : "none"}">${n}${k === key ? (dir > 0 ? " ▲" : " ▼") : ""}</button></th>`;
+  const th = (key, n) => `<th aria-sort="${k === key ? (dir > 0 ? "ascending" : "descending") : "none"}"><button data-sort="${key}">${n}${k === key ? (dir > 0 ? " ▲" : " ▼") : ""}</button></th>`;
   const rooms = P.rooms.map(r => ({r, ...roomAreas(r), lv:level(r.level)?.name || ""}));
-  el.innerHTML = `<div class="sec"><h3>Oggetti (${rows.length})</h3><div class="tblwrap"><table class="olist"><thead><tr>${th("name","Nome")}${th("cat","Categoria")}${th("w","L×P×H cm")}${th("lv","Piano")}<th><span class="sr">Visibile</span>👁</th><th><span class="sr">Bloccato</span>🔒</th></tr></thead><tbody>
+  el.innerHTML = `<div class="sec"><h3>Oggetti (${rows.length})</h3><div class="tblwrap" tabindex="0" role="region" aria-label="Tabella"><table class="olist"><thead><tr>${th("name","Nome")}${th("cat","Categoria")}${th("w","L×P×H cm")}${th("lv","Piano")}<th><span class="sr">Visibile</span>👁</th><th><span class="sr">Bloccato</span>🔒</th></tr></thead><tbody>
     ${rows.map(x => `<tr data-oid="${x.o.id}" class="${isSelected(x.o.id) ? "on" : ""}${x.o.hidden ? " off" : ""}"><td>${esc(x.name)}</td><td>${esc(x.cat)}</td><td class="num">${Math.round(x.w*100)}×${Math.round(x.d*100)}×${Math.round(x.h*100)}</td><td>${esc(x.lv)}</td><td><button class="ic" data-ohide="${x.o.id}" aria-pressed="${!x.o.hidden}" aria-label="${x.o.hidden ? "Mostra" : "Nascondi"} ${esc(x.name)}">${x.o.hidden ? "◌" : "●"}</button></td><td><button class="ic" data-olock="${x.o.id}" aria-pressed="${!!x.o.locked}" aria-label="${x.o.locked ? "Sblocca" : "Blocca"} ${esc(x.name)}">${x.o.locked ? "■" : "□"}</button></td></tr>`).join("")}</tbody></table></div>
     <p class="note">Clic su una riga per selezionare (Maiusc per aggiungere), doppio clic per le proprietà. Gli oggetti bloccati non si spostano col mouse.</p></div>
-    <div class="sec"><h3>Locali (${rooms.length})</h3><div class="tblwrap"><table class="olist"><thead><tr><th>Nome</th><th>Piano</th><th>Netta m²</th><th>Lorda m²</th><th>Perimetro m</th></tr></thead><tbody>
-    ${rooms.map(x => `<tr data-rid="${x.r.id}" class="${isSelected(x.r.id) ? "on" : ""}"><td>${esc(x.r.name || "Locale")}</td><td>${esc(x.lv)}</td><td class="num">${fmt(x.net)}</td><td class="num">${fmt(x.gross)}</td><td class="num">${fmt(x.per)}</td></tr>`).join("")}
-    ${rooms.length ? `<tr class="tot"><td>Totale</td><td></td><td class="num">${fmt(rooms.reduce((s, x) => s + x.net, 0))}</td><td class="num">${fmt(rooms.reduce((s, x) => s + x.gross, 0))}</td><td></td></tr>` : ""}</tbody></table></div>
+    <div class="sec"><h3>Locali (${rooms.length})</h3><div class="tblwrap" tabindex="0" role="region" aria-label="Tabella"><table class="olist"><thead><tr><th>Nome</th><th>Piano</th><th>Netta m²</th><th>Lorda m²</th><th>Perimetro m</th><th>Finestre m²</th><th><abbr title="Rapporto aeroilluminante: finestre / superficie netta">R.A.I.</abbr></th></tr></thead><tbody>
+    ${rooms.map(x => { const gl = roomGlazing(x.r), rai = x.net > 0 ? gl / x.net : 0, ok = rai >= 1/8 - 1e-9;
+      return `<tr data-rid="${x.r.id}" class="${isSelected(x.r.id) ? "on" : ""}"><td>${esc(x.r.name || "Locale")}</td><td>${esc(x.lv)}</td><td class="num">${fmt(x.net)}</td><td class="num">${fmt(x.gross)}</td><td class="num">${fmt(x.per)}</td><td class="num">${fmt(gl)}</td><td class="num ${ok ? "" : "warn"}" title="${ok ? "Almeno 1/8" : "Meno di 1/8: insufficiente per un locale abitabile"}">${rai > 0 ? "1/" + fmt(1 / rai, 1) : "—"}${ok ? "" : " ⚠"}</td></tr>`; }).join("")}
+    ${rooms.length ? `<tr class="tot"><td>Totale</td><td></td><td class="num">${fmt(rooms.reduce((s, x) => s + x.net, 0))}</td><td class="num">${fmt(rooms.reduce((s, x) => s + x.gross, 0))}</td><td></td><td></td><td></td></tr>` : ""}</tbody></table></div>
+    <p class="note">R.A.I. indicativo: finestre e porte vetrate sul perimetro del locale diviso la superficie netta. Per i locali abitabili il D.M. 5/7/1975 chiede almeno 1/8; bagni e ripostigli possono avere aerazione meccanica.</p>
     <div class="btns"><button class="btn" id="listCsv">Esporta elenco in CSV</button></div></div>${computoHTML()}`;
 }
 $("#panel-list")?.addEventListener("click", async e => {

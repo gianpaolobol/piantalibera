@@ -49,12 +49,19 @@ function sanitizeProject(p){
   for (const L of arr("levels")){ L.id = fix(L.id); L.name = T(L.name, 80) || "Piano"; L.elev = N(L.elev); L.height = N(L.height, 2.7) || 2.7; L.slab = N(L.slab, .25);
     if (L.roof && typeof L.roof === "object"){ L.roof = {type:["none", "flat", "gable", "hip", "shed"].includes(L.roof.type) ? L.roof.type : "none", pitch:N(L.roof.pitch, 30), overhang:N(L.roof.overhang, .5), mat:K(L.roof.mat) || "tegole", ...(L.roof.ridge === "x" || L.roof.ridge === "y" ? {ridge:L.roof.ridge} : {}), ...(["s", "n", "e", "o"].includes(L.roof.dir) ? {dir:L.roof.dir} : {})}; } else L.roof = null;
     if (L.underlay && typeof L.underlay === "object"){ const U = L.underlay; if (U.kind === "img" && !okUrl(U.src)) L.underlay = null; else for (const k of ["ox", "oy", "mpp", "k", "opacity"]) if (k in U) U[k] = N(U[k]); } }
+  // valori fisici (#56): altezze e spessori positivi, muri non nulli, aperture con misure positive dentro il muro
+  for (const L of p.levels){ if (!(L.height > 0)) L.height = 2.7; if (!(L.slab >= 0)) L.slab = .25; }
   if (!p.levels.length) p.levels.push({id:"L0", name:"Piano terra", elev:0, height:2.9, slab:.25, roof:null, underlay:null});
   for (const w of arr("walls")){ w.id = fix(w.id); w.level = fix(w.level); w.a = pt(w.a); w.b = pt(w.b); w.thick = N(w.thick, .3) || .3; w.height = Nn(w.height); for (const k of ["mat", "matA", "matB"]) if (w[k] != null) w[k] = K(w[k]); if (w.wtype != null) w.wtype = K(w.wtype); if (w.layers) w.layers = {core:N(w.layers.core), insul:N(w.layers.insul)};
     if (w.arc){ w.arc = {g:fix(w.arc.g), i:N(w.arc.i), h:N(w.arc.h), A:pt(w.arc.A), B:pt(w.arc.B)}; } }
+  p.walls = p.walls.filter(w => Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1]) >= .01);
+  for (const w of p.walls){ if (!(w.thick > 0)) w.thick = .3; w.thick = Math.min(w.thick, 3); if (w.height != null && !(w.height > 0)) w.height = null; }
   for (const r of arr("rooms")){ r.id = fix(r.id); r.level = fix(r.level); r.pts = Array.isArray(r.pts) ? r.pts.map(pt) : []; r.name = T(r.name, 80); r.mat = K(r.mat); if (r.lab) r.lab = pt(r.lab);
     if (r.ceilH != null) r.ceilH = Nn(r.ceilH); if (r.ceilMat != null) r.ceilMat = K(r.ceilMat); if (r.tile) r.tile = {scale:N(r.tile.scale, 1), rot:N(r.tile.rot), ox:N(r.tile.ox), oy:N(r.tile.oy)}; if (r.skirt) r.skirt = {h:N(r.skirt.h, .08), mat:K(r.skirt.mat) || "bianco"}; }
   for (const o of arr("openings")){ o.id = fix(o.id); o.wall = fix(o.wall); for (const k of ["t", "w", "h", "sill"]) o[k] = N(o[k]); o.type = o.type === "door" ? "door" : "window"; o.flip = N(o.flip) | 0; if (o.style != null) o.style = K(o.style); if (o.shut != null) o.shut = K(o.shut); }
+  { const len = new Map(p.walls.map(w => [w.id, Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1])]));
+    p.openings = p.openings.filter(o => len.has(o.wall));
+    for (const o of p.openings){ const L = len.get(o.wall); if (!(o.w > 0)) o.w = Math.min(.9, L); o.w = Math.min(o.w, L); if (!(o.h > 0)) o.h = o.type === "door" ? 2.1 : 1.2; if (!(o.sill >= 0)) o.sill = o.type === "door" ? 0 : .9; o.t = clamp(o.t, o.w / 2, Math.max(o.w / 2, L - o.w / 2)); } }
   for (const o of arr("objects")){ o.id = fix(o.id); o.level = fix(o.level); o.kind = K(o.kind) || "lib"; o.ref = K(o.ref); o.name = T(o.name, 120); for (const k of ["x", "y", "z", "rot"]) o[k] = N(o[k]); o.scale = N(o.scale, 1) || 1;
     if (o.p && typeof o.p === "object") for (const [k, v] of Object.entries(o.p)) o.p[k] = typeof v === "number" ? N(v) : typeof v === "boolean" ? v : K(v);
     if (o.light && typeof o.light === "object") o.light = {on:o.light.on !== false, ...(o.light.lm != null ? {lm:N(o.light.lm, 800)} : {}), ...(o.light.k != null ? {k:N(o.light.k, 3000)} : {})}; }
@@ -71,7 +78,7 @@ function sanitizeProject(p){
   if (p.site && typeof p.site === "object"){ const s = p.site; p.site = {auto:!!s.auto, city:T(s.city, 40), lat:N(s.lat, 44.494), lon:N(s.lon, 11.343), tz:N(s.tz, 1), dst:s.dst !== false, north:N(s.north), date:/^\d{4}-\d{2}-\d{2}$/.test(s.date || "") ? s.date : "2026-06-21", hour:N(s.hour, 16)}; }
   if (p.prices && typeof p.prices === "object"){ const q = {}; for (const [k, v] of Object.entries(p.prices)) if (Number.isFinite(Number(v))) q[T(k, 160)] = Number(v); p.prices = q; }
   if (p.share && typeof p.share === "object") p.share = ID_OK.test(p.share.id || "") ? {id:p.share.id, expires_at:T(p.share.expires_at, 40), mode:p.share.mode === "edit" ? "edit" : "view"} : undefined;
-  if (p.tav && typeof p.tav === "object"){ const t = p.tav; p.tav = {paper:["A4", "A3", "A2", "A1"].includes(t.paper) ? t.paper : "A3", scale:[50, 100, 200].includes(+t.scale) ? +t.scale : 100, color:!!t.color, chains:t.chains !== false, furniture:t.furniture !== false, comp:t.comp !== false, sec:{axis:t.sec?.axis === "z" ? "z" : "x", pos:N(t.sec?.pos, 5), dir:N(t.sec?.dir, 1) < 0 ? -1 : 1}}; }
+  if (p.tav && typeof p.tav === "object"){ const t = p.tav; p.tav = {paper:["A4", "A3", "A2", "A1"].includes(t.paper) ? t.paper : "A3", scale:[50, 100, 200].includes(+t.scale) ? +t.scale : 100, color:!!t.color, chains:t.chains !== false, furniture:t.furniture !== false, comp:t.comp !== false, sec:{axis:t.sec?.axis === "z" ? "z" : "x", pos:N(t.sec?.pos, 5), dir:N(t.sec?.dir, 1) < 0 ? -1 : 1}, ...(t.info && typeof t.info === "object" ? {info:{studio:T(t.info.studio, 80), committente:T(t.info.committente, 80), luogo:T(t.info.luogo, 80)}} : {})}; }
   if (p.lightsMode != null && !["auto", "on", "off"].includes(p.lightsMode)) p.lightsMode = "auto";
   return p;
 }
@@ -91,10 +98,35 @@ function migrate(p){
   if (!p.pid) p.pid = uid();
   p.version = SCHEMA_VERSION; return p;
 }
+/* Alla riapertura la raccolta Progetti (IndexedDB) può essere più aggiornata di localStorage: salvataggio rapido
+   fallito per spazio, altra scheda che ha scritto localStorage, modelli importati (che localStorage non contiene).
+   Si apre la versione più recente del progetto di questa scheda e si ricaricano i modelli importati. */
+async function restoreFromIdb(wantPid, savedT){
+  if (!window.indexedDB) return;
+  try {
+    const before = snap, pid = wantPid || P.pid, rec = await projGet(pid); if (!rec?.data) return;
+    if (snap !== before) return;   // l'utente ha già cominciato a modificare: non si cambia il progetto sotto le mani
+    const data = JSON.parse(rec.data);
+    if (pid !== P.pid || (rec.updated || 0) > savedT + 1000){
+      await openProjectData(data, {keepPid:true});
+      if (savedT && pid === P.pid) toast("Riaperta la versione più recente dalla raccolta Progetti");
+      return;
+    }
+    let n = 0;
+    for (const [id, it] of Object.entries(data.imports || {})){
+      if (importStore[id] || !P.objects.some(o => o.kind === "import" && o.ref === id)) continue;
+      pendingImports[id] = it;
+      try { if (it.file) await registerImport(id, it.file, it.opts || {unit:"auto", up:"auto"}); else if (it.source) await restoreRemote(id, it.source); delete pendingImports[id]; n++; } catch(err){ console.warn("modello importato", err); }
+    }
+    if (n){ draw2D(); rebuild3D(); }
+  } catch(e){ console.warn("raccolta progetti", e); }
+}
 function readCanvasColors(){ readColors(); draw2D(); render3D(); }
 function init(){
-  let saved = null; try { saved = JSON.parse(localStorage.getItem("pianta-libera-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v1")); } catch(e){}
-  P = migrate(saved?.levels?.length ? saved : sampleProject()); S.level = P.levels[0].id; snap = JSON.stringify(P);
+  let saved = null, savedT = 0, tabPid = null, lastPid = null;
+  try { saved = JSON.parse(localStorage.getItem(LS_P)) || JSON.parse(localStorage.getItem("pianta-aperta-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v1")); savedT = +localStorage.getItem(LS_T) || 0; lastPid = localStorage.getItem(LS_LAST); } catch(e){}
+  try { tabPid = sessionStorage.getItem(SS_PID); } catch(e){}
+  P = migrate(saved?.levels?.length ? saved : sampleProject()); S.level = P.levels[0].id; snap = snapOf(P);
   $("#projName").value = P.name; readColors(); setTool("select"); renderStatus();
   if (!saved?.levels?.length && !new URLSearchParams(location.search).get("condividi")) save();   // l'identità del progetto (pid) resta tra un'apertura e l'altra
   new ResizeObserver(() => { resize2D(); resize3D(); }).observe($("#views"));
@@ -106,6 +138,7 @@ function init(){
   loadPersonalIndex();
   const shareId = new URLSearchParams(location.search).get("condividi");
   const editKey = (location.hash.match(/(?:^#|&)modifica=([a-f0-9]{48})/) || [])[1];
-  if (shareId && editKey) enterGuest(shareId, editKey); else if (shareId) enterViewer(shareId); else { setTimeout(queueIdbSave, 2500); loadGallery(); }
+  if (shareId && editKey) enterGuest(shareId, editKey); else if (shareId) enterViewer(shareId);
+  else { restoreFromIdb(tabPid || lastPid, savedT).finally(() => { idbReady = true; setTimeout(queueIdbSave, 2500); }); loadGallery(); }
 }
 init();
