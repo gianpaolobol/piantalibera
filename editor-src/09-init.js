@@ -91,10 +91,35 @@ function migrate(p){
   if (!p.pid) p.pid = uid();
   p.version = SCHEMA_VERSION; return p;
 }
+/* Alla riapertura la raccolta Progetti (IndexedDB) può essere più aggiornata di localStorage: salvataggio rapido
+   fallito per spazio, altra scheda che ha scritto localStorage, modelli importati (che localStorage non contiene).
+   Si apre la versione più recente del progetto di questa scheda e si ricaricano i modelli importati. */
+async function restoreFromIdb(wantPid, savedT){
+  if (!window.indexedDB) return;
+  try {
+    const before = snap, pid = wantPid || P.pid, rec = await projGet(pid); if (!rec?.data) return;
+    if (snap !== before) return;   // l'utente ha già cominciato a modificare: non si cambia il progetto sotto le mani
+    const data = JSON.parse(rec.data);
+    if (pid !== P.pid || (rec.updated || 0) > savedT + 1000){
+      await openProjectData(data, {keepPid:true});
+      if (savedT && pid === P.pid) toast("Riaperta la versione più recente dalla raccolta Progetti");
+      return;
+    }
+    let n = 0;
+    for (const [id, it] of Object.entries(data.imports || {})){
+      if (importStore[id] || !P.objects.some(o => o.kind === "import" && o.ref === id)) continue;
+      pendingImports[id] = it;
+      try { if (it.file) await registerImport(id, it.file, it.opts || {unit:"auto", up:"auto"}); else if (it.source) await restoreRemote(id, it.source); delete pendingImports[id]; n++; } catch(err){ console.warn("modello importato", err); }
+    }
+    if (n){ draw2D(); rebuild3D(); }
+  } catch(e){ console.warn("raccolta progetti", e); }
+}
 function readCanvasColors(){ readColors(); draw2D(); render3D(); }
 function init(){
-  let saved = null; try { saved = JSON.parse(localStorage.getItem("pianta-libera-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v1")); } catch(e){}
-  P = migrate(saved?.levels?.length ? saved : sampleProject()); S.level = P.levels[0].id; snap = JSON.stringify(P);
+  let saved = null, savedT = 0, tabPid = null, lastPid = null;
+  try { saved = JSON.parse(localStorage.getItem(LS_P)) || JSON.parse(localStorage.getItem("pianta-aperta-v2")) || JSON.parse(localStorage.getItem("pianta-aperta-v1")); savedT = +localStorage.getItem(LS_T) || 0; lastPid = localStorage.getItem(LS_LAST); } catch(e){}
+  try { tabPid = sessionStorage.getItem(SS_PID); } catch(e){}
+  P = migrate(saved?.levels?.length ? saved : sampleProject()); S.level = P.levels[0].id; snap = snapOf(P);
   $("#projName").value = P.name; readColors(); setTool("select"); renderStatus();
   if (!saved?.levels?.length && !new URLSearchParams(location.search).get("condividi")) save();   // l'identità del progetto (pid) resta tra un'apertura e l'altra
   new ResizeObserver(() => { resize2D(); resize3D(); }).observe($("#views"));
@@ -106,6 +131,7 @@ function init(){
   loadPersonalIndex();
   const shareId = new URLSearchParams(location.search).get("condividi");
   const editKey = (location.hash.match(/(?:^#|&)modifica=([a-f0-9]{48})/) || [])[1];
-  if (shareId && editKey) enterGuest(shareId, editKey); else if (shareId) enterViewer(shareId); else { setTimeout(queueIdbSave, 2500); loadGallery(); }
+  if (shareId && editKey) enterGuest(shareId, editKey); else if (shareId) enterViewer(shareId);
+  else { restoreFromIdb(tabPid || lastPid, savedT).finally(() => { idbReady = true; setTimeout(queueIdbSave, 2500); }); loadGallery(); }
 }
 init();
