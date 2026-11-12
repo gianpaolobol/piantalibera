@@ -258,7 +258,9 @@ function rebuildNow(){
       const gr = fresh.children.find(c => c.userData.cat === "ground"); if (gr) ground3D = gr; }
     if (!S.ground && ground3D){ ground3D.geometry.dispose(); ground3D = null; }
     const root = new THREE.Group(); root.name = P.name || "Progetto"; const roof = new THREE.Group(); roof.name = "Copertura";
-    for (const L of P.levels){ const c = LV3D.get(L.id); if (!c) continue; root.add(c.group); for (const m of c.roofs) roof.add(m); }
+    for (const L of P.levels){ const c = LV3D.get(L.id); if (!c) continue; root.add(c.group); for (const m of c.roofs) roof.add(m);
+      // luci accese o spente dipendono dall'ora e dalla modalità, non dai dati del piano: si aggiornano anche sui piani riusati
+      if (!changed.has(L.id)) for (const ch of c.group.children){ const id = ch.userData?.objId; if (!id) continue; const o = P.objects.find(x => x.id === id); if (o) decorateObject3D(ch, o); } }
     if (roof.children.length) root.add(roof); if (ground3D) root.add(ground3D);
     modelGroup = root; scene.add(modelGroup);
     applyVisibility(); placeSun(); render3D(); if (typeof afterRebuild3D === "function") afterRebuild3D();
