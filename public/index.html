@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-xLCh+r4iSrcyhsiuB+VOKMYq7naFkTequA2/+AMw4Lw=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ka4VHl9DvjYBYfvXcYsPtXXP5pQeKC74lERCV5vQPcc=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -323,6 +323,8 @@ body.compact .hud{bottom:52px}
 .f3row.sel{background:var(--accent-soft)}.f3row .note{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0}
 .btn.mini{min-height:30px;padding:2px 8px}
 .photo-ov{position:absolute;inset:0;pointer-events:none;display:flex;justify-content:center;z-index:2}.photo-ov img{height:100%;width:auto;max-width:none}
+.no3d{position:absolute;inset:12px;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:20px;background:var(--panel, #fff);color:var(--ink, #222);border:1px solid var(--line, #ccc);border-radius:10px;font-size:14px;line-height:1.45;text-align:center;z-index:5}
+.no3d b{font-size:15px}
 </style>
 
 <div id="app">
@@ -957,7 +959,7 @@ const thumbCache = {};
 let thumbR = null;
 function thumbRenderer(){
   if (thumbR) return thumbR;
-  const r = new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true});
+  const r = NO_WEBGL ? inertObject() : new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true});
   r.setPixelRatio(1); r.setSize(THUMB.w, THUMB.h); r.outputEncoding = THREE.sRGBEncoding; r.toneMapping = THREE.ACESFilmicToneMapping;
   r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
   const sc = new THREE.Scene(), pm = new THREE.PMREMGenerator(r); sc.environment = pm.fromScene(new THREE.RoomEnvironment(), .04).texture;
@@ -1028,7 +1030,17 @@ const wallsOf = lid => P.walls.filter(w => w.level === lid);
 const wallById = id => P.walls.find(w => w.id === id);
 
 const c3d = $("#c3d");
-const renderer = new THREE.WebGLRenderer({canvas:c3d, antialias:true, preserveDrawingBuffer:true});
+/* Senza WebGL (PC senza accelerazione grafica, macchine virtuali, desktop remoto) l'editor resta usabile in pianta:
+   il renderer diventa un oggetto inerte che accetta ogni chiamata, e la vista 3D mostra un messaggio (#67). */
+function inertObject(){ const h = { get:(t, k) => k === Symbol.toPrimitive ? () => 0 : k === "then" ? undefined : k in t ? t[k] : (t[k] = new Proxy(function(){}, h)),
+  apply:() => new Proxy(function(){}, h), construct:() => new Proxy(function(){}, h), set:(t, k, v) => { t[k] = v; return true; } }; return new Proxy(function(){}, h); }
+let NO_WEBGL = false;
+const renderer = (() => { try { const r = new THREE.WebGLRenderer({canvas:c3d, antialias:true, preserveDrawingBuffer:true}); if (!r.getContext()) throw new Error("WebGL"); return r; }
+  catch(e){ NO_WEBGL = true; console.warn("WebGL non disponibile: vista 3D disattivata", e?.message || e); return inertObject(); } })();
+if (NO_WEBGL) queueMicrotask(() => {
+  const box = document.createElement("div"); box.className = "no3d"; box.setAttribute("role", "status");
+  box.innerHTML = "<b>La vista 3D non è disponibile su questo dispositivo.</b><span>Il browser non può usare la grafica 3D (WebGL): capita su computer senza accelerazione grafica, in macchine virtuali o in desktop remoto. La pianta, le tavole, il computo e le esportazioni funzionano. Per il 3D: attiva l'accelerazione hardware nelle impostazioni del browser o aggiorna i driver della scheda video.</span>";
+  c3d.parentElement.appendChild(box); });
 renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1;
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
@@ -5607,7 +5619,7 @@ async function panoJPEG(cv){
 }
 /* visore 360° nella pagina */
 function openPanoViewer(cv){
-  closePanoViewer();
+  closePanoViewer(); if (NO_WEBGL){ toast("Il visore 360° richiede la grafica 3D (WebGL), non disponibile su questo dispositivo", true); return; }
   const d = document.createElement("div"); d.id = "panoBox"; d.className = "help pano"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Panorama 360°");
   d.innerHTML = `<div class="pano-in"><header><h3>Panorama 360°</h3><span class="note">Trascina per guardarti intorno · rotella per lo zoom</span><button class="btn" id="panoSave">Scarica JPG</button><button class="btn" id="panoClose" aria-label="Chiudi">✕</button></header><canvas id="panoCv"></canvas></div>`;
   document.body.appendChild(d);
@@ -6574,6 +6586,9 @@ function openPrintPreview(){
       ${rows.some(r => !r.fits) ? `<p class="note warn">Alcuni pezzi superano il piatto: scegli una scala più piccola o separa i piani (scheda Esporta).</p>` : `<p class="note">Tutti i pezzi entrano nel piatto.</p>`}
       <p class="note">Il piatto in figura è a grandezza reale; i pezzi sono già appoggiati e distanziati come nel file 3MF.</p></div></div></div>`;
   document.body.appendChild(d);
+  if (NO_WEBGL){ $("#prCv").replaceWith(Object.assign(document.createElement("p"), {className:"note", textContent:"Anteprima 3D non disponibile senza WebGL: le misure e il file 3MF restano validi."}));
+    d.addEventListener("click", e => { if (e.target === d || e.target.closest("#prClose")) closePrintPreview(); });
+    $("#prPrinter").addEventListener("change", e => { PREFS.printer = +e.target.value; savePrefs(); openPrintPreview(); }); return; }
   const cv = $("#prCv"), r = new THREE.WebGLRenderer({canvas:cv, antialias:true}); r.outputEncoding = THREE.sRGBEncoding; r.setClearColor(isDark() ? "#1b2124" : "#eef0ee");
   const sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(40, 1, 1, 5000); sc.add(new THREE.HemisphereLight("#ffffff", "#8a8f8a", .9)); const dl = new THREE.DirectionalLight("#ffffff", .9); dl.position.set(200, 400, 300); sc.add(dl);
   const grp = new THREE.Group(); sc.add(grp); let ox = 5, oz = 5, rowD = 0;   // pezzi disposti a file sul piatto

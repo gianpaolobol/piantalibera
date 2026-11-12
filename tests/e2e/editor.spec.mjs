@@ -574,3 +574,4 @@ test("nuova versione pubblicata: avviso con Aggiorna", async ({ page }) => {
   await page.evaluate(() => checkNewVersion(true)); await page.waitForTimeout(500);
   await expect(page.locator("#newVersion")).toHaveCount(0);
 });
+
