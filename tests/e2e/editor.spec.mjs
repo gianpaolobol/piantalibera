@@ -852,3 +852,67 @@ test("revisione del riconoscimento: dubbi in giallo, togli e cambia tipo, le cor
   await expect(page.locator(".a3rep")).toContainText("Creati 5 muri, 3 porte, 2 finestre e 2 locali");
   await expect(page.locator(".a3rep")).toContainText("1 correzione della revisione applicata");
 });
+
+test("selezione nel 3D: muro, apertura e locale con il suo solaio sono evidenziati e hanno le proprietà", async ({ page }) => {
+  const errors = await open(page);
+  // punto dello schermo di un punto del modello (x, y quota, z = y di pianta)
+  const scr = (x, y, z) => page.evaluate(([x, y, z]) => { const v = new THREE.Vector3(x, y, z).project(camera), r = c3d.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }, [x, y, z]);
+  const clic = async p => { await page.mouse.move(p[0], p[1]); await page.mouse.down(); await page.mouse.up(); await page.waitForTimeout(150); };
+  await page.click('#viewSeg button[data-v="3d"]');
+  await page.waitForTimeout(400);
+  // un muro che la camera vede di faccia: il primo colpito dal raggio verso il centro del suo lato senza aperture
+  const tgt = await page.evaluate(() => {
+    for (const w of P.walls.filter(w => w.level === S.level)){ const f = wallFrame(w), L = level(w.level);
+      for (const k of [.15, .5, .85]){ const s = k * f.len; if (P.openings.some(o => o.wall === w.id && Math.abs(s - o.t) < o.w / 2 + .1)) continue;
+        for (const sd of [1, -1]){ const x = w.a[0] + f.ux*s + f.nx*w.thick/2*sd, z = w.a[1] + f.uy*s + f.ny*w.thick/2*sd, y = L.elev + 1.2;
+          const v = new THREE.Vector3(x, y, z), dir = v.clone().sub(camera.position).normalize(), rc = new THREE.Raycaster(camera.position, dir);
+          const h = rc.intersectObject(modelGroup, true).find(h => h.object.visible && !["glass", "ground", "roof", "gable", "ceiling"].includes(h.object.userData.cat));
+          const p = v.clone().project(camera);
+          if (h && h.object.userData.cat === "wall" && h.point.distanceTo(v) < .05 && Math.abs(p.x) < .9 && Math.abs(p.y) < .9) return {id:w.id, x, y, z}; } } }
+    return null; });
+  expect(tgt, "un muro visibile nel 3D").not.toBeNull();
+  await clic(await scr(tgt.x, tgt.y, tgt.z));
+  expect(await page.evaluate(() => S.sel)).toMatchObject({type:"wall", id:tgt.id});
+  expect(await page.evaluate(() => raySel.children.filter(c => c.isMesh).length), "sagoma del muro nel 3D").toBe(1);
+  await expect(page.locator("#panel-props")).toContainText(/Muro/i);
+  // pavimento: locale e solaio
+  await page.evaluate(() => { S.ceilings = false; applyVisibility(); render3D(); });
+  const fl = await page.evaluate(() => {   // un punto di pavimento visibile dalla camera, in un locale del piano
+    const skip = ["glass", "ground", "roof", "gable", "ceiling"];
+    for (const r of P.rooms.filter(r => r.level === S.level)){ const xs = r.pts.map(p => p[0]), ys = r.pts.map(p => p[1]), y = level(r.level).elev;
+      for (let i = 1; i < 10; i++) for (let j = 1; j < 10; j++){ const x = Math.min(...xs) + (Math.max(...xs) - Math.min(...xs)) * i / 10, z = Math.min(...ys) + (Math.max(...ys) - Math.min(...ys)) * j / 10;
+        if (!inPoly([x, z], r.pts)) continue; const v = new THREE.Vector3(x, y, z), p = v.clone().project(camera); if (Math.abs(p.x) > .85 || Math.abs(p.y) > .85) continue;
+        const h = new THREE.Raycaster(camera.position, v.clone().sub(camera.position).normalize()).intersectObject(modelGroup, true).find(h => h.object.visible && !skip.includes(h.object.userData.cat));
+        if (h && h.object.userData.cat === "floor" && h.point.distanceTo(v) < .05) return {id:r.id, x, y, z}; } }
+    return null; });
+  expect(fl, "un pavimento visibile nel 3D").not.toBeNull();
+  await clic(await scr(fl.x, fl.y, fl.z));
+  expect(await page.evaluate(() => S.sel)).toMatchObject({type:"room", id:fl.id});
+  await expect(page.locator("#slabSec")).toBeVisible();
+  const vol0 = await page.evaluate(() => { const g = raySel.children.find(c => c.isMesh).geometry; g.computeBoundingBox(); return g.boundingBox.max.y - g.boundingBox.min.y; });
+  await page.fill("#rSlabT", "40"); await page.locator("#rSlabT").press("Enter"); await page.locator("#rSlabT").blur?.();
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(id => P.rooms.find(r => r.id === id).slab.t, fl.id)).toBeCloseTo(.4, 5);
+  const vol1 = await page.evaluate(() => { const g = raySel.children.find(c => c.isMesh).geometry; g.computeBoundingBox(); return g.boundingBox.max.y - g.boundingBox.min.y; });
+  expect(vol1).toBeGreaterThan(vol0 + .1);
+  await page.selectOption("#rSlabK", "legno"); await page.waitForTimeout(200);
+  expect(await page.evaluate(id => P.rooms.find(r => r.id === id).slab, fl.id)).toEqual({t:.4, k:"legno"});
+  // spessore fuori misura: rifiutato
+  await page.fill("#rSlabT", "900"); await page.locator("#rSlabT").press("Enter"); await page.waitForTimeout(200);
+  expect(await page.evaluate(id => P.rooms.find(r => r.id === id).slab.t, fl.id)).toBeCloseTo(.4, 5);
+  expect(errors).toEqual([]);
+});
+
+test("Importa pianta DWG/DXF: il riconoscimento è la scelta predefinita e porta alla revisione", async ({ page }) => {
+  const errors = await open(page);
+  await page.evaluate(() => { P = sampleProject(); P.walls = []; P.rooms = []; P.openings = []; P.objects = []; commit(); });
+  await page.click('[data-tab="import"]');
+  await page.setInputFiles("#fPlan", { name: "tavola-casa.dxf", mimeType: "application/dxf", buffer: Buffer.from(tavolaDXF()) });
+  await expect(page.locator("#dxM")).toHaveValue("auto", { timeout: 15_000 });
+  await expect(page.locator("#dxNote")).toContainText("spessore dalle due linee");
+  await page.click("#dxGo");
+  await expect(page.locator(".a3rev")).toContainText("5 muri, 2 porte, 3 finestre, 2 locali", { timeout: 15_000 });
+  await page.click("#a3Make");
+  expect(await page.evaluate(() => P.walls.filter(w => w.level === S.level).length)).toBe(5);
+  expect(errors).toEqual([]);
+});

@@ -54,7 +54,10 @@ test("IFC4 della stanza di riferimento letto con web-ifc: elementi, volume dei m
   assert.equal(props.filter(x => x === "Pset_WallCommon").length, 4);
   assert.deepEqual([props.includes("Pset_DoorCommon"), props.includes("Pset_WindowCommon")], [true, true]);
   const ext = ids(id, WI.IFCPROPERTYSINGLEVALUE).map(x => api.GetLine(id, x)).filter(p => p.Name.value === "IsExternal");
-  assert.equal(ext.length, 6); assert.ok(ext.every(p => p.NominalValue.value === "T" || p.NominalValue.value === true));
+  const isT = p => p.NominalValue.value === "T" || p.NominalValue.value === true;
+  assert.equal(ext.filter(isT).length, 6); assert.equal(ext.filter(p => !isT(p)).length, 1);   // 6 elementi esterni + il solaio (interno)
+  const refs = ids(id, WI.IFCPROPERTYSINGLEVALUE).map(x => api.GetLine(id, x)).filter(p => p.Name.value === "Reference").map(p => p.NominalValue.value);
+  assert.ok(refs.some(r => /^Solaio (laterocemento|vespaio) \d+ cm$/.test(r)), "riferimento del solaio");
   const q = ids(id, WI.IFCQUANTITYAREA).map(x => api.GetLine(id, x)), nfa = q.find(x => x.Name.value === "NetFloorArea").AreaValue.value;
   near(nfa, 4.7 * 3.7, 1e-6);
   const nsa = q.filter(x => x.Name.value === "NetSideArea").reduce((s, x) => s + x.AreaValue.value, 0); near(nsa, 45.03, 1e-6);

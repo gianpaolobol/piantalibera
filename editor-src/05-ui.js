@@ -79,7 +79,7 @@ function renderInspector(){
       const ra = roomAreas(sel);
       h += `<div class="sec"><h3>Locale</h3>${F("rName","Nome",sel.name)}<dl class="kv"><dt>Superficie netta</dt><dd>${fmt(A)} m²</dd><dt>Superficie lorda</dt><dd>${fmt(ra.gross)} m² <small>con metà muri</small></dd><dt>Perimetro</dt><dd>${fmtL(ra.per)}</dd><dt>Volume netto</dt><dd>${fmt(A*L.height,1)} m³</dd></dl>
         <label class="chk"><input type="checkbox" id="rNoCeil" ${sel.noCeiling?"checked":""}> Senza soffitto (vista dall'alto)</label><p class="note">L'etichetta del locale si trascina in pianta.</p>
-        <span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, sel.mat, "rm")}${roomExtraHTML(sel)}<div class="btns"><button class="btn" id="camRoom">Vista interna</button><button class="btn danger" id="delSel">Elimina</button></div></div>`; }
+        <span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, sel.mat, "rm")}${roomExtraHTML(sel)}<div class="btns"><button class="btn" id="camRoom">Vista interna</button><button class="btn danger" id="delSel">Elimina</button></div></div>${slabHTML(sel, L, A)}`; }
     if (S.sel.type === "object"){
       const it = sel.kind === "lib" ? LIBMAP[libRef(sel.ref)] : null, imp = sel.kind === "import" ? importStore[sel.ref] : null, fp = objFootprint(sel);
       h += `<div class="sec"><h3>${it ? esc(it.cat) : imp?.source?.type === "polyhaven" ? "Poly Haven" : "Modello importato"}</h3>${it ? `<div class="libsel">${thumbImg(it.ref)}<div><b>${esc(it.nome)}</b><small>${esc(it.dim)}${it.credit ? ` · ${esc(it.credit)}` : ""}</small></div></div>` : ""}${F("obName","Nome",sel.name)}<div class="row">${F("obX","X (m)",fmt(sel.x),'inputmode="decimal"')}${F("obY","Y (m)",fmt(sel.y),'inputmode="decimal"')}</div>
@@ -240,3 +240,11 @@ let autoLabelQ = 0; new MutationObserver(() => { if (!autoLabelQ) autoLabelQ = r
 // strumenti del ricalco solo quando il piano ha una base importata (#59, U3)
 function syncUnderlayTools(){ const on = !!level()?.underlay; for (const b of document.querySelectorAll('[data-tool="calib"], [data-tool="moveunder"]')) b.hidden = !on; }
 function refresh(){ syncUnderlayTools(); renderLevels(); renderInspector(); draw2D(); rebuild3D(); $("#undoBtn").disabled = !past.length; $("#redoBtn").disabled = !future.length; if (S.tab === "export") renderExport(); if (S.tab === "list") renderList(); renderCamSel(); }
+
+/* Solaio sotto il locale: elemento con le sue proprietà (spessore, struttura), evidenziato nel 3D quando il locale è selezionato */
+const SLAB_KINDS = [["laterocemento", "Laterocemento"], ["ca", "Calcestruzzo armato pieno"], ["predalles", "Predalles / prefabbricato"], ["legno", "Legno (travi e tavolato)"], ["acciaio", "Acciaio e lamiera grecata"], ["vespaio", "Su vespaio (controterra)"]];
+function slabOf(r, L = level(r.level)){ return {t:r.slab?.t ?? L.slab, k:r.slab?.k || (L.elev <= .01 ? "vespaio" : "laterocemento")}; }
+function slabHTML(r, L, A){ const s = slabOf(r, L);
+  return `<div class="sec" id="slabSec"><h3>Solaio</h3><div class="row">${F("rSlabT", "Spessore (cm)", fmt(s.t * 100, 0), 'inputmode="decimal"')}<div class="f"><label class="lbl" for="rSlabK">Struttura</label><select id="rSlabK" class="inp">${SLAB_KINDS.map(([k, n]) => `<option value="${k}" ${s.k === k ? "selected" : ""}>${n}</option>`).join("")}</select></div></div>
+    <dl class="kv"><dt>Estradosso</dt><dd>${fmt(L.elev, 2)} m</dd><dt>Intradosso</dt><dd>${fmt(L.elev - s.t, 2)} m</dd><dt>Superficie</dt><dd>${fmt(A)} m²</dd><dt>Volume</dt><dd>${fmt(A * s.t, 2)} m³</dd></dl>
+    <p class="note">Nel 3D un clic sul pavimento seleziona locale e solaio.</p></div>`; }

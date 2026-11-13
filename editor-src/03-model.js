@@ -156,7 +156,7 @@ function buildModel(opts={}){
     for (const r of P.rooms.filter(r=>r.level===L.id)){
       if (r.pts.length < 3) continue;
       const sh = roomShape(r, holesUp);
-      const g = new THREE.ExtrudeGeometry(sh, {depth:L.slab, bevelEnabled:false}); g.rotateX(Math.PI/2); g.translate(0, e0, 0);
+      const g = new THREE.ExtrudeGeometry(sh, {depth:r.slab?.t ?? L.slab, bevelEnabled:false}); g.rotateX(Math.PI/2); g.translate(0, e0, 0);
       add(L.id, r.mat, "floor", g, r.tile ? r : null);
       if (!opts.print && !r.noCeiling){ const csh = roomShape(r, holesHere), cm = r.ceilMat || (r.ceilH ? "cartongesso" : "soffitto");
         if (r.ceilH){ const cg = new THREE.ExtrudeGeometry(csh, {depth:.06, bevelEnabled:false}); cg.rotateX(Math.PI/2); cg.translate(0, e0 + r.ceilH + .06, 0); add(L.id, cm, "ceiling", cg); }

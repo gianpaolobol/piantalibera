@@ -258,16 +258,16 @@ function renderImport(){
 function dxfPanel(){ const d = dxfPending;
   return `<div class="exp" id="dxfBox"><header><h4>${esc(d.name)}</h4><span class="tag">${d.count} entità</span></header>
     <div class="row"><div class="f"><span class="lbl">Unità del disegno</span><select id="dxU" class="inp"><option value="1">Metri</option><option value="0.01">Centimetri</option><option value="0.001">Millimetri</option></select></div>
-    <div class="f"><span class="lbl">Come usarlo</span><select id="dxM" class="inp"><option value="vec">Base di ricalco</option><option value="walls">Linee → muri (asse)</option></select></div></div>
+    <div class="f"><span class="lbl">Come usarlo</span><select id="dxM" class="inp"><option value="auto" ${d.mode==="auto"?"selected":""}>Riconosci muri, porte, finestre e locali</option><option value="vec" ${d.mode==="vec"?"selected":""}>Solo base di ricalco</option><option value="walls" ${d.mode==="walls"?"selected":""}>Linee singole → muri (asse, spessore unico)</option></select></div></div>
     <span class="lbl">Layer da usare</span><div class="layers">${Object.entries(d.layers).map(([n,c])=>`<label class="chk"><input type="checkbox" data-layer="${esc(n)}" ${d.sel.has(n)?"checked":""}> ${esc(n)} <span class="tag">${c}</span></label>`).join("")}</div>
     <div id="dxThickRow" ${d.mode==="walls"?"":"hidden"}>${F("dxT","Spessore muri (m)","0,30",'inputmode="decimal"')}</div>
-    <p class="note">«Linee → muri» va bene per disegni a linea singola sull'asse del muro. Per piante con le due facce del muro usa la base di ricalco.</p>
+    <p class="note" id="dxNote">${d.mode === "auto" ? "Consigliato: ogni muro prende il suo spessore dalle due linee del disegno; porte, finestre e locali vengono riconosciuti e li rivedi prima di creare il modello." : d.mode === "walls" ? "Solo per disegni a linea singola sull'asse del muro: tutti i muri avranno lo stesso spessore." : "La pianta resta sotto come base da ricalcare a mano."}</p>
     <div class="btns"><button class="btn primary" id="dxGo">Importa</button><button class="btn" id="dxNo">Annulla</button></div></div>`; }
 const PI = $("#panel-import");
 PI.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
   if (b.id === "imPlan") $("#fPlan").click(); if (b.id === "imModel") $("#fModel").click(); if (b.id === "imProj") $("#fProj").click(); if (b.id === "imTex") $("#fTex").click();
   if (b.id === "dxNo"){ dxfPending = null; renderImport(); }
-  if (b.id === "dxGo") applyDXF();
+  if (b.id === "dxGo"){ if (dxfPending.mode === "auto"){ const f = dxfPending.file; dxfPending = null; a3FromImport(f); } else applyDXF(); }
   if (b.dataset.mdel){ const k = b.dataset.mdel; const used = P.walls.some(w=>w.mat===k) || P.rooms.some(r=>r.mat===k) || P.levels.some(l=>l.roof?.mat===k); if (used){ toast("Il materiale è in uso: cambialo prima su muri, pavimenti o coperture", true); return; } delete P.materials[k]; invalidateMat(k); commit(); renderImport(); }
   if (b.dataset.phh) pickPHHdri(b.dataset.phh, b.dataset.nome);
   if (b.dataset.pht) pickPHTexture(b.dataset.pht, b.dataset.nome);
@@ -278,7 +278,7 @@ PI.addEventListener("change", e => { const t = e.target;
   if (t.id === "phHq") hydratePHList("hdris"); if (t.id === "phTq") hydratePHList("textures");
   if (!dxfPending) return;
   if (t.dataset.layer){ t.checked ? dxfPending.sel.add(t.dataset.layer) : dxfPending.sel.delete(t.dataset.layer); }
-  if (t.id === "dxM"){ dxfPending.mode = t.value; $("#dxThickRow").hidden = t.value !== "walls"; }
+  if (t.id === "dxM"){ dxfPending.mode = t.value; renderImport(); }
   if (t.id === "dxU") dxfPending.unit = +t.value;
 });
 const readAs = (f, how) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r[how](f); });
@@ -373,7 +373,7 @@ async function loadDXF(f){
   const {segs, unit} = flattenCAD(await readCAD(f));
   if (!segs.length) throw new Error("nessuna linea trovata nel disegno");
   const layers = {}; segs.forEach(s => layers[s[4]] = (layers[s[4]]||0) + 1);
-  dxfPending = {name:f.name, segs, layers, sel:new Set(Object.keys(layers)), mode:"vec", unit, count:segs.length};
+  dxfPending = {name:f.name, segs, layers, sel:new Set(Object.keys(layers)), mode:"auto", unit, count:segs.length, file:f};
   S.tab = "import"; renderTabs();
 }
 /** Unità del disegno quando l'intestazione non la dice: prima dai raggi delle porte (~0,8–1 m), poi dalla larghezza. */

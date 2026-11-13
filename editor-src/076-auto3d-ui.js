@@ -51,6 +51,10 @@ function a3Cluster(){
   const plans = all.filter(c => c.role === "pianta"); plans.slice(1).forEach(c => { if (c.reason !== "nome del file" && !c.reason.startsWith("etichetta")) c.role = "ignora"; });
   A3S.clusters = all;
 }
+/** Dal pannello «Importa pianta» (DWG/DXF): stesso file al riconoscimento, poi revisione. */
+async function a3FromImport(f){ Object.assign(A3S, {files:[], clusters:[], layersOff:null, report:null, preview:null, dec:new Map()});
+  await a3AddFiles([f]); if (A3S.files.length && A3S.clusters.some(c => c.role === "pianta")) a3Recognize(); else renderImport();
+  $("#a3Box")?.scrollIntoView({block:"start"}); }
 async function a3AddFiles(files){
   for (const f of files){
     try { busy(`Leggo ${f.name}…`); const flat = flattenCAD(await readCAD(f)); if (!flat.segs.length) throw new Error("nessuna linea"); A3S.files.push({name:f.name, flat, unit:flat.unit}); }

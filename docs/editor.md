@@ -95,7 +95,8 @@ Fase 1 completata.
 
 ## 3D e pannelli (fase 2)
 
-- **Nel 3D**: clic su un oggetto o muro = selezione condivisa con la pianta (Maiusc aggiunge); trascinamento di un oggetto sul suo piano con aggancio alla griglia.
+- **Nel 3D**: clic su oggetto, muro, porta/finestra o pavimento = selezione condivisa con la pianta (Maiusc aggiunge); trascinamento di un oggetto sul suo piano con aggancio alla griglia. Dal 13/11 la selezione si vede anche nel 3D: muri, aperture e solai hanno una sagoma colorata in trasparenza (visibile anche dietro altri elementi), gli oggetti il riquadro. Il clic usa ciò che si è colpito: sul muro sceglie il muro o l'apertura a quell'altezza, sul pavimento il locale (non più quote o arredi vicini in pianta).
+- **Solaio** (13/11): ogni locale ha il suo solaio, nella scheda del locale: spessore, struttura (laterocemento, calcestruzzo armato, predalles, legno, acciaio e lamiera, vespaio), estradosso, intradosso, superficie e volume. Lo spessore cambia il 3D e l'IFC (`IfcSlab` per locale, `.BASESLAB.` se su vespaio, `Pset_SlabCommon` e quantità).
 - **A piedi**: W A S D o frecce (Maiusc corre), trascinare per guardarsi intorno, Esc per uscire; l'osservatore compare in pianta.
 - **Camere salvate**: menu «Camere…» nella barra 3D (salva, richiama, rinomina ed elimina anche nella sezione Piano); salvate nel progetto (`P.cameras`).
 - **Metro 3D**: due clic sulle superfici, distanza a schermo; «Metro» di nuovo per chiudere.
@@ -133,6 +134,8 @@ Fase 1 completata.
 ## Da pianta e prospetti al 3D
 
 Scheda Importa → «Da pianta e prospetti al 3D». Si caricano uno o più file DWG/DXF; i disegni della tavola vengono separati per vicinanza e riconosciuti dalle etichette («PIANTA…», «PROSPETTO SUD…»), dal nome del file o dal contenuto. Ogni disegno ha un'anteprima e un ruolo modificabile.
+
+Dal 13/11 anche «Importa pianta» con un DWG/DXF propone per prima questa strada («Riconosci muri, porte, finestre e locali»): ogni muro prende il suo spessore dalle due linee. Restano come alternative «Solo base di ricalco» e «Linee singole → muri» (spessore unico, solo per disegni a linea d'asse).
 
 - **Muri**: coppie di linee parallele a distanza tra 5 e 70 cm; restano solo gli spessori ricorrenti nel disegno (istogramma pesato sulla lunghezza) e i muri collegati agli altri. Le estremità si allungano fino all'asse del muro che incontrano.
 - **Aperture**: vuoti tra 45 cm e 3,2 m lungo un muro; porta se c'è un arco di raggio compatibile, finestra se nel vuoto ci sono linee del vetro.
