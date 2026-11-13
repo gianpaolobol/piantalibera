@@ -19,7 +19,7 @@ const A3 = (() => {
     if (m && s.length <= 12) return SIDES[m[1]];
     return null;
   }
-  const isPlanText = t => /\b(pianta|plan|piano terra|piano primo|floor)\b/i.test(cleanText(t));
+  const isPlanText = t => /\b(pianta|plan|planimetria|floor|piano\s+(terra|rialzato|primo|secondo|terzo|quarto|quinto|sesto|settimo|interrato|seminterrato|ammezzato|sottotetto|mansarda|tipo|attico|\d+))\b/i.test(cleanText(t));
   /** Raggruppa i segmenti in disegni separati (pianta, prospetti…) per vicinanza. drawing: {segs, arcs, texts} in metri, y verso l'alto. */
   function clusterDrawings(dr, gap = 1.2){
     const n = dr.segs.length, par = Int32Array.from({length:n}, (_, i) => i);
@@ -52,12 +52,18 @@ const A3 = (() => {
       const sloped = segs.filter(s => { const a = Math.abs(Math.atan2(s[3]-s[1], s[2]-s[0])) / D2R, b = Math.min(a, 180 - a); return b > 8 && b < 70 && segLen(s) > .8; }).length;
       const ground = segs.some(s => Math.abs(s[3]-s[1]) < .01 && segLen(s) > .7 * w && Math.min(s[1], s[3]) < c.bbox[1] + .05);
       c.n = segs.length; c.w = w; c.h = h;
-      c.guess = side ? side : label && isPlanText(label.text) ? "pianta" : doorArcs >= 1 && !sloped ? "pianta" : (ground && h < 25) ? "prospetto" : "ignora";
-      c.reason = label ? `etichetta «${cleanText(label.text).slice(0, 40)}»` : doorArcs ? `${doorArcs} archi di porta` : ground ? "linea di terra" : "";
+      // tipo del disegno: le prove forti di una pianta (ante delle porte, superfici scritte) vincono sull'etichetta di un disegno vicino
+      const leaves = c.arcs.filter(a => a.r > .5 && a.r < 1.6 && (a.sweep == null || Math.abs(a.sweep - Math.PI / 2) < .25)).length;
+      const areaTxt = c.texts.filter(t => /\d\s*(mq|m2|m²)\b|\b(mq|m2|m²)\s*\d/i.test(cleanText(t.text))).length;
+      const strongPlan = leaves >= 3 || areaTxt >= 2 || (leaves >= 1 && sloped <= .15 * segs.length);
+      c.kind = strongPlan || (label && isPlanText(label.text) && !side) ? "pianta" : side || (ground && h < 25) ? "prospetto" : "altro";
+      c.evidence = {leaves, areaTxt, sloped, label:label ? (side ? "lato" : isPlanText(label.text) ? "pianta" : "") : "", ground:!!(ground && h < 25)};
+      c.guess = c.kind === "pianta" ? "pianta" : side ? side : c.kind === "prospetto" ? "prospetto" : "ignora";
+      c.reason = strongPlan ? (areaTxt >= 2 ? `${areaTxt} superfici scritte` : `${leaves} porte`) : label ? `etichetta «${cleanText(label.text).slice(0, 40)}»` : ground ? "linea di terra" : "";
     }
     // una sola pianta: quella con più archi di porta / più segmenti
-    const plans = cl.filter(c => c.guess === "pianta").sort((a,b) => (b.arcs.length - a.arcs.length) || (b.n - a.n));
-    plans.slice(1).forEach(c => { if (!c.reason.startsWith("etichetta")) c.guess = "ignora"; });
+    const plans = cl.filter(c => c.guess === "pianta").sort((a,b) => (/etichetta/.test(b.reason) - /etichetta/.test(a.reason)) || (b.arcs.length - a.arcs.length) || (b.n - a.n));
+    plans.slice(1).forEach(c => { c.guess = "ignora"; });   // ne resta proposta una sola; c.kind dice comunque che è una pianta
     if (!plans.length && cl.length){ const big = [...cl].sort((a,b) => b.n - a.n)[0]; if (big.guess !== "prospetto" || cl.length === 1) big.guess = "pianta"; }
     return cl.sort((a,b) => (a.bbox[1] === b.bbox[1] ? a.bbox[0]-b.bbox[0] : b.bbox[3]-a.bbox[3]));
   }
@@ -123,7 +129,7 @@ const A3 = (() => {
     r.angle = +(th / D2R).toFixed(3); return r;
   }
   function analyzePlanAxis(segsIn, arcs = [], texts = [], opt = {}){
-    const minT = opt.minThick ?? .05, maxT = opt.maxThick ?? .7;
+    const minT = opt.minThick ?? .05; let maxT = opt.maxThick ?? .7;
     const segs = segsIn.filter(s => segLen(s) >= .05).map(s => { const L = segLen(s); let ang = Math.atan2(s[3]-s[1], s[2]-s[0]); if (ang < 0) ang += Math.PI; if (ang >= Math.PI - 1e-9) ang -= Math.PI; return {s, L, ang}; });
     // gruppi di direzione (tolleranza 1°), con il caso 0°/180°
     const order = segs.map((_, i) => i).sort((a,b) => segs[a].ang - segs[b].ang);
@@ -133,6 +139,8 @@ const A3 = (() => {
     // layer dei muri come primo indizio: se c'è (MURI, WALL, A-WALL…) e porta almeno un quarto delle linee, le facce si cercano solo lì
     const WALL_L = /mur|wall|parete|tamponam|tramezz/i, wallLen = segs.reduce((t, x) => t + (WALL_L.test(x.s[4] || "") ? x.L : 0), 0), allLen = segs.reduce((t, x) => t + x.L, 0);
     const wallOnly = opt.wallLayer !== false && wallLen >= .25 * allLen ? i => WALL_L.test(segs[i].s[4] || "") : null;
+    // con il layer dei muri si accetta ogni spessore plausibile, anche i muri antichi fino a 80 cm, senza chiedere che si ripeta
+    if (wallOnly && opt.maxThick == null) maxT = .8;
     const pairs = [];
     for (const g of groups){
       const a0 = median(g.ids.map(i => segs[i].ang)), u = [Math.cos(a0), Math.sin(a0)], n = [-u[1], u[0]];
@@ -152,7 +160,7 @@ const A3 = (() => {
     const peaks = [...hist.entries()].filter(([k, w]) => { const nb = (hist.get(k-1)||0) + w + (hist.get(k+1)||0); return nb >= Math.max(.04 * tot, 1.5) && w >= (hist.get(k-1)||0) && w >= (hist.get(k+1)||0); }).map(([k]) => k / 100);
     const top = Math.max(0, ...peaks.map(t => [-1, 0, 1].reduce((s, q) => s + (hist.get(Math.round(t*100) + q) || 0), 0)));
     peaks.splice(0, peaks.length, ...peaks.filter(t => [-1, 0, 1].reduce((s, q) => s + (hist.get(Math.round(t*100) + q) || 0), 0) >= .06 * top));
-    const okT = d => peaks.some(t => Math.abs(t - d) <= .015);
+    const okT = d => wallOnly ? d >= minT && d <= maxT : peaks.some(t => Math.abs(t - d) <= .015);
     // ogni tratto di linea appartiene a un solo muro: si scelgono prima le coppie più lunghe
     const used = new Map(); // indice linea -> intervalli occupati
     const freeParts = (li, a, b) => { let parts = [[a, b]]; for (const [u0, u1] of used.get(li) || []) parts = parts.flatMap(([p0, p1]) => (u1 <= p0 || u0 >= p1) ? [[p0, p1]] : [[p0, u0], [u1, p1]].filter(([q0, q1]) => q1 - q0 > .02)); return parts; };
@@ -163,6 +171,27 @@ const A3 = (() => {
       for (const [a, b] of freeParts(p.A.i, p.o0, p.o1)) for (const [c, d] of freeParts(p.B.i, a, b)){
         if (d - c < .1) continue; take(p.A.i, c, d); take(p.B.i, c, d);
         pieces.push({g:p.g, off:(p.A.off + p.B.off)/2, t:p.d, a:c, b:d, peak:okT(p.d)});
+      }
+    }
+    // muri a linea singola (perimetro verso il confinante o la facciata): una linea del layer dei muri senza faccia gemella,
+    // con muri perpendicolari che la toccano da un solo lato, diventa un muro di spessore stimato verso il lato libero (dubbio in revisione)
+    if (wallOnly && opt.singleLine !== false){
+      const Tsl = opt.singleThick ?? .3;
+      for (const g of groups) for (const ln of g.lines || []){
+        if (!wallOnly(ln.i)) continue;
+        for (const [a, b] of freeParts(ln.i, ln.a, ln.b)){
+          if (b - a < 1) continue;
+          let side = 0; const sides = new Map();   // asse del muro perpendicolare → lati in cui sta (un muro che attraversa la linea non conta)
+          for (const pc of pieces){ const cr = g.u[0]*pc.g.u[1] - g.u[1]*pc.g.u[0]; if (Math.abs(cr) < .9) continue;
+            const Pp = s0 => [pc.g.u[0]*s0 + pc.g.n[0]*pc.off, pc.g.u[1]*s0 + pc.g.n[1]*pc.off], acr = Q => Q[0]*g.n[0] + Q[1]*g.n[1] - ln.off, M = acr(Pp((pc.a + pc.b) / 2));
+            for (const s0 of [pc.a, pc.b]){ const E = Pp(s0), along = E[0]*g.u[0] + E[1]*g.u[1];
+              // l'estremo tocca la linea; il lato è quello in cui sta il resto del muro perpendicolare
+              if (along < a - pc.t / 2 - .1 || along > b + pc.t / 2 + .1 || Math.abs(acr(E)) > pc.t / 2 + .3 || Math.abs(M) < .2) continue;
+              const k = Math.round(along / .05); if (!sides.has(k)) sides.set(k, new Set()); sides.get(k).add(Math.sign(M)); } }
+          let nA = 0, nB = 0; for (const set of sides.values()) if (set.size === 1) set.has(1) ? nA++ : nB++;
+          if (nA && !nB) side = 1; else if (nB && !nA) side = -1; else continue;
+          take(ln.i, a, b); pieces.push({g, off:ln.off - side * Tsl / 2, t:Tsl, a, b, peak:true, single:true});
+        }
       }
     }
     // linee di muro: pezzi allineati, uniti; i vuoti tra 0,5 e 3,2 m sono aperture
@@ -181,7 +210,7 @@ const A3 = (() => {
       for (let k = 0; k < runs.length; k++){
         const r = runs[k], prev = runs[k-1], gap = prev ? r.a - prev.b : Infinity;
         if (wall && gap <= 3.2){ wall.ops.push({s0:prev.b, s1:r.a}); wall.b = r.b; }
-        else { wall = {g:ln.g, off:ln.off, t:Math.round(ln.t * 100) / 100, a:r.a, b:r.b, ops:[], peak:ln.peak, joined:{}}; walls.push(wall); }
+        else { wall = {g:ln.g, off:ln.off, t:Math.round(ln.t * 100) / 100, a:r.a, b:r.b, ops:[], peak:ln.peak, joined:{}, single:ln.pcs.some(p => p.single)}; walls.push(wall); }
       }
       for (const w of walls.filter(w => w.g === ln.g && w.off === ln.off)) w.P = P;
     }
@@ -208,6 +237,14 @@ const A3 = (() => {
       }
     }
     W = W.filter(w => w.b - w.a > .1);
+    // nicchie e spessore variabile: due tratti allineati che condividono una faccia e si toccano sono lo stesso muro
+    for (const w of W) for (const v of W){
+      if (v === w || v.g !== w.g || Math.abs(v.off - w.off) > (v.t + w.t) / 2) continue;
+      const share = [-1, 1].some(sw => [-1, 1].some(sv => Math.abs((w.off + sw * w.t / 2) - (v.off + sv * v.t / 2)) < .02));
+      if (!share) continue;
+      if (Math.abs(v.a - w.b) < .06){ w.joined.b = true; v.joined.a = true; w.nicchia = v.nicchia = true; }
+      if (Math.abs(v.b - w.a) < .06){ w.joined.a = true; v.joined.b = true; w.nicchia = v.nicchia = true; }
+    }
     // muri isolati di spessore secondario (arredi, campiture): scartati
     const mainT = peaks.length ? peaks.reduce((m, t) => ((hist.get(Math.round(t*100)) || 0) > (hist.get(Math.round(m*100)) || 0) ? t : m), peaks[0]) : 0;
     const segDist = (p, A, B) => { const d = [B[0]-A[0], B[1]-A[1]], l2 = d[0]*d[0] + d[1]*d[1] || 1e-12; const t = Math.max(0, Math.min(1, ((p[0]-A[0])*d[0] + (p[1]-A[1])*d[1]) / l2)); return Math.hypot(p[0]-A[0]-t*d[0], p[1]-A[1]-t*d[1]); };
@@ -238,7 +275,7 @@ const A3 = (() => {
     // porte e finestre nei vuoti
     let nid = 0;
     // fiducia per la revisione guidata (fase C): dubbio con il motivo, altrimenti sicuro
-    const wallConf = w => !w.peak ? {ok:false, why:`spessore raro (${Math.round(w.t * 100)} cm)`} : !(w.joined.a && w.joined.b) && !linked(w) ? {ok:false, why:"non collegato ad altri muri"} : !(w.joined.a && w.joined.b) ? {ok:false, why:"un capo libero"} : {ok:true};
+    const wallConf = w => w.single ? {ok:false, why:`muro a linea singola: spessore stimato ${Math.round(w.t * 100)} cm`} : !w.peak ? {ok:false, why:`spessore raro (${Math.round(w.t * 100)} cm)`} : !(w.joined.a && w.joined.b) && !linked(w) ? {ok:false, why:"non collegato ad altri muri"} : !(w.joined.a && w.joined.b) ? {ok:false, why:"un capo libero"} : {ok:true};
     const out = W.map(w => ({id:"w" + (nid++), a:w.P(w.a), b:w.P(w.b), thick:w.t, conf:wallConf(w), _w:w}));
     for (const ow of out){
       const w = ow._w;
@@ -301,7 +338,7 @@ const A3 = (() => {
       for (let i = 0; i < n; i++){ const a = P[i], b = P[(i+1) % n];
         if (Math.abs(a[1]-b[1]) < 1e-6){ const y = snapTo(a[1], fy, (a[0]+b[0])/2); out[i][1] = y; out[(i+1) % n][1] = y; }
         else if (Math.abs(a[0]-b[0]) < 1e-6){ const x = snapTo(a[0], fx, (a[1]+b[1])/2); out[i][0] = x; out[(i+1) % n][0] = x; } }
-      r.pts = out; const A = r.pts.reduce((s, p, i) => { const q = r.pts[(i+1) % r.pts.length]; return s + p[0]*q[1] - q[0]*p[1]; }, 0); r.area = +Math.abs(A/2).toFixed(2); }
+      r.pts = snapEdges(out, walls); const A = r.pts.reduce((s, p, i) => { const q = r.pts[(i+1) % r.pts.length]; return s + p[0]*q[1] - q[0]*p[1]; }, 0); r.area = +Math.abs(A/2).toFixed(2); }
     return rooms;
     }
     const inPoly = (x, y, p) => { let c = false; for (let i = 0, j = p.length-1; i < p.length; j = i++) if ((p[i][1] > y) !== (p[j][1] > y) && x < (p[j][0]-p[i][0]) * (y-p[i][1]) / (p[j][1]-p[i][1]) + p[i][0]) c = !c; return c; };
@@ -317,6 +354,17 @@ const A3 = (() => {
       r.mat = /bagn|wc|doccia|lavand|cucin|kitchen|bath|lavanderia|centrale|tecnic/i.test(name) ? "gres" : /terraz|balcon|portic|loggi|cortil/i.test(name) ? "pietra" : /garage|box|cantin|riposti/i.test(name) ? "cemento" : "parquet";
     }
     return rooms;
+  }
+  /** Ogni lato del locale sulla faccia del muro parallelo più vicino (a qualsiasi angolo); vertici = intersezioni dei lati. */
+  function snapEdges(P, walls){
+    const n = P.length; if (n < 3) return P;
+    const faces = []; for (const w of walls){ const d = [w.b[0]-w.a[0], w.b[1]-w.a[1]], L = Math.hypot(d[0], d[1]) || 1, u = [d[0]/L, d[1]/L], nn = [-u[1], u[0]], o = w.a[0]*nn[0] + w.a[1]*nn[1], s0 = w.a[0]*u[0] + w.a[1]*u[1];
+      for (const sg of [-1, 1]) faces.push({u, nn, off:o + sg*w.thick/2, lo:s0 - w.thick, hi:s0 + L + w.thick}); }
+    const lines = P.map((A, i) => { const B = P[(i+1) % n], d = [B[0]-A[0], B[1]-A[1]], L = Math.hypot(d[0], d[1]) || 1, u = [d[0]/L, d[1]/L], nn = [-u[1], u[0]], m = [(A[0]+B[0])/2, (A[1]+B[1])/2];
+      let best = null; for (const f of faces){ if (Math.abs(u[0]*f.u[1] - u[1]*f.u[0]) > .05) continue; const dd = Math.abs(m[0]*f.nn[0] + m[1]*f.nn[1] - f.off), along = m[0]*f.u[0] + m[1]*f.u[1]; if (dd > .12 || along < f.lo || along > f.hi) continue; if (!best || dd < best.dd) best = {dd, f}; }
+      return best ? {nn:best.f.nn, off:best.f.off} : {nn, off:A[0]*nn[0] + A[1]*nn[1]}; });
+    return P.map((p, i) => { const l1 = lines[(i - 1 + n) % n], l2 = lines[i], det = l1.nn[0]*l2.nn[1] - l1.nn[1]*l2.nn[0]; if (Math.abs(det) < .1) return p;
+      const x = (l1.off*l2.nn[1] - l2.off*l1.nn[1]) / det, y = (l1.nn[0]*l2.off - l2.nn[0]*l1.off) / det; return Math.hypot(x - p[0], y - p[1]) < .3 ? [+x.toFixed(4), +y.toFixed(4)] : p; });
   }
   /* locali esatti quando i muri sono ortogonali (sempre, dopo il raddrizzamento): griglia sulle coordinate stesse dei muri,
      superficie netta senza approssimazioni anche dove un lato confina con muri di spessore diverso */

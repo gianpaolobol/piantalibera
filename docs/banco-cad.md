@@ -114,6 +114,27 @@ Effetto sul banco sintetico (nessun peggioramento): locali con superficie ±1 % 
 - Riconoscimento del tipo di disegno (pianta, prospetto, sezione) debole: spesso «ignora» su piante vere. Nella revisione si sceglie a mano, ma va migliorato.
 - Manca una misura automatica sulle tavole vere: serve annotare a mano almeno alcune piante (muri, aperture e locali giusti) per avere richiamo e precisione come sul banco sintetico.
 
+## Banco reale, secondo giro: misura e punti 1–4 (13/11/2026)
+
+**Misura sulle tavole vere** (`scripts/banco-reale.mjs`, dati privati fuori dal repository). La verità oggettiva sono le **superfici dei locali scritte dal progettista** («mq 14,50»): una superficie è ritrovata se il locale riconosciuto che la contiene ha la stessa area (entro l'1 % o il 3 %). Le piante sono i disegni con almeno 3 superfici scritte: 57 piante, 512 superfici in 6 tavole.
+
+| Indicatore (banco reale) | primo giro | ora |
+|---|---|---|
+| Unità giusta della tavola | 3 su 6 | **6 su 6** (porte con l'anta: arco di un quarto + segmento lungo quanto il raggio) |
+| Superfici scritte con un locale riconosciuto | 36,1 % | **47,9 %** |
+| … con superficie esatta (±1 %) | 13,3 % | **17,2 %** |
+| … entro il 3 % | 18,8 % | **25,4 %** |
+| Piante riconosciute come piante (senza usare le superfici scritte) | 10,5 % | **94,7 %** |
+| Prospetti e sezioni scambiati per piante | — | **0 su 22** |
+
+Interventi, tutti misurati su entrambi i banchi (il sintetico non peggiora):
+1. **Muri a linea singola**: una linea del layer dei muri senza faccia gemella, con muri perpendicolari che vi terminano da un solo lato (un muro che la attraversa non conta), diventa un muro di 30 cm verso il lato libero, segnato come dubbio «spessore stimato».
+2. **Muri antichi e con nicchie**: con il layer dei muri si accetta ogni spessore da 5 a 80 cm senza chiedere che si ripeta; due tratti allineati che condividono una faccia e si toccano sono lo stesso muro. Lati dei locali agganciati alla faccia parallela più vicina a qualsiasi angolo (piante non ortogonali).
+3. **Tipo di disegno**: le prove forti di una pianta (almeno 3 ante, superfici scritte) vincono sull'etichetta di un disegno vicino; etichette «piano quarto», «planimetria», «piano interrato»… (non «piano di lavoro»); tutte le piante della tavola restano piante (`kind`), una sola è proposta per il modello.
+4. **Misura**: questo banco.
+
+**Che cosa resta** (dalla distribuzione degli scarti): circa un terzo delle superfici ritrovate è esatto; il 30 % è fuori di oltre il 30 % perché **due o più locali si fondono** dove manca un muro (tramezzi su altri layer, muri disegnati come retino pieno, varchi senza spalle); una parte è più piccola dell'1–3 % sulle piante non ortogonali, dove il locale si calcola ancora sulla griglia di 5 cm. Sono i prossimi passi; servono anche tavole di altri studi, perché queste seguono tutte lo stesso standard di layer.
+
 ## Prossimo passo
 
 Banco reale appena il titolare fornisce le piante; poi modello addestrato (fase D) per i disegni più disordinati e altezze e più piani (fase E).
