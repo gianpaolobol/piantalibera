@@ -135,6 +135,17 @@ Interventi, tutti misurati su entrambi i banchi (il sintetico non peggiora):
 
 **Che cosa resta** (dalla distribuzione degli scarti): circa un terzo delle superfici ritrovate è esatto; il 30 % è fuori di oltre il 30 % perché **due o più locali si fondono** dove manca un muro (tramezzi su altri layer, muri disegnati come retino pieno, varchi senza spalle); una parte è più piccola dell'1–3 % sulle piante non ortogonali, dove il locale si calcola ancora sulla griglia di 5 cm. Sono i prossimi passi; servono anche tavole di altri studi, perché queste seguono tutte lo stesso standard di layer.
 
+## Aperture: misure scritte, davanzali, portefinestre e alzatine (13/11/2026)
+
+Richiesta del titolare: davanzale dalle quote «HB» quando ci sono, altrimenti 1,00 m; portefinestre riconosciute come tali, a raso o con alzatina.
+
+- **Misure scritte delle aperture** (`parseOpeningLabel`, `applyOpeningLabels`): nelle 7 tavole le aperture sono etichettate soprattutto come «80 / 210» (larghezza sopra, altezza sotto, cm), poi «100x140», «hb 94», «hb 100 cm», «HB=0,90». Un'etichetta vale solo se un vano entro 1,6 m la **conferma con la larghezza** (luce del serramento ≤ vano ≤ luce + 16 cm: l'etichetta indica il serramento, il vano è un po' più largo); ogni etichetta va a un solo vano, dal più vicino. L'altezza scritta sostituisce quella tipica e decide il tipo: H < 1,60 m finestra (anche se c'è un arco: finestra ad anta), H ≥ 1,95 m porta, o portafinestra se nel vano c'è il vetro. Un'etichetta a meno di 75 cm da un vano che non la conferma rende il vano un **dubbio** («scritto 80/210 ma il vano è largo 120 cm»): mai una correzione silenziosa.
+- **hb**: sopra 30 cm è il davanzale della finestra più vicina (entro 1,6 m); fino a 30 cm è l'**alzatina** della porta o portafinestra più vicina (`alz`). Senza scritte e senza prospetti il davanzale è 1,00 m (prima 0,90).
+- **Portafinestra**: arco e vetro per tutta la luce dello stesso vano (prima: dubbio «porta o finestra?»), alta 2,40 m se non c'è altro; dal prospetto una soglia bassa su un vano col vetro è una portafinestra e i cm sopra il terreno sono l'alzatina. Nell'editor: porta con modello «Portafinestra», campo «Alzatina (cm)» per ogni porta (3D con soglia in marmo, IFC col vano alzato).
+- **Di chi è l'arco**: la cerniera è lo stipite più vicino al centro dell'arco, quindi l'arco appartiene solo a quel vano. Prima un arco di una porta nel muro perpendicolare, vicino all'angolo, trasformava in porta la finestra accanto. Se l'attribuzione è contesa (stipiti quasi alla stessa distanza) o il vano non ha vetro, resta un dubbio.
+
+Misure: banco sintetico tipo d'apertura giusto 99,6 → **100,0 %**, dubbi 0,8 → 0,7 per pianta, errori non segnalati 72 → 71 (su 200 piante; il rapporto «errori segnalati» passa da 86,8 a 86,6 % perché spariscono 14 errori di tipo che erano tutti segnalati); muri, aperture trovate e locali invariati. Banco reale: superfici invariate; 320 aperture su 2.163 con misura scritta confermata, 84 portefinestre, 8 alzatine, 87 davanzali da «hb», 95 misure che non tornano segnalate come dubbi.
+
 ## Prossimo passo
 
 Banco reale appena il titolare fornisce le piante; poi modello addestrato (fase D) per i disegni più disordinati e altezze e più piani (fase E).

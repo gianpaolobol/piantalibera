@@ -123,7 +123,7 @@ function selectionFrom3D(hit){
   if (cat === "wall"){   // muro colpito: l'apertura sopra il punto, altrimenti il muro più vicino in pianta
     const L = level(lid), y = hit.point.y - (L?.elev || 0); let best = null;
     for (const w of P.walls){ if (w.level !== lid) continue; const r = projOnSeg(q, w.a, w.b), d = r.d - w.thick / 2; if (d > .05) continue;
-      const s = r.t * wallFrame(w).len, o = P.openings.find(o => o.wall === w.id && Math.abs(s - o.t) < o.w / 2 && y >= (o.type === "door" ? 0 : o.sill || 0) - .02 && y <= (o.type === "door" ? 0 : o.sill || 0) + o.h + .02);
+      const s = r.t * wallFrame(w).len, o = P.openings.find(o => o.wall === w.id && Math.abs(s - o.t) < o.w / 2 && y >= opBot(o) - .02 && y <= opBot(o) + o.h + .02);
       if (!best || d < best.d) best = {d, h:o ? {type:"opening", id:o.id} : {type:"wall", id:w.id}}; }
     if (best) return {...best.h, lid}; }
   const prev = S.level; S.level = lid; const h = hitTest(q); if (!h || h.type === "dim") S.level = prev; return h && h.type !== "dim" ? {...h, lid} : null;
@@ -150,7 +150,7 @@ function selGeos3D(s){
     const Pw = (a, o) => [w.a[0] + f.ux*a + f.nx*o, w.a[1] + f.uy*a + f.ny*o];
     return [prism3D([Pw(sh.A[0], t2), Pw(f.len - sh.A[1], t2), Pw(f.len - sh.B[1], -t2), Pw(sh.B[0], -t2)], L.elev, L.elev + (w.height || L.height))]; }
   if (s.type === "opening"){ const o = P.openings.find(x => x.id === s.id), w = o && P.walls.find(x => x.id === o.wall); if (!w) return []; const L = level(w.level), f = wallFrame(w), t2 = w.thick / 2 + .03;
-    const Pw = (a, q) => [w.a[0] + f.ux*a + f.nx*q, w.a[1] + f.uy*a + f.ny*q], s0 = o.t - o.w / 2, s1 = o.t + o.w / 2, bot = o.type === "door" ? 0 : (o.sill || 0);
+    const Pw = (a, q) => [w.a[0] + f.ux*a + f.nx*q, w.a[1] + f.uy*a + f.ny*q], s0 = o.t - o.w / 2, s1 = o.t + o.w / 2, bot = opBot(o);
     return [prism3D([Pw(s0, t2), Pw(s1, t2), Pw(s1, -t2), Pw(s0, -t2)], L.elev + bot, L.elev + bot + o.h)]; }
   if (s.type === "room"){ const r = P.rooms.find(x => x.id === s.id); if (!r || r.pts.length < 3) return []; const L = level(r.level), t = r.slab?.t ?? L.slab;
     return [prism3D(r.pts, L.elev - t, L.elev + .01)]; }

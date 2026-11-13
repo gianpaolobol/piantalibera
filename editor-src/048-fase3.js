@@ -254,6 +254,7 @@ function buildOpeningFill(w, c, piece, e0, bot, topO, t){
     return;
   }
   const st = o.style || "battente";
+  if (bot > .005){ piece(s0 - .02, s1 + .02, y0 - .03, y0, t + .04, "marmo", "sill"); e0 = y0; }   // alzatina (soglia rialzata): la porta parte da lì
   const jambs = () => { piece(s0, s0 + .05, e0, y1, fd, "serramento", "frame"); piece(s1 - .05, s1, e0, y1, fd, "serramento", "frame"); piece(s0 + .05, s1 - .05, y1 - .05, y1, fd, "serramento", "frame"); };
   if (st === "doppia"){ jambs(); piece(s0 + .05, mid - .003, e0 + .01, y1 - .05, .045, "legno", "door"); piece(mid + .003, s1 - .05, e0 + .01, y1 - .05, .045, "legno", "door"); }
   else if (st === "vetrata"){ jambs(); sash(s0 + .05, s1 - .05, e0 + .01, y1 - .05, doorOff(o, fd), .045, .08); doorHandle(o, piece, s0, s1, e0, fd); }

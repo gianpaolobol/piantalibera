@@ -134,7 +134,7 @@ function buildModel(opts={}){
       const solid = (s0,s1,y0,y1) => { piece(s0,s1,y0,y1, t, w.mat, "wall"); for (const k of skins) piece(s0,s1,Math.max(y0,e0),y1, .004, k.mat, "wall", k.side*(t/2+.002)); };
       for (const [s0,s1] of solids) solid(s0,s1, base, e0+h);
       for (const c of cuts){
-        const o = c.o, bot = o.type === "door" ? 0 : o.sill, topO = Math.min(h, bot + o.h);
+        const o = c.o, bot = opBot(o), topO = Math.min(h, bot + o.h);
         solid(c.s0,c.s1, base, e0+bot);
         if (topO < h) solid(c.s0,c.s1, e0+topO, e0+h);
         if (opts.noFill) continue;
@@ -352,3 +352,6 @@ function materialsCanvas(scale, opts={}){
     return () => { restoreMats.forEach(([o,m]) => o.material = m); scene.background = bg; renderer.toneMapping = tm; }; }, {...opts, plain:true});
   return {canvas:c, legend};
 }
+
+/** Quota del fondo del vano: davanzale per le finestre, alzatina (soglia rialzata, `alz`) per porte e portefinestre. */
+function opBot(o){ return o.type === "door" ? (o.alz || 0) : (o.sill || 0); }

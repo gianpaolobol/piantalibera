@@ -94,13 +94,15 @@ Obiettivi del progetto (`docs/progetto-cad-bim.md` §9) misurati sul banco sinte
 |---|---|---|---|---|
 | Muri trovati (lunghezza) | B `muri_richiamo` | 99,7 % (prima 97,1 %) | **≥ 97 %** | ArchLine.XP dichiara 90–95 % |
 | Muri giusti (precisione) | B `muri_precisione` | 99,7 % (prima 93,3 %) | **≥ 97 %** | |
-| Porte e finestre trovate con il tipo giusto | B `aperture_richiamo` × `aperture_tipo` | 98,3 % × 99,6 % (prima 92,3 % × 89,7 %) | **≥ 95 %** | |
+| Porte e finestre trovate con il tipo giusto | B `aperture_richiamo` × `aperture_tipo` | 98,7 % × 100,0 % (prima 92,3 % × 89,7 %) | **≥ 95 %** | |
 | Locali con superficie entro l'1 % | B `locali_area_1pct` | 96,6 % (prima 49,5 %) | **≥ 95 %** | |
-| Errori segnalati tra i dubbi | B `errori_segnalati` | 87,1 % (prima 82,4 %) | **≥ 80 %** | chi rivede deve trovare gli errori tra i dubbi, non cercarli |
+| Errori segnalati tra i dubbi | B `errori_segnalati` | 86,6 % (prima 82,4 %); errori non segnalati 71 su 200 piante (main: 72) | **≥ 80 %** | chi rivede deve trovare gli errori tra i dubbi, non cercarli. Il rapporto scende quando spariscono errori segnalati: conta anche il numero assoluto |
 | Dubbi per pianta | B `dubbi_per_pianta` | 0,8 | **≤ 5** | |
 | Tempo per pianta | B `ms` | ~4 ms | **≤ 3 s** | |
 | **Banco reale**: superfici scritte ritrovate con locale esatto (±1 %) | `scripts/banco-reale.mjs` (privato) | 17,2 % (primo giro 13,3 %) | **≥ 80 %** | obiettivo del progetto; oggi lontano: il lavoro principale dei prossimi giri |
 | **Banco reale**: superfici scritte dentro un locale riconosciuto | idem | 47,9 % (primo giro 36,1 %) | **≥ 95 %** | |
+| **Banco reale**: aperture con la misura scritta confermata dalla larghezza | idem | 14,8 % (320 su 2.163; prima 0) | crescere | l'altezza scritta sostituisce quella tipica; il tipo segue l'altezza (H < 1,60 finestra, H ≥ 1,95 porta o portafinestra) |
+| **Banco reale**: misure scritte che non tornano, segnalate | idem | 95 dubbi | tutte segnalate | una misura scritta diversa dal vano non corregge mai in silenzio |
 | **Banco reale**: piante riconosciute come piante (senza superfici scritte) | idem | 94,7 % (prima 10,5 %) | **≥ 95 %** | |
 | **Banco reale**: unità giusta della tavola | idem | 6 su 6 (prima 3 su 6) | **tutte** | |
 
