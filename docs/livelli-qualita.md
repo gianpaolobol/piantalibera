@@ -99,6 +99,10 @@ Obiettivi del progetto (`docs/progetto-cad-bim.md` §9) misurati sul banco sinte
 | Errori segnalati tra i dubbi | B `errori_segnalati` | 87,1 % (prima 82,4 %) | **≥ 80 %** | chi rivede deve trovare gli errori tra i dubbi, non cercarli |
 | Dubbi per pianta | B `dubbi_per_pianta` | 0,8 | **≤ 5** | |
 | Tempo per pianta | B `ms` | ~4 ms | **≤ 3 s** | |
+| **Banco reale**: superfici scritte ritrovate con locale esatto (±1 %) | `scripts/banco-reale.mjs` (privato) | 17,2 % (primo giro 13,3 %) | **≥ 80 %** | obiettivo del progetto; oggi lontano: il lavoro principale dei prossimi giri |
+| **Banco reale**: superfici scritte dentro un locale riconosciuto | idem | 47,9 % (primo giro 36,1 %) | **≥ 95 %** | |
+| **Banco reale**: piante riconosciute come piante (senza superfici scritte) | idem | 94,7 % (prima 10,5 %) | **≥ 95 %** | |
+| **Banco reale**: unità giusta della tavola | idem | 6 su 6 (prima 3 su 6) | **tutte** | |
 
 ### Piattaforme
 
@@ -174,3 +178,4 @@ Punteggio 0–4 sull'editor completo (pianta, 3D, pannello, telefono); motivo in
 | 13/11/2026 | #94, #96 | banco CAD → BIM; muri 97,1 → 99,7 %, precisione 93,3 → 99,4 %, aperture 92,3 → 98,3 %, tipo 89,7 → 99,6 %, locali ±1 % 49,5 → 95,2 % |
 | 13/11/2026 | fase C | revisione guidata: errori segnalati 82,4 %, 1 dubbi per pianta |
 | 13/11/2026 | banco reale | unità dalle porte, filtro dei layer, scale, layer dei muri: locali ±1 % 95,2 → 96,6 %, errori segnalati 82,4 → 87,1 % |
+| 13/11/2026 | banco reale, 2° giro | unità 3 → 6 su 6; superfici ritrovate 36,1 → 47,9 %, esatte 13,3 → 17,2 %; piante riconosciute 10,5 → 94,7 % |

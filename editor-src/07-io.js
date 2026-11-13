@@ -365,7 +365,7 @@ function flattenCAD(dxf){
   walk(dxf.entities, {sx:1, sy:1, r:0, x:0, y:0}, 0);
   // unità: le porte del disegno (archi di un quarto di giro, 55–130 cm) comandano anche sull'unità dichiarata nel file,
   // spesso sbagliata nelle tavole italiane (disegnate in centimetri, dichiarate in millimetri)
-  const ins = dxf.header?.$INSUNITS, declared = ins === 4 ? .001 : ins === 5 ? .01 : ins === 6 ? 1 : null, fromDoors = unitFromDoors(arcs);
+  const ins = dxf.header?.$INSUNITS, declared = ins === 4 ? .001 : ins === 5 ? .01 : ins === 6 ? 1 : null, fromDoors = unitFromDoors(arcs, segs);
   const unit = fromDoors ?? declared ?? (segs.length ? guessUnit(segs, arcs) : 1);
   return {segs, arcs, texts, unit, unitSource:fromDoors != null ? (declared != null && declared !== fromDoors ? "porte (diversa da quella del file)" : "porte") : declared != null ? "file" : "stima"};
 }
@@ -377,13 +377,18 @@ async function loadDXF(f){
   S.tab = "import"; renderTabs();
 }
 /** Unità del disegno quando l'intestazione non la dice: prima dai raggi delle porte (~0,8–1 m), poi dalla larghezza. */
-/** Unità dalle porte: mediana dei raggi degli archi di un quarto di giro; null se gli archi sono pochi o non decidono. */
-function unitFromDoors(arcs){
-  const q = arcs.filter(a => !a.full && Math.abs((a.sweep ?? 0) - Math.PI / 2) < .2);
-  const doorL = q.filter(a => /port|door|infiss|serram|apert|mur|wall/i.test(a.layer || "")), notOther = q.filter(a => !/elettr|impiant|ilumin|illumin|arred|mobil|furn|sanit|quot|dim|test|text|hatch|retin|tratt|verde|albero|giardin|strutt/i.test(a.layer || ""));
-  const rs = (doorL.length >= 4 ? doorL : notOther).map(a => a.r).sort((a, b) => a - b);
-  if (rs.length < 4) return null; const r = rs[rs.length >> 1];
-  const ok = [1, .1, .01, .001].filter(u => r * u >= .55 && r * u <= 1.3); return ok.length === 1 ? ok[0] : null;
+/** Unità dalle porte: un'anta è un arco di un quarto di giro con un segmento lungo quanto il raggio che parte dal centro
+    (il disegno dell'anta). Per ogni unità possibile si contano le ante credibili (60–110 cm): vince l'unità con più porte,
+    se ne ha almeno 4 e almeno il doppio della seconda. */
+function unitFromDoors(arcs, segs = []){
+  const q = arcs.filter(a => !a.full && a.r > 0 && Math.abs((a.sweep ?? 0) - Math.PI / 2) < .2 && !/arred|mobil|furn|sanit|elettr|impiant/i.test(a.layer || ""));
+  if (q.length < 4) return null;
+  const rs = q.map(a => a.r).sort((a, b) => a - b), cell = Math.max(rs[rs.length >> 1] * .05, 1e-6), H = new Map(), key = (x, y) => Math.round(x / cell) + "," + Math.round(y / cell);
+  for (const g of segs){ const L = Math.hypot(g[2] - g[0], g[3] - g[1]); for (const [x, y] of [[g[0], g[1]], [g[2], g[3]]]){ const k = key(x, y); if (!H.has(k)) H.set(k, []); H.get(k).push(L); } }
+  const leaf = a => { const cx = Math.round(a.cx / cell), cy = Math.round(a.cy / cell); for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const L of H.get((cx + i) + "," + (cy + j)) || []) if (Math.abs(L - a.r) < .12 * a.r) return true; return false; };
+  const doors = q.filter(leaf); if (doors.length < 4) return null;
+  const cnt = [1, .1, .01, .001].map(u => [u, doors.filter(a => a.r * u >= .6 && a.r * u <= 1.1).length]).sort((a, b) => b[1] - a[1]);
+  return cnt[0][1] >= 4 && cnt[0][1] >= 2 * cnt[1][1] ? cnt[0][0] : null;
 }
 function guessUnit(segs, arcs = []){
   const rs = arcs.filter(a => !a.full).map(a => a.r).sort((a,b) => a-b);

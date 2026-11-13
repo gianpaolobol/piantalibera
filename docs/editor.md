@@ -147,6 +147,8 @@ Scheda Importa → «Da pianta e prospetti al 3D». Si caricano uno o più file 
 
 - **Unità dalle porte** (13/11/2026): se il file dichiara un'unità sbagliata (tavola in centimetri dichiarata in millimetri, frequente), comandano gli archi delle porte. Filtro dei layer più ampio (impianti, superfici, scale, demolizioni, strutture, librerie di blocchi); gradini delle scale ignorati; se c'è un layer dei muri, le facce si cercano lì.
 
+- **Tavole vere, secondo giro** (13/11/2026): muri a linea singola sul perimetro (spessore stimato, dubbio), muri antichi fino a 80 cm e con nicchie, locali agganciati ai muri a qualsiasi angolo, tutte le piante della tavola riconosciute come tali (una sola proposta per il modello). Misura in `docs/banco-cad.md`.
+
 Limiti noti: un solo piano per volta (con gronda oltre 4,6 m l'app avvisa che i solai intermedi vanno aggiunti); coperture a padiglione e muri curvi non riconosciuti; pianta con il nord in alto. Va collaudato su tavole reali.
 
 ## Decisioni del proprietario (6/11/2026)

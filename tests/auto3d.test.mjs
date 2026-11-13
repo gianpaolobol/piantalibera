@@ -93,3 +93,21 @@ test("fiducia per la revisione: superficie scritta diversa, vano senza simbolo, 
   const nudo = A3.analyzePlan(d.segs.filter(s => s[4] !== "FINESTRE"), [], d.texts);
   assert.ok(nudo.openings.length >= 3 && nudo.openings.every(o => o.conf.ok === false && /senza simbolo/.test(o.conf.why)));
 });
+
+test("muro a linea singola sul perimetro: diventa un muro stimato (dubbio) e il locale si chiude", () => {
+  const d = planDrawing();
+  // la faccia esterna del muro nord manca (disegnata con una sola linea verso il confinante)
+  const segs = d.segs.filter(s => !(s[1] === 0 && s[3] === 0 && s[4] === "MURI"));
+  const r = A3.analyzePlan(segs, d.arcs, d.texts);
+  const nord = r.walls.filter(w => /linea singola/.test(w.conf.why || ""));
+  assert.ok(nord.length >= 1, JSON.stringify(r.walls.map(w => w.conf)));
+  assert.ok(nord.every(w => Math.abs(w.a[1] - .15) < .02 && Math.abs(w.b[1] - .15) < .02), "verso il lato libero, sulla faccia interna");
+  assert.equal(r.rooms.length, 2);
+});
+
+test("tipo di disegno: la pianta con le porte è una pianta anche con l'etichetta di un prospetto vicino", () => {
+  const d = planDrawing(), up = d.segs.map(s => [s[0], -s[1], s[2], -s[3], s[4]]);
+  const arcs = d.arcs.map(a => ({ ...a, cy: -a.cy, sweep: Math.PI / 2 })), texts = [{ x: 3, y: -9, text: "PROSPETTO NORD" }, { x: 3, y: -4, text: "SOGGIORNO mq 41,74" }, { x: 8, y: -4, text: "CAMERA mq 25,9" }];
+  const cl = A3.clusterDrawings({ segs: up, arcs, texts });
+  assert.equal(cl.length, 1); assert.equal(cl[0].kind, "pianta"); assert.equal(cl[0].guess, "pianta");
+});
