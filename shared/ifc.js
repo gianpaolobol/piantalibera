@@ -94,7 +94,7 @@ export function buildIFC(P, opt = {}){
     }
     // copertura, scale, ringhiere, arredi: superfici triangolate fornite da chi chiama
     if (Lv.roof?.type && Lv.roof.type !== "none"){ const t = faceSet(tess({roof:Lv.id}, Lv.elev));
-      if (t){ elems.push(add(`IFCROOF('${guid()}',$,'Copertura',${ifcStr(matName(Lv.roof.mat))},$,${lp(bLP, ax3(pt3(0, 0, Lv.elev)))},${repT([t])},$,${({flat:".FLAT_ROOF.", gable:".GABLE_ROOF.", hip:".HIP_ROOF.", shed:".SHED_ROOF."})[Lv.roof.type] || ".NOTDEFINED."})`)); counts.other++; } }
+      if (t){ elems.push(add(`IFCROOF('${guid()}',$,'Copertura',${ifcStr(matName(Lv.roof.mat))},$,${lp(bLP, ax3(pt3(0, 0, Lv.elev)))},${repT([t])},$,${({flat:".FLAT_ROOF.", gable:".GABLE_ROOF.", hip:".HIP_ROOF.", shed:".SHED_ROOF.", custom:".FREEFORM."})[Lv.roof.type] || ".NOTDEFINED."})`)); counts.other++; } }
     for (const ob of (P.objects || []).filter(o => o.level === Lv.id && !o.hidden)){
       const info = objInfo(ob); if (!info) continue;
       const t = faceSet(tess({obj:ob.id}, Lv.elev)); if (!t) continue;

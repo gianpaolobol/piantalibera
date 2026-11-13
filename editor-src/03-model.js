@@ -163,7 +163,8 @@ function buildModel(opts={}){
         else { const cg = new THREE.ShapeGeometry(csh); cg.rotateX(Math.PI/2); cg.translate(0, e0 + L.height - .005, 0); add(L.id, cm, "ceiling", cg); } }
       if (!opts.print && r.skirt) for (const sg of skirtGeos(r, L)) add(L.id, r.skirt.mat || "bianco", "skirt", sg);
     }
-    if (L.roof && L.roof.type !== "none" && opts.roof !== false){
+    if (L.roof?.type === "custom" && opts.roof !== false) buildCustomRoof(L, e0, add, opts);
+    else if (L.roof && L.roof.type !== "none" && opts.roof !== false){
       const ws = wallsOf(L.id), RR = roofRects(L.id); if (ws.length && RR) for (const rr of RR.rects){
         // una copertura per ogni rettangolo massimo della sagoma: sulle piante a L, T, U i tetti si incontrano nei compluvi
         const {x0, x1, z0, z1} = rr, tMax = RR.tMax, single = RR.rects.length === 1;

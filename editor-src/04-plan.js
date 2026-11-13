@@ -199,6 +199,7 @@ function drawToolPreview(g){
   }
   if (S.tool === "dim" && d?.a && hp){ const b = d.b || hp.p, off = d.b ? dimOffsetFrom(d.a, d.b, hp.p) : 0; dimLine(g, d.a, b, off, fmtL(Math.hypot(b[0]-d.a[0], b[1]-d.a[1]))); }
   if (S.tool === "calib" && S.calib?.p1){ const a = toS(S.calib.p1), b = S.calib.p2 ? toS(S.calib.p2) : hp ? toS(hp.p) : a; g.setLineDash([4,3]); g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke(); g.setLineDash([]); for (const p of [a,b]){ g.beginPath(); g.arc(p[0],p[1],4,0,7); g.fill(); } }
+  if (typeof drawRoof2D === "function") drawRoof2D(g);
   if (hp?.snapped && ["wall","rect","room","calib","dim"].includes(S.tool)){ const s = toS(hp.p); g.lineWidth = 1.5; g.beginPath(); g.arc(s[0],s[1],7,0,7); g.stroke(); }
   g.restore();
 }
@@ -210,7 +211,8 @@ function hud2d(){
     rect:"Trascina per disegnare una stanza con i suoi muri", room:"Clic sui vertici · Invio o clic sul primo punto per chiudere",
     paint:"Clic su un muro o un pavimento per applicare il materiale · Alt+clic preleva · nel 3D si dipinge un lato del muro",
     door:"Clic su un muro per inserire la porta", window:"Clic su un muro per inserire la finestra", furn:"Scegli a destra, poi clic in pianta per posizionare",
-    calib:S.calib?.p2 ? "Inserisci la misura reale a destra" : "Clic su due punti di cui conosci la distanza", moveunder:"Trascina per spostare la base di ricalco"};
+    calib:S.calib?.p2 ? "Inserisci la misura reale a destra" : "Clic su due punti di cui conosci la distanza", moveunder:"Trascina per spostare la base di ricalco",
+    roof:S.tool === "roof" && RF.drawing ? "Clic sui vertici della falda · clic sul primo punto o Invio per chiudere · Esc annulla" : "Clic su falda o vertice · trascina i vertici · doppio clic su un lato aggiunge un punto · Esc per finire"};
   const n = selList().length;
   $("#hud2d").innerHTML = `<span>${esc(n > 1 && S.tool === "select" ? `${n} elementi selezionati · trascina per spostarli · tasto destro per il menu` : tips[S.tool])}</span>${hp ? `<span>x ${fmt(hp.p[0])} · y ${fmt(hp.p[1])}</span>` : ""}`;
   updateStatusInfo();
