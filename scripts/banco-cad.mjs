@@ -15,6 +15,6 @@ mkdirSync(dirname(out), { recursive: true }); writeFileSync(out, JSON.stringify(
 const pc = v => (v * 100).toFixed(1).replace(".", ",") + " %";
 const righe = [["totale", r.totale], ...Object.entries(r.perStile)];
 console.log(`Banco CAD → BIM: ${r.piante} piante (${n} per stile)\n`);
-console.log("| stile | muri richiamo | muri precisione | spessore esatto | aperture trovate | aperture precisione | tipo giusto | locali trovati | locali ±1 % | ms |");
-console.log("|---|---|---|---|---|---|---|---|---|---|");
-for (const [k, m] of righe) console.log(`| ${k} | ${pc(m.muri_richiamo)} | ${pc(m.muri_precisione)} | ${pc(m.spessore_esatto)} | ${pc(m.aperture_richiamo)} | ${pc(m.aperture_precisione)} | ${pc(m.aperture_tipo)} | ${pc(m.locali_trovati)} | ${pc(m.locali_area_1pct)} | ${m.ms} |`);
+console.log("| stile | muri richiamo | muri precisione | spessore esatto | aperture trovate | aperture precisione | tipo giusto | locali trovati | locali ±1 % | errori segnalati | dubbi/pianta | ms |");
+console.log("|---|---|---|---|---|---|---|---|---|---|---|---|");
+for (const [k, m] of righe) console.log(`| ${k} | ${pc(m.muri_richiamo)} | ${pc(m.muri_precisione)} | ${pc(m.spessore_esatto)} | ${pc(m.aperture_richiamo)} | ${pc(m.aperture_precisione)} | ${pc(m.aperture_tipo)} | ${pc(m.locali_trovati)} | ${pc(m.locali_area_1pct)} | ${pc(m.errori_segnalati)} | ${m.dubbi_per_pianta} | ${m.ms} |`);

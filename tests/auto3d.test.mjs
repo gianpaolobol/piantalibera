@@ -83,3 +83,13 @@ test("tavola unica: pianta e prospetti separati ed etichettati", () => {
   assert.deepEqual(cl.map(c => c.guess).sort(), ["est", "pianta", "sud"]);
   assert.equal(A3.sideFromText("PROSPETTO OVEST"), "ovest"); assert.equal(A3.sideFromText("Fronte nord"), "nord"); assert.equal(A3.sideFromText("Estate"), null);
 });
+
+test("fiducia per la revisione: superficie scritta diversa, vano senza simbolo, muri sicuri", () => {
+  const d = planDrawing(), r = A3.analyzePlan(d.segs, d.arcs, d.texts);
+  assert.ok(r.walls.every(w => w.conf && w.conf.ok), JSON.stringify(r.walls.map(w => w.conf)));
+  const sog = r.rooms.find(x => x.name === "Soggiorno");
+  assert.equal(sog.conf.ok, false); assert.match(sog.conf.why, /superficie scritta 24,5 m²/);
+  // senza archi né vetri le aperture restano, ma sono dubbi
+  const nudo = A3.analyzePlan(d.segs.filter(s => s[4] !== "FINESTRE"), [], d.texts);
+  assert.ok(nudo.openings.length >= 3 && nudo.openings.every(o => o.conf.ok === false && /senza simbolo/.test(o.conf.why)));
+});

@@ -142,7 +142,9 @@ test("da tavola DXF (pianta + prospetti) al modello 3D", async ({ page }) => {
   await expect(page.locator(".a3grid figure")).toHaveCount(3, { timeout: 15_000 });
   const roles = await page.locator(".a3grid select").evaluateAll(s => s.map(x => x.value).sort());
   expect(roles).toEqual(["est", "pianta", "sud"]);
-  await page.click("#a3Go");
+  await page.click("#a3Go");                                   // riconosci → revisione → crea (fase C)
+  await expect(page.locator(".a3rev")).toContainText("5 muri, 2 porte, 3 finestre, 2 locali");
+  await page.click("#a3Make");
   await expect(page.locator(".a3rep")).toContainText("Creati 5 muri, 2 porte, 3 finestre e 2 locali");
   const r = await page.evaluate(() => ({ walls: P.walls.filter(w => w.level === S.level).length, rooms: P.rooms.filter(x => x.level === S.level).map(x => x.name).sort(), h: level().height, roof: level().roof }));
   expect(r.walls).toBe(5); expect(r.rooms).toEqual(["Camera", "Soggiorno"]); expect(r.h).toBe(3);
@@ -822,4 +824,31 @@ test("un solo selettore del piano: schede sulla pianta, select in alto solo in v
   await page.click('#tag2d [data-lvl="+"]');
   expect(await page.evaluate(() => P.levels.length)).toBe(2);
   await expect(page.locator("#tag2d .lvl:not([data-lvl='+'])")).toHaveCount(2);
+});
+
+test("revisione del riconoscimento: dubbi in giallo, togli e cambia tipo, le correzioni restano (fase C)", async ({ page }) => {
+  await open(page);
+  await page.click('[data-tab="import"]');
+  // pianta della casa di prova con un vano senza simbolo (dubbio) nel muro nord
+  const dxf = tavolaDXF();
+  await page.setInputFiles("#fA3", { name: "tavola-casa.dxf", mimeType: "application/dxf", buffer: Buffer.from(dxf) });
+  await expect(page.locator(".a3grid figure")).toHaveCount(3, { timeout: 15_000 });
+  await page.click("#a3Go");
+  await expect(page.locator(".a3prev svg line.w")).toHaveCount(5);
+  // correzioni: una finestra diventa porta, un muro viene tolto
+  const k = await page.evaluate(() => { const m = A3S.preview.m; const o = m.openings.find(x => x.type === "window"); A3S.dec.set(o.key, {type:"door"}); A3S.dec.set(m.walls.find(w => w.thick < .2).key, {drop:true}); renderImport(); return o.key; });
+  await expect(page.locator(".a3rev")).toContainText("4 muri, 2 porte, 2 finestre");   // la porta del tramezzo tolto sparisce con lui
+  // dubbi: le due correzioni e la superficie scritta nel disegno («24,5 mq») diversa da quella calcolata
+  await expect(page.locator(".a3dub li")).toHaveCount(3);
+  await expect(page.locator(".a3dub")).toContainText("superficie scritta 24,5 m²");
+  await expect(page.locator(`.a3dub select[data-a3type="${k}"]`)).toHaveValue("door");
+  // cambiare un layer rifà il riconoscimento: le correzioni restano
+  await page.evaluate(() => { const L = [...document.querySelectorAll("[data-a3layer]")].find(x => x.checked); L.click(); L.click(); });
+  await expect(page.locator(".a3rev")).toContainText("4 muri, 2 porte, 2 finestre");
+  // «Rimetti» annulla la correzione del muro
+  await page.locator(".a3dub li", { hasText: "Muro" }).locator("button").click();
+  await expect(page.locator(".a3rev")).toContainText("5 muri, 3 porte, 2 finestre");
+  await page.click("#a3Make");
+  await expect(page.locator(".a3rep")).toContainText("Creati 5 muri, 3 porte, 2 finestre e 2 locali");
+  await expect(page.locator(".a3rep")).toContainText("1 correzione della revisione applicata");
 });

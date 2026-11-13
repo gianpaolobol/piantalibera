@@ -143,6 +143,8 @@ Scheda Importa → «Da pianta e prospetti al 3D». Si caricano uno o più file 
 
 - **Dalla fase B del progetto CAD → BIM (13/11/2026, `docs/banco-cad.md`)**: pulizia delle linee spezzate, doppie e staccate e dei retini; piante ruotate raddrizzate; muri di spessore raro; porte e finestre vicino agli angoli; locali con superficie esatta (griglia sulle coordinate dei muri); porte scorrevoli. Banco di 200 piante: muri 99,7 %, aperture 98,3 % (tipo 99,6 %), locali esatti 95,2 % (prima 49,5 %).
 
+- **Revisione guidata (fase C)**: «Riconosci muri, aperture e locali» mostra prima un'anteprima a colori con i dubbi in giallo (muri di spessore raro o con un capo libero, vani senza simbolo, superfici diverse da quelle scritte); per ogni dubbio Togli/Rimetti e Porta/Finestra; poi «Crea il modello BIM». Le correzioni restano se si cambiano layer, unità o ruoli.
+
 Limiti noti: un solo piano per volta (con gronda oltre 4,6 m l'app avvisa che i solai intermedi vanno aggiunti); coperture a padiglione e muri curvi non riconosciuti; pianta con il nord in alto. Va collaudato su tavole reali.
 
 ## Decisioni del proprietario (6/11/2026)
