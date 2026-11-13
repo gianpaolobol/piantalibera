@@ -954,6 +954,8 @@ test("copertura personalizzata: falde dalla copertura automatica, colmo alzato, 
   await page.reload(); await page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function"); await page.waitForTimeout(1200);
   r = await R(); expect(r.type).toBe("custom"); expect(r.falde.length).toBe(2);
   expect(await page.evaluate(() => customRoofArea(level()))).toBeGreaterThan(100);
+  expect(errors).toEqual([]);
+});
 
 test("porta con alzatina: campo nella scheda, soglia nel 3D, valori fuori misura rifiutati", async ({ page }) => {
   const errors = await open(page);
