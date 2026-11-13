@@ -355,7 +355,7 @@ function flattenCAD(dxf){
   const walk = (ents, tr, depth, layerOverride) => { for (const en of ents || []){ const lay = (en.layer === "0" && layerOverride) ? layerOverride : (en.layer || "0");
     if (en.type === "LINE" && en.vertices?.length >= 2){ const a = T(en.vertices[0], tr), b = T(en.vertices[1], tr); segs.push([a[0],a[1],b[0],b[1],lay]); }
     else if ((en.type === "LWPOLYLINE" || en.type === "POLYLINE") && en.vertices?.length){ const v = en.vertices.map(p=>T(p,tr)); for (let i=0;i<v.length-1;i++) segs.push([v[i][0],v[i][1],v[i+1][0],v[i+1][1],lay]); if (en.shape || en.closed) segs.push([v[v.length-1][0],v[v.length-1][1],v[0][0],v[0][1],lay]); }
-    else if (en.type === "ARC" || en.type === "CIRCLE"){ let a0 = en.startAngle ?? 0, a1 = en.endAngle ?? Math.PI*2; if (a1 < a0) a1 += Math.PI*2; const sc = Math.abs(tr.sx); const cc = T(en.center, tr); arcs.push({cx:cc[0], cy:cc[1], r:en.radius*sc, layer:lay, full:en.type === "CIRCLE"});
+    else if (en.type === "ARC" || en.type === "CIRCLE"){ let a0 = en.startAngle ?? 0, a1 = en.endAngle ?? Math.PI*2; if (a1 < a0) a1 += Math.PI*2; const sc = Math.abs(tr.sx); const cc = T(en.center, tr); arcs.push({cx:cc[0], cy:cc[1], r:en.radius*sc, layer:lay, full:en.type === "CIRCLE", sweep:a1 - a0});
       const n = Math.max(6, Math.ceil((a1-a0)/(Math.PI/16))); let prev = null; for (let i=0;i<=n;i++){ const a = a0 + (a1-a0)*i/n, p = T({x:en.center.x + Math.cos(a)*en.radius, y:en.center.y + Math.sin(a)*en.radius}, tr); if (prev) segs.push([prev[0],prev[1],p[0],p[1],lay]); prev = p; } }
     else if ((en.type === "TEXT" || en.type === "MTEXT") && en.text){ const p = T(en.startPoint || en.position || en.insertionPoint, tr); texts.push({x:p[0], y:p[1], text:en.text, layer:lay}); }
     else if (en.type === "INSERT" && depth < 4){
@@ -363,8 +363,11 @@ function flattenCAD(dxf){
       const bl = dxf.blocks?.[en.name]; if (bl){ const r = (en.rotation||0)*Math.PI/180, sx = en.xScale||1, sy = en.yScale||1; const bx = bl.position?.x||0, by = bl.position?.y||0;
       const sub = {sx: tr.sx*sx, sy: tr.sy*sy, r: tr.r + r, x: 0, y: 0}; const ip = T(en.position, tr); const c = Math.cos(sub.r), s = Math.sin(sub.r); sub.x = ip[0] - (bx*sub.sx*c - by*sub.sy*s); sub.y = ip[1] - (bx*sub.sx*s + by*sub.sy*c); walk(bl.entities, sub, depth+1, lay); } } } };
   walk(dxf.entities, {sx:1, sy:1, r:0, x:0, y:0}, 0);
-  const ins = dxf.header?.$INSUNITS; const unit = ins === 4 ? .001 : ins === 5 ? .01 : ins === 6 ? 1 : segs.length ? guessUnit(segs, arcs) : 1;
-  return {segs, arcs, texts, unit};
+  // unità: le porte del disegno (archi di un quarto di giro, 55–130 cm) comandano anche sull'unità dichiarata nel file,
+  // spesso sbagliata nelle tavole italiane (disegnate in centimetri, dichiarate in millimetri)
+  const ins = dxf.header?.$INSUNITS, declared = ins === 4 ? .001 : ins === 5 ? .01 : ins === 6 ? 1 : null, fromDoors = unitFromDoors(arcs);
+  const unit = fromDoors ?? declared ?? (segs.length ? guessUnit(segs, arcs) : 1);
+  return {segs, arcs, texts, unit, unitSource:fromDoors != null ? (declared != null && declared !== fromDoors ? "porte (diversa da quella del file)" : "porte") : declared != null ? "file" : "stima"};
 }
 async function loadDXF(f){
   const {segs, unit} = flattenCAD(await readCAD(f));
@@ -374,6 +377,14 @@ async function loadDXF(f){
   S.tab = "import"; renderTabs();
 }
 /** Unità del disegno quando l'intestazione non la dice: prima dai raggi delle porte (~0,8–1 m), poi dalla larghezza. */
+/** Unità dalle porte: mediana dei raggi degli archi di un quarto di giro; null se gli archi sono pochi o non decidono. */
+function unitFromDoors(arcs){
+  const q = arcs.filter(a => !a.full && Math.abs((a.sweep ?? 0) - Math.PI / 2) < .2);
+  const doorL = q.filter(a => /port|door|infiss|serram|apert|mur|wall/i.test(a.layer || "")), notOther = q.filter(a => !/elettr|impiant|ilumin|illumin|arred|mobil|furn|sanit|quot|dim|test|text|hatch|retin|tratt|verde|albero|giardin|strutt/i.test(a.layer || ""));
+  const rs = (doorL.length >= 4 ? doorL : notOther).map(a => a.r).sort((a, b) => a - b);
+  if (rs.length < 4) return null; const r = rs[rs.length >> 1];
+  const ok = [1, .1, .01, .001].filter(u => r * u >= .55 && r * u <= 1.3); return ok.length === 1 ? ok[0] : null;
+}
 function guessUnit(segs, arcs = []){
   const rs = arcs.filter(a => !a.full).map(a => a.r).sort((a,b) => a-b);
   if (rs.length >= 2){ const r = rs[rs.length >> 1]; for (const u of [1, .01, .001]) if (r * u > .5 && r * u < 1.4) return u; }

@@ -145,6 +145,8 @@ Scheda Importa → «Da pianta e prospetti al 3D». Si caricano uno o più file 
 
 - **Revisione guidata (fase C)**: «Riconosci muri, aperture e locali» mostra prima un'anteprima a colori con i dubbi in giallo (muri di spessore raro o con un capo libero, vani senza simbolo, superfici diverse da quelle scritte); per ogni dubbio Togli/Rimetti e Porta/Finestra; poi «Crea il modello BIM». Le correzioni restano se si cambiano layer, unità o ruoli.
 
+- **Unità dalle porte** (13/11/2026): se il file dichiara un'unità sbagliata (tavola in centimetri dichiarata in millimetri, frequente), comandano gli archi delle porte. Filtro dei layer più ampio (impianti, superfici, scale, demolizioni, strutture, librerie di blocchi); gradini delle scale ignorati; se c'è un layer dei muri, le facce si cercano lì.
+
 Limiti noti: un solo piano per volta (con gronda oltre 4,6 m l'app avvisa che i solai intermedi vanno aggiunti); coperture a padiglione e muri curvi non riconosciuti; pianta con il nord in alto. Va collaudato su tavole reali.
 
 ## Decisioni del proprietario (6/11/2026)

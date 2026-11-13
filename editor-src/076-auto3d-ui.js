@@ -2,7 +2,8 @@
    Da pianta e prospetti al 3D — pannello nella scheda Importa
    ============================================================ */
 const A3S = {files:[], clusters:[], layersOff:null, report:null, preview:null, dec:new Map()};   // dec: correzioni della revisione, per posizione (restano se si rifà il riconoscimento)
-const A3_SKIP_LAYERS = /quot|dim|cot[ae]|text|testo|scritt|hatch|tratt|camp|retin|arred|mobil|furn|sanit|asse|axis|grid|grigl|cartig|squadr|defpoints|viewport|^vp/i;
+// layer che non sono muri né aperture: quote, testi, retini, arredi, impianti, superfici, scale, demolizioni, strutture, librerie di blocchi
+const A3_SKIP_LAYERS = /quot|dim|cot[ae]|text|test[oi]|scritt|hatch|tratt|camp|retin|arred|mobil|furn|sanit|asse|axis|grid|grigl|cartig|squadr|defpoints|viewport|^vp|impiant|elettr|idraul|termic|gas\b|clima|superfic|area|scal[ae]\b|stair|demoli|gronda|gronde|pluvial|trav[ei]|pilastr.*strutt|sezion|section|noplot|no.?plot|cad-block|dwgmodels|verde|alber|veget|planim|catast|perimetr.*lott/i;
 const A3_ROLES = [["pianta","Pianta"],["sud","Prospetto sud"],["nord","Prospetto nord"],["est","Prospetto est"],["ovest","Prospetto ovest"],["ignora","Ignora"]];
 
 function autoPanelHTML(){

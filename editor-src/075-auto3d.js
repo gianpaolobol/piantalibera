@@ -87,6 +87,16 @@ const A3 = (() => {
       if (list.length < 8) continue; const offs = list.map(x => x.off).sort((a, b) => a - b), steps = offs.slice(1).map((o, i) => o - offs[i]).filter(d => d > 1e-4);
       if (median(list.map(x => x.L)) < 1.2 && median(steps) < .25) for (const x of list) if (x.L < 1.5) dropped.add(x);
     }
+    // gradini delle scale: lungo gli assi, almeno 6 linee corte (40–160 cm) parallele, sovrapposte, a passo regolare 22–35 cm
+    for (const ax of [th, th + Math.PI / 2]){
+      const nrm = ((ax % Math.PI) + Math.PI) % Math.PI, L = items.filter(x => !dropped.has(x) && Math.abs(Math.sin(x.ang - nrm)) < .01 && x.L >= .4 && x.L <= 1.6).sort((x, y) => x.off - y.off);
+      for (let i = 0; i < L.length; i++){
+        const run = [L[i]];
+        for (let j = i + 1; j < L.length; j++){ const p = run[run.length - 1], d = L[j].off - p.off; if (d < .22) continue; if (d > .35) break;
+          if (Math.min(p.b, L[j].b) - Math.max(p.a, L[j].a) > .5 * Math.min(p.L, L[j].L) && Math.abs(d - (run.length > 1 ? run[1].off - run[0].off : d)) < .03) run.push(L[j]); }
+        if (run.length >= 6) run.forEach(x => dropped.add(x));
+      }
+    }
     // collineari: stessa direzione (±0,2°) e stessa retta (±5 mm), intervalli uniti se si toccano entro «gap»
     const keep = items.filter(x => !dropped.has(x)).sort((x, y) => x.ang - y.ang || x.off - y.off || x.a - y.a), out = [], used = new Uint8Array(keep.length);
     for (let i = 0; i < keep.length; i++){
@@ -120,6 +130,9 @@ const A3 = (() => {
     const groups = []; let cur = null;
     for (const i of order){ if (!cur || segs[i].ang - cur.last > D2R * .6){ cur = {ids:[], last:segs[i].ang}; groups.push(cur); } cur.ids.push(i); cur.last = segs[i].ang; }
     if (groups.length > 1 && (Math.PI - groups[groups.length-1].last) + segs[groups[0].ids[0]].ang < D2R * .6){ groups[0].ids.push(...groups.pop().ids); }
+    // layer dei muri come primo indizio: se c'è (MURI, WALL, A-WALL…) e porta almeno un quarto delle linee, le facce si cercano solo lì
+    const WALL_L = /mur|wall|parete|tamponam|tramezz/i, wallLen = segs.reduce((t, x) => t + (WALL_L.test(x.s[4] || "") ? x.L : 0), 0), allLen = segs.reduce((t, x) => t + x.L, 0);
+    const wallOnly = opt.wallLayer !== false && wallLen >= .25 * allLen ? i => WALL_L.test(segs[i].s[4] || "") : null;
     const pairs = [];
     for (const g of groups){
       const a0 = median(g.ids.map(i => segs[i].ang)), u = [Math.cos(a0), Math.sin(a0)], n = [-u[1], u[0]];
@@ -127,6 +140,7 @@ const A3 = (() => {
       const L = g.ids.filter(i => segs[i].L >= .15).map(i => { const s = segs[i].s; const p0 = s[0]*u[0] + s[1]*u[1], p1 = s[2]*u[0] + s[3]*u[1]; const o0 = s[0]*n[0] + s[1]*n[1], o1 = s[2]*n[0] + s[3]*n[1]; return {i, a:Math.min(p0,p1), b:Math.max(p0,p1), off:(o0+o1)/2, skew:Math.abs(o0-o1)}; }).filter(x => x.skew < .03).sort((x,y) => x.off - y.off);
       g.lines = L;
       for (let x = 0; x < L.length; x++) for (let y = x+1; y < L.length && L[y].off - L[x].off <= maxT; y++){
+        if (wallOnly && !(wallOnly(L[x].i) && wallOnly(L[y].i))) continue;
         const d = L[y].off - L[x].off; if (d < minT) continue;
         const o0 = Math.max(L[x].a, L[y].a), o1 = Math.min(L[x].b, L[y].b);
         if (o1 - o0 >= .15) pairs.push({g, A:L[x], B:L[y], d, o0, o1});
@@ -294,7 +308,8 @@ const A3 = (() => {
     const skip = /^\s*([\d.,]+\s*(m|mq|m2|m²|cm)?|h\s*[=:].*|s\.?\s*=.*|sup.*|superf.*|[\d.,]+\s*[x×]\s*[\d.,]+.*)\s*$/i;
     for (const r of rooms){
       const cand = texts.filter(t => inPoly(t.x, t.y, r.pts)).map(t => cleanText(t.text)).filter(t => t && t.length <= 30 && !skip.test(t) && /[a-zà-ù]{2}/i.test(t));
-      const name = cand[0] || ""; r.name = name ? name[0].toUpperCase() + name.slice(1).toLowerCase() : "";
+      // il nome senza la superficie e l'altezza scritte accanto («Soggiorno mq 35,54 h 2,90» → «Soggiorno»)
+      const name = (cand[0] || "").replace(/\s*(\b(mq|m2|m²|sup\.?|s\s*=|h\s*[=:]?\s*\d)|\d+[.,]\d+\s*(mq|m2|m²)).*$/i, "").trim(); r.name = name ? name[0].toUpperCase() + name.slice(1).toLowerCase() : "";
       // superficie scritta nel locale («14,50 m²», «mq 14.5») confrontata con quella calcolata
       const written = texts.filter(t => inPoly(t.x, t.y, r.pts)).map(t => cleanText(t.text).match(/(?:^|\s)(?:mq|m2|m²|sup\.?|s\s*=)?\s*(\d+[.,]\d+|\d+)\s*(?:mq|m2|m²)?\s*$/i)).find(m => m && /mq|m2|m²|sup|s\s*=/i.test(m[0]));
       const wa = written ? +written[1].replace(",", ".") : null, A = r.area;
