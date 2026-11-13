@@ -141,6 +141,8 @@ Scheda Importa → «Da pianta e prospetti al 3D». Si caricano uno o più file 
 - Quote, testi, campiture e arredi vengono esclusi per nome del layer; l'elenco dei layer resta modificabile.
 - DWG: lettore libredwg compilato in WebAssembly (`@mlightcad/libredwg-web@0.8.2`, GPL-3.0), scaricato da jsDelivr solo quando serve (~11 MB). Alcuni DWG vecchi non si leggono: in quel caso si salva come DXF.
 
+- **Dalla fase B del progetto CAD → BIM (13/11/2026, `docs/banco-cad.md`)**: pulizia delle linee spezzate, doppie e staccate e dei retini; piante ruotate raddrizzate; muri di spessore raro; porte e finestre vicino agli angoli; locali con superficie esatta (griglia sulle coordinate dei muri); porte scorrevoli. Banco di 200 piante: muri 99,7 %, aperture 98,3 % (tipo 99,6 %), locali esatti 95,2 % (prima 49,5 %).
+
 Limiti noti: un solo piano per volta (con gronda oltre 4,6 m l'app avvisa che i solai intermedi vanno aggiunti); coperture a padiglione e muri curvi non riconosciuti; pianta con il nord in alto. Va collaudato su tavole reali.
 
 ## Decisioni del proprietario (6/11/2026)

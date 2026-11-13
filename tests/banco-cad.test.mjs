@@ -38,3 +38,9 @@ test("il motore attuale gira su tutto il banco senza errori e trova i muri della
   assert.equal(r.piante, 3 * Object.keys(STILI).length);
   assert.ok(r.perStile.ordinato.muri_richiamo > .9, JSON.stringify(r.perStile.ordinato));
 });
+
+test("fase B: il motore resta sopra le soglie sul banco (nessun passo indietro)", () => {
+  const r = misuraBanco(banco(8), motoreAttuale()).totale;
+  const soglie = { muri_richiamo: .99, muri_precisione: .98, aperture_richiamo: .96, aperture_tipo: .97, locali_area_1pct: .9 };
+  for (const [k, v] of Object.entries(soglie)) assert.ok(r[k] >= v, `${k}: ${r[k]} < ${v}`);
+});
