@@ -974,3 +974,23 @@ test("porta con alzatina: campo nella scheda, soglia nel 3D, valori fuori misura
   expect(await page.evaluate(id => "alz" in P.openings.find(o => o.id === id), id)).toBe(false);
   expect(errors).toEqual([]);
 });
+
+test("tavola DXF con scale sul loro layer: gradini esterni e rampa diventano oggetti scala, non muri", async ({ page }) => {
+  const errors = await open(page);
+  await page.click('[data-tab="import"]');
+  await page.setInputFiles("#fA3", { name: "tavola-casa.dxf", mimeType: "application/dxf", buffer: Buffer.from(tavolaDXF({ scale: true })) });
+  await expect(page.locator(".a3grid figure")).toHaveCount(3, { timeout: 15_000 });
+  await page.click("#a3Go");
+  await expect(page.locator(".a3rev")).toContainText("5 muri, 2 porte, 3 finestre, 2 locali");
+  expect(await page.locator(".a3prev polygon.st").count()).toBe(2);
+  await page.click("#a3Make");
+  await expect(page.locator(".a3rep")).toContainText("2 scale");
+  const st = await page.evaluate(() => P.objects.filter(o => o.level === S.level && o.fromCAD).map(o => ({ ref: o.ref, x: o.x, y: o.y, rot: o.rot, n: o.p.n, w: o.p.w })));
+  expect(st.length).toBe(2);
+  const g = st.find(o => o.n === 3), f = st.find(o => o.n !== 3);
+  expect(g.ref).toBe("scala_dritta"); expect(g.w).toBeCloseTo(3.4, 1);
+  expect(f.w).toBeCloseTo(.9, 2);
+  // la scala nel 3D: il suo ingombro in pianta copre il punto atteso
+  expect(await page.evaluate(() => { let n = 0; modelGroup.traverse(o => { if (o.userData?.objId && P.objects.find(p => p.id === o.userData.objId)?.fromCAD) n++; }); return n; })).toBe(2);
+  expect(errors).toEqual([]);
+});

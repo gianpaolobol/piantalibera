@@ -116,8 +116,92 @@ const A3 = (() => {
     return out;
   }
   const rotPt = ([x, y], c, s) => [x*c - y*s, x*s + y*c];
+  /** Scale: serie di almeno 3 linee parallele a passo regolare (20–45 cm). «dritta»: pedate della stessa lunghezza e allineate;
+   *  «gradini»: rettangoli concentrici aperti su un lato (gradini esterni su tre lati), ogni linea più lunga della precedente di due passi.
+   *  Il verso di salita viene dalla freccia (linea che attraversa le pedate con la punta), altrimenti verso la linea più corta.
+   *  Restituisce le rampe e gli indici delle linee usate (che non devono diventare muri). */
+  function findStairs(segs, extraFrom = Infinity){
+    const it = segs.map((s, i) => { const L = segLen(s); let ang = Math.atan2(s[3]-s[1], s[2]-s[0]); if (ang < 0) ang += Math.PI; if (ang >= Math.PI - 1e-9) ang -= Math.PI;
+      const u = [Math.cos(ang), Math.sin(ang)], n = [-u[1], u[0]], p0 = s[0]*u[0] + s[1]*u[1], p1 = s[2]*u[0] + s[3]*u[1];
+      return {i, s, L, ang, u, n, a:Math.min(p0, p1), b:Math.max(p0, p1), off:(s[0]*n[0] + s[1]*n[1] + s[2]*n[0] + s[3]*n[1]) / 2}; }).filter(x => x.L >= .5 && x.L <= 8);
+    const byAng = new Map(); for (const x of it){ const k = Math.round(x.ang / D2R) % 180; for (const kk of [k]) (byAng.get(kk) || byAng.set(kk, []).get(kk)).push(x); }
+    const flights = [], used = new Set();
+    for (const [k, list0] of byAng){
+      const list = [...list0, ...(byAng.get((k + 1) % 180) || []).filter(x => Math.abs(x.ang - list0[0].ang) < 1.2 * D2R)].sort((x, y) => x.off - y.off);
+      const taken = new Set();
+      for (let i = 0; i < list.length; i++){
+        if (taken.has(list[i]) || used.has(list[i].i)) continue;
+        for (const kind of ["dritta", "gradini"]){
+          const run = [list[i]]; let step = null;
+          for (let j = i + 1; j < list.length; j++){ const p = run[run.length - 1], q = list[j], d = q.off - p.off; if (d < .2) continue; if (d > .45) break; if (taken.has(q) || used.has(q.i)) continue;
+            if (step !== null && Math.abs(d - step) > .035) continue;
+            const ok = kind === "dritta" ? Math.abs(p.a - q.a) < .1 && Math.abs(p.b - q.b) < .1 && q.L <= 2.2 && p.L <= 2.2
+              : (Math.abs((p.a - q.a) - d) < .1 && Math.abs((q.b - p.b) - d) < .1) || (Math.abs((q.a - p.a) - d) < .1 && Math.abs((p.b - q.b) - d) < .1);
+            if (!ok) continue; if (step === null) step = d; run.push(q); }
+          // gradini concentrici: l'ordine delle lunghezze deve essere monotono (tutti crescono o tutti calano)
+          if (kind === "gradini" && run.length >= 3){ const inc = run[1].L > run[0].L; if (!run.every((x, t) => !t || (x.L > run[t - 1].L) === inc)) continue; }
+          if (run.length < 3) continue;
+          run.forEach(x => taken.add(x));
+          flights.push({kind, run, step, u:run[0].u, n:run[0].n}); break;
+        }
+      }
+    }
+    // frecce: linea perpendicolare alle pedate che ne attraversa almeno due, con la punta (due tratti corti che si incontrano a un estremo)
+    const shorts = segs.map((s, i) => ({s, i, L:segLen(s)})).filter(x => x.L > .05 && x.L < .45);
+    const tip = (P) => shorts.filter(x => Math.hypot(x.s[0] - P[0], x.s[1] - P[1]) < .03 || Math.hypot(x.s[2] - P[0], x.s[3] - P[1]) < .03).length >= 2;
+    const out = [], WALLY = /mur|wall|parete|tamponam|tramezz|costru/i, same = (j, f) => (j >= extraFrom) === (f.run[0].i >= extraFrom) && !WALLY.test(segs[j][4] || "");
+    for (const f of flights){
+      const offs = f.run.map(x => x.off), o0 = Math.min(...offs), o1 = Math.max(...offs), A = Math.max(...f.run.map(x => x.a)), B = Math.min(...f.run.map(x => x.b));
+      const lo = f.kind === "dritta" ? median(f.run.map(x => x.a)) : Math.min(...f.run.map(x => x.a)), hi = f.kind === "dritta" ? median(f.run.map(x => x.b)) : Math.max(...f.run.map(x => x.b));
+      const w = f.kind === "dritta" ? median(f.run.map(x => x.L)) : Math.max(...f.run.map(x => x.L));
+      // verso: +1 sale verso offset crescente
+      let up = 0;
+      for (let j = 0; j < segs.length && !up; j++){ const s = segs[j], L = segLen(s); if (L < 2 * f.step || used.has(j) || f.run.some(x => x.i === j) || !same(j, f)) continue;
+        const dv = [(s[2]-s[0]) / L, (s[3]-s[1]) / L]; if (Math.abs(dv[0]*f.n[0] + dv[1]*f.n[1]) < .97) continue;
+        const along = ((s[0] + s[2]) / 2) * f.u[0] + ((s[1] + s[3]) / 2) * f.u[1]; if (along < A || along > B) continue;
+        const e0 = s[0]*f.n[0] + s[1]*f.n[1], e1 = s[2]*f.n[0] + s[3]*f.n[1]; if (Math.min(e0, e1) > o0 + f.step || Math.max(e0, e1) < o1 - f.step) continue;
+        const t0 = tip([s[0], s[1]]), t1 = tip([s[2], s[3]]); if (t0 !== t1){ up = (t1 ? e1 - e0 : e0 - e1) > 0 ? 1 : -1; used.add(j); const P = t1 ? [s[2], s[3]] : [s[0], s[1]];
+          for (const x of shorts) if (same(x.i, f) && Math.hypot(x.s[0] - P[0], x.s[1] - P[1]) < .03 || Math.hypot(x.s[2] - P[0], x.s[3] - P[1]) < .03) used.add(x.i); } }
+      if (!up && f.kind === "gradini"){ const sh = f.run.reduce((m, x) => x.L < m.L ? x : m); up = sh.off > (o0 + o1) / 2 ? 1 : -1; }
+      for (const x of f.run) used.add(x.i);
+      // fianchi: linee perpendicolari alle pedate che toccano i loro estremi (gradini) o le fiancheggiano per tutta la rampa (cosciali)
+      const ends = f.run.flatMap(x => [[x.s[0], x.s[1]], [x.s[2], x.s[3]]]);
+      segs.forEach((s, j) => { if (used.has(j) || !same(j, f)) return; const L = segLen(s); if (L < .05) return; const dv = [(s[2]-s[0]) / L, (s[3]-s[1]) / L]; if (Math.abs(dv[0]*f.n[0] + dv[1]*f.n[1]) < .99) return;
+        const pa = s[0]*f.u[0] + s[1]*f.u[1], e0 = s[0]*f.n[0] + s[1]*f.n[1], e1 = s[2]*f.n[0] + s[3]*f.n[1];
+        if (f.kind === "gradini" ? ends.some(P => Math.hypot(P[0] - s[0], P[1] - s[1]) < .03 || Math.hypot(P[0] - s[2], P[1] - s[3]) < .03) && L <= o1 - o0 + f.step + 3
+          : (Math.abs(pa - lo) < .06 || Math.abs(pa - hi) < .06) && Math.min(e0, e1) > o0 - f.step - .05 && Math.max(e0, e1) < o1 + f.step + .05 && L > .5 * (o1 - o0)) used.add(j); });
+      const c = (lo + hi) / 2, steps = f.kind === "gradini" ? f.run.length : f.run.length - 1;
+      // gradini esterni: il blocco parte dal fronte più esterno e sale verso l'edificio per «steps» pedate
+      const co = f.kind === "gradini" && up ? (up > 0 ? o0 : o1) + up * steps * f.step / 2 : (o0 + o1) / 2;
+      out.push({kind:f.kind, center:[f.u[0]*c + f.n[0]*co, f.u[1]*c + f.n[1]*co], dir:up ? [f.n[0]*up, f.n[1]*up] : [f.n[0], f.n[1]], known:!!up, w:+w.toFixed(3), tread:+f.step.toFixed(3), steps, run:+(o1 - o0).toFixed(3), along:[lo, hi], offs:[o0, o1], u:f.u, n:f.n});
+    }
+    // due rampe dritte affiancate, stessa direzione, con le pedate alla stessa altezza di partenza/arrivo: scala a U; perpendicolari e vicine: a L
+    const stairs = [], gone = new Set();
+    for (const f of out){ if (gone.has(f) || f.kind !== "dritta") continue;
+      const g = out.find(h => h !== f && !gone.has(h) && h.kind === "dritta" && Math.abs(h.n[0]*f.n[0] + h.n[1]*f.n[1]) > .99 && Math.abs(h.w - f.w) < .25
+        && Math.min(h.offs[1], f.offs[1]) - Math.max(h.offs[0], f.offs[0]) > -.6 && Math.abs((h.along[0] + h.along[1]) / 2 - (f.along[0] + f.along[1]) / 2) < f.w + h.w);
+      if (g){ gone.add(f); gone.add(g);
+        const x0 = Math.min(f.along[0], g.along[0]), x1 = Math.max(f.along[1], g.along[1]), y0 = Math.min(f.offs[0], g.offs[0]), y1 = Math.max(f.offs[1], g.offs[1]);
+        stairs.push({shape:"U", center:[f.u[0]*(x0 + x1)/2 + f.n[0]*(y0 + y1)/2, f.u[1]*(x0 + x1)/2 + f.n[1]*(y0 + y1)/2], dir:f.dir, known:f.known || g.known, w:+((f.w + g.w) / 2).toFixed(3), tread:+((f.tread + g.tread) / 2).toFixed(3), steps:f.steps + g.steps + 2, ext:false,
+          conf:f.known || g.known ? {ok:true} : {ok:false, why:"scala a U: verso di salita da controllare"}}); continue; }
+      gone.add(f);
+      stairs.push({shape:"dritta", center:f.center, dir:f.dir, known:f.known, w:f.w, tread:f.tread, steps:f.steps, ext:false, conf:f.known ? {ok:true} : {ok:false, why:"rampa: verso di salita da controllare"}});
+    }
+    // linee del layer delle scale che restano inspiegate vicino a una scala: riconosciuta solo in parte → dubbio
+    for (const st of stairs){ const R = Math.max(st.w, st.steps * st.tread) / 2 + 1.2;
+      const left = segs.filter((s, j) => j >= extraFrom && !used.has(j) && segLen(s) > .3 && Math.hypot((s[0] + s[2]) / 2 - st.center[0], (s[1] + s[3]) / 2 - st.center[1]) < R).length;
+      if (left > 2) st.conf = {ok:false, why:`scala riconosciuta in parte (${left} linee della scala non spiegate): controlla rampe e gradini`}; }
+    for (const f of out) if (f.kind === "gradini") stairs.push({shape:"gradini", center:f.center, dir:f.dir, known:true, w:f.w, tread:f.tread, steps:f.steps, ext:true, conf:{ok:true}});
+    return {stairs, used};
+  }
   /** Pianta: pulizia, raddrizzamento sulla direzione principale, riconoscimento, ritorno all'orientamento del disegno. */
   function analyzePlan(segsIn, arcs = [], texts = [], opt = {}){
+    // scale prima di tutto: le loro linee (anche quelle sul layer delle scale, passate a parte) non diventano muri
+    const extra = opt.stairSegs || [], st = opt.stairs === false ? {stairs:[], used:new Set()} : findStairs([...segsIn, ...extra], segsIn.length);
+    if (st.used.size) segsIn = segsIn.filter((_, i) => !st.used.has(i));
+    const r = analyzePlanRot(segsIn, arcs, texts, opt); r.stairs = st.stairs; return r;
+  }
+  function analyzePlanRot(segsIn, arcs = [], texts = [], opt = {}){
     const segs0 = opt.clean === false ? segsIn : cleanSegs(segsIn, opt), th = opt.straighten === false ? 0 : dominantAngle(segs0);
     if (Math.abs(th) < 1e-4) return analyzePlanAxis(segs0, arcs, texts, opt);
     const c = Math.cos(-th), s = Math.sin(-th), R = p => rotPt(p, c, s), B = p => rotPt(p, Math.cos(th), Math.sin(th));
@@ -137,7 +221,7 @@ const A3 = (() => {
     for (const i of order){ if (!cur || segs[i].ang - cur.last > D2R * .6){ cur = {ids:[], last:segs[i].ang}; groups.push(cur); } cur.ids.push(i); cur.last = segs[i].ang; }
     if (groups.length > 1 && (Math.PI - groups[groups.length-1].last) + segs[groups[0].ids[0]].ang < D2R * .6){ groups[0].ids.push(...groups.pop().ids); }
     // layer dei muri come primo indizio: se c'è (MURI, WALL, A-WALL…) e porta almeno un quarto delle linee, le facce si cercano solo lì
-    const WALL_L = /mur|wall|parete|tamponam|tramezz/i, wallLen = segs.reduce((t, x) => t + (WALL_L.test(x.s[4] || "") ? x.L : 0), 0), allLen = segs.reduce((t, x) => t + x.L, 0);
+    const WALL_L = /mur|wall|parete|tamponam|tramezz|costru/i, wallLen = segs.reduce((t, x) => t + (WALL_L.test(x.s[4] || "") ? x.L : 0), 0), allLen = segs.reduce((t, x) => t + x.L, 0);
     const wallOnly = opt.wallLayer !== false && wallLen >= .25 * allLen ? i => WALL_L.test(segs[i].s[4] || "") : null;
     // con il layer dei muri si accetta ogni spessore plausibile, anche i muri antichi fino a 80 cm, senza chiedere che si ripeta
     if (wallOnly && opt.maxThick == null) maxT = .8;
@@ -591,7 +675,7 @@ const A3 = (() => {
       delete o.fromElev; delete o.from;
     }
     if (height > 4.6) notes.push(`Altezza di gronda ${height.toFixed(2)} m: probabilmente più piani. Per ora il volume è unico; i solai intermedi vanno aggiunti a mano.`);
-    return {walls, openings, rooms:plan.rooms, height, roof, notes, bbox:[bx0, by0, bx1, by1]};
+    return {walls, openings, rooms:plan.rooms, stairs:plan.stairs || [], height, roof, notes, bbox:[bx0, by0, bx1, by1]};
   }
-  return {parseOpeningLabel, clusterDrawings, analyzePlan, analyzePlanAxis, cleanSegs, dominantAngle, analyzeElevation, prepareElevation, unitFactor, combine, sideFromText, cleanText, findRooms};
+  return {findStairs, parseOpeningLabel, clusterDrawings, analyzePlan, analyzePlanAxis, cleanSegs, dominantAngle, analyzeElevation, prepareElevation, unitFactor, combine, sideFromText, cleanText, findRooms};
 })();

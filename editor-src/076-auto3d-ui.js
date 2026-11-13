@@ -6,6 +6,16 @@ const a3KindOf = o => o.type === "door" && o.style === "portafinestra" ? "pf" : 
 function a3Kind(o, k){ if (!k || k === a3KindOf(o)) return {...o};
   const r = {...o, type:k === "pf" ? "door" : k}; if (k === "pf") r.style = "portafinestra"; else if (o.style === "portafinestra") delete r.style;
   if (r.type === "window" && !(r.sill > .15)) { r.sill = 1; delete r.alz; } if (r.type === "door") r.sill = 0; return r; }
+const A3_STAIR_LAYERS = /scal[ae]\b|stair|gradin/i;
+/** Scala riconosciuta → oggetto scala parametrico dell'editor (sale lungo −y locale; rotazione dalla direzione di salita). */
+function a3StairObject(st, L){
+  const ref = st.shape === "U" ? "scala_u" : "scala_dritta", it = LIBMAP[ref]; if (!it) return null;
+  const Hfull = +(nextLevelAbove(L) ? nextLevelAbove(L).elev - L.elev : L.height + L.slab).toFixed(3);
+  const H = st.ext ? +(st.steps * .16).toFixed(3) : Hfull, n = st.ext ? st.steps : Math.max(st.steps, Math.round(H / .2));
+  const th = Math.atan2(-st.dir[0], -st.dir[1]), rot = +(-th * 180 / Math.PI).toFixed(1);
+  const o = {id:uid(), level:L.id, kind:"lib", ref, name:st.ext ? "Gradini esterni" : it.nome, x:+st.center[0].toFixed(3), y:+st.center[1].toFixed(3), rot, scale:1, z:0};
+  o.p = {H, n, w:st.w, tread:st.tread, ...(st.ext ? {rail:"nessuno", mat:"pietra"} : {})}; return o;
+}
 const A3S = {files:[], clusters:[], layersOff:null, report:null, preview:null, dec:new Map()};   // dec: correzioni della revisione, per posizione (restano se si rifà il riconoscimento)
 // layer che non sono muri né aperture: quote, testi, retini, arredi, impianti, superfici, scale, demolizioni, strutture, librerie di blocchi
 const A3_SKIP_LAYERS = /quot|dim|cot[ae]|text|test[oi]|scritt|hatch|tratt|camp|retin|arred|mobil|furn|sanit|asse|axis|grid|grigl|cartig|squadr|defpoints|viewport|^vp|impiant|elettr|idraul|termic|gas\b|clima|superfic|area|scal[ae]\b|stair|demoli|gronda|gronde|pluvial|trav[ei]|pilastr.*strutt|sezion|section|noplot|no.?plot|cad-block|dwgmodels|verde|alber|veget|planim|catast|perimetr.*lott/i;
@@ -84,9 +94,14 @@ function a3Recognize(){
   const segs = pc.segs.map(s => [...toApp(s[0], s[1]), ...toApp(s[2], s[3]), s[4]]);
   const arcs = pc.arcs.map(a => { const [cx, cy] = toApp(a.cx, a.cy); return {...a, cx, cy}; });
   const texts = pc.texts.map(t => { const [x, y] = toApp(t.x, t.y); return {...t, x, y}; });
+  // linee dei layer delle scale (escluse dai muri): servono a riconoscere rampe e gradini
+  const f = A3S.files.find(x => x.name === pc.file), u = f?.unit || 1, [bx0b, by0b, bx1b, by1b] = pc.bbox;
+  const stairSegs = f ? f.flat.segs.filter(s => A3S.layersOff.has(s[4]) && A3_STAIR_LAYERS.test(s[4])).map(s => [s[0]*u, s[1]*u, s[2]*u, s[3]*u, s[4]])
+    .filter(s => Math.min(s[0], s[2]) >= bx0b - 3 && Math.max(s[0], s[2]) <= bx1b + 3 && Math.min(s[1], s[3]) >= by0b - 3 && Math.max(s[1], s[3]) <= by1b + 3
+      && !A3S.clusters.some(c => c !== pc && c.file === pc.file && (s[0] + s[2]) / 2 >= c.bbox[0] && (s[0] + s[2]) / 2 <= c.bbox[2] && (s[1] + s[3]) / 2 >= c.bbox[1] && (s[1] + s[3]) / 2 <= c.bbox[3])).map(s => [...toApp(s[0], s[1]), ...toApp(s[2], s[3]), s[4]]) : [];
   busy("Riconosco muri, aperture e locali…");
   try {
-    const pr = A3.analyzePlan(segs, arcs, texts);
+    const pr = A3.analyzePlan(segs, arcs, texts, {stairSegs});
     if (!pr.walls.length){ toast("Non trovo muri: controlla i layer e l'unità del disegno", true); A3S.preview = null; return; }
     const elevs = A3S.clusters.filter(c => ["sud","nord","est","ovest"].includes(c.role)).map(c => { const [ex0, ey0] = c.bbox; return {side:c.role, data:A3.prepareElevation(c.segs.map(s => [s[0]-ex0, s[1]-ey0, s[2]-ex0, s[3]-ey0, s[4]]), pr, c.role)}; }).filter(e => e.data);
     const m = A3.combine(pr, elevs, {height:A3S.height ?? 2.7});
@@ -111,6 +126,7 @@ function a3Doubts(){
   for (const w of m.walls) if (dub(w) || D.has(w.key)) out.push({k:w.key, kind:"Muro", why:dub(w) ? w.conf.why : "corretto da te", drop:!!D.get(w.key)?.drop});
   for (const o of m.openings) if (dub(o) || D.has(o.key)) out.push({k:o.key, kind:o.style === "portafinestra" ? "Portafinestra" : o.type0 === "door" ? "Porta" : "Finestra", why:dub(o) ? o.conf.why : "corretta da te", drop:!!D.get(o.key)?.drop, type:D.get(o.key)?.type || a3KindOf(o), op:true});
   for (const r of m.rooms) if (r.conf && !r.conf.ok) out.push({k:"r:" + (r.name || ""), kind:r.name || "Locale", why:r.conf.why, info:true});
+  for (const st of m.stairs || []) if (st.conf && !st.conf.ok) out.push({k:"s:" + st.center.map(a3r).join(","), kind:"Scala", why:st.conf.why + " (poi la ruoti dalla scheda dell'oggetto)", info:true});
   return out;
 }
 function a3ReviewSVG(){
@@ -123,14 +139,16 @@ function a3ReviewSVG(){
   const walls = m.walls.map(w => { const dr = D.get(w.key)?.drop; return `<line data-k="${esc(w.key)}" x1="${w.a[0]}" y1="${w.a[1]}" x2="${w.b[0]}" y2="${w.b[1]}" stroke-width="${w.thick}" class="w ${dr ? "drop" : w.conf?.ok === false ? "dub" : ""}"/>`; }).join("");
   const ops = m.openings.map(o => { const w = m.walls.find(x => x.id === o.wall); if (!w) return ""; const L = Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1]) || 1, u = [(w.b[0]-w.a[0])/L, (w.b[1]-w.a[1])/L], A = [w.a[0]+u[0]*(o.t-o.w/2), w.a[1]+u[1]*(o.t-o.w/2)], B = [w.a[0]+u[0]*(o.t+o.w/2), w.a[1]+u[1]*(o.t+o.w/2)];
     const t = D.get(o.key)?.type || a3KindOf(o), dr = D.get(o.key)?.drop; return `<line data-k="${esc(o.key)}" x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke-width="${w.thick + .06}" class="o ${t === "pf" ? "door pf" : t} ${dr ? "drop" : o.conf?.ok === false ? "dub" : ""}"/>`; }).join("");
-  return `<svg viewBox="${x0 - pad} ${y0 - pad} ${W} ${H}" role="img" aria-label="Anteprima del riconoscimento: muri, porte, finestre e locali"><g class="r">${rooms}</g><path d="${d}" class="cad" stroke-width="${sw}"/>${walls}${ops}</svg>`;
+  const stairs = (m.stairs || []).map(st => { const d = st.dir, q = [-d[1], d[0]], len = st.steps * st.tread, c = st.center, P = (a, b) => [c[0] + q[0]*a + d[0]*b, c[1] + q[1]*a + d[1]*b].join(",");
+    return `<polygon class="st" points="${[P(-st.w/2, -len/2), P(st.w/2, -len/2), P(st.w/2, len/2), P(-st.w/2, len/2)].join(" ")}"/><polyline class="st" points="${[P(0, -len/2 + .1), P(0, len/2 - .1), P(-.12, len/2 - .3), P(0, len/2 - .1), P(.12, len/2 - .3)].join(" ")}"/>`; }).join("");
+  return `<svg viewBox="${x0 - pad} ${y0 - pad} ${W} ${H}" role="img" aria-label="Anteprima del riconoscimento: muri, porte, finestre, locali e scale"><g class="r">${rooms}</g><path d="${d}" class="cad" stroke-width="${sw}"/>${walls}${ops}<g style="stroke-width:${sw * 2}">${stairs}</g></svg>`;
 }
 function a3ReviewHTML(){
   const {m} = A3S.preview, rv = a3Reviewed(), dub = a3Doubts(), nD = rv.openings.filter(o => o.type === "door").length;
   return `<div class="a3rev"><span class="lbl">Revisione</span>
     <p class="note">${rv.walls.length} muri, ${nD} porte, ${rv.openings.length - nD} finestre, ${m.rooms.length} locali. In giallo i dubbi: controllali qui sotto, poi crea il modello. Le correzioni restano se cambi layer o unità e rifai il riconoscimento.</p>
     <div class="a3prev">${a3ReviewSVG()}</div>
-    <div class="a3leg"><i class="lw"></i>muro <i class="ld"></i>porta <i class="lp"></i>portafinestra <i class="lf"></i>finestra <i class="lq"></i>dubbio</div>
+    <div class="a3leg"><i class="lw"></i>muro <i class="ld"></i>porta <i class="lp"></i>portafinestra <i class="lf"></i>finestra <i class="ls"></i>scala <i class="lq"></i>dubbio</div>
     ${dub.length ? `<ul class="a3dub">${dub.map(x => `<li data-a3k="${esc(x.k)}" class="${x.drop ? "drop" : ""}"><span><b>${esc(x.kind)}</b> · ${esc(x.why)}</span>${x.info ? "" : `<span class="acts">${x.op ? `<select class="inp" data-a3type="${esc(x.k)}" aria-label="Tipo"><option value="door" ${x.type === "door" ? "selected" : ""}>Porta</option><option value="pf" ${x.type === "pf" ? "selected" : ""}>Portafinestra</option><option value="window" ${x.type === "window" ? "selected" : ""}>Finestra</option></select>` : ""}<button class="btn" data-a3drop="${esc(x.k)}">${x.drop ? "Rimetti" : "Togli"}</button></span>`}</li>`).join("")}</ul>` : `<p class="note">Nessun dubbio.</p>`}
     <div class="btns"><button class="btn primary" id="a3Make">Crea il modello BIM</button></div>
     <p class="note">Il piano corrente («${esc(level().name)}») viene sostituito: muri, aperture e locali. Con Annulla torni indietro.</p></div>`;
@@ -145,10 +163,13 @@ function a3Generate(){
     for (const w of rv.walls){ const id = uid(); ids[w.id] = id; P.walls.push({id, level:lid, a:w.a, b:w.b, thick:w.thick, height:null, mat:S.defaults.wallMat}); }
     for (const o of rv.openings) if (ids[o.wall]) P.openings.push({id:uid(), wall:ids[o.wall], t:o.t, w:o.w, h:o.h, sill:o.sill, type:o.type, flip:0, ...(o.style ? {style:o.style} : {}), ...(o.alz ? {alz:o.alz} : {})});
     m.rooms.forEach((r, i) => P.rooms.push({id:uid(), level:lid, name:r.name || `Locale ${i+1}`, mat:FLOOR_MATS.includes(r.mat) ? r.mat : S.defaults.roomMat, pts:r.pts}));
+    P.objects = P.objects.filter(o => !(o.level === lid && o.fromCAD));
+    for (const st of m.stairs || []){ const o = a3StairObject(st, L); if (o){ o.fromCAD = true; P.objects.push(o); } }
     L.height = m.height; L.roof = {...L.roof, ...m.roof}; if (!m.roof.ridge) delete L.roof.ridge;
     L.underlay = {kind:"vec", lines:segs.map(s => s.slice(0, 4)), ox:0, oy:0, k:1, opacity:.3, name:pc.file};
     const nD = rv.openings.filter(o => o.type === "door").length, nF = rv.openings.length - nD, nC = A3S.dec.size;
-    A3S.report = {title:`Creati ${rv.walls.length} muri, ${nD} porte, ${nF} finestre e ${m.rooms.length} locali`, lines:[
+    const nS = (m.stairs || []).length;
+    A3S.report = {title:`Creati ${rv.walls.length} muri, ${nD} porte, ${nF} finestre e ${m.rooms.length} locali${nS ? `, ${nS} scal${nS > 1 ? "e" : "a"}` : ""}`, lines:[
       `Spessori riconosciuti: ${pr.thicknesses.map(t => fmt(t*100, 0) + " cm").join(", ") || "—"}.`,
       elevs.length ? `Altezza di gronda ${fmt(m.height, 2)} m da ${elevs.length} prospett${elevs.length > 1 ? "i" : "o"}.` : `Nessun prospetto: altezza ${fmt(m.height, 2)} m e aperture con misure tipiche.`,
       m.roof.type === "gable" ? `Copertura a due falde, pendenza ${fmt(m.roof.pitch, 1)}°, colmo ${m.roof.ridge === "x" ? "est–ovest" : "nord–sud"}.` : "Copertura piana.",
