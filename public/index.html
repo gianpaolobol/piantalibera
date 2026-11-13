@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-NFd4N7TpNBbMcExLt/67scDBFYaUvO57wPy7Uc7PqzI=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-1+o3YhLFelAtgGJRp4jzTHKE4FtVphyykSSzCjIHRJE=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4137,7 +4137,7 @@ const A3 = (() => {
    *  «gradini»: rettangoli concentrici aperti su un lato (gradini esterni su tre lati), ogni linea più lunga della precedente di due passi.
    *  Il verso di salita viene dalla freccia (linea che attraversa le pedate con la punta), altrimenti verso la linea più corta.
    *  Restituisce le rampe e gli indici delle linee usate (che non devono diventare muri). */
-  function findStairs(segs){
+  function findStairs(segs, extraFrom = Infinity){
     const it = segs.map((s, i) => { const L = segLen(s); let ang = Math.atan2(s[3]-s[1], s[2]-s[0]); if (ang < 0) ang += Math.PI; if (ang >= Math.PI - 1e-9) ang -= Math.PI;
       const u = [Math.cos(ang), Math.sin(ang)], n = [-u[1], u[0]], p0 = s[0]*u[0] + s[1]*u[1], p1 = s[2]*u[0] + s[3]*u[1];
       return {i, s, L, ang, u, n, a:Math.min(p0, p1), b:Math.max(p0, p1), off:(s[0]*n[0] + s[1]*n[1] + s[2]*n[0] + s[3]*n[1]) / 2}; }).filter(x => x.L >= .5 && x.L <= 8);
@@ -4187,7 +4187,9 @@ const A3 = (() => {
         const pa = s[0]*f.u[0] + s[1]*f.u[1], e0 = s[0]*f.n[0] + s[1]*f.n[1], e1 = s[2]*f.n[0] + s[3]*f.n[1];
         if (f.kind === "gradini" ? ends.some(P => Math.hypot(P[0] - s[0], P[1] - s[1]) < .03 || Math.hypot(P[0] - s[2], P[1] - s[3]) < .03) && L <= o1 - o0 + f.step + .05
           : (Math.abs(pa - lo) < .06 || Math.abs(pa - hi) < .06) && Math.min(e0, e1) > o0 - f.step - .05 && Math.max(e0, e1) < o1 + f.step + .05 && L > .5 * (o1 - o0)) used.add(j); });
-      const c = (lo + hi) / 2, co = (o0 + o1) / 2, steps = f.kind === "gradini" ? f.run.length : f.run.length - 1;
+      const c = (lo + hi) / 2, steps = f.kind === "gradini" ? f.run.length : f.run.length - 1;
+      // gradini esterni: il blocco parte dal fronte più esterno e sale verso l'edificio per «steps» pedate
+      const co = f.kind === "gradini" && up ? (up > 0 ? o0 : o1) + up * steps * f.step / 2 : (o0 + o1) / 2;
       out.push({kind:f.kind, center:[f.u[0]*c + f.n[0]*co, f.u[1]*c + f.n[1]*co], dir:up ? [f.n[0]*up, f.n[1]*up] : [f.n[0], f.n[1]], known:!!up, w:+w.toFixed(3), tread:+f.step.toFixed(3), steps, run:+(o1 - o0).toFixed(3), along:[lo, hi], offs:[o0, o1], u:f.u, n:f.n});
     }
     // due rampe dritte affiancate, stessa direzione, con le pedate alla stessa altezza di partenza/arrivo: scala a U; perpendicolari e vicine: a L
@@ -4202,13 +4204,17 @@ const A3 = (() => {
       gone.add(f);
       stairs.push({shape:"dritta", center:f.center, dir:f.dir, known:f.known, w:f.w, tread:f.tread, steps:f.steps, ext:false, conf:f.known ? {ok:true} : {ok:false, why:"rampa: verso di salita da controllare"}});
     }
+    // linee del layer delle scale che restano inspiegate vicino a una scala: riconosciuta solo in parte → dubbio
+    for (const st of stairs){ const R = Math.max(st.w, st.steps * st.tread) / 2 + 1.2;
+      const left = segs.filter((s, j) => j >= extraFrom && !used.has(j) && segLen(s) > .3 && Math.hypot((s[0] + s[2]) / 2 - st.center[0], (s[1] + s[3]) / 2 - st.center[1]) < R).length;
+      if (left > 2) st.conf = {ok:false, why:`scala riconosciuta in parte (${left} linee della scala non spiegate): controlla rampe e gradini`}; }
     for (const f of out) if (f.kind === "gradini") stairs.push({shape:"gradini", center:f.center, dir:f.dir, known:true, w:f.w, tread:f.tread, steps:f.steps, ext:true, conf:{ok:true}});
     return {stairs, used};
   }
   /** Pianta: pulizia, raddrizzamento sulla direzione principale, riconoscimento, ritorno all'orientamento del disegno. */
   function analyzePlan(segsIn, arcs = [], texts = [], opt = {}){
     // scale prima di tutto: le loro linee (anche quelle sul layer delle scale, passate a parte) non diventano muri
-    const extra = opt.stairSegs || [], st = opt.stairs === false ? {stairs:[], used:new Set()} : findStairs([...segsIn, ...extra]);
+    const extra = opt.stairSegs || [], st = opt.stairs === false ? {stairs:[], used:new Set()} : findStairs([...segsIn, ...extra], segsIn.length);
     if (st.used.size) segsIn = segsIn.filter((_, i) => !st.used.has(i));
     const r = analyzePlanRot(segsIn, arcs, texts, opt); r.stairs = st.stairs; return r;
   }
