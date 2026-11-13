@@ -1,6 +1,6 @@
 # Progetto: dal CAD 2D al BIM semplificato
 
-> Documento di progetto per la revisione e l'approvazione del titolare (13/11/2026). **Nessuna riga di codice finché non è approvato.**
+> Documento di progetto **approvato dal titolare il 13/11/2026** («Procedi»): le sei decisioni del §7 sono le proposte della colonna «Proposta».
 > Dopo l'approvazione: piccole PR come nella revisione 11/2026, ognuna con prove e misura prima/dopo; stato nella issue #1.
 
 ## 1. L'idea
@@ -208,7 +208,7 @@ Invariato; in più la possibilità di partire dalla vista in stile schizzo, che 
 - Un progetto v3 si apre identico; uno v4 in una versione vecchia perde solo il CAD, con avviso.
 - Storia di annulla con il meccanismo leggero di oggi; condivisione con il cliente: CAD visibile solo se il progettista lo sceglie.
 
-## 7. Decisioni del titolare
+## 7. Decisioni del titolare (approvate il 13/11/2026: vale la colonna «Proposta»)
 
 | # | Decisione | Proposta | Alternative |
 |---|---|---|---|
