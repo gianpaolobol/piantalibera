@@ -277,28 +277,80 @@ const A3 = (() => {
     // fiducia per la revisione guidata (fase C): dubbio con il motivo, altrimenti sicuro
     const wallConf = w => w.single ? {ok:false, why:`muro a linea singola: spessore stimato ${Math.round(w.t * 100)} cm`} : !w.peak ? {ok:false, why:`spessore raro (${Math.round(w.t * 100)} cm)`} : !(w.joined.a && w.joined.b) && !linked(w) ? {ok:false, why:"non collegato ad altri muri"} : !(w.joined.a && w.joined.b) ? {ok:false, why:"un capo libero"} : {ok:true};
     const out = W.map(w => ({id:"w" + (nid++), a:w.P(w.a), b:w.P(w.b), thick:w.t, conf:wallConf(w), _w:w}));
+    // la cerniera di un arco è lo stipite più vicino al suo centro: l'arco appartiene a quel vano soltanto (non alla finestra accanto, nell'altro muro)
+    const jambs = []; for (const ow of out) for (const o of ow._w.ops) if (o.s1 - o.s0 >= .45) for (const s of [o.s0, o.s1]) jambs.push({o, p:ow._w.P(s)});
+    const owner = a => { let b = null, bd = Infinity; for (const j of jambs){ const d = Math.hypot(a.cx - j.p[0], a.cy - j.p[1]); if (d < bd){ bd = d; b = j.o; } } return b; };
+    const jd = (a, o) => Math.min(...jambs.filter(j => j.o === o).map(j => Math.hypot(a.cx - j.p[0], a.cy - j.p[1])));
+    // arco di un altro vano ma con la cerniera quasi alla stessa distanza: attribuzione incerta → dubbio
+    const contested = (a, o) => { const w = owner(a); return w !== o && jd(a, o) < jd(a, w) + .15; };
     for (const ow of out){
       const w = ow._w;
       for (const o of w.ops){
         const width = o.s1 - o.s0; if (width < .45) continue;
         const j0 = w.P(o.s0), j1 = w.P(o.s1);
-        const arc = arcs.find(a => a.r > .45 && a.r < 1.7 && (Math.hypot(a.cx-j0[0], a.cy-j0[1]) < w.t/2 + .25 || Math.hypot(a.cx-j1[0], a.cy-j1[1]) < w.t/2 + .25) && (Math.abs(a.r - width) < .3 || Math.abs(a.r - width/2) < .2));
+        const arc = arcs.find(a => a.r > .45 && a.r < 1.7 && owner(a) === o && (Math.hypot(a.cx-j0[0], a.cy-j0[1]) < w.t/2 + .25 || Math.hypot(a.cx-j1[0], a.cy-j1[1]) < w.t/2 + .25) && (Math.abs(a.r - width) < .3 || Math.abs(a.r - width/2) < .2));
         const inGap = (w.g.lines || []).filter(l => Math.abs(l.off - w.off) < w.t/2 + .02).map(l => ({l, ov:Math.min(l.b, o.s1) - Math.max(l.a, o.s0)})).filter(x => x.ov > .2 * width);
         const glass = inGap.some(x => x.ov > .5 * width);
         // porta scorrevole: ante su due linee sfalsate, ciascuna più corta del vano, che si sovrappongono al centro
         const part = inGap.filter(x => x.ov < .88 * width), sliding = part.some(x => part.some(y => Math.abs(y.l.off - x.l.off) > .005 && Math.min(x.l.b, y.l.b) - Math.max(x.l.a, y.l.a) > .05 * width)) && !inGap.some(x => x.ov >= .88 * width);
+        const foreign = !arc && arcs.find(a => a.r > .45 && a.r < 1.7 && (contested(a, o) || !glass && owner(a) !== o) && (Math.hypot(a.cx-j0[0], a.cy-j0[1]) < w.t/2 + .25 || Math.hypot(a.cx-j1[0], a.cy-j1[1]) < w.t/2 + .25));
         const type = arc || sliding ? "door" : glass ? "window" : width >= 2.6 ? "window" : "door";
-        openings.push({wall:ow.id, t:(o.s0 + o.s1)/2 - w.a, w:+width.toFixed(3), type, from:arc ? "arco" : sliding ? "scorrevole" : glass ? "vetro" : "vuoto", ...(sliding && !arc ? {style:"scorrevole"} : {}),
-          conf:!(arc || sliding || glass) ? {ok:false, why:`vano di ${Math.round(width * 100)} cm senza simbolo: ${type === "door" ? "porta" : "finestra"}?`}
+        // portafinestra: ante a battente (arco) e vetro per tutta la luce del vano
+        const pf = !!arc && inGap.some(x => x.ov > .88 * width) && width >= .6;
+        openings.push({wall:ow.id, t:(o.s0 + o.s1)/2 - w.a, w:+width.toFixed(3), type, from:pf ? "portafinestra" : arc ? "arco" : sliding ? "scorrevole" : glass ? "vetro" : "vuoto", ...(pf ? {style:"portafinestra"} : sliding && !arc ? {style:"scorrevole"} : {}),
+          conf:foreign ? {ok:false, why:`arco di ${Math.round(foreign.r * 100)} cm conteso con il vano vicino: ${type === "door" ? "porta" : "finestra"}?`} : !(arc || sliding || glass) ? {ok:false, why:`vano di ${Math.round(width * 100)} cm senza simbolo: ${type === "door" ? "porta" : "finestra"}?`}
             : arc && Math.abs(arc.r - width) > .1 && Math.abs(arc.r - width/2) > .1 ? {ok:false, why:`arco di ${Math.round(arc.r * 100)} cm su un vano di ${Math.round(width * 100)} cm`}
-            : arc && glass && inGap.some(x => x.ov > .88 * width) ? {ok:false, why:"arco e vetro nello stesso vano: porta o finestra?"} : {ok:true}});
+            : {ok:true}});
       }
     }
+    applyOpeningLabels(out, openings, texts);
     const rooms = findRooms(out, texts);
     return {walls:out.map(({_w, ...r}) => r), openings, rooms, thicknesses:[...new Set(out.map(w => w.thick))].sort((a,b) => a-b)};
   }
 
   /* locali: aree chiuse dai muri (raster 5 cm) con il nome preso dai testi della pianta */
+  /** Etichetta scritta accanto a un'apertura: «80/210», «100x140», «hb 90», «h.d. 1,00»… (misure in cm, o in m se piccole). */
+  function parseOpeningLabel(raw){
+    const s = cleanText(raw).toLowerCase().replace(/rei\s*\d+/g, "").replace(/\(.*?\)/g, "").trim();
+    let m = s.match(/^(?:h\.?\s*b\.?|h\.?\s*d\.?|hdav|dav(?:anzale)?|bancale)\s*[=:.]?\s*(\d+(?:[.,]\d+)?)\s*(cm|m)?$/);
+    if (m){ let v = +m[1].replace(",", "."); if (m[2] === "m" || v < 3) v *= 100; return v >= 0 && v <= 250 ? {k:"hb", v:+(v / 100).toFixed(3)} : null; }
+    m = s.match(/^(\d+(?:[.,]\d+)?)\s*(?:x|×|\*|\/|\s)\s*(\d+(?:[.,]\d+)?)\s*(?:cm)?$/);
+    if (m){ let w = +m[1].replace(",", "."), h = +m[2].replace(",", "."); if (w < 5 && h < 5){ w *= 100; h *= 100; }
+      if (w >= 40 && w <= 400 && h >= 40 && h <= 320) return {k:"wh", w:+(w / 100).toFixed(3), h:+(h / 100).toFixed(3)}; }
+    return null;
+  }
+  /** Misure scritte delle aperture: un'etichetta L/H vale solo se la larghezza del vano la conferma (luce del serramento ≤ vano ≤ luce + 16 cm);
+   *  l'altezza scritta decide il tipo quando il simbolo è incerto; «hb» è il davanzale delle finestre o l'alzatina delle porte. */
+  function applyOpeningLabels(walls, openings, texts){
+    if (!texts?.length || !openings.length) return;
+    const W = new Map(walls.map(w => [w.id, w]));
+    const C = o => { const w = W.get(o.wall), L = Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1]) || 1; return [w.a[0] + (w.b[0]-w.a[0]) / L * o.t, w.a[1] + (w.b[1]-w.a[1]) / L * o.t]; };
+    const ops = openings.map(o => ({o, c:C(o)})), labs = texts.map(t => ({t, L:parseOpeningLabel(t.text)})).filter(x => x.L);
+    if (!labs.length) return;
+    const dist = (q, t) => Math.hypot(q.c[0] - t.x, q.c[1] - t.y);
+    const pairs = [];
+    for (const l of labs) if (l.L.k === "wh") for (const q of ops){ const d = dist(q, l.t), dw = q.o.w - l.L.w; if (d < 1.6 && dw >= -.05 && dw <= .16) pairs.push({l, q, d}); }
+    pairs.sort((a, b) => a.d - b.d); const used = new Set();
+    for (const p of pairs){ if (used.has(p.l) || p.q.lab) continue; used.add(p.l); p.q.lab = p.l.L; }
+    for (const q of ops){ const o = q.o, L = q.lab; if (!L) continue;
+      const glass = o.from === "vetro" || o.from === "portafinestra";
+      o.h = L.h; o.label = `${Math.round(L.w * 100)}/${Math.round(L.h * 100)}`;
+      if (L.h < 1.6){ if (o.type === "door"){ o.type = "window"; delete o.style; } o.conf = {ok:true}; }
+      else if (L.h >= 1.95){ if (glass){ o.type = "door"; o.style = "portafinestra"; o.from = "portafinestra"; } else if (o.type === "window"){ o.type = "door"; } o.conf = {ok:true}; }
+      else if (o.conf?.ok === false) o.conf = {ok:false, why:`${o.conf.why} (scritto ${o.label})`};
+    }
+    // etichetta vicina a un vano di larghezza diversa: dubbio con il motivo, mai una correzione silenziosa
+    for (const l of labs) if (l.L.k === "wh" && !used.has(l)){ const n = ops.map(q => ({q, d:dist(q, l.t)})).sort((a, b) => a.d - b.d)[0];
+      if (n && n.d < .75 && !n.q.lab && n.q.o.conf?.ok !== false) n.q.o.conf = {ok:false, why:`scritto ${Math.round(l.L.w * 100)}/${Math.round(l.L.h * 100)} ma il vano è largo ${Math.round(n.q.o.w * 100)} cm`}; }
+    for (const l of labs) if (l.L.k === "hb"){
+      const near = ops.map(q => ({q, d:dist(q, l.t)})).filter(x => x.d < 1.6).sort((a, b) => a.d - b.d);
+      if (l.L.v <= .3){ const n = near[0]; if (!n) continue; const o = n.q.o;
+        if (o.type === "window" && o.h != null && o.h >= 1.95 || o.type === "door"){ o.type = "door"; if (o.from === "vetro" || o.from === "portafinestra"){ o.style = "portafinestra"; o.from = "portafinestra"; } if (l.L.v > .005) o.alz = l.L.v; o.sill = 0; }
+        else if (o.type === "window") o.conf = {ok:false, why:`scritto hb ${Math.round(l.L.v * 100)} su una finestra: portafinestra con alzatina?`};
+        continue; }
+      const n = near.find(x => x.q.o.type === "window"); if (!n) continue;
+      n.q.o.sill = l.L.v; n.q.o.hb = true; }
+  }
   function findRooms(walls, texts, cell = .05){
     if (!walls.length) return [];
     const rooms = vectorRooms(walls) || rasterRooms();
@@ -511,8 +563,12 @@ const A3 = (() => {
         const t = ((pt[0]-best.a[0])*dx + (pt[1]-best.a[1])*dy) / L;
         const sill = op.sill * kz, h = op.h * kz, type = sill < .15 ? "door" : "window";
         const ex = openings.filter(o => o.wall === best.id && !o.fromElev).sort((a,b) => Math.abs(a.t - t) - Math.abs(b.t - t))[0];
-        if (ex && Math.abs(ex.t - t) <= Math.max(ex.w, w)/2 + .2){ Object.assign(ex, {sill:+sill.toFixed(3), h:+h.toFixed(3), type, fromElev:true}); if (ex.from === "vuoto") ex.w = +w.toFixed(3); matched++; }
-        else if (t - w/2 > .05 && t + w/2 < L - .05){ openings.push({wall:best.id, t:+t.toFixed(3), w:+w.toFixed(3), h:+h.toFixed(3), sill:+sill.toFixed(3), type, from:"prospetto", fromElev:true}); added++; }
+        const low = type === "door" ? {sill:0, ...(sill > .02 ? {alz:+sill.toFixed(3)} : {}), h:+(h).toFixed(3)} : {sill:+sill.toFixed(3), h:+h.toFixed(3)};
+        if (ex && Math.abs(ex.t - t) <= Math.max(ex.w, w)/2 + .2){
+          const pf = type === "door" && (ex.style === "portafinestra" || ex.from === "vetro" || ex.from === "portafinestra");
+          Object.assign(ex, low, {type, fromElev:true}, pf ? {style:"portafinestra"} : {}); if (type === "window" && ex.style === "portafinestra") delete ex.style;
+          if (ex.from === "vuoto") ex.w = +w.toFixed(3); matched++; }
+        else if (t - w/2 > .05 && t + w/2 < L - .05){ openings.push({wall:best.id, t:+t.toFixed(3), w:+w.toFixed(3), ...low, type, from:"prospetto", fromElev:true}); added++; }
       }
       notes.push(`Prospetto ${e.side}: ${d.openings.length} aperture lette, ${matched} abbinate alla pianta${added ? `, ${added} aggiunte` : ""}.`);
     }
@@ -529,12 +585,13 @@ const A3 = (() => {
       roof = {type:"gable", pitch:+Math.max(5, Math.min(60, pitch)).toFixed(1), overhang:+((gEnd || gSide).overhang ?? .4).toFixed(2), mat:"tegole", ridge:ridgeAxis};
     } else if (!elevs.length) roof = {type:"flat", pitch:20, overhang:0, mat:"cemento"};
     for (const o of openings){
-      if (o.h == null){ if (o.type === "door"){ o.sill = 0; o.h = Math.min(2.1, height - .2); } else { o.sill = .9; o.h = Math.min(1.4, height - 1.1); } }
-      o.h = Math.min(o.h, height - o.sill - .05);
+      if (o.h == null){ if (o.type === "door"){ o.sill = 0; o.h = o.style === "portafinestra" ? Math.min(2.4, height - .3) : Math.min(2.1, height - .2); } else { o.sill = o.sill ?? 1; o.h = Math.min(1.4, height - o.sill - .3); } }
+      if (o.sill == null) o.sill = o.type === "door" ? 0 : 1;
+      o.h = Math.min(o.h, height - (o.type === "door" ? o.alz || 0 : o.sill) - .05);
       delete o.fromElev; delete o.from;
     }
     if (height > 4.6) notes.push(`Altezza di gronda ${height.toFixed(2)} m: probabilmente più piani. Per ora il volume è unico; i solai intermedi vanno aggiunti a mano.`);
     return {walls, openings, rooms:plan.rooms, height, roof, notes, bbox:[bx0, by0, bx1, by1]};
   }
-  return {clusterDrawings, analyzePlan, analyzePlanAxis, cleanSegs, dominantAngle, analyzeElevation, prepareElevation, unitFactor, combine, sideFromText, cleanText, findRooms};
+  return {parseOpeningLabel, clusterDrawings, analyzePlan, analyzePlanAxis, cleanSegs, dominantAngle, analyzeElevation, prepareElevation, unitFactor, combine, sideFromText, cleanText, findRooms};
 })();

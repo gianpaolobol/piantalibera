@@ -916,3 +916,21 @@ test("Importa pianta DWG/DXF: il riconoscimento è la scelta predefinita e porta
   expect(await page.evaluate(() => P.walls.filter(w => w.level === S.level).length)).toBe(5);
   expect(errors).toEqual([]);
 });
+
+test("porta con alzatina: campo nella scheda, soglia nel 3D, valori fuori misura rifiutati", async ({ page }) => {
+  const errors = await open(page);
+  const id = await page.evaluate(() => { const o = P.openings.find(o => o.type === "door"); setSel([{type:"opening", id:o.id}]); renderInspector(); draw2D(); return o.id; });
+  await expect(page.locator("#oA")).toBeVisible();
+  const sill3D = () => page.evaluate(() => { let n = 0; modelGroup.traverse(o => { if (o.isMesh && o.userData.cat === "sill") n++; }); return n; });
+  const n0 = await sill3D();
+  await page.fill("#oA", "12"); await page.locator("#oA").press("Enter"); await page.waitForTimeout(300);
+  expect(await page.evaluate(id => P.openings.find(o => o.id === id).alz, id)).toBeCloseTo(.12, 5);
+  expect(await sill3D()).toBeGreaterThan(n0 - 1);
+  const bot = await page.evaluate(() => { const g = raySel.children.find(c => c.isMesh).geometry; g.computeBoundingBox(); return g.boundingBox.min.y - level().elev; });
+  expect(bot).toBeCloseTo(.12, 2);
+  await page.fill("#oA", "80"); await page.locator("#oA").press("Enter"); await page.waitForTimeout(200);
+  expect(await page.evaluate(id => P.openings.find(o => o.id === id).alz, id)).toBeCloseTo(.12, 5);
+  await page.fill("#oA", "0"); await page.locator("#oA").press("Enter"); await page.waitForTimeout(200);
+  expect(await page.evaluate(id => "alz" in P.openings.find(o => o.id === id), id)).toBe(false);
+  expect(errors).toEqual([]);
+});

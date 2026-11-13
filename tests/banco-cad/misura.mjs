@@ -82,6 +82,7 @@ export function valuta(verita, ris){
     errore_area_mediano_pct: mediana(errArea) * 100,
     errori_segnalati: errati.length ? errati.filter(dubbio).length / errati.length : 1,
     dubbi_per_pianta: dubbi,
+    errori_non_segnalati: errati.filter(x => !dubbio(x)).length,
   };
 }
 
