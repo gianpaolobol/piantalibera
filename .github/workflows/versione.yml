@@ -1,0 +1,76 @@
+name: Versione
+# Congela un commit come versione recuperabile: etichetta vX.Y.Z, pacchetto locale ricostruito da quel codice
+# (provato senza internet) e release «Pianta Libera X.Y.Z» con le istruzioni per tornarci (docs/versioni.md).
+# Uso: Actions → «Versione» → Run workflow → numero di versione, commit (vuoto = main) e una riga di descrizione.
+on:
+  workflow_dispatch:
+    inputs:
+      versione:
+        description: "Numero di versione (es. 0.5.0)"
+        required: true
+      commit:
+        description: "Commit o ramo da congelare (vuoto = main)"
+        required: false
+        default: ""
+      descrizione:
+        description: "Una riga: che cosa contiene questa versione"
+        required: true
+permissions:
+  contents: write
+concurrency:
+  group: versione-${{ inputs.versione }}
+  cancel-in-progress: false
+jobs:
+  versione:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Controlla il numero di versione
+        env: { VER: "${{ inputs.versione }}" }
+        run: '[[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::La versione deve essere del tipo 0.5.0"; exit 1; }'
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit || 'main' }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Costruisci il pacchetto
+        run: npm run build:pacchetto
+      - name: Browser per la prova
+        run: npx playwright install --with-deps chromium
+      - name: Prova senza internet
+        run: node scripts/smoke-package.mjs
+      - name: Etichetta e release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VER: ${{ inputs.versione }}
+          DESC: ${{ inputs.descrizione }}
+        run: |
+          set -euo pipefail
+          SHA=$(git rev-parse HEAD); TAG="v$VER"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            OLD=$(git ls-remote --tags origin "refs/tags/$TAG^{}" | cut -f1); [ -n "$OLD" ] || OLD=$(git ls-remote --tags origin "refs/tags/$TAG" | cut -f1)
+            [ "$OLD" = "$SHA" ] || { echo "::error::$TAG esiste già su un altro commit ($OLD): le versioni non si riscrivono"; exit 1; }
+          else
+            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" tag -a "$TAG" "$SHA" -m "Pianta Libera $VER — $DESC"; git push origin "refs/tags/$TAG"
+          fi
+          ZIP="pianta-libera-$VER-locale.zip"; cp dist/pianta-libera-locale.zip "$ZIP"; sha256sum "$ZIP" > SHA256SUMS.txt
+          cat > note.md <<EOF
+          **$DESC**
+
+          Versione congelata il $(date -u +%d/%m/%Y) dal commit ${SHA::7}. Resta recuperabile in ogni momento.
+
+          ### Come tornare a questa versione
+          - **Sul tuo computer, anche senza internet**: scarica \`$ZIP\` qui sotto, estrai e avvia con doppio clic (guida: docs/installazione-locale.md). Resta la $VER, non si aggiorna da sola.
+          - **Sito pubblicato e app** (le app per Windows, Mac, Android e iOS aprono il sito): Actions → «Deploy su Cloudflare (editor + /api/render)» → Run workflow → in «Use workflow from» scegli il tag \`$TAG\`. Per la demo: lo stesso con «Demo su GitHub Pages». Per tornare all'ultima versione si rilancia da \`main\`.
+          - **Codice**: tag \`$TAG\`.
+
+          Dettagli: https://github.com/$GITHUB_REPOSITORY/blob/main/docs/versioni.md
+          EOF
+          sed -i 's/^          //' note.md
+          if gh release view "$TAG" >/dev/null 2>&1; then gh release upload "$TAG" "$ZIP" SHA256SUMS.txt --clobber
+          else gh release create "$TAG" "$ZIP" SHA256SUMS.txt --title "Pianta Libera $VER" --notes-file note.md --latest=false; fi
+          echo "### Versione $VER: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"
