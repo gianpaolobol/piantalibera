@@ -594,11 +594,17 @@ const A3 = (() => {
       if (hasH(y0, A.x, B.x) && hasH(y1, A.x, B.x)) rects.push({x0:A.x, x1:B.x, y0, y1});
     }
     let ops = rects.filter(r => r.x0 >= xa - .05 && r.x1 <= xb + .05 && r.y0 >= ground - .05 && r.x1 - r.x0 < .9 * (xb - xa) && r.y1 - r.y0 < eave);
+    // cornici: rettangolo che ne racchiude un altro con margini laterali uguali (11–35 cm: i telai stanno entro 10 cm) e sopra simile: è la cornice, non il vano
+    const corn = new Set();
+    for (const r of ops){ const q = ops.filter(q => q !== r && q.x0 > r.x0 && q.x1 < r.x1 && q.y1 < r.y1 && q.y0 >= r.y0 - .01).sort((a, b) => (b.x1 - b.x0) - (a.x1 - a.x0))[0]; if (!q) continue;
+      const mL = q.x0 - r.x0, mR = r.x1 - q.x1, mT = r.y1 - q.y1;
+      if (mL >= .11 && mL <= .35 && Math.abs(mL - mR) < .02 && mT >= .05 && mT <= .45){ corn.add(r); q.cornice = +((mL + mR) / 2).toFixed(3); } }
+    ops = ops.filter(r => !corn.has(r));
     ops = ops.filter(r => !ops.some(q => q !== r && q.x0 <= r.x0 + .01 && q.x1 >= r.x1 - .01 && q.y0 <= r.y0 + .01 && q.y1 >= r.y1 - .01 && (q.x1-q.x0)*(q.y1-q.y0) > (r.x1-r.x0)*(r.y1-r.y0) + 1e-6)); // telai interni
     ops = ops.filter((r, i) => !ops.some((q, k) => k < i && Math.abs(q.x0-r.x0) < .01 && Math.abs(q.x1-r.x1) < .01 && Math.abs(q.y0-r.y0) < .01 && Math.abs(q.y1-r.y1) < .01));
     // persiane: rettangoli stretti affiancati a un'apertura della stessa altezza
     ops = ops.filter(r => !ops.some(q => q !== r && Math.abs(q.y0 - r.y0) < .05 && Math.abs(q.y1 - r.y1) < .05 && (Math.abs(q.x0 - r.x1) < .06 || Math.abs(q.x1 - r.x0) < .06) && (r.x1 - r.x0) <= .6 * (q.x1 - q.x0)));
-    return {width:+(xb - xa).toFixed(3), eave:+eave.toFixed(3), roof, openings:ops.map(r => ({u0:+(r.x0 - xa).toFixed(3), u1:+(r.x1 - xa).toFixed(3), sill:+Math.max(0, r.y0 - ground).toFixed(3), h:+(r.y1 - r.y0).toFixed(3)})).sort((a,b) => a.u0 - b.u0)};
+    return {width:+(xb - xa).toFixed(3), eave:+eave.toFixed(3), roof, openings:ops.map(r => ({u0:+(r.x0 - xa).toFixed(3), u1:+(r.x1 - xa).toFixed(3), sill:+Math.max(0, r.y0 - ground).toFixed(3), h:+(r.y1 - r.y0).toFixed(3), ...(r.cornice ? {cornice:r.cornice} : {})})).sort((a,b) => a.u0 - b.u0)};
   }
 
   /** Prospetto disegnato in un'unità diversa dalla pianta (cm, mm): fattore 10^n che porta la sua larghezza vicina a quella attesa. */
@@ -650,9 +656,9 @@ const A3 = (() => {
         const low = type === "door" ? {sill:0, ...(sill > .02 ? {alz:+sill.toFixed(3)} : {}), h:+(h).toFixed(3)} : {sill:+sill.toFixed(3), h:+h.toFixed(3)};
         if (ex && Math.abs(ex.t - t) <= Math.max(ex.w, w)/2 + .2){
           const pf = type === "door" && (ex.style === "portafinestra" || ex.from === "vetro" || ex.from === "portafinestra");
-          Object.assign(ex, low, {type, fromElev:true}, pf ? {style:"portafinestra"} : {}); if (type === "window" && ex.style === "portafinestra") delete ex.style;
+          Object.assign(ex, low, {type, fromElev:true}, pf ? {style:"portafinestra"} : {}, op.cornice ? {cornice:{ext:+(op.cornice * kx).toFixed(3)}} : {}); if (type === "window" && ex.style === "portafinestra") delete ex.style;
           if (ex.from === "vuoto") ex.w = +w.toFixed(3); matched++; }
-        else if (t - w/2 > .05 && t + w/2 < L - .05){ openings.push({wall:best.id, t:+t.toFixed(3), w:+w.toFixed(3), ...low, type, from:"prospetto", fromElev:true}); added++; }
+        else if (t - w/2 > .05 && t + w/2 < L - .05){ openings.push({wall:best.id, t:+t.toFixed(3), w:+w.toFixed(3), ...low, type, from:"prospetto", fromElev:true, ...(op.cornice ? {cornice:{ext:+(op.cornice * kx).toFixed(3)}} : {})}); added++; }
       }
       notes.push(`Prospetto ${e.side}: ${d.openings.length} aperture lette, ${matched} abbinate alla pianta${added ? `, ${added} aggiunte` : ""}.`);
     }

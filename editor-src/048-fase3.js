@@ -237,6 +237,7 @@ function doorHandle(o, piece, s0, s1, e0, fd){
 }
 /* riempimento 3D del vano: telai, ante, vetri, oscuranti. piece(s0,s1,y0,y1,spessore,mat,cat,offset) */
 function buildOpeningFill(w, c, piece, e0, bot, topO, t){
+  if (c.o.cornice && typeof openingCornice === "function") openingCornice(w, c, piece, e0, bot, topO, t);
   const o = c.o, fd = Math.min(.09, t*.8), s0 = c.s0, s1 = c.s1, y0 = e0 + bot, y1 = e0 + topO, W = s1 - s0, mid = (s0 + s1) / 2, ext = extSide(w, o);
   const sash = (a, b, ya, yb, off = 0, d = fd, fw = .06) => { // anta con vetro
     piece(a, a + fw, ya, yb, d, "serramento", "frame", off); piece(b - fw, b, ya, yb, d, "serramento", "frame", off);

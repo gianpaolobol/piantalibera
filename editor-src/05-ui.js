@@ -74,13 +74,13 @@ function renderInspector(){
     if (S.sel.type === "opening"){ const w = wallById(sel.wall);
       h += `<div class="sec"><h3>${sel.type==="door"?"Porta":"Finestra"}</h3><div class="row3">${F("oW","Larghezza",fmt(sel.w),'inputmode="decimal"')}${F("oH","Altezza",fmt(sel.h),'inputmode="decimal"')}${sel.type==="window"?F("oS","Davanzale",fmt(sel.sill),'inputmode="decimal"'):F("oA","Alzatina (cm)",fmt((sel.alz||0)*100,0),'inputmode="decimal" title="Soglia rialzata da terra: 0 = a raso"')}</div>
         <div class="row">${F("oT","Distanza asse (m)",fmt(sel.t),'inputmode="decimal"')}<div class="f"><span class="lbl">Tipo</span><select id="oType" class="inp"><option value="door" ${sel.type==="door"?"selected":""}>Porta</option><option value="window" ${sel.type==="window"?"selected":""}>Finestra</option></select></div></div>
-        ${openingExtraHTML(sel)}<p class="note">Distanza misurata dall'inizio del muro (${fmt(wallFrame(w).len)} m).</p>
+        ${openingExtraHTML(sel)}${corniceOpHTML(sel)}<p class="note">Distanza misurata dall'inizio del muro (${fmt(wallFrame(w).len)} m).</p>
         <div class="btns">${sel.type==="door"?`<button class="btn" id="oHinge">Specchia (cerniera)</button><button class="btn" id="oSide">Apre dall'altro lato</button>`:""}<button class="btn danger" id="delSel">Elimina</button></div></div>`; }
     if (S.sel.type === "room"){ const A = Math.abs(polyArea(sel.pts));
       const ra = roomAreas(sel);
       h += `<div class="sec"><h3>Locale</h3>${F("rName","Nome",sel.name)}<dl class="kv"><dt>Superficie netta</dt><dd>${fmt(A)} m²</dd><dt>Superficie lorda</dt><dd>${fmt(ra.gross)} m² <small>con metà muri</small></dd><dt>Perimetro</dt><dd>${fmtL(ra.per)}</dd><dt>Volume netto</dt><dd>${fmt(A*L.height,1)} m³</dd></dl>
         <label class="chk"><input type="checkbox" id="rNoCeil" ${sel.noCeiling?"checked":""}> Senza soffitto (vista dall'alto)</label><p class="note">L'etichetta del locale si trascina in pianta.</p>
-        <span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, sel.mat, "rm")}${roomExtraHTML(sel)}<div class="btns"><button class="btn" id="camRoom">Vista interna</button><button class="btn danger" id="delSel">Elimina</button></div></div>${slabHTML(sel, L, A)}`; }
+        <span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, sel.mat, "rm")}${roomExtraHTML(sel)}<div class="btns"><button class="btn" id="camRoom">Vista interna</button><button class="btn danger" id="delSel">Elimina</button></div></div>${slabHTML(sel, L, A)}${roomCorniceHTML(sel)}`; }
     if (S.sel.type === "object"){
       const it = sel.kind === "lib" ? LIBMAP[libRef(sel.ref)] : null, imp = sel.kind === "import" ? importStore[sel.ref] : null, fp = objFootprint(sel);
       h += `<div class="sec"><h3>${it ? esc(it.cat) : imp?.source?.type === "polyhaven" ? "Poly Haven" : "Modello importato"}</h3>${it ? `<div class="libsel">${thumbImg(it.ref)}<div><b>${esc(it.nome)}</b><small>${esc(it.dim)}${it.credit ? ` · ${esc(it.credit)}` : ""}</small></div></div>` : ""}${F("obName","Nome",sel.name)}<div class="row">${F("obX","X (m)",fmt(sel.x),'inputmode="decimal"')}${F("obY","Y (m)",fmt(sel.y),'inputmode="decimal"')}</div>

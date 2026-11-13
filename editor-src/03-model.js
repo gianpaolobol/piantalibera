@@ -162,6 +162,7 @@ function buildModel(opts={}){
         if (r.ceilH){ const cg = new THREE.ExtrudeGeometry(csh, {depth:.06, bevelEnabled:false}); cg.rotateX(Math.PI/2); cg.translate(0, e0 + r.ceilH + .06, 0); add(L.id, cm, "ceiling", cg); }
         else { const cg = new THREE.ShapeGeometry(csh); cg.rotateX(Math.PI/2); cg.translate(0, e0 + L.height - .005, 0); add(L.id, cm, "ceiling", cg); } }
       if (!opts.print && r.skirt) for (const sg of skirtGeos(r, L)) add(L.id, r.skirt.mat || "bianco", "skirt", sg);
+      if ((r.cornice || r.balcone) && typeof buildRoomExtras === "function") buildRoomExtras(r, L, add, opts);
     }
     if (L.roof?.type === "custom" && opts.roof !== false) buildCustomRoof(L, e0, add, opts);
     else if (L.roof && L.roof.type !== "none" && opts.roof !== false){

@@ -152,3 +152,12 @@ test("scale: gradini esterni su tre lati e rampa con freccia diventano scale, no
   assert.equal(f.steps, 8); assert.equal(f.known, true); assert.deepEqual(f.dir.map(v => Math.round(v) + 0), [0, 1]); assert.equal(f.conf.ok, true);
   assert.ok(Math.abs(f.w - .9) < .01 && Math.abs(f.tread - .28) < .01);
 });
+
+test("prospetto: la cornice attorno alla finestra non allarga il vano e diventa cornice esterna", () => {
+  const segs = [...elevSud(), ...rect(6.35, .75, 8.15, 2.45)];   // cornice da 15 cm attorno alla finestra 6,5–8 × 0,9–2,3
+  const e = A3.analyzeElevation(segs);
+  assert.equal(e.openings.length, 2, JSON.stringify(e.openings));
+  assert.deepEqual(e.openings[1], { u0: 6.5, u1: 8, sill: .9, h: 1.4, cornice: .15 });
+  const d = planDrawing(), plan = A3.analyzePlan(d.segs, d.arcs, d.texts), m = A3.combine(plan, [{ side: "sud", data: A3.prepareElevation(segs, plan, "sud") }], { height: 2.7 });
+  const w = m.openings.find(o => o.cornice); assert.ok(w, "la finestra prende la cornice"); assert.equal(w.cornice.ext, .15); assert.equal(w.w, 1.5);
+});
