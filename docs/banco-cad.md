@@ -94,6 +94,26 @@ Le piante sono sintetiche e il generatore lo abbiamo scritto noi, come il motore
 | Errori segnalati tra i dubbi | **82,4 %** |
 | Dubbi per pianta (media) | **1** |
 
+## Banco reale, primo giro (13/11/2026)
+
+Il titolare ha fornito 7 tavole DWG di lavori reali (esecutivi, varianti, CILA). Restano **fuori dal repository pubblico**: qui solo numeri aggregati, senza nomi, indirizzi o immagini.
+
+**Che cosa si è visto**
+- 6 tavole su 7 si leggono con il lettore DWG dell'editor (1,5–50 s; da 11 mila a 860 mila linee; da 2 a 25 disegni per tavola). La settima (formato AutoCAD 2000) contiene solo un riferimento esterno o non viene letta da libredwg: va salvata come DXF.
+- **Unità sbagliata nel file in 3 tavole su 6**: disegnate in centimetri, dichiarate in millimetri. Le piante risultavano 10 volte più piccole, porte e muri non tornavano e i disegni vicini si fondevano. Ora l'unità si ricava dalle porte (archi di un quarto di giro, 55–130 cm, sui layer di porte e infissi) e comanda anche sull'unità dichiarata.
+- **Layer che confondono**: impianti elettrici (oltre 100 mila linee in una tavola), testi, superfici, scale, demolizioni, gronde, travi, librerie di blocchi. Il filtro dei layer ora li esclude.
+- **Gradini delle scale** presi per muri: tolti dalla pulizia (almeno 6 linee parallele a passo regolare di 22–35 cm).
+- **Layer dei muri come primo indizio** (`docs/progetto-cad-bim.md` §2.2): se la pianta ha un layer dei muri che porta almeno un quarto delle linee, le facce dei muri si cercano solo lì (porte e finestre si leggono da tutti i layer).
+- Nomi dei locali puliti dalla superficie scritta accanto («Soggiorno mq 35,54» → «Soggiorno»).
+
+Effetto sul banco sintetico (nessun peggioramento): locali con superficie ±1 % 95,2 → **96,6 %**, errori segnalati 82,4 → **87,1 %**, precisione muri 99,4 → **99,7 %**.
+
+**Che cosa resta, sulle tavole vere**
+- Muri del perimetro disegnati con **una sola linea** (verso l'unità confinante o la facciata): non formano una coppia di facce, il locale sul bordo non si chiude.
+- Muri antichi con nicchie e spessore variabile spezzati in tratti.
+- Riconoscimento del tipo di disegno (pianta, prospetto, sezione) debole: spesso «ignora» su piante vere. Nella revisione si sceglie a mano, ma va migliorato.
+- Manca una misura automatica sulle tavole vere: serve annotare a mano almeno alcune piante (muri, aperture e locali giusti) per avere richiamo e precisione come sul banco sintetico.
+
 ## Prossimo passo
 
 Banco reale appena il titolare fornisce le piante; poi modello addestrato (fase D) per i disegni più disordinati e altezze e più piani (fase E).

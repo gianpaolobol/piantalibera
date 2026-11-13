@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-yXdjS6nvQkDWcOfrBjkr0lFLNjE1PD0E3EI/xeb7yhU=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Vb61R+EDxdYgeFOmIySRdR2fJup8PIEZRhlswv9xnGQ=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -3838,7 +3838,7 @@ function flattenCAD(dxf){
   const walk = (ents, tr, depth, layerOverride) => { for (const en of ents || []){ const lay = (en.layer === "0" && layerOverride) ? layerOverride : (en.layer || "0");
     if (en.type === "LINE" && en.vertices?.length >= 2){ const a = T(en.vertices[0], tr), b = T(en.vertices[1], tr); segs.push([a[0],a[1],b[0],b[1],lay]); }
     else if ((en.type === "LWPOLYLINE" || en.type === "POLYLINE") && en.vertices?.length){ const v = en.vertices.map(p=>T(p,tr)); for (let i=0;i<v.length-1;i++) segs.push([v[i][0],v[i][1],v[i+1][0],v[i+1][1],lay]); if (en.shape || en.closed) segs.push([v[v.length-1][0],v[v.length-1][1],v[0][0],v[0][1],lay]); }
-    else if (en.type === "ARC" || en.type === "CIRCLE"){ let a0 = en.startAngle ?? 0, a1 = en.endAngle ?? Math.PI*2; if (a1 < a0) a1 += Math.PI*2; const sc = Math.abs(tr.sx); const cc = T(en.center, tr); arcs.push({cx:cc[0], cy:cc[1], r:en.radius*sc, layer:lay, full:en.type === "CIRCLE"});
+    else if (en.type === "ARC" || en.type === "CIRCLE"){ let a0 = en.startAngle ?? 0, a1 = en.endAngle ?? Math.PI*2; if (a1 < a0) a1 += Math.PI*2; const sc = Math.abs(tr.sx); const cc = T(en.center, tr); arcs.push({cx:cc[0], cy:cc[1], r:en.radius*sc, layer:lay, full:en.type === "CIRCLE", sweep:a1 - a0});
       const n = Math.max(6, Math.ceil((a1-a0)/(Math.PI/16))); let prev = null; for (let i=0;i<=n;i++){ const a = a0 + (a1-a0)*i/n, p = T({x:en.center.x + Math.cos(a)*en.radius, y:en.center.y + Math.sin(a)*en.radius}, tr); if (prev) segs.push([prev[0],prev[1],p[0],p[1],lay]); prev = p; } }
     else if ((en.type === "TEXT" || en.type === "MTEXT") && en.text){ const p = T(en.startPoint || en.position || en.insertionPoint, tr); texts.push({x:p[0], y:p[1], text:en.text, layer:lay}); }
     else if (en.type === "INSERT" && depth < 4){
@@ -3846,8 +3846,11 @@ function flattenCAD(dxf){
       const bl = dxf.blocks?.[en.name]; if (bl){ const r = (en.rotation||0)*Math.PI/180, sx = en.xScale||1, sy = en.yScale||1; const bx = bl.position?.x||0, by = bl.position?.y||0;
       const sub = {sx: tr.sx*sx, sy: tr.sy*sy, r: tr.r + r, x: 0, y: 0}; const ip = T(en.position, tr); const c = Math.cos(sub.r), s = Math.sin(sub.r); sub.x = ip[0] - (bx*sub.sx*c - by*sub.sy*s); sub.y = ip[1] - (bx*sub.sx*s + by*sub.sy*c); walk(bl.entities, sub, depth+1, lay); } } } };
   walk(dxf.entities, {sx:1, sy:1, r:0, x:0, y:0}, 0);
-  const ins = dxf.header?.$INSUNITS; const unit = ins === 4 ? .001 : ins === 5 ? .01 : ins === 6 ? 1 : segs.length ? guessUnit(segs, arcs) : 1;
-  return {segs, arcs, texts, unit};
+  // unità: le porte del disegno (archi di un quarto di giro, 55–130 cm) comandano anche sull'unità dichiarata nel file,
+  // spesso sbagliata nelle tavole italiane (disegnate in centimetri, dichiarate in millimetri)
+  const ins = dxf.header?.$INSUNITS, declared = ins === 4 ? .001 : ins === 5 ? .01 : ins === 6 ? 1 : null, fromDoors = unitFromDoors(arcs);
+  const unit = fromDoors ?? declared ?? (segs.length ? guessUnit(segs, arcs) : 1);
+  return {segs, arcs, texts, unit, unitSource:fromDoors != null ? (declared != null && declared !== fromDoors ? "porte (diversa da quella del file)" : "porte") : declared != null ? "file" : "stima"};
 }
 async function loadDXF(f){
   const {segs, unit} = flattenCAD(await readCAD(f));
@@ -3857,6 +3860,14 @@ async function loadDXF(f){
   S.tab = "import"; renderTabs();
 }
 /** Unità del disegno quando l'intestazione non la dice: prima dai raggi delle porte (~0,8–1 m), poi dalla larghezza. */
+/** Unità dalle porte: mediana dei raggi degli archi di un quarto di giro; null se gli archi sono pochi o non decidono. */
+function unitFromDoors(arcs){
+  const q = arcs.filter(a => !a.full && Math.abs((a.sweep ?? 0) - Math.PI / 2) < .2);
+  const doorL = q.filter(a => /port|door|infiss|serram|apert|mur|wall/i.test(a.layer || "")), notOther = q.filter(a => !/elettr|impiant|ilumin|illumin|arred|mobil|furn|sanit|quot|dim|test|text|hatch|retin|tratt|verde|albero|giardin|strutt/i.test(a.layer || ""));
+  const rs = (doorL.length >= 4 ? doorL : notOther).map(a => a.r).sort((a, b) => a - b);
+  if (rs.length < 4) return null; const r = rs[rs.length >> 1];
+  const ok = [1, .1, .01, .001].filter(u => r * u >= .55 && r * u <= 1.3); return ok.length === 1 ? ok[0] : null;
+}
 function guessUnit(segs, arcs = []){
   const rs = arcs.filter(a => !a.full).map(a => a.r).sort((a,b) => a-b);
   if (rs.length >= 2){ const r = rs[rs.length >> 1]; for (const u of [1, .01, .001]) if (r * u > .5 && r * u < 1.4) return u; }
@@ -4041,6 +4052,16 @@ const A3 = (() => {
       if (list.length < 8) continue; const offs = list.map(x => x.off).sort((a, b) => a - b), steps = offs.slice(1).map((o, i) => o - offs[i]).filter(d => d > 1e-4);
       if (median(list.map(x => x.L)) < 1.2 && median(steps) < .25) for (const x of list) if (x.L < 1.5) dropped.add(x);
     }
+    // gradini delle scale: lungo gli assi, almeno 6 linee corte (40–160 cm) parallele, sovrapposte, a passo regolare 22–35 cm
+    for (const ax of [th, th + Math.PI / 2]){
+      const nrm = ((ax % Math.PI) + Math.PI) % Math.PI, L = items.filter(x => !dropped.has(x) && Math.abs(Math.sin(x.ang - nrm)) < .01 && x.L >= .4 && x.L <= 1.6).sort((x, y) => x.off - y.off);
+      for (let i = 0; i < L.length; i++){
+        const run = [L[i]];
+        for (let j = i + 1; j < L.length; j++){ const p = run[run.length - 1], d = L[j].off - p.off; if (d < .22) continue; if (d > .35) break;
+          if (Math.min(p.b, L[j].b) - Math.max(p.a, L[j].a) > .5 * Math.min(p.L, L[j].L) && Math.abs(d - (run.length > 1 ? run[1].off - run[0].off : d)) < .03) run.push(L[j]); }
+        if (run.length >= 6) run.forEach(x => dropped.add(x));
+      }
+    }
     // collineari: stessa direzione (±0,2°) e stessa retta (±5 mm), intervalli uniti se si toccano entro «gap»
     const keep = items.filter(x => !dropped.has(x)).sort((x, y) => x.ang - y.ang || x.off - y.off || x.a - y.a), out = [], used = new Uint8Array(keep.length);
     for (let i = 0; i < keep.length; i++){
@@ -4074,6 +4095,9 @@ const A3 = (() => {
     const groups = []; let cur = null;
     for (const i of order){ if (!cur || segs[i].ang - cur.last > D2R * .6){ cur = {ids:[], last:segs[i].ang}; groups.push(cur); } cur.ids.push(i); cur.last = segs[i].ang; }
     if (groups.length > 1 && (Math.PI - groups[groups.length-1].last) + segs[groups[0].ids[0]].ang < D2R * .6){ groups[0].ids.push(...groups.pop().ids); }
+    // layer dei muri come primo indizio: se c'è (MURI, WALL, A-WALL…) e porta almeno un quarto delle linee, le facce si cercano solo lì
+    const WALL_L = /mur|wall|parete|tamponam|tramezz/i, wallLen = segs.reduce((t, x) => t + (WALL_L.test(x.s[4] || "") ? x.L : 0), 0), allLen = segs.reduce((t, x) => t + x.L, 0);
+    const wallOnly = opt.wallLayer !== false && wallLen >= .25 * allLen ? i => WALL_L.test(segs[i].s[4] || "") : null;
     const pairs = [];
     for (const g of groups){
       const a0 = median(g.ids.map(i => segs[i].ang)), u = [Math.cos(a0), Math.sin(a0)], n = [-u[1], u[0]];
@@ -4081,6 +4105,7 @@ const A3 = (() => {
       const L = g.ids.filter(i => segs[i].L >= .15).map(i => { const s = segs[i].s; const p0 = s[0]*u[0] + s[1]*u[1], p1 = s[2]*u[0] + s[3]*u[1]; const o0 = s[0]*n[0] + s[1]*n[1], o1 = s[2]*n[0] + s[3]*n[1]; return {i, a:Math.min(p0,p1), b:Math.max(p0,p1), off:(o0+o1)/2, skew:Math.abs(o0-o1)}; }).filter(x => x.skew < .03).sort((x,y) => x.off - y.off);
       g.lines = L;
       for (let x = 0; x < L.length; x++) for (let y = x+1; y < L.length && L[y].off - L[x].off <= maxT; y++){
+        if (wallOnly && !(wallOnly(L[x].i) && wallOnly(L[y].i))) continue;
         const d = L[y].off - L[x].off; if (d < minT) continue;
         const o0 = Math.max(L[x].a, L[y].a), o1 = Math.min(L[x].b, L[y].b);
         if (o1 - o0 >= .15) pairs.push({g, A:L[x], B:L[y], d, o0, o1});
@@ -4248,7 +4273,8 @@ const A3 = (() => {
     const skip = /^\s*([\d.,]+\s*(m|mq|m2|m²|cm)?|h\s*[=:].*|s\.?\s*=.*|sup.*|superf.*|[\d.,]+\s*[x×]\s*[\d.,]+.*)\s*$/i;
     for (const r of rooms){
       const cand = texts.filter(t => inPoly(t.x, t.y, r.pts)).map(t => cleanText(t.text)).filter(t => t && t.length <= 30 && !skip.test(t) && /[a-zà-ù]{2}/i.test(t));
-      const name = cand[0] || ""; r.name = name ? name[0].toUpperCase() + name.slice(1).toLowerCase() : "";
+      // il nome senza la superficie e l'altezza scritte accanto («Soggiorno mq 35,54 h 2,90» → «Soggiorno»)
+      const name = (cand[0] || "").replace(/\s*(\b(mq|m2|m²|sup\.?|s\s*=|h\s*[=:]?\s*\d)|\d+[.,]\d+\s*(mq|m2|m²)).*$/i, "").trim(); r.name = name ? name[0].toUpperCase() + name.slice(1).toLowerCase() : "";
       // superficie scritta nel locale («14,50 m²», «mq 14.5») confrontata con quella calcolata
       const written = texts.filter(t => inPoly(t.x, t.y, r.pts)).map(t => cleanText(t.text).match(/(?:^|\s)(?:mq|m2|m²|sup\.?|s\s*=)?\s*(\d+[.,]\d+|\d+)\s*(?:mq|m2|m²)?\s*$/i)).find(m => m && /mq|m2|m²|sup|s\s*=/i.test(m[0]));
       const wa = written ? +written[1].replace(",", ".") : null, A = r.area;
@@ -4435,7 +4461,8 @@ const A3 = (() => {
    Da pianta e prospetti al 3D — pannello nella scheda Importa
    ============================================================ */
 const A3S = {files:[], clusters:[], layersOff:null, report:null, preview:null, dec:new Map()};   // dec: correzioni della revisione, per posizione (restano se si rifà il riconoscimento)
-const A3_SKIP_LAYERS = /quot|dim|cot[ae]|text|testo|scritt|hatch|tratt|camp|retin|arred|mobil|furn|sanit|asse|axis|grid|grigl|cartig|squadr|defpoints|viewport|^vp/i;
+// layer che non sono muri né aperture: quote, testi, retini, arredi, impianti, superfici, scale, demolizioni, strutture, librerie di blocchi
+const A3_SKIP_LAYERS = /quot|dim|cot[ae]|text|test[oi]|scritt|hatch|tratt|camp|retin|arred|mobil|furn|sanit|asse|axis|grid|grigl|cartig|squadr|defpoints|viewport|^vp|impiant|elettr|idraul|termic|gas\b|clima|superfic|area|scal[ae]\b|stair|demoli|gronda|gronde|pluvial|trav[ei]|pilastr.*strutt|sezion|section|noplot|no.?plot|cad-block|dwgmodels|verde|alber|veget|planim|catast|perimetr.*lott/i;
 const A3_ROLES = [["pianta","Pianta"],["sud","Prospetto sud"],["nord","Prospetto nord"],["est","Prospetto est"],["ovest","Prospetto ovest"],["ignora","Ignora"]];
 
 function autoPanelHTML(){
