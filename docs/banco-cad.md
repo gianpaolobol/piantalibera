@@ -57,6 +57,30 @@ Motore di «Da pianta e prospetti al 3D» (`editor-src/075-auto3d.js`) con lo st
 
 Sono piante sintetiche: più regolari dei disegni veri (muri solo ortogonali prima della rotazione, simboli standard). I valori sui disegni dello studio saranno più bassi; il **banco reale** si aggiunge quando il titolare fornisce 10–20 piante DWG (tenute fuori dal repository pubblico). Gli obiettivi del §9 di `docs/progetto-cad-bim.md` valgono sul banco reale.
 
-## Prossimo passo (fase B)
+## Fase B: regole migliori (13/11/2026)
 
-Regole migliori, misurate su questo banco: tavola e cartiglio esclusi prima di cercare i muri, pulizia topologica, grafo dei muri con giunzioni, locali calcolati sui vettori (non sulla griglia) e a qualsiasi angolo, porte scorrevoli riconosciute.
+Cinque interventi sul motore (`editor-src/075-auto3d.js`), ognuno misurato su questo banco:
+
+1. **Pulizia del disegno** (`cleanSegs`): linee collineari spezzate, doppie o staccate fino a 3 cm unite; retini (famiglie fitte di linee corte oblique) tolti.
+2. **Raddrizzamento** (`dominantAngle`): la pianta si ruota sulla sua direzione principale prima dell'analisi e il risultato torna all'orientamento del disegno.
+3. **Muri di spessore raro** (un portante da 20 cm tra tramezzi da 10): accettati se le due facce si sovrappongono quasi per intero e il muro arriva ad altri muri ai due capi; scartati i «muri» che stanno dentro la fascia di un muro più spesso (linee del telaio di una finestra).
+4. **Porte e finestre in fondo al muro**, vicino all'angolo: il vano arriva fino alla faccia del muro perpendicolare se c'è l'arco della porta o le linee del serramento. Era la causa principale dei locali fusi.
+5. **Locali esatti sui vettori** (`vectorRooms`): con muri ortogonali (sempre, dopo il raddrizzamento) i locali si calcolano su una griglia fatta dalle coordinate dei muri, non su una griglia di 5 cm: superficie esatta anche con il gradino tra muri di spessore diverso. **Porte scorrevoli**: due ante sfalsate più corte del vano.
+
+| Indicatore (200 piante) | prima | dopo | stile difficile prima → dopo |
+|---|---|---|---|
+| Muri trovati | 97,1 % | **99,7 %** | 89,9 % → 99,6 % |
+| Muri giusti (precisione) | 93,3 % | **99,4 %** | 67,8 % → 98,4 % |
+| Spessore esatto (±5 mm) | 99,7 % | **99,8 %** | 98,7 % → 99,9 % |
+| Aperture trovate | 92,3 % | **98,3 %** | 84,0 % → 96,8 % |
+| Aperture giuste | 94,0 % | **97,6 %** | 71,7 % → 95,2 % |
+| Tipo porta/finestra giusto | 89,7 % | **99,6 %** | 89,0 % → 99,7 % |
+| Locali trovati | 98,6 % | **99,6 %** | 93,2 % → 99,3 % |
+| Locali con superficie ±1 % | 49,5 % | **95,2 %** | 0,7 % → 93,3 % |
+| Tempo per pianta | 7.3 ms | 4.2 ms | |
+
+Le piante sono sintetiche e il generatore lo abbiamo scritto noi, come il motore: c'è il rischio di adattare le regole ai nostri stessi disegni. Le regole sono generali (nessun valore preso dal generatore), ma la prova vera è il **banco reale** con le piante dello studio.
+
+## Prossimo passo
+
+Revisione guidata (fase C) e banco reale appena il titolare fornisce le piante.
