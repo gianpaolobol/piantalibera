@@ -55,7 +55,7 @@ jobs:
             OLD=$(git ls-remote --tags origin "refs/tags/$TAG^{}" | cut -f1); [ -n "$OLD" ] || OLD=$(git ls-remote --tags origin "refs/tags/$TAG" | cut -f1)
             [ "$OLD" = "$SHA" ] || { echo "::error::$TAG esiste già su un altro commit ($OLD): le versioni non si riscrivono"; exit 1; }
           else
-            git tag -a "$TAG" "$SHA" -m "Pianta Libera $VER — $DESC"; git push origin "refs/tags/$TAG"
+            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" tag -a "$TAG" "$SHA" -m "Pianta Libera $VER — $DESC"; git push origin "refs/tags/$TAG"
           fi
           ZIP="pianta-libera-$VER-locale.zip"; cp dist/pianta-libera-locale.zip "$ZIP"; sha256sum "$ZIP" > SHA256SUMS.txt
           cat > note.md <<EOF
