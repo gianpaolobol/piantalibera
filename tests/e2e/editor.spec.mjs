@@ -974,3 +974,36 @@ test("porta con alzatina: campo nella scheda, soglia nel 3D, valori fuori misura
   expect(await page.evaluate(id => "alz" in P.openings.find(o => o.id === id), id)).toBe(false);
   expect(errors).toEqual([]);
 });
+
+test("cornici e balconi: cornice esterna e interna su tutte le finestre, cornice del soffitto, balcone con parapetto, computo e salvataggio", async ({ page }) => {
+  const errors = await open(page);
+  const win = await page.evaluate(() => { const o = P.openings.find(o => o.type === "window"); setSel([{type:"opening", id:o.id}]); renderInspector(); return o.id; });
+  await page.fill("#oCe", "14"); await page.locator("#oCe").press("Enter"); await page.waitForTimeout(150);
+  await page.fill("#oCi", "7"); await page.locator("#oCi").press("Enter"); await page.waitForTimeout(150);
+  expect(await page.evaluate(id => P.openings.find(o => o.id === id).cornice, win)).toEqual({ ext: .14, int: .07 });
+  await page.click("#oCeAll"); await page.waitForTimeout(200);
+  expect(await page.evaluate(() => P.openings.filter(o => o.type === "window").every(o => o.cornice?.ext === .14 && o.cornice?.int === .07))).toBe(true);
+  await page.fill("#oCe", "99"); await page.locator("#oCe").press("Enter"); await page.waitForTimeout(150);
+  expect(await page.evaluate(id => P.openings.find(o => o.id === id).cornice.ext, win)).toBe(.14);   // fuori misura: rifiutata
+  // locale: cornice del soffitto, poi balcone (niente soffitto, parapetto)
+  const rid = await page.evaluate(() => { const r = P.rooms.find(r => r.level === S.level); setSel([{type:"room", id:r.id}]); renderInspector(); return r.id; });
+  await page.check("#rCorn"); await page.waitForTimeout(200);
+  expect(await page.evaluate(id => P.rooms.find(r => r.id === id).cornice, rid)).toEqual({ h: .08 });
+  const cnt = cat => page.evaluate(c => { let n = 0; modelGroup.traverse(o => { if (o.isMesh && o.userData.cat === c) n += o.geometry.attributes.position.count; }); return n; }, cat);
+  const rows = () => page.evaluate(() => computo().filter(r => r.cat === "Cornici" || /Parapetto del balcone/.test(r.voce)).map(r => r.voce));
+  expect(await rows()).toEqual(expect.arrayContaining(["Cornici esterne di porte e finestre", "Cornici interne e mostrine", "Cornici del soffitto"]));
+  const balc = await page.evaluate(() => { const ws = wallsOf(S.level), xs = ws.flatMap(w => [w.a[0], w.b[0]]), ys = ws.flatMap(w => [w.a[1], w.b[1]]), x0 = Math.min(...xs), y1 = Math.max(...ys), t = ws[0].thick / 2;
+    const r = {id:uid(), level:S.level, name:"Terrazzo", mat:"pietra", pts:[[x0 + 1, y1 + t], [x0 + 5, y1 + t], [x0 + 5, y1 + t + 1.4], [x0 + 1, y1 + t + 1.4]]}; P.rooms.push(r); commit(); setSel([{type:"room", id:r.id}]); renderInspector(); return r.id; });
+  const frames0 = await cnt("frame");
+  await page.check("#rBalc"); await page.waitForTimeout(250);
+  expect(await page.evaluate(id => { const r = P.rooms.find(r => r.id === id); return [r.balcone, !!r.noCeiling]; }, balc)).toEqual([{ tipo: "ringhiera", h: 1 }, true]);
+  expect(await cnt("frame")).toBeGreaterThan(frames0 + 20 * 24);   // corrimano, montanti e bacchette sui 3 lati liberi
+  const par = await page.evaluate(() => computo().find(r => /Parapetto del balcone/.test(r.voce)).q);
+  expect(par).toBeCloseTo(4 + 1.4 * 2, 1);                      // il lato contro il muro non ha parapetto
+  await page.selectOption("#rBalcT", "muratura"); await page.waitForTimeout(200);
+  await page.fill("#rBalcH", "0,5"); await page.locator("#rBalcH").press("Enter"); await page.waitForTimeout(150);
+  expect(await page.evaluate(id => P.rooms.find(r => r.id === id).balcone, balc)).toEqual({ tipo: "muratura", h: 1 });
+  await page.reload(); await page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function"); await page.waitForTimeout(1200);
+  expect(await page.evaluate(([w, b]) => [P.openings.find(o => o.id === w).cornice, P.rooms.find(r => r.id === b).balcone], [win, balc])).toEqual([{ ext: .14, int: .07 }, { tipo: "muratura", h: 1 }]);
+  expect(errors).toEqual([]);
+});

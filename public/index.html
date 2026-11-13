@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-QTxfaer552ogbTofV2BLANPspgZlCJ1aArkWHHLIekQ=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-BGMGvykFWtOHxof9Y87SCNR5qHkNz7/cmcqESNxL5iM=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1429,6 +1429,7 @@ function buildModel(opts={}){
         if (r.ceilH){ const cg = new THREE.ExtrudeGeometry(csh, {depth:.06, bevelEnabled:false}); cg.rotateX(Math.PI/2); cg.translate(0, e0 + r.ceilH + .06, 0); add(L.id, cm, "ceiling", cg); }
         else { const cg = new THREE.ShapeGeometry(csh); cg.rotateX(Math.PI/2); cg.translate(0, e0 + L.height - .005, 0); add(L.id, cm, "ceiling", cg); } }
       if (!opts.print && r.skirt) for (const sg of skirtGeos(r, L)) add(L.id, r.skirt.mat || "bianco", "skirt", sg);
+      if ((r.cornice || r.balcone) && typeof buildRoomExtras === "function") buildRoomExtras(r, L, add, opts);
     }
     if (L.roof?.type === "custom" && opts.roof !== false) buildCustomRoof(L, e0, add, opts);
     else if (L.roof && L.roof.type !== "none" && opts.roof !== false){
@@ -2876,6 +2877,7 @@ function doorHandle(o, piece, s0, s1, e0, fd){
 }
 /* riempimento 3D del vano: telai, ante, vetri, oscuranti. piece(s0,s1,y0,y1,spessore,mat,cat,offset) */
 function buildOpeningFill(w, c, piece, e0, bot, topO, t){
+  if (c.o.cornice && typeof openingCornice === "function") openingCornice(w, c, piece, e0, bot, topO, t);
   const o = c.o, fd = Math.min(.09, t*.8), s0 = c.s0, s1 = c.s1, y0 = e0 + bot, y1 = e0 + topO, W = s1 - s0, mid = (s0 + s1) / 2, ext = extSide(w, o);
   const sash = (a, b, ya, yb, off = 0, d = fd, fw = .06) => { // anta con vetro
     piece(a, a + fw, ya, yb, d, "serramento", "frame", off); piece(b - fw, b, ya, yb, d, "serramento", "frame", off);
@@ -3241,13 +3243,13 @@ function renderInspector(){
     if (S.sel.type === "opening"){ const w = wallById(sel.wall);
       h += `<div class="sec"><h3>${sel.type==="door"?"Porta":"Finestra"}</h3><div class="row3">${F("oW","Larghezza",fmt(sel.w),'inputmode="decimal"')}${F("oH","Altezza",fmt(sel.h),'inputmode="decimal"')}${sel.type==="window"?F("oS","Davanzale",fmt(sel.sill),'inputmode="decimal"'):F("oA","Alzatina (cm)",fmt((sel.alz||0)*100,0),'inputmode="decimal" title="Soglia rialzata da terra: 0 = a raso"')}</div>
         <div class="row">${F("oT","Distanza asse (m)",fmt(sel.t),'inputmode="decimal"')}<div class="f"><span class="lbl">Tipo</span><select id="oType" class="inp"><option value="door" ${sel.type==="door"?"selected":""}>Porta</option><option value="window" ${sel.type==="window"?"selected":""}>Finestra</option></select></div></div>
-        ${openingExtraHTML(sel)}<p class="note">Distanza misurata dall'inizio del muro (${fmt(wallFrame(w).len)} m).</p>
+        ${openingExtraHTML(sel)}${corniceOpHTML(sel)}<p class="note">Distanza misurata dall'inizio del muro (${fmt(wallFrame(w).len)} m).</p>
         <div class="btns">${sel.type==="door"?`<button class="btn" id="oHinge">Specchia (cerniera)</button><button class="btn" id="oSide">Apre dall'altro lato</button>`:""}<button class="btn danger" id="delSel">Elimina</button></div></div>`; }
     if (S.sel.type === "room"){ const A = Math.abs(polyArea(sel.pts));
       const ra = roomAreas(sel);
       h += `<div class="sec"><h3>Locale</h3>${F("rName","Nome",sel.name)}<dl class="kv"><dt>Superficie netta</dt><dd>${fmt(A)} m²</dd><dt>Superficie lorda</dt><dd>${fmt(ra.gross)} m² <small>con metà muri</small></dd><dt>Perimetro</dt><dd>${fmtL(ra.per)}</dd><dt>Volume netto</dt><dd>${fmt(A*L.height,1)} m³</dd></dl>
         <label class="chk"><input type="checkbox" id="rNoCeil" ${sel.noCeiling?"checked":""}> Senza soffitto (vista dall'alto)</label><p class="note">L'etichetta del locale si trascina in pianta.</p>
-        <span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, sel.mat, "rm")}${roomExtraHTML(sel)}<div class="btns"><button class="btn" id="camRoom">Vista interna</button><button class="btn danger" id="delSel">Elimina</button></div></div>${slabHTML(sel, L, A)}`; }
+        <span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, sel.mat, "rm")}${roomExtraHTML(sel)}<div class="btns"><button class="btn" id="camRoom">Vista interna</button><button class="btn danger" id="delSel">Elimina</button></div></div>${slabHTML(sel, L, A)}${roomCorniceHTML(sel)}`; }
     if (S.sel.type === "object"){
       const it = sel.kind === "lib" ? LIBMAP[libRef(sel.ref)] : null, imp = sel.kind === "import" ? importStore[sel.ref] : null, fp = objFootprint(sel);
       h += `<div class="sec"><h3>${it ? esc(it.cat) : imp?.source?.type === "polyhaven" ? "Poly Haven" : "Modello importato"}</h3>${it ? `<div class="libsel">${thumbImg(it.ref)}<div><b>${esc(it.nome)}</b><small>${esc(it.dim)}${it.credit ? ` · ${esc(it.credit)}` : ""}</small></div></div>` : ""}${F("obName","Nome",sel.name)}<div class="row">${F("obX","X (m)",fmt(sel.x),'inputmode="decimal"')}${F("obY","Y (m)",fmt(sel.y),'inputmode="decimal"')}</div>
@@ -4531,11 +4533,17 @@ const A3 = (() => {
       if (hasH(y0, A.x, B.x) && hasH(y1, A.x, B.x)) rects.push({x0:A.x, x1:B.x, y0, y1});
     }
     let ops = rects.filter(r => r.x0 >= xa - .05 && r.x1 <= xb + .05 && r.y0 >= ground - .05 && r.x1 - r.x0 < .9 * (xb - xa) && r.y1 - r.y0 < eave);
+    // cornici: rettangolo che ne racchiude un altro con margini laterali uguali (11–35 cm: i telai stanno entro 10 cm) e sopra simile: è la cornice, non il vano
+    const corn = new Set();
+    for (const r of ops){ const q = ops.filter(q => q !== r && q.x0 > r.x0 && q.x1 < r.x1 && q.y1 < r.y1 && q.y0 >= r.y0 - .01).sort((a, b) => (b.x1 - b.x0) - (a.x1 - a.x0))[0]; if (!q) continue;
+      const mL = q.x0 - r.x0, mR = r.x1 - q.x1, mT = r.y1 - q.y1;
+      if (mL >= .11 && mL <= .35 && Math.abs(mL - mR) < .02 && mT >= .05 && mT <= .45){ corn.add(r); q.cornice = +((mL + mR) / 2).toFixed(3); } }
+    ops = ops.filter(r => !corn.has(r));
     ops = ops.filter(r => !ops.some(q => q !== r && q.x0 <= r.x0 + .01 && q.x1 >= r.x1 - .01 && q.y0 <= r.y0 + .01 && q.y1 >= r.y1 - .01 && (q.x1-q.x0)*(q.y1-q.y0) > (r.x1-r.x0)*(r.y1-r.y0) + 1e-6)); // telai interni
     ops = ops.filter((r, i) => !ops.some((q, k) => k < i && Math.abs(q.x0-r.x0) < .01 && Math.abs(q.x1-r.x1) < .01 && Math.abs(q.y0-r.y0) < .01 && Math.abs(q.y1-r.y1) < .01));
     // persiane: rettangoli stretti affiancati a un'apertura della stessa altezza
     ops = ops.filter(r => !ops.some(q => q !== r && Math.abs(q.y0 - r.y0) < .05 && Math.abs(q.y1 - r.y1) < .05 && (Math.abs(q.x0 - r.x1) < .06 || Math.abs(q.x1 - r.x0) < .06) && (r.x1 - r.x0) <= .6 * (q.x1 - q.x0)));
-    return {width:+(xb - xa).toFixed(3), eave:+eave.toFixed(3), roof, openings:ops.map(r => ({u0:+(r.x0 - xa).toFixed(3), u1:+(r.x1 - xa).toFixed(3), sill:+Math.max(0, r.y0 - ground).toFixed(3), h:+(r.y1 - r.y0).toFixed(3)})).sort((a,b) => a.u0 - b.u0)};
+    return {width:+(xb - xa).toFixed(3), eave:+eave.toFixed(3), roof, openings:ops.map(r => ({u0:+(r.x0 - xa).toFixed(3), u1:+(r.x1 - xa).toFixed(3), sill:+Math.max(0, r.y0 - ground).toFixed(3), h:+(r.y1 - r.y0).toFixed(3), ...(r.cornice ? {cornice:r.cornice} : {})})).sort((a,b) => a.u0 - b.u0)};
   }
 
   /** Prospetto disegnato in un'unità diversa dalla pianta (cm, mm): fattore 10^n che porta la sua larghezza vicina a quella attesa. */
@@ -4587,9 +4595,9 @@ const A3 = (() => {
         const low = type === "door" ? {sill:0, ...(sill > .02 ? {alz:+sill.toFixed(3)} : {}), h:+(h).toFixed(3)} : {sill:+sill.toFixed(3), h:+h.toFixed(3)};
         if (ex && Math.abs(ex.t - t) <= Math.max(ex.w, w)/2 + .2){
           const pf = type === "door" && (ex.style === "portafinestra" || ex.from === "vetro" || ex.from === "portafinestra");
-          Object.assign(ex, low, {type, fromElev:true}, pf ? {style:"portafinestra"} : {}); if (type === "window" && ex.style === "portafinestra") delete ex.style;
+          Object.assign(ex, low, {type, fromElev:true}, pf ? {style:"portafinestra"} : {}, op.cornice ? {cornice:{ext:+(op.cornice * kx).toFixed(3)}} : {}); if (type === "window" && ex.style === "portafinestra") delete ex.style;
           if (ex.from === "vuoto") ex.w = +w.toFixed(3); matched++; }
-        else if (t - w/2 > .05 && t + w/2 < L - .05){ openings.push({wall:best.id, t:+t.toFixed(3), w:+w.toFixed(3), ...low, type, from:"prospetto", fromElev:true}); added++; }
+        else if (t - w/2 > .05 && t + w/2 < L - .05){ openings.push({wall:best.id, t:+t.toFixed(3), w:+w.toFixed(3), ...low, type, from:"prospetto", fromElev:true, ...(op.cornice ? {cornice:{ext:+(op.cornice * kx).toFixed(3)}} : {})}); added++; }
       }
       notes.push(`Prospetto ${e.side}: ${d.openings.length} aperture lette, ${matched} abbinate alla pianta${added ? `, ${added} aggiunte` : ""}.`);
     }
@@ -4763,8 +4771,10 @@ function a3Generate(){
     P.walls = P.walls.filter(w => w.level !== lid); P.openings = P.openings.filter(o => !oldW.has(o.wall)); P.rooms = P.rooms.filter(r => r.level !== lid);
     const ids = {};
     for (const w of rv.walls){ const id = uid(); ids[w.id] = id; P.walls.push({id, level:lid, a:w.a, b:w.b, thick:w.thick, height:null, mat:S.defaults.wallMat}); }
-    for (const o of rv.openings) if (ids[o.wall]) P.openings.push({id:uid(), wall:ids[o.wall], t:o.t, w:o.w, h:o.h, sill:o.sill, type:o.type, flip:0, ...(o.style ? {style:o.style} : {}), ...(o.alz ? {alz:o.alz} : {})});
-    m.rooms.forEach((r, i) => P.rooms.push({id:uid(), level:lid, name:r.name || `Locale ${i+1}`, mat:FLOOR_MATS.includes(r.mat) ? r.mat : S.defaults.roomMat, pts:r.pts}));
+    for (const o of rv.openings) if (ids[o.wall]) P.openings.push({id:uid(), wall:ids[o.wall], t:o.t, w:o.w, h:o.h, sill:o.sill, type:o.type, flip:0, ...(o.style ? {style:o.style} : {}), ...(o.alz ? {alz:o.alz} : {}), ...(o.cornice ? {cornice:o.cornice} : {})});
+    // balconi, terrazzi e logge dal nome: niente soffitto, parapetto sui lati liberi
+    m.rooms.forEach((r, i) => { const balc = /balcon|terrazz|loggia|veranda/i.test(r.name || "");
+      P.rooms.push({id:uid(), level:lid, name:r.name || `Locale ${i+1}`, mat:balc ? "pietra" : FLOOR_MATS.includes(r.mat) ? r.mat : S.defaults.roomMat, pts:r.pts, ...(balc ? {balcone:{tipo:"ringhiera", h:1}, noCeiling:true} : {})}); });
     L.height = m.height; L.roof = {...L.roof, ...m.roof}; if (!m.roof.ridge) delete L.roof.ridge;
     L.underlay = {kind:"vec", lines:segs.map(s => s.slice(0, 4)), ox:0, oy:0, k:1, opacity:.3, name:pc.file};
     const nD = rv.openings.filter(o => o.type === "door").length, nF = rv.openings.length - nD, nC = A3S.dec.size;
@@ -6818,11 +6828,12 @@ function computo(){
     if (L.roof.type === "custom"){ add(`tetto:${L.roof.mat}`, "Copertura", `Copertura a falde (personalizzata) in ${matName(L.roof.mat).toLowerCase()}`, "m²", customRoofArea(L)); continue; }
     const RR = roofRects(L.id); if (!RR) continue; const o = L.roof.overhang || 0, A = RR.area(o), p = THREE.MathUtils.degToRad(clamp(L.roof.pitch || 0, 0, 60));
     add(`tetto:${L.roof.mat}`, "Copertura", `Copertura ${({flat:"piana", gable:"a due falde", hip:"a padiglione", shed:"a una falda"})[L.roof.type]} in ${matName(L.roof.mat).toLowerCase()}`, "m²", L.roof.type === "flat" ? A : A / Math.cos(p)); }
+  if (typeof corniciComputo === "function") corniciComputo(add);
   for (const o of P.objects){ const it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null; if (it?.cat === "Persone") continue;
     if (it?.param?.kind === "rail") add("ringhiera", "Scale e parapetti", "Ringhiera / parapetto", "m", paramsOf(o, it).len * (o.scale || 1));
     else if (it?.param) add(`scala:${o.ref}`, "Scale e parapetti", it.nome, "n.", 1);
     else add(`ogg:${o.kind === "lib" ? o.ref : "imp:" + o.name}`, it?.cat === "Luci" ? "Impianto elettrico" : it?.cat === "Verde" ? "Sistemazioni esterne" : "Arredi", it?.nome || o.name || "Oggetto", "n.", 1); }
-  const order = ["Murature", "Finiture pareti", "Pavimenti", "Finiture", "Porte", "Finestre", "Copertura", "Scale e parapetti", "Impianto elettrico", "Arredi", "Sistemazioni esterne"];
+  const order = ["Murature", "Finiture pareti", "Pavimenti", "Finiture", "Porte", "Finestre", "Cornici", "Copertura", "Scale e parapetti", "Impianto elettrico", "Arredi", "Sistemazioni esterne"];
   return [...R.values()].sort((a, b) => order.indexOf(a.cat) - order.indexOf(b.cat) || a.voce.localeCompare(b.voce, "it"));
 }
 const prices = () => (P.prices = P.prices || {});
@@ -7738,6 +7749,107 @@ document.addEventListener("keydown", e => {
   else if ((e.key === "Delete" || e.key === "Backspace") && RF.sel){ e.stopImmediatePropagation(); e.preventDefault(); $("#" + (RF.sel.k != null ? "rfDelPt" : "rfDelF"))?.click(); }
 }, true);
 
+/* ---- 056-cornici.js ---- */
+/* ============================================================
+   Cornici di porte e finestre, cornici del soffitto, balconi con parapetto
+   o.cornice = {ext, int}  (larghezze in m; esterna in pietra, interna/mostrina chiara)
+   r.cornice = {h}          (cornice a gola sotto il soffitto)
+   r.balcone = {tipo:"ringhiera"·"muratura"·"vetro", h}  (niente soffitto, parapetto sui lati liberi)
+   ============================================================ */
+const CORN_D = .03;   // sporgenza delle cornici dal muro
+
+/** Fasce della cornice attorno al vano: stipiti, architrave e, senza davanzale, la fascia bassa. side = +1 esterno, −1 interno. */
+function openingCornice(w, c, piece, e0, bot, topO, t){
+  const o = c.o, cr = o.cornice; if (!cr) return;
+  const ext = extSide(w, o), y0 = e0 + bot, y1 = e0 + topO;
+  for (const [side, cw, mat] of [[ext, cr.ext, cr.extMat || "pietra"], [-ext, cr.int, cr.intMat || (o.type === "door" ? "bianco" : "bianco")]]){
+    if (!(cw > 0)) continue; const off = side * (t / 2 + CORN_D / 2);
+    piece(c.s0 - cw, c.s0, y0 - (bot > .05 ? 0 : 0), y1 + cw, CORN_D, mat, "frame", off);
+    piece(c.s1, c.s1 + cw, y0, y1 + cw, CORN_D, mat, "frame", off);
+    piece(c.s0, c.s1, y1, y1 + cw, CORN_D, mat, "frame", off);
+    if (o.type === "window" && side === ext && bot <= .05) piece(c.s0 - cw, c.s1 + cw, y0 - cw, y0, CORN_D, mat, "frame", off);
+    if (o.type === "window" && side !== ext) piece(c.s0 - cw, c.s1 + cw, y0 - cw, y0, CORN_D, mat, "frame", off);
+  }
+}
+/** Lati di un locale con il verso interno; «free» = lato che non poggia su un muro (per il parapetto dei balconi). */
+function roomEdges(r){
+  const out = [], ws = wallsOf(r.level);
+  for (let i = 0; i < r.pts.length; i++){
+    const p = r.pts[i], q = r.pts[(i + 1) % r.pts.length], dx = q[0] - p[0], dy = q[1] - p[1], len = Math.hypot(dx, dy); if (len < .05) continue;
+    const ux = dx / len, uy = dy / len; let nx = -uy, ny = ux; const mid = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+    if (!inPoly([mid[0] + nx * .05, mid[1] + ny * .05], r.pts)){ nx = -nx; ny = -ny; }
+    const onWall = k => { const x = [p[0] + dx * k, p[1] + dy * k]; return ws.some(w => projOnSeg([x[0] - nx * (w.thick / 2 + .01), x[1] - ny * (w.thick / 2 + .01)], w.a, w.b).d < w.thick / 2 + .06); };
+    out.push({p, q, len, ux, uy, nx, ny, free:![.1, .5, .9].some(onWall)});
+  }
+  return out;
+}
+/** Profilo estruso lungo un lato: punti (n verso l'interno, y) a partire dal filo del lato. */
+function profileAlong(e, y0, prof, ext0 = 0, ext1 = 0){
+  const pos = [], P = (s, n, y) => [e.p[0] + e.ux * s + e.nx * n, y, e.p[1] + e.uy * s + e.ny * n];
+  const a = -ext0, b = e.len + ext1;
+  for (let i = 0; i < prof.length - 1; i++){ const [n0, h0] = prof[i], [n1, h1] = prof[i + 1];
+    const A = P(a, n0, y0 + h0), B = P(b, n0, y0 + h0), C = P(b, n1, y0 + h1), D = P(a, n1, y0 + h1); pos.push(...A, ...B, ...C, ...A, ...C, ...D, ...A, ...C, ...B, ...A, ...D, ...C); }   // due versi: visibile da ogni lato
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); return g;
+}
+/** Cornice a gola sotto il soffitto, sui lati del locale che poggiano sui muri. */
+function ceilingCorniceGeos(r, L){
+  const h = r.cornice?.h || .08, top = L.elev + (r.ceilH || L.height) - .006;
+  const prof = [[0, 0], [h * .15, 0], [h * .35, -h * .1], [h * .6, -h * .35], [h * .85, -h * .7], [h, -h * .9], [h, -h], [0, -h]];
+  return roomEdges(r).filter(e => !e.free || !r.balcone).map(e => profileAlong(e, top, prof, -0, 0));
+}
+/** Parapetto del balcone sui lati liberi: ringhiera (corrimano, montanti, bacchette), muratura con copertina, vetro con corrimano. */
+function balconyGeos(r, L, add){
+  const B = r.balcone, h = B.h || 1, e0 = L.elev, lid = L.id;
+  for (const e of roomEdges(r)){ if (!e.free) continue;
+    const at = (s, n) => [e.p[0] + e.ux * s + e.nx * n, e.p[1] + e.uy * s + e.ny * n], rot = -Math.atan2(e.uy, e.ux), m = at(e.len / 2, .06);
+    if (B.tipo === "muratura"){ add(lid, B.mat || "intonaco", "wall", boxGeo(m[0], e0 + h / 2, m[1], e.len, h, .12, 0, rot, 0)); add(lid, "marmo", "sill", boxGeo(m[0], e0 + h + .02, m[1], e.len + .04, .04, .18, 0, rot, 0)); continue; }
+    add(lid, "metallo_nero", "frame", boxGeo(m[0], e0 + h - .025, m[1], e.len, .05, .05, 0, rot, 0));
+    const nP = Math.max(2, Math.ceil(e.len / 1.2) + 1);
+    for (let i = 0; i < nP; i++){ const q = at(.03 + (e.len - .06) * i / (nP - 1), .06); add(lid, "metallo_nero", "frame", boxGeo(q[0], e0 + (h - .05) / 2, q[1], .04, h - .05, .04, 0, rot, 0)); }
+    if (B.tipo === "vetro"){ add(lid, "vetro", "glass", boxGeo(m[0], e0 + (h - .05) / 2 + .02, m[1], e.len - .06, h - .12, .012, 0, rot, 0)); continue; }
+    add(lid, "metallo_nero", "frame", boxGeo(m[0], e0 + .1, m[1], e.len, .03, .03, 0, rot, 0));
+    const nb = Math.floor(e.len / .11); for (let i = 1; i < nb; i++){ const q = at(i * e.len / nb, .06); add(lid, "metallo_nero", "frame", boxGeo(q[0], e0 + (h - .05 + .1) / 2, q[1], .015, h - .15, .015, 0, rot, 0)); }
+  }
+}
+function buildRoomExtras(r, L, add, opts){
+  if (opts.print) return;
+  if (r.cornice && !r.noCeiling && !r.balcone) for (const g of ceilingCorniceGeos(r, L)) add(L.id, r.cornice.mat || "bianco", "skirt", g);
+  if (r.balcone) balconyGeos(r, L, add);
+}
+/** Metri di cornici e parapetti per il computo. */
+function corniciComputo(add){
+  let fe = 0, fi = 0; for (const o of P.openings){ const c = o.cornice; if (!c) continue; const per = o.w + 2 * o.h + (o.type === "window" ? o.w : 0); if (c.ext > 0) fe += per; if (c.int > 0) fi += per; }
+  if (fe) add("cornice_est", "Cornici", "Cornici esterne di porte e finestre", "m", fe);
+  if (fi) add("cornice_int", "Cornici", "Cornici interne e mostrine", "m", fi);
+  let cs = 0, pr = {}; for (const r of P.rooms){ const E = roomEdges(r); if (r.cornice && !r.balcone) cs += E.reduce((s, e) => s + e.len, 0); if (r.balcone){ const k = r.balcone.tipo || "ringhiera"; pr[k] = (pr[k] || 0) + E.filter(e => e.free).reduce((s, e) => s + e.len, 0); } }
+  if (cs) add("cornice_soff", "Cornici", "Cornici del soffitto", "m", cs);
+  for (const [k, v] of Object.entries(pr)) if (v) add("parapetto_" + k, "Scale e parapetti", `Parapetto del balcone (${({ringhiera:"ringhiera", muratura:"muratura", vetro:"vetro"})[k] || k})`, "m", v);
+}
+
+/* ---------- pannello ---------- */
+function corniceOpHTML(o){ const c = o.cornice || {};
+  return `<div class="row">${F("oCe", "Cornice esterna (cm)", c.ext ? fmt(c.ext * 100, 0) : "", 'inputmode="decimal" placeholder="nessuna"')}${F("oCi", o.type === "door" ? "Mostrina interna (cm)" : "Cornice interna (cm)", c.int ? fmt(c.int * 100, 0) : "", 'inputmode="decimal" placeholder="nessuna"')}</div>
+    <div class="btns"><button class="btn" id="oCeAll" title="Stesse cornici su tutte le ${o.type === "door" ? "porte" : "finestre"} del piano">Applica a tutte le ${o.type === "door" ? "porte" : "finestre"} del piano</button></div>`; }
+function roomCorniceHTML(r){ const B = r.balcone;
+  return `<div class="sec" id="rCornSec"><h3>Cornice e balcone</h3>
+    <label class="chk"><input type="checkbox" id="rCorn" ${r.cornice ? "checked" : ""} ${B ? "disabled" : ""}> Cornice del soffitto</label>
+    ${r.cornice && !B ? `<div class="row">${F("rCornH", "Altezza cornice (cm)", fmt((r.cornice.h || .08) * 100, 0), 'inputmode="decimal"')}<div></div></div>` : ""}
+    <label class="chk"><input type="checkbox" id="rBalc" ${B ? "checked" : ""}> Balcone o terrazzo (senza soffitto, parapetto sui lati liberi)</label>
+    ${B ? `<div class="row"><div class="f"><label class="lbl" for="rBalcT">Parapetto</label><select id="rBalcT" class="inp">${[["ringhiera", "Ringhiera a bacchette"], ["vetro", "Vetro con corrimano"], ["muratura", "Muratura con copertina"]].map(([k, n]) => `<option value="${k}" ${B.tipo === k ? "selected" : ""}>${n}</option>`).join("")}</select></div>${F("rBalcH", "Altezza (m)", fmt(B.h || 1, 2), 'inputmode="decimal"')}</div>` : ""}</div>`; }
+P_.addEventListener("change", e => { const t = e.target, v = num(t.value), sel = findSel(); if (!sel) return;
+  if ((t.id === "oCe" || t.id === "oCi") && S.sel?.type === "opening"){ if (t.value.trim() !== "" && (v === null || v < 0 || v > 60)){ toast("Cornice tra 0 e 60 cm", true); renderInspector(); return; }
+    const c = {...(sel.cornice || {})}, k = t.id === "oCe" ? "ext" : "int"; if (v > 0) c[k] = v / 100; else delete c[k]; if (Object.keys(c).length) sel.cornice = c; else delete sel.cornice; commit(); renderInspector(); }
+  if (S.sel?.type !== "room") return;
+  if (t.id === "rCorn"){ if (t.checked) sel.cornice = {h:.08}; else delete sel.cornice; commit(); renderInspector(); }
+  if (t.id === "rCornH" && sel.cornice){ if (v >= 2 && v <= 40){ sel.cornice.h = v / 100; commit(); } else { toast("Cornice tra 2 e 40 cm", true); renderInspector(); } }
+  if (t.id === "rBalc"){ if (t.checked){ sel.balcone = {tipo:"ringhiera", h:1}; sel.noCeiling = true; } else { delete sel.balcone; delete sel.noCeiling; } commit(); renderInspector(); }
+  if (t.id === "rBalcT" && sel.balcone){ sel.balcone.tipo = t.value; commit(); }
+  if (t.id === "rBalcH" && sel.balcone){ if (v >= .8 && v <= 1.5){ sel.balcone.h = v; commit(); } else { toast("Parapetto tra 0,80 e 1,50 m (di norma almeno 1,00 m)", true); renderInspector(); } }
+});
+P_.addEventListener("click", e => { const b = e.target.closest("button"); if (b?.id !== "oCeAll") return; const o = findSel(); if (!o || S.sel?.type !== "opening") return;
+  let n = 0; for (const x of P.openings) if (x !== o && x.type === o.type && wallById(x.wall)?.level === wallById(o.wall)?.level){ if (o.cornice) x.cornice = {...o.cornice}; else delete x.cornice; n++; }
+  commit(); toast(`Cornici applicate a ${n} ${o.type === "door" ? "porte" : "finestre"}`); });
+
 /* ---- 09-init.js ---- */
 /* ============================================================
    Progetto di esempio, migrazione, avvio
@@ -7800,12 +7912,15 @@ function sanitizeProject(p){
   p.walls = p.walls.filter(w => Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1]) >= .01);
   for (const w of p.walls){ if (!(w.thick > 0)) w.thick = .3; w.thick = Math.min(w.thick, 3); if (w.height != null && !(w.height > 0)) w.height = null; }
   for (const r of arr("rooms")){ r.id = fix(r.id); r.level = fix(r.level); r.pts = Array.isArray(r.pts) ? r.pts.map(pt) : []; r.name = T(r.name, 80); r.mat = K(r.mat); if (r.lab) r.lab = pt(r.lab);
+    if (r.cornice && typeof r.cornice === "object") r.cornice = {h:clamp(N(r.cornice.h, .08), .02, .4)}; else delete r.cornice;
+    if (r.balcone && typeof r.balcone === "object") r.balcone = {tipo:["ringhiera", "vetro", "muratura"].includes(r.balcone.tipo) ? r.balcone.tipo : "ringhiera", h:clamp(N(r.balcone.h, 1), .8, 1.5)}; else delete r.balcone;
     if (r.slab && typeof r.slab === "object"){ const t = N(r.slab.t, NaN); r.slab = {...(t >= .02 && t <= 1.5 ? {t} : {}), ...(["laterocemento", "ca", "predalles", "legno", "acciaio", "vespaio"].includes(r.slab.k) ? {k:r.slab.k} : {})}; if (!Object.keys(r.slab).length) delete r.slab; } else delete r.slab;
     if (r.ceilH != null) r.ceilH = Nn(r.ceilH); if (r.ceilMat != null) r.ceilMat = K(r.ceilMat); if (r.tile) r.tile = {scale:N(r.tile.scale, 1), rot:N(r.tile.rot), ox:N(r.tile.ox), oy:N(r.tile.oy)}; if (r.skirt) r.skirt = {h:N(r.skirt.h, .08), mat:K(r.skirt.mat) || "bianco"}; }
   for (const o of arr("openings")){ o.id = fix(o.id); o.wall = fix(o.wall); for (const k of ["t", "w", "h", "sill"]) o[k] = N(o[k]); o.type = o.type === "door" ? "door" : "window"; o.flip = N(o.flip) | 0; if (o.style != null) o.style = K(o.style); if (o.shut != null) o.shut = K(o.shut); }
   { const len = new Map(p.walls.map(w => [w.id, Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1])]));
     p.openings = p.openings.filter(o => len.has(o.wall));
-    for (const o of p.openings){ const L = len.get(o.wall); if (!(o.w > 0)) o.w = Math.min(.9, L); o.w = Math.min(o.w, L); if (!(o.h > 0)) o.h = o.type === "door" ? 2.1 : 1.2; if (!(o.sill >= 0)) o.sill = o.type === "door" ? 0 : .9; if (o.alz != null){ const a = Number(o.alz); if (a > 0 && a <= .3) o.alz = a; else delete o.alz; } o.t = clamp(o.t, o.w / 2, Math.max(o.w / 2, L - o.w / 2)); } }
+    for (const o of p.openings){ const L = len.get(o.wall); if (!(o.w > 0)) o.w = Math.min(.9, L); o.w = Math.min(o.w, L); if (!(o.h > 0)) o.h = o.type === "door" ? 2.1 : 1.2; if (!(o.sill >= 0)) o.sill = o.type === "door" ? 0 : .9; if (o.cornice && typeof o.cornice === "object"){ const c = {}; for (const k of ["ext", "int"]){ const v = N(o.cornice[k], 0); if (v > 0 && v <= .6) c[k] = v; } if (Object.keys(c).length) o.cornice = c; else delete o.cornice; } else delete o.cornice;
+      if (o.alz != null){ const a = Number(o.alz); if (a > 0 && a <= .3) o.alz = a; else delete o.alz; } o.t = clamp(o.t, o.w / 2, Math.max(o.w / 2, L - o.w / 2)); } }
   for (const o of arr("objects")){ o.id = fix(o.id); o.level = fix(o.level); o.kind = K(o.kind) || "lib"; o.ref = K(o.ref); o.name = T(o.name, 120); for (const k of ["x", "y", "z", "rot"]) o[k] = N(o[k]); o.scale = N(o.scale, 1) || 1;
     if (o.p && typeof o.p === "object") for (const [k, v] of Object.entries(o.p)) o.p[k] = typeof v === "number" ? N(v) : typeof v === "boolean" ? v : K(v);
     if (o.light && typeof o.light === "object") o.light = {on:o.light.on !== false, ...(o.light.lm != null ? {lm:N(o.light.lm, 800)} : {}), ...(o.light.k != null ? {k:N(o.light.k, 3000)} : {})}; }

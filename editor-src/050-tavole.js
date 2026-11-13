@@ -321,11 +321,12 @@ function computo(){
     if (L.roof.type === "custom"){ add(`tetto:${L.roof.mat}`, "Copertura", `Copertura a falde (personalizzata) in ${matName(L.roof.mat).toLowerCase()}`, "m²", customRoofArea(L)); continue; }
     const RR = roofRects(L.id); if (!RR) continue; const o = L.roof.overhang || 0, A = RR.area(o), p = THREE.MathUtils.degToRad(clamp(L.roof.pitch || 0, 0, 60));
     add(`tetto:${L.roof.mat}`, "Copertura", `Copertura ${({flat:"piana", gable:"a due falde", hip:"a padiglione", shed:"a una falda"})[L.roof.type]} in ${matName(L.roof.mat).toLowerCase()}`, "m²", L.roof.type === "flat" ? A : A / Math.cos(p)); }
+  if (typeof corniciComputo === "function") corniciComputo(add);
   for (const o of P.objects){ const it = o.kind === "lib" ? LIBMAP[libRef(o.ref)] : null; if (it?.cat === "Persone") continue;
     if (it?.param?.kind === "rail") add("ringhiera", "Scale e parapetti", "Ringhiera / parapetto", "m", paramsOf(o, it).len * (o.scale || 1));
     else if (it?.param) add(`scala:${o.ref}`, "Scale e parapetti", it.nome, "n.", 1);
     else add(`ogg:${o.kind === "lib" ? o.ref : "imp:" + o.name}`, it?.cat === "Luci" ? "Impianto elettrico" : it?.cat === "Verde" ? "Sistemazioni esterne" : "Arredi", it?.nome || o.name || "Oggetto", "n.", 1); }
-  const order = ["Murature", "Finiture pareti", "Pavimenti", "Finiture", "Porte", "Finestre", "Copertura", "Scale e parapetti", "Impianto elettrico", "Arredi", "Sistemazioni esterne"];
+  const order = ["Murature", "Finiture pareti", "Pavimenti", "Finiture", "Porte", "Finestre", "Cornici", "Copertura", "Scale e parapetti", "Impianto elettrico", "Arredi", "Sistemazioni esterne"];
   return [...R.values()].sort((a, b) => order.indexOf(a.cat) - order.indexOf(b.cat) || a.voce.localeCompare(b.voce, "it"));
 }
 const prices = () => (P.prices = P.prices || {});

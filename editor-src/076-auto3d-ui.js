@@ -143,8 +143,10 @@ function a3Generate(){
     P.walls = P.walls.filter(w => w.level !== lid); P.openings = P.openings.filter(o => !oldW.has(o.wall)); P.rooms = P.rooms.filter(r => r.level !== lid);
     const ids = {};
     for (const w of rv.walls){ const id = uid(); ids[w.id] = id; P.walls.push({id, level:lid, a:w.a, b:w.b, thick:w.thick, height:null, mat:S.defaults.wallMat}); }
-    for (const o of rv.openings) if (ids[o.wall]) P.openings.push({id:uid(), wall:ids[o.wall], t:o.t, w:o.w, h:o.h, sill:o.sill, type:o.type, flip:0, ...(o.style ? {style:o.style} : {}), ...(o.alz ? {alz:o.alz} : {})});
-    m.rooms.forEach((r, i) => P.rooms.push({id:uid(), level:lid, name:r.name || `Locale ${i+1}`, mat:FLOOR_MATS.includes(r.mat) ? r.mat : S.defaults.roomMat, pts:r.pts}));
+    for (const o of rv.openings) if (ids[o.wall]) P.openings.push({id:uid(), wall:ids[o.wall], t:o.t, w:o.w, h:o.h, sill:o.sill, type:o.type, flip:0, ...(o.style ? {style:o.style} : {}), ...(o.alz ? {alz:o.alz} : {}), ...(o.cornice ? {cornice:o.cornice} : {})});
+    // balconi, terrazzi e logge dal nome: niente soffitto, parapetto sui lati liberi
+    m.rooms.forEach((r, i) => { const balc = /balcon|terrazz|loggia|veranda/i.test(r.name || "");
+      P.rooms.push({id:uid(), level:lid, name:r.name || `Locale ${i+1}`, mat:balc ? "pietra" : FLOOR_MATS.includes(r.mat) ? r.mat : S.defaults.roomMat, pts:r.pts, ...(balc ? {balcone:{tipo:"ringhiera", h:1}, noCeiling:true} : {})}); });
     L.height = m.height; L.roof = {...L.roof, ...m.roof}; if (!m.roof.ridge) delete L.roof.ridge;
     L.underlay = {kind:"vec", lines:segs.map(s => s.slice(0, 4)), ox:0, oy:0, k:1, opacity:.3, name:pc.file};
     const nD = rv.openings.filter(o => o.type === "door").length, nF = rv.openings.length - nD, nC = A3S.dec.size;

@@ -19,7 +19,7 @@ const scripts = [
   "examples/js/shaders/GammaCorrectionShader.js", "examples/js/postprocessing/EffectComposer.js",
   "examples/js/postprocessing/RenderPass.js", "examples/js/postprocessing/ShaderPass.js", "examples/js/postprocessing/SSAOPass.js",
 ];
-const parts = ["01-base.js", "../shared/geometria.js", "../shared/ifc.js", "02-lib.js", "03-model.js", "04-plan.js", "045-plan-pro.js", "047-fase2.js", "048-fase3.js", "05-ui.js", "06-online.js", "07-io.js", "075-auto3d.js", "076-auto3d-ui.js", "../shared/photo-seg.js", "../shared/photo-depth.js", "077-foto3d.js", "08-ai.js", "049-progetti.js", "050-tavole.js", "051-condivisione.js", "052-avanguardia.js", "053-mobile.js", "054-muri.js", "055-tetto.js", "09-init.js"];
+const parts = ["01-base.js", "../shared/geometria.js", "../shared/ifc.js", "02-lib.js", "03-model.js", "04-plan.js", "045-plan-pro.js", "047-fase2.js", "048-fase3.js", "05-ui.js", "06-online.js", "07-io.js", "075-auto3d.js", "076-auto3d-ui.js", "../shared/photo-seg.js", "../shared/photo-depth.js", "077-foto3d.js", "08-ai.js", "049-progetti.js", "050-tavole.js", "051-condivisione.js", "052-avanguardia.js", "053-mobile.js", "054-muri.js", "055-tetto.js", "056-cornici.js", "09-init.js"];
 
 // i moduli in shared/ sono ES module (li usano anche Worker e test): nell'editor si incorporano senza «export»
 function readPart(f){ const t = readFileSync(join(src, f), "utf8"); return f.startsWith("../shared/") ? t.replace(/^import\s.*from\s+"\.\/[\w-]+\.js";\s*$/gm, "").replace(/^export\s+/gm, "") : t; }
