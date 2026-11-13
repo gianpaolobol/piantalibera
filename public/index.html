@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-BGMGvykFWtOHxof9Y87SCNR5qHkNz7/cmcqESNxL5iM=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-C3Aou/zT9UPKulsJDirbSxhWXoDuoIr4pZg+3YCBwVI=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -211,10 +211,10 @@ body.walking .walkpad{display:grid}@media (pointer:fine){body.walking .walkpad{d
 .a3rev{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px}
 .a3prev svg{display:block;width:100%;max-height:360px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
 .a3prev .cad{fill:none;stroke:var(--muted);opacity:.55}.a3prev .r polygon{fill:var(--accent-soft);stroke:none}.a3prev .r polygon.dub{fill:#f9a82533}
-.a3prev .w{stroke:var(--ink);stroke-opacity:.55;stroke-linecap:butt}.a3prev .o{stroke-linecap:butt}.a3prev .o.door{stroke:#c0392b}.a3prev .o.window{stroke:#2471a3}.a3prev .o.pf{stroke:#7d3c98}
+.a3prev .w{stroke:var(--ink);stroke-opacity:.55;stroke-linecap:butt}.a3prev .o{stroke-linecap:butt}.a3prev .o.door{stroke:#c0392b}.a3prev .o.window{stroke:#2471a3}.a3prev .o.pf{stroke:#7d3c98}.a3prev .st{fill:#16a08522;stroke:#16a085}
 .a3prev .dub{stroke:#f9a825 !important;stroke-opacity:.95}.a3prev .drop{stroke-opacity:.15 !important;stroke-dasharray:.1 .08}.a3prev .hl{stroke:#e91e63 !important;stroke-opacity:1}
 .a3leg{display:flex;gap:10px;align-items:center;font-size:11px;color:var(--muted)}.a3leg i{display:inline-block;width:14px;height:5px;margin-right:3px}
-.a3leg .lw{background:var(--ink);opacity:.55}.a3leg .ld{background:#c0392b}.a3leg .lf{background:#2471a3}.a3leg .lp{background:#7d3c98}.a3leg .lq{background:#f9a825}
+.a3leg .lw{background:var(--ink);opacity:.55}.a3leg .ld{background:#c0392b}.a3leg .lf{background:#2471a3}.a3leg .lp{background:#7d3c98}.a3leg .ls{background:#16a085}.a3leg .lq{background:#f9a825}
 .a3dub{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;max-height:240px;overflow:auto}
 .a3dub li{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-left:3px solid #f9a825;border-radius:4px;cursor:pointer}
 .a3dub li.drop{opacity:.6;text-decoration:line-through}.a3dub .acts{display:flex;gap:4px;flex:none}.a3dub .inp{font-size:12px;padding:3px 4px}
@@ -4139,8 +4139,92 @@ const A3 = (() => {
     return out;
   }
   const rotPt = ([x, y], c, s) => [x*c - y*s, x*s + y*c];
+  /** Scale: serie di almeno 3 linee parallele a passo regolare (20–45 cm). «dritta»: pedate della stessa lunghezza e allineate;
+   *  «gradini»: rettangoli concentrici aperti su un lato (gradini esterni su tre lati), ogni linea più lunga della precedente di due passi.
+   *  Il verso di salita viene dalla freccia (linea che attraversa le pedate con la punta), altrimenti verso la linea più corta.
+   *  Restituisce le rampe e gli indici delle linee usate (che non devono diventare muri). */
+  function findStairs(segs, extraFrom = Infinity){
+    const it = segs.map((s, i) => { const L = segLen(s); let ang = Math.atan2(s[3]-s[1], s[2]-s[0]); if (ang < 0) ang += Math.PI; if (ang >= Math.PI - 1e-9) ang -= Math.PI;
+      const u = [Math.cos(ang), Math.sin(ang)], n = [-u[1], u[0]], p0 = s[0]*u[0] + s[1]*u[1], p1 = s[2]*u[0] + s[3]*u[1];
+      return {i, s, L, ang, u, n, a:Math.min(p0, p1), b:Math.max(p0, p1), off:(s[0]*n[0] + s[1]*n[1] + s[2]*n[0] + s[3]*n[1]) / 2}; }).filter(x => x.L >= .5 && x.L <= 8);
+    const byAng = new Map(); for (const x of it){ const k = Math.round(x.ang / D2R) % 180; for (const kk of [k]) (byAng.get(kk) || byAng.set(kk, []).get(kk)).push(x); }
+    const flights = [], used = new Set();
+    for (const [k, list0] of byAng){
+      const list = [...list0, ...(byAng.get((k + 1) % 180) || []).filter(x => Math.abs(x.ang - list0[0].ang) < 1.2 * D2R)].sort((x, y) => x.off - y.off);
+      const taken = new Set();
+      for (let i = 0; i < list.length; i++){
+        if (taken.has(list[i]) || used.has(list[i].i)) continue;
+        for (const kind of ["dritta", "gradini"]){
+          const run = [list[i]]; let step = null;
+          for (let j = i + 1; j < list.length; j++){ const p = run[run.length - 1], q = list[j], d = q.off - p.off; if (d < .2) continue; if (d > .45) break; if (taken.has(q) || used.has(q.i)) continue;
+            if (step !== null && Math.abs(d - step) > .035) continue;
+            const ok = kind === "dritta" ? Math.abs(p.a - q.a) < .1 && Math.abs(p.b - q.b) < .1 && q.L <= 2.2 && p.L <= 2.2
+              : (Math.abs((p.a - q.a) - d) < .1 && Math.abs((q.b - p.b) - d) < .1) || (Math.abs((q.a - p.a) - d) < .1 && Math.abs((p.b - q.b) - d) < .1);
+            if (!ok) continue; if (step === null) step = d; run.push(q); }
+          // gradini concentrici: l'ordine delle lunghezze deve essere monotono (tutti crescono o tutti calano)
+          if (kind === "gradini" && run.length >= 3){ const inc = run[1].L > run[0].L; if (!run.every((x, t) => !t || (x.L > run[t - 1].L) === inc)) continue; }
+          if (run.length < 3) continue;
+          run.forEach(x => taken.add(x));
+          flights.push({kind, run, step, u:run[0].u, n:run[0].n}); break;
+        }
+      }
+    }
+    // frecce: linea perpendicolare alle pedate che ne attraversa almeno due, con la punta (due tratti corti che si incontrano a un estremo)
+    const shorts = segs.map((s, i) => ({s, i, L:segLen(s)})).filter(x => x.L > .05 && x.L < .45);
+    const tip = (P) => shorts.filter(x => Math.hypot(x.s[0] - P[0], x.s[1] - P[1]) < .03 || Math.hypot(x.s[2] - P[0], x.s[3] - P[1]) < .03).length >= 2;
+    const out = [], WALLY = /mur|wall|parete|tamponam|tramezz|costru/i, same = (j, f) => (j >= extraFrom) === (f.run[0].i >= extraFrom) && !WALLY.test(segs[j][4] || "");
+    for (const f of flights){
+      const offs = f.run.map(x => x.off), o0 = Math.min(...offs), o1 = Math.max(...offs), A = Math.max(...f.run.map(x => x.a)), B = Math.min(...f.run.map(x => x.b));
+      const lo = f.kind === "dritta" ? median(f.run.map(x => x.a)) : Math.min(...f.run.map(x => x.a)), hi = f.kind === "dritta" ? median(f.run.map(x => x.b)) : Math.max(...f.run.map(x => x.b));
+      const w = f.kind === "dritta" ? median(f.run.map(x => x.L)) : Math.max(...f.run.map(x => x.L));
+      // verso: +1 sale verso offset crescente
+      let up = 0;
+      for (let j = 0; j < segs.length && !up; j++){ const s = segs[j], L = segLen(s); if (L < 2 * f.step || used.has(j) || f.run.some(x => x.i === j) || !same(j, f)) continue;
+        const dv = [(s[2]-s[0]) / L, (s[3]-s[1]) / L]; if (Math.abs(dv[0]*f.n[0] + dv[1]*f.n[1]) < .97) continue;
+        const along = ((s[0] + s[2]) / 2) * f.u[0] + ((s[1] + s[3]) / 2) * f.u[1]; if (along < A || along > B) continue;
+        const e0 = s[0]*f.n[0] + s[1]*f.n[1], e1 = s[2]*f.n[0] + s[3]*f.n[1]; if (Math.min(e0, e1) > o0 + f.step || Math.max(e0, e1) < o1 - f.step) continue;
+        const t0 = tip([s[0], s[1]]), t1 = tip([s[2], s[3]]); if (t0 !== t1){ up = (t1 ? e1 - e0 : e0 - e1) > 0 ? 1 : -1; used.add(j); const P = t1 ? [s[2], s[3]] : [s[0], s[1]];
+          for (const x of shorts) if (same(x.i, f) && Math.hypot(x.s[0] - P[0], x.s[1] - P[1]) < .03 || Math.hypot(x.s[2] - P[0], x.s[3] - P[1]) < .03) used.add(x.i); } }
+      if (!up && f.kind === "gradini"){ const sh = f.run.reduce((m, x) => x.L < m.L ? x : m); up = sh.off > (o0 + o1) / 2 ? 1 : -1; }
+      for (const x of f.run) used.add(x.i);
+      // fianchi: linee perpendicolari alle pedate che toccano i loro estremi (gradini) o le fiancheggiano per tutta la rampa (cosciali)
+      const ends = f.run.flatMap(x => [[x.s[0], x.s[1]], [x.s[2], x.s[3]]]);
+      segs.forEach((s, j) => { if (used.has(j) || !same(j, f)) return; const L = segLen(s); if (L < .05) return; const dv = [(s[2]-s[0]) / L, (s[3]-s[1]) / L]; if (Math.abs(dv[0]*f.n[0] + dv[1]*f.n[1]) < .99) return;
+        const pa = s[0]*f.u[0] + s[1]*f.u[1], e0 = s[0]*f.n[0] + s[1]*f.n[1], e1 = s[2]*f.n[0] + s[3]*f.n[1];
+        if (f.kind === "gradini" ? ends.some(P => Math.hypot(P[0] - s[0], P[1] - s[1]) < .03 || Math.hypot(P[0] - s[2], P[1] - s[3]) < .03) && L <= o1 - o0 + f.step + 3
+          : (Math.abs(pa - lo) < .06 || Math.abs(pa - hi) < .06) && Math.min(e0, e1) > o0 - f.step - .05 && Math.max(e0, e1) < o1 + f.step + .05 && L > .5 * (o1 - o0)) used.add(j); });
+      const c = (lo + hi) / 2, steps = f.kind === "gradini" ? f.run.length : f.run.length - 1;
+      // gradini esterni: il blocco parte dal fronte più esterno e sale verso l'edificio per «steps» pedate
+      const co = f.kind === "gradini" && up ? (up > 0 ? o0 : o1) + up * steps * f.step / 2 : (o0 + o1) / 2;
+      out.push({kind:f.kind, center:[f.u[0]*c + f.n[0]*co, f.u[1]*c + f.n[1]*co], dir:up ? [f.n[0]*up, f.n[1]*up] : [f.n[0], f.n[1]], known:!!up, w:+w.toFixed(3), tread:+f.step.toFixed(3), steps, run:+(o1 - o0).toFixed(3), along:[lo, hi], offs:[o0, o1], u:f.u, n:f.n});
+    }
+    // due rampe dritte affiancate, stessa direzione, con le pedate alla stessa altezza di partenza/arrivo: scala a U; perpendicolari e vicine: a L
+    const stairs = [], gone = new Set();
+    for (const f of out){ if (gone.has(f) || f.kind !== "dritta") continue;
+      const g = out.find(h => h !== f && !gone.has(h) && h.kind === "dritta" && Math.abs(h.n[0]*f.n[0] + h.n[1]*f.n[1]) > .99 && Math.abs(h.w - f.w) < .25
+        && Math.min(h.offs[1], f.offs[1]) - Math.max(h.offs[0], f.offs[0]) > -.6 && Math.abs((h.along[0] + h.along[1]) / 2 - (f.along[0] + f.along[1]) / 2) < f.w + h.w);
+      if (g){ gone.add(f); gone.add(g);
+        const x0 = Math.min(f.along[0], g.along[0]), x1 = Math.max(f.along[1], g.along[1]), y0 = Math.min(f.offs[0], g.offs[0]), y1 = Math.max(f.offs[1], g.offs[1]);
+        stairs.push({shape:"U", center:[f.u[0]*(x0 + x1)/2 + f.n[0]*(y0 + y1)/2, f.u[1]*(x0 + x1)/2 + f.n[1]*(y0 + y1)/2], dir:f.dir, known:f.known || g.known, w:+((f.w + g.w) / 2).toFixed(3), tread:+((f.tread + g.tread) / 2).toFixed(3), steps:f.steps + g.steps + 2, ext:false,
+          conf:f.known || g.known ? {ok:true} : {ok:false, why:"scala a U: verso di salita da controllare"}}); continue; }
+      gone.add(f);
+      stairs.push({shape:"dritta", center:f.center, dir:f.dir, known:f.known, w:f.w, tread:f.tread, steps:f.steps, ext:false, conf:f.known ? {ok:true} : {ok:false, why:"rampa: verso di salita da controllare"}});
+    }
+    // linee del layer delle scale che restano inspiegate vicino a una scala: riconosciuta solo in parte → dubbio
+    for (const st of stairs){ const R = Math.max(st.w, st.steps * st.tread) / 2 + 1.2;
+      const left = segs.filter((s, j) => j >= extraFrom && !used.has(j) && segLen(s) > .3 && Math.hypot((s[0] + s[2]) / 2 - st.center[0], (s[1] + s[3]) / 2 - st.center[1]) < R).length;
+      if (left > 2) st.conf = {ok:false, why:`scala riconosciuta in parte (${left} linee della scala non spiegate): controlla rampe e gradini`}; }
+    for (const f of out) if (f.kind === "gradini") stairs.push({shape:"gradini", center:f.center, dir:f.dir, known:true, w:f.w, tread:f.tread, steps:f.steps, ext:true, conf:{ok:true}});
+    return {stairs, used};
+  }
   /** Pianta: pulizia, raddrizzamento sulla direzione principale, riconoscimento, ritorno all'orientamento del disegno. */
   function analyzePlan(segsIn, arcs = [], texts = [], opt = {}){
+    // scale prima di tutto: le loro linee (anche quelle sul layer delle scale, passate a parte) non diventano muri
+    const extra = opt.stairSegs || [], st = opt.stairs === false ? {stairs:[], used:new Set()} : findStairs([...segsIn, ...extra], segsIn.length);
+    if (st.used.size) segsIn = segsIn.filter((_, i) => !st.used.has(i));
+    const r = analyzePlanRot(segsIn, arcs, texts, opt); r.stairs = st.stairs; return r;
+  }
+  function analyzePlanRot(segsIn, arcs = [], texts = [], opt = {}){
     const segs0 = opt.clean === false ? segsIn : cleanSegs(segsIn, opt), th = opt.straighten === false ? 0 : dominantAngle(segs0);
     if (Math.abs(th) < 1e-4) return analyzePlanAxis(segs0, arcs, texts, opt);
     const c = Math.cos(-th), s = Math.sin(-th), R = p => rotPt(p, c, s), B = p => rotPt(p, Math.cos(th), Math.sin(th));
@@ -4160,7 +4244,7 @@ const A3 = (() => {
     for (const i of order){ if (!cur || segs[i].ang - cur.last > D2R * .6){ cur = {ids:[], last:segs[i].ang}; groups.push(cur); } cur.ids.push(i); cur.last = segs[i].ang; }
     if (groups.length > 1 && (Math.PI - groups[groups.length-1].last) + segs[groups[0].ids[0]].ang < D2R * .6){ groups[0].ids.push(...groups.pop().ids); }
     // layer dei muri come primo indizio: se c'è (MURI, WALL, A-WALL…) e porta almeno un quarto delle linee, le facce si cercano solo lì
-    const WALL_L = /mur|wall|parete|tamponam|tramezz/i, wallLen = segs.reduce((t, x) => t + (WALL_L.test(x.s[4] || "") ? x.L : 0), 0), allLen = segs.reduce((t, x) => t + x.L, 0);
+    const WALL_L = /mur|wall|parete|tamponam|tramezz|costru/i, wallLen = segs.reduce((t, x) => t + (WALL_L.test(x.s[4] || "") ? x.L : 0), 0), allLen = segs.reduce((t, x) => t + x.L, 0);
     const wallOnly = opt.wallLayer !== false && wallLen >= .25 * allLen ? i => WALL_L.test(segs[i].s[4] || "") : null;
     // con il layer dei muri si accetta ogni spessore plausibile, anche i muri antichi fino a 80 cm, senza chiedere che si ripeta
     if (wallOnly && opt.maxThick == null) maxT = .8;
@@ -4620,9 +4704,9 @@ const A3 = (() => {
       delete o.fromElev; delete o.from;
     }
     if (height > 4.6) notes.push(`Altezza di gronda ${height.toFixed(2)} m: probabilmente più piani. Per ora il volume è unico; i solai intermedi vanno aggiunti a mano.`);
-    return {walls, openings, rooms:plan.rooms, height, roof, notes, bbox:[bx0, by0, bx1, by1]};
+    return {walls, openings, rooms:plan.rooms, stairs:plan.stairs || [], height, roof, notes, bbox:[bx0, by0, bx1, by1]};
   }
-  return {parseOpeningLabel, clusterDrawings, analyzePlan, analyzePlanAxis, cleanSegs, dominantAngle, analyzeElevation, prepareElevation, unitFactor, combine, sideFromText, cleanText, findRooms};
+  return {findStairs, parseOpeningLabel, clusterDrawings, analyzePlan, analyzePlanAxis, cleanSegs, dominantAngle, analyzeElevation, prepareElevation, unitFactor, combine, sideFromText, cleanText, findRooms};
 })();
 
 /* ---- 076-auto3d-ui.js ---- */
@@ -4634,6 +4718,16 @@ const a3KindOf = o => o.type === "door" && o.style === "portafinestra" ? "pf" : 
 function a3Kind(o, k){ if (!k || k === a3KindOf(o)) return {...o};
   const r = {...o, type:k === "pf" ? "door" : k}; if (k === "pf") r.style = "portafinestra"; else if (o.style === "portafinestra") delete r.style;
   if (r.type === "window" && !(r.sill > .15)) { r.sill = 1; delete r.alz; } if (r.type === "door") r.sill = 0; return r; }
+const A3_STAIR_LAYERS = /scal[ae]\b|stair|gradin/i;
+/** Scala riconosciuta → oggetto scala parametrico dell'editor (sale lungo −y locale; rotazione dalla direzione di salita). */
+function a3StairObject(st, L){
+  const ref = st.shape === "U" ? "scala_u" : "scala_dritta", it = LIBMAP[ref]; if (!it) return null;
+  const Hfull = +(nextLevelAbove(L) ? nextLevelAbove(L).elev - L.elev : L.height + L.slab).toFixed(3);
+  const H = st.ext ? +(st.steps * .16).toFixed(3) : Hfull, n = st.ext ? st.steps : Math.max(st.steps, Math.round(H / .2));
+  const th = Math.atan2(-st.dir[0], -st.dir[1]), rot = +(-th * 180 / Math.PI).toFixed(1);
+  const o = {id:uid(), level:L.id, kind:"lib", ref, name:st.ext ? "Gradini esterni" : it.nome, x:+st.center[0].toFixed(3), y:+st.center[1].toFixed(3), rot, scale:1, z:0};
+  o.p = {H, n, w:st.w, tread:st.tread, ...(st.ext ? {rail:"nessuno", mat:"pietra"} : {})}; return o;
+}
 const A3S = {files:[], clusters:[], layersOff:null, report:null, preview:null, dec:new Map()};   // dec: correzioni della revisione, per posizione (restano se si rifà il riconoscimento)
 // layer che non sono muri né aperture: quote, testi, retini, arredi, impianti, superfici, scale, demolizioni, strutture, librerie di blocchi
 const A3_SKIP_LAYERS = /quot|dim|cot[ae]|text|test[oi]|scritt|hatch|tratt|camp|retin|arred|mobil|furn|sanit|asse|axis|grid|grigl|cartig|squadr|defpoints|viewport|^vp|impiant|elettr|idraul|termic|gas\b|clima|superfic|area|scal[ae]\b|stair|demoli|gronda|gronde|pluvial|trav[ei]|pilastr.*strutt|sezion|section|noplot|no.?plot|cad-block|dwgmodels|verde|alber|veget|planim|catast|perimetr.*lott/i;
@@ -4712,9 +4806,14 @@ function a3Recognize(){
   const segs = pc.segs.map(s => [...toApp(s[0], s[1]), ...toApp(s[2], s[3]), s[4]]);
   const arcs = pc.arcs.map(a => { const [cx, cy] = toApp(a.cx, a.cy); return {...a, cx, cy}; });
   const texts = pc.texts.map(t => { const [x, y] = toApp(t.x, t.y); return {...t, x, y}; });
+  // linee dei layer delle scale (escluse dai muri): servono a riconoscere rampe e gradini
+  const f = A3S.files.find(x => x.name === pc.file), u = f?.unit || 1, [bx0b, by0b, bx1b, by1b] = pc.bbox;
+  const stairSegs = f ? f.flat.segs.filter(s => A3S.layersOff.has(s[4]) && A3_STAIR_LAYERS.test(s[4])).map(s => [s[0]*u, s[1]*u, s[2]*u, s[3]*u, s[4]])
+    .filter(s => Math.min(s[0], s[2]) >= bx0b - 3 && Math.max(s[0], s[2]) <= bx1b + 3 && Math.min(s[1], s[3]) >= by0b - 3 && Math.max(s[1], s[3]) <= by1b + 3
+      && !A3S.clusters.some(c => c !== pc && c.file === pc.file && (s[0] + s[2]) / 2 >= c.bbox[0] && (s[0] + s[2]) / 2 <= c.bbox[2] && (s[1] + s[3]) / 2 >= c.bbox[1] && (s[1] + s[3]) / 2 <= c.bbox[3])).map(s => [...toApp(s[0], s[1]), ...toApp(s[2], s[3]), s[4]]) : [];
   busy("Riconosco muri, aperture e locali…");
   try {
-    const pr = A3.analyzePlan(segs, arcs, texts);
+    const pr = A3.analyzePlan(segs, arcs, texts, {stairSegs});
     if (!pr.walls.length){ toast("Non trovo muri: controlla i layer e l'unità del disegno", true); A3S.preview = null; return; }
     const elevs = A3S.clusters.filter(c => ["sud","nord","est","ovest"].includes(c.role)).map(c => { const [ex0, ey0] = c.bbox; return {side:c.role, data:A3.prepareElevation(c.segs.map(s => [s[0]-ex0, s[1]-ey0, s[2]-ex0, s[3]-ey0, s[4]]), pr, c.role)}; }).filter(e => e.data);
     const m = A3.combine(pr, elevs, {height:A3S.height ?? 2.7});
@@ -4739,6 +4838,7 @@ function a3Doubts(){
   for (const w of m.walls) if (dub(w) || D.has(w.key)) out.push({k:w.key, kind:"Muro", why:dub(w) ? w.conf.why : "corretto da te", drop:!!D.get(w.key)?.drop});
   for (const o of m.openings) if (dub(o) || D.has(o.key)) out.push({k:o.key, kind:o.style === "portafinestra" ? "Portafinestra" : o.type0 === "door" ? "Porta" : "Finestra", why:dub(o) ? o.conf.why : "corretta da te", drop:!!D.get(o.key)?.drop, type:D.get(o.key)?.type || a3KindOf(o), op:true});
   for (const r of m.rooms) if (r.conf && !r.conf.ok) out.push({k:"r:" + (r.name || ""), kind:r.name || "Locale", why:r.conf.why, info:true});
+  for (const st of m.stairs || []) if (st.conf && !st.conf.ok) out.push({k:"s:" + st.center.map(a3r).join(","), kind:"Scala", why:st.conf.why + " (poi la ruoti dalla scheda dell'oggetto)", info:true});
   return out;
 }
 function a3ReviewSVG(){
@@ -4751,14 +4851,16 @@ function a3ReviewSVG(){
   const walls = m.walls.map(w => { const dr = D.get(w.key)?.drop; return `<line data-k="${esc(w.key)}" x1="${w.a[0]}" y1="${w.a[1]}" x2="${w.b[0]}" y2="${w.b[1]}" stroke-width="${w.thick}" class="w ${dr ? "drop" : w.conf?.ok === false ? "dub" : ""}"/>`; }).join("");
   const ops = m.openings.map(o => { const w = m.walls.find(x => x.id === o.wall); if (!w) return ""; const L = Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1]) || 1, u = [(w.b[0]-w.a[0])/L, (w.b[1]-w.a[1])/L], A = [w.a[0]+u[0]*(o.t-o.w/2), w.a[1]+u[1]*(o.t-o.w/2)], B = [w.a[0]+u[0]*(o.t+o.w/2), w.a[1]+u[1]*(o.t+o.w/2)];
     const t = D.get(o.key)?.type || a3KindOf(o), dr = D.get(o.key)?.drop; return `<line data-k="${esc(o.key)}" x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke-width="${w.thick + .06}" class="o ${t === "pf" ? "door pf" : t} ${dr ? "drop" : o.conf?.ok === false ? "dub" : ""}"/>`; }).join("");
-  return `<svg viewBox="${x0 - pad} ${y0 - pad} ${W} ${H}" role="img" aria-label="Anteprima del riconoscimento: muri, porte, finestre e locali"><g class="r">${rooms}</g><path d="${d}" class="cad" stroke-width="${sw}"/>${walls}${ops}</svg>`;
+  const stairs = (m.stairs || []).map(st => { const d = st.dir, q = [-d[1], d[0]], len = st.steps * st.tread, c = st.center, P = (a, b) => [c[0] + q[0]*a + d[0]*b, c[1] + q[1]*a + d[1]*b].join(",");
+    return `<polygon class="st" points="${[P(-st.w/2, -len/2), P(st.w/2, -len/2), P(st.w/2, len/2), P(-st.w/2, len/2)].join(" ")}"/><polyline class="st" points="${[P(0, -len/2 + .1), P(0, len/2 - .1), P(-.12, len/2 - .3), P(0, len/2 - .1), P(.12, len/2 - .3)].join(" ")}"/>`; }).join("");
+  return `<svg viewBox="${x0 - pad} ${y0 - pad} ${W} ${H}" role="img" aria-label="Anteprima del riconoscimento: muri, porte, finestre, locali e scale"><g class="r">${rooms}</g><path d="${d}" class="cad" stroke-width="${sw}"/>${walls}${ops}<g style="stroke-width:${sw * 2}">${stairs}</g></svg>`;
 }
 function a3ReviewHTML(){
   const {m} = A3S.preview, rv = a3Reviewed(), dub = a3Doubts(), nD = rv.openings.filter(o => o.type === "door").length;
   return `<div class="a3rev"><span class="lbl">Revisione</span>
     <p class="note">${rv.walls.length} muri, ${nD} porte, ${rv.openings.length - nD} finestre, ${m.rooms.length} locali. In giallo i dubbi: controllali qui sotto, poi crea il modello. Le correzioni restano se cambi layer o unità e rifai il riconoscimento.</p>
     <div class="a3prev">${a3ReviewSVG()}</div>
-    <div class="a3leg"><i class="lw"></i>muro <i class="ld"></i>porta <i class="lp"></i>portafinestra <i class="lf"></i>finestra <i class="lq"></i>dubbio</div>
+    <div class="a3leg"><i class="lw"></i>muro <i class="ld"></i>porta <i class="lp"></i>portafinestra <i class="lf"></i>finestra <i class="ls"></i>scala <i class="lq"></i>dubbio</div>
     ${dub.length ? `<ul class="a3dub">${dub.map(x => `<li data-a3k="${esc(x.k)}" class="${x.drop ? "drop" : ""}"><span><b>${esc(x.kind)}</b> · ${esc(x.why)}</span>${x.info ? "" : `<span class="acts">${x.op ? `<select class="inp" data-a3type="${esc(x.k)}" aria-label="Tipo"><option value="door" ${x.type === "door" ? "selected" : ""}>Porta</option><option value="pf" ${x.type === "pf" ? "selected" : ""}>Portafinestra</option><option value="window" ${x.type === "window" ? "selected" : ""}>Finestra</option></select>` : ""}<button class="btn" data-a3drop="${esc(x.k)}">${x.drop ? "Rimetti" : "Togli"}</button></span>`}</li>`).join("")}</ul>` : `<p class="note">Nessun dubbio.</p>`}
     <div class="btns"><button class="btn primary" id="a3Make">Crea il modello BIM</button></div>
     <p class="note">Il piano corrente («${esc(level().name)}») viene sostituito: muri, aperture e locali. Con Annulla torni indietro.</p></div>`;
@@ -4775,10 +4877,13 @@ function a3Generate(){
     // balconi, terrazzi e logge dal nome: niente soffitto, parapetto sui lati liberi
     m.rooms.forEach((r, i) => { const balc = /balcon|terrazz|loggia|veranda/i.test(r.name || "");
       P.rooms.push({id:uid(), level:lid, name:r.name || `Locale ${i+1}`, mat:balc ? "pietra" : FLOOR_MATS.includes(r.mat) ? r.mat : S.defaults.roomMat, pts:r.pts, ...(balc ? {balcone:{tipo:"ringhiera", h:1}, noCeiling:true} : {})}); });
+    P.objects = P.objects.filter(o => !(o.level === lid && o.fromCAD));
+    for (const st of m.stairs || []){ const o = a3StairObject(st, L); if (o){ o.fromCAD = true; P.objects.push(o); } }
     L.height = m.height; L.roof = {...L.roof, ...m.roof}; if (!m.roof.ridge) delete L.roof.ridge;
     L.underlay = {kind:"vec", lines:segs.map(s => s.slice(0, 4)), ox:0, oy:0, k:1, opacity:.3, name:pc.file};
     const nD = rv.openings.filter(o => o.type === "door").length, nF = rv.openings.length - nD, nC = A3S.dec.size;
-    A3S.report = {title:`Creati ${rv.walls.length} muri, ${nD} porte, ${nF} finestre e ${m.rooms.length} locali`, lines:[
+    const nS = (m.stairs || []).length;
+    A3S.report = {title:`Creati ${rv.walls.length} muri, ${nD} porte, ${nF} finestre e ${m.rooms.length} locali${nS ? `, ${nS} scal${nS > 1 ? "e" : "a"}` : ""}`, lines:[
       `Spessori riconosciuti: ${pr.thicknesses.map(t => fmt(t*100, 0) + " cm").join(", ") || "—"}.`,
       elevs.length ? `Altezza di gronda ${fmt(m.height, 2)} m da ${elevs.length} prospett${elevs.length > 1 ? "i" : "o"}.` : `Nessun prospetto: altezza ${fmt(m.height, 2)} m e aperture con misure tipiche.`,
       m.roof.type === "gable" ? `Copertura a due falde, pendenza ${fmt(m.roof.pitch, 1)}°, colmo ${m.roof.ridge === "x" ? "est–ovest" : "nord–sud"}.` : "Copertura piana.",

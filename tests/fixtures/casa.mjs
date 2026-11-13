@@ -33,7 +33,7 @@ export function elevEst(){
 
 
 /** Tavola unica in DXF (R12, centimetri): pianta in alto, prospetti sud ed est sotto, con le etichette. */
-export function tavolaDXF(){
+export function tavolaDXF(opt = {}){
   const k = 100, out = ["0","SECTION","2","HEADER","9","$INSUNITS","70","5","0","ENDSEC","0","SECTION","2","ENTITIES"];
   const line = (s, dx, dy, flip) => out.push("0","LINE","8",s[4] || "0","10",String((s[0]+dx)*k),"20",String((flip ? -s[1] : s[1])*k + dy*k),"11",String((s[2]+dx)*k),"21",String((flip ? -s[3] : s[3])*k + dy*k));
   const text = (x, y, t, layer = "TESTI") => out.push("0","TEXT","8",layer,"10",String(x*k),"20",String(y*k),"40","30","1",t);
@@ -41,6 +41,11 @@ export function tavolaDXF(){
   d.segs.forEach(s => line(s, 0, 0, true));
   for (const a of d.arcs) out.push("0","ARC","8","PORTE","10",String(a.cx*k),"20",String(-a.cy*k),"40",String(a.r*k),"50",String(-a.a1*180/Math.PI),"51",String(-a.a0*180/Math.PI));
   d.texts.forEach(t => text(t.x, -t.y, t.text.replace(/[{}]|\\f[^;]*;/g, "")));
+  if (opt.scale){   // gradini esterni davanti all'ingresso sud e una rampa interna, sul layer delle scale (con la freccia di salita)
+    for (let k2 = 0; k2 < 3; k2++){ const o = .3 * (k2 + 1); for (const s of [[2.5 - .8 - o, 8 + o, 2.5 + .8 + o, 8 + o], [2.5 - .8 - o, 8, 2.5 - .8 - o, 8 + o], [2.5 + .8 + o, 8, 2.5 + .8 + o, 8 + o]]) line([...s, "1-SCALA"], 0, 0, true); }
+    for (let i = 0; i <= 8; i++) line([6, 2 + i * .28, 6.9, 2 + i * .28, "1-SCALA"], 0, 0, true);
+    for (const s of [[6.45, 2.05, 6.45, 4.2], [6.45, 4.2, 6.35, 4.0], [6.45, 4.2, 6.55, 4.0]]) line([...s, "1-SCALA"], 0, 0, true);
+  }
   text(3, -9.5, "PIANTA PIANO TERRA");
   elevSud().forEach(s => line(s, 20, -14));
   text(24, -15.5, "PROSPETTO SUD");
