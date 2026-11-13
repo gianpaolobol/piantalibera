@@ -44,7 +44,7 @@ Un progetto con versione superiore a quella dell'editor viene aperto comunque, c
 
 **Room** — `id`, `level`, `name`, `pts` (poligono), `mat`, `lab` (posizione dell'etichetta), `ceilH`/`ceilMat` (controsoffitto), `tile` (`{scale, rot, ox, oy}` posa del pavimento), `skirt` (`{h, mat}` battiscopa). Facoltativo `slab` (`{t, k}`): solaio sotto il locale, spessore `t` in metri (0,02–1,5; senza = spessore del piano) e struttura `k` (`laterocemento`, `ca`, `predalles`, `legno`, `acciaio`, `vespaio`); usato nel 3D, nell'IFC (`IfcSlab` con `Pset_SlabCommon` e quantità) e nella scheda del locale.
 
-**Opening** — `id`, `wall`, `t` (distanza dall'estremo `a` del muro), `w`, `h`, `sill`, `type:"door"·"window"`, `flip` (0–3), `style`, `shut`.
+**Opening** — `id`, `wall`, `t` (distanza dall'estremo `a` del muro), `w`, `h`, `sill`, `type:"door"·"window"`, `flip` (0–3), `style`, `shut`, facoltativo `alz` (solo porte: alzatina, soglia rialzata da terra in metri, 0–0,30; il vano e la porta partono da lì). Le portefinestre sono porte con `style:"portafinestra"`.
 
 **Object** — `id`, `level`, `kind` (`"lib"` libreria, `"stair"` e `"rail"` parametrici, `"import"` modello importato, `"ph"` Poly Haven…), `ref`, `name`, `x`, `y`, `z`, `rot`, `scale`, `p` (parametri: numeri, booleani o chiavi), `light` (`{on, lm, k}` lumen e kelvin).
 

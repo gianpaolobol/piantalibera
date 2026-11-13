@@ -72,7 +72,7 @@ function renderInspector(){
         <span class="lbl">Finitura</span>${swatches(WALL_MATS, sel.mat, "wm")}${wallSidesHTML(sel)}
         <div class="btns"><button class="btn" id="wFlip">Inverti verso</button><button class="btn" id="wAll">Applica finitura a tutto il piano</button><button class="btn danger" id="delSel">Elimina</button></div></div>`; }
     if (S.sel.type === "opening"){ const w = wallById(sel.wall);
-      h += `<div class="sec"><h3>${sel.type==="door"?"Porta":"Finestra"}</h3><div class="row3">${F("oW","Larghezza",fmt(sel.w),'inputmode="decimal"')}${F("oH","Altezza",fmt(sel.h),'inputmode="decimal"')}${sel.type==="window"?F("oS","Davanzale",fmt(sel.sill),'inputmode="decimal"'):""}</div>
+      h += `<div class="sec"><h3>${sel.type==="door"?"Porta":"Finestra"}</h3><div class="row3">${F("oW","Larghezza",fmt(sel.w),'inputmode="decimal"')}${F("oH","Altezza",fmt(sel.h),'inputmode="decimal"')}${sel.type==="window"?F("oS","Davanzale",fmt(sel.sill),'inputmode="decimal"'):F("oA","Alzatina (cm)",fmt((sel.alz||0)*100,0),'inputmode="decimal" title="Soglia rialzata da terra: 0 = a raso"')}</div>
         <div class="row">${F("oT","Distanza asse (m)",fmt(sel.t),'inputmode="decimal"')}<div class="f"><span class="lbl">Tipo</span><select id="oType" class="inp"><option value="door" ${sel.type==="door"?"selected":""}>Porta</option><option value="window" ${sel.type==="window"?"selected":""}>Finestra</option></select></div></div>
         ${openingExtraHTML(sel)}<p class="note">Distanza misurata dall'inizio del muro (${fmt(wallFrame(w).len)} m).</p>
         <div class="btns">${sel.type==="door"?`<button class="btn" id="oHinge">Specchia (cerniera)</button><button class="btn" id="oSide">Apre dall'altro lato</button>`:""}<button class="btn danger" id="delSel">Elimina</button></div></div>`; }
@@ -136,6 +136,7 @@ P_.addEventListener("change", e => {
     case "oW": if (v>0){ sel.w = v; commit(); } break;
     case "oH": if (v>0){ sel.h = v; commit(); } break;
     case "oS": if (v>=0){ sel.sill = v; commit(); } break;
+    case "oA": if (v>=0 && v<=30){ if (v > 0) sel.alz = v / 100; else delete sel.alz; commit(); } else { toast("Alzatina tra 0 e 30 cm", true); renderInspector(); } break;
     case "oT": if (v!==null){ const w = wallById(sel.wall); sel.t = clamp(v, sel.w/2, wallFrame(w).len - sel.w/2); commit(); } break;
     case "oType": sel.type = e.target.value; if (sel.type==="door") sel.sill = 0; else if (!sel.sill) sel.sill = .9; commit(); break;
     case "rName": sel.name = e.target.value; commit(); break;

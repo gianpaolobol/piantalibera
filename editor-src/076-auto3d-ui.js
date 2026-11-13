@@ -1,6 +1,11 @@
 /* ============================================================
    Da pianta e prospetti al 3D — pannello nella scheda Importa
    ============================================================ */
+/** Tipo d'apertura nella revisione: porta, portafinestra (porta con lo stile) o finestra. */
+const a3KindOf = o => o.type === "door" && o.style === "portafinestra" ? "pf" : o.type;
+function a3Kind(o, k){ if (!k || k === a3KindOf(o)) return {...o};
+  const r = {...o, type:k === "pf" ? "door" : k}; if (k === "pf") r.style = "portafinestra"; else if (o.style === "portafinestra") delete r.style;
+  if (r.type === "window" && !(r.sill > .15)) { r.sill = 1; delete r.alz; } if (r.type === "door") r.sill = 0; return r; }
 const A3S = {files:[], clusters:[], layersOff:null, report:null, preview:null, dec:new Map()};   // dec: correzioni della revisione, per posizione (restano se si rifà il riconoscimento)
 // layer che non sono muri né aperture: quote, testi, retini, arredi, impianti, superfici, scale, demolizioni, strutture, librerie di blocchi
 const A3_SKIP_LAYERS = /quot|dim|cot[ae]|text|test[oi]|scritt|hatch|tratt|camp|retin|arred|mobil|furn|sanit|asse|axis|grid|grigl|cartig|squadr|defpoints|viewport|^vp|impiant|elettr|idraul|termic|gas\b|clima|superfic|area|scal[ae]\b|stair|demoli|gronda|gronde|pluvial|trav[ei]|pilastr.*strutt|sezion|section|noplot|no.?plot|cad-block|dwgmodels|verde|alber|veget|planim|catast|perimetr.*lott/i;
@@ -97,14 +102,14 @@ function a3Reviewed(){
   const {m} = A3S.preview, D = A3S.dec;
   const walls = m.walls.filter(w => !D.get(w.key)?.drop);
   const keep = new Set(walls.map(w => w.id));
-  const openings = m.openings.filter(o => keep.has(o.wall) && !D.get(o.key)?.drop).map(o => ({...o, type:D.get(o.key)?.type || o.type}));
+  const openings = m.openings.filter(o => keep.has(o.wall) && !D.get(o.key)?.drop).map(o => a3Kind(o, D.get(o.key)?.type));
   return {walls, openings};
 }
 function a3Doubts(){
   const {m} = A3S.preview, D = A3S.dec, out = [];
   const dub = x => x.conf && x.conf.ok === false;
   for (const w of m.walls) if (dub(w) || D.has(w.key)) out.push({k:w.key, kind:"Muro", why:dub(w) ? w.conf.why : "corretto da te", drop:!!D.get(w.key)?.drop});
-  for (const o of m.openings) if (dub(o) || D.has(o.key)) out.push({k:o.key, kind:o.type0 === "door" ? "Porta" : "Finestra", why:dub(o) ? o.conf.why : "corretta da te", drop:!!D.get(o.key)?.drop, type:D.get(o.key)?.type || o.type, op:true});
+  for (const o of m.openings) if (dub(o) || D.has(o.key)) out.push({k:o.key, kind:o.style === "portafinestra" ? "Portafinestra" : o.type0 === "door" ? "Porta" : "Finestra", why:dub(o) ? o.conf.why : "corretta da te", drop:!!D.get(o.key)?.drop, type:D.get(o.key)?.type || a3KindOf(o), op:true});
   for (const r of m.rooms) if (r.conf && !r.conf.ok) out.push({k:"r:" + (r.name || ""), kind:r.name || "Locale", why:r.conf.why, info:true});
   return out;
 }
@@ -117,7 +122,7 @@ function a3ReviewSVG(){
   const rooms = m.rooms.map(r => `<polygon points="${r.pts.map(p => p.join(",")).join(" ")}" class="${r.conf && !r.conf.ok ? "dub" : ""}"/>`).join("");
   const walls = m.walls.map(w => { const dr = D.get(w.key)?.drop; return `<line data-k="${esc(w.key)}" x1="${w.a[0]}" y1="${w.a[1]}" x2="${w.b[0]}" y2="${w.b[1]}" stroke-width="${w.thick}" class="w ${dr ? "drop" : w.conf?.ok === false ? "dub" : ""}"/>`; }).join("");
   const ops = m.openings.map(o => { const w = m.walls.find(x => x.id === o.wall); if (!w) return ""; const L = Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1]) || 1, u = [(w.b[0]-w.a[0])/L, (w.b[1]-w.a[1])/L], A = [w.a[0]+u[0]*(o.t-o.w/2), w.a[1]+u[1]*(o.t-o.w/2)], B = [w.a[0]+u[0]*(o.t+o.w/2), w.a[1]+u[1]*(o.t+o.w/2)];
-    const t = D.get(o.key)?.type || o.type, dr = D.get(o.key)?.drop; return `<line data-k="${esc(o.key)}" x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke-width="${w.thick + .06}" class="o ${t} ${dr ? "drop" : o.conf?.ok === false ? "dub" : ""}"/>`; }).join("");
+    const t = D.get(o.key)?.type || a3KindOf(o), dr = D.get(o.key)?.drop; return `<line data-k="${esc(o.key)}" x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke-width="${w.thick + .06}" class="o ${t === "pf" ? "door pf" : t} ${dr ? "drop" : o.conf?.ok === false ? "dub" : ""}"/>`; }).join("");
   return `<svg viewBox="${x0 - pad} ${y0 - pad} ${W} ${H}" role="img" aria-label="Anteprima del riconoscimento: muri, porte, finestre e locali"><g class="r">${rooms}</g><path d="${d}" class="cad" stroke-width="${sw}"/>${walls}${ops}</svg>`;
 }
 function a3ReviewHTML(){
@@ -125,8 +130,8 @@ function a3ReviewHTML(){
   return `<div class="a3rev"><span class="lbl">Revisione</span>
     <p class="note">${rv.walls.length} muri, ${nD} porte, ${rv.openings.length - nD} finestre, ${m.rooms.length} locali. In giallo i dubbi: controllali qui sotto, poi crea il modello. Le correzioni restano se cambi layer o unità e rifai il riconoscimento.</p>
     <div class="a3prev">${a3ReviewSVG()}</div>
-    <div class="a3leg"><i class="lw"></i>muro <i class="ld"></i>porta <i class="lf"></i>finestra <i class="lq"></i>dubbio</div>
-    ${dub.length ? `<ul class="a3dub">${dub.map(x => `<li data-a3k="${esc(x.k)}" class="${x.drop ? "drop" : ""}"><span><b>${esc(x.kind)}</b> · ${esc(x.why)}</span>${x.info ? "" : `<span class="acts">${x.op ? `<select class="inp" data-a3type="${esc(x.k)}" aria-label="Tipo"><option value="door" ${x.type === "door" ? "selected" : ""}>Porta</option><option value="window" ${x.type === "window" ? "selected" : ""}>Finestra</option></select>` : ""}<button class="btn" data-a3drop="${esc(x.k)}">${x.drop ? "Rimetti" : "Togli"}</button></span>`}</li>`).join("")}</ul>` : `<p class="note">Nessun dubbio.</p>`}
+    <div class="a3leg"><i class="lw"></i>muro <i class="ld"></i>porta <i class="lp"></i>portafinestra <i class="lf"></i>finestra <i class="lq"></i>dubbio</div>
+    ${dub.length ? `<ul class="a3dub">${dub.map(x => `<li data-a3k="${esc(x.k)}" class="${x.drop ? "drop" : ""}"><span><b>${esc(x.kind)}</b> · ${esc(x.why)}</span>${x.info ? "" : `<span class="acts">${x.op ? `<select class="inp" data-a3type="${esc(x.k)}" aria-label="Tipo"><option value="door" ${x.type === "door" ? "selected" : ""}>Porta</option><option value="pf" ${x.type === "pf" ? "selected" : ""}>Portafinestra</option><option value="window" ${x.type === "window" ? "selected" : ""}>Finestra</option></select>` : ""}<button class="btn" data-a3drop="${esc(x.k)}">${x.drop ? "Rimetti" : "Togli"}</button></span>`}</li>`).join("")}</ul>` : `<p class="note">Nessun dubbio.</p>`}
     <div class="btns"><button class="btn primary" id="a3Make">Crea il modello BIM</button></div>
     <p class="note">Il piano corrente («${esc(level().name)}») viene sostituito: muri, aperture e locali. Con Annulla torni indietro.</p></div>`;
 }
@@ -138,7 +143,7 @@ function a3Generate(){
     P.walls = P.walls.filter(w => w.level !== lid); P.openings = P.openings.filter(o => !oldW.has(o.wall)); P.rooms = P.rooms.filter(r => r.level !== lid);
     const ids = {};
     for (const w of rv.walls){ const id = uid(); ids[w.id] = id; P.walls.push({id, level:lid, a:w.a, b:w.b, thick:w.thick, height:null, mat:S.defaults.wallMat}); }
-    for (const o of rv.openings) if (ids[o.wall]) P.openings.push({id:uid(), wall:ids[o.wall], t:o.t, w:o.w, h:o.h, sill:o.sill, type:o.type, flip:0, ...(o.style ? {style:o.style} : {})});
+    for (const o of rv.openings) if (ids[o.wall]) P.openings.push({id:uid(), wall:ids[o.wall], t:o.t, w:o.w, h:o.h, sill:o.sill, type:o.type, flip:0, ...(o.style ? {style:o.style} : {}), ...(o.alz ? {alz:o.alz} : {})});
     m.rooms.forEach((r, i) => P.rooms.push({id:uid(), level:lid, name:r.name || `Locale ${i+1}`, mat:FLOOR_MATS.includes(r.mat) ? r.mat : S.defaults.roomMat, pts:r.pts}));
     L.height = m.height; L.roof = {...L.roof, ...m.roof}; if (!m.roof.ridge) delete L.roof.ridge;
     L.underlay = {kind:"vec", lines:segs.map(s => s.slice(0, 4)), ox:0, oy:0, k:1, opacity:.3, name:pc.file};
@@ -167,7 +172,7 @@ PI.addEventListener("change", e => { const t = e.target;
   if (t.dataset.a3unit !== undefined){ A3S.files[+t.dataset.a3unit].unit = +t.value; again(); }
   if (t.dataset.a3layer !== undefined){ t.checked ? A3S.layersOff.delete(t.dataset.a3layer) : A3S.layersOff.add(t.dataset.a3layer); again(); }
   if (t.dataset.a3type !== undefined){ const k = t.dataset.a3type, o = A3S.preview?.m.openings.find(x => x.key === k); if (!o) return;
-    const d = {...(A3S.dec.get(k) || {})}; if (t.value === o.type) delete d.type; else d.type = t.value; Object.keys(d).length ? A3S.dec.set(k, d) : A3S.dec.delete(k); renderImport(); }
+    const d = {...(A3S.dec.get(k) || {})}; if (t.value === a3KindOf(o)) delete d.type; else d.type = t.value; Object.keys(d).length ? A3S.dec.set(k, d) : A3S.dec.delete(k); renderImport(); }
   if (t.id === "a3H"){ const v = num(t.value); if (v > 1.5) A3S.height = v; }
 });
 $("#fA3").addEventListener("change", async e => { const fs = [...e.target.files]; e.target.value = ""; if (fs.length) await a3AddFiles(fs); });

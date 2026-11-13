@@ -12,7 +12,7 @@ export function ifcStr(s){ let o = ""; for (const ch of String(s ?? "")){ const 
 /* Superficie dei vani di un muro alto H (m²): ogni apertura limitata alla lunghezza e all'altezza del muro. */
 export function wallOpeningArea(w, openings, H){
   const len = wallFrame(w).len, cl = (v, a, b) => Math.min(b, Math.max(a, v));
-  return Math.min(len * H, openings.filter(o => o.wall === w.id).reduce((s, o) => s + cl(o.w, 0, len) * cl(Math.min(o.h, H - (o.type === "door" ? 0 : o.sill)), 0, H), 0));
+  return Math.min(len * H, openings.filter(o => o.wall === w.id).reduce((s, o) => s + cl(o.w, 0, len) * cl(Math.min(o.h, H - (o.type === "door" ? (o.alz || 0) : o.sill)), 0, H), 0));
 }
 /* Muro esterno: da almeno un lato non c'è un locale del suo piano (prova a 20 cm dalla faccia, a metà muro);
    senza locali disegnati si considera esterno. `rooms` = locali dello stesso piano. */
@@ -71,7 +71,7 @@ export function buildIFC(P, opt = {}){
       bim.pset(wall, "Pset_WallCommon", [["IsExternal", "bool", ext], ["LoadBearing", "bool", w.thick >= .25 || /portante|esterno/i.test(w.wtype || "")], ["Reference", "label", w.wtype || `Muro ${Math.round(w.thick * 100)} cm`]]);
       bim.qto(wall, "Qto_WallBaseQuantities", [["Length", "len", f.len], ["Width", "len", w.thick], ["Height", "len", h], ["NetSideArea", "area", net], ["NetVolume", "vol", net * w.thick]]);
       for (const o of P.openings.filter(o => o.wall === w.id)){
-        const bot = o.type === "door" ? 0 : o.sill, oh = Math.min(o.h, h - bot), oLP = lp(wLP, ax3(pt3(o.t, 0, bot)));
+        const bot = o.type === "door" ? (o.alz || 0) : o.sill, oh = Math.min(o.h, h - bot), oLP = lp(wLP, ax3(pt3(o.t, 0, bot)));
         const op = add(`IFCOPENINGELEMENT('${guid()}',$,'Vano',$,$,${oLP},${rep([box(0, 0, o.w, w.thick + .1, 0, oh)])},$,.OPENING.)`);
         add(`IFCRELVOIDSELEMENT('${guid()}',$,$,$,${wall},${op})`);
         const fLP = lp(oLP, A0), geo = rep([box(0, 0, o.w, .06, 0, oh)]);

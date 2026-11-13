@@ -60,7 +60,7 @@ test("unione: altezze e davanzali dai prospetti, copertura a due falde", () => {
   assert.ok(Math.abs(ew.a[0] - 9.85) < .01);
   const yC = Math.min(ew.a[1], ew.b[1]) + east.t; assert.ok(Math.abs(yC - (8 - 3.6)) < .05, String(yC));
   const north = m.openings.find(o => plan.walls.find(w => w.id === o.wall).a[1] < .2 && o.type === "window");
-  assert.equal(north.sill, .9, "le aperture senza prospetto prendono i valori tipici");
+  assert.equal(north.sill, 1, "le aperture senza prospetto prendono il davanzale tipico di 1,00 m");
 });
 
 test("unità diverse tra pianta e prospetto (cm, mm) si riconoscono", () => {
@@ -110,4 +110,27 @@ test("tipo di disegno: la pianta con le porte è una pianta anche con l'etichett
   const arcs = d.arcs.map(a => ({ ...a, cy: -a.cy, sweep: Math.PI / 2 })), texts = [{ x: 3, y: -9, text: "PROSPETTO NORD" }, { x: 3, y: -4, text: "SOGGIORNO mq 41,74" }, { x: 8, y: -4, text: "CAMERA mq 25,9" }];
   const cl = A3.clusterDrawings({ segs: up, arcs, texts });
   assert.equal(cl.length, 1); assert.equal(cl[0].kind, "pianta"); assert.equal(cl[0].guess, "pianta");
+});
+
+test("etichette delle aperture: L/H confermata dalla larghezza, hb davanzale e alzatina, portafinestra, dubbio se non torna", () => {
+  const d = planDrawing(), r0 = A3.analyzePlan(d.segs, d.arcs, d.texts);
+  const ctr = o => { const w = r0.walls.find(x => x.id === o.wall), L = Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1]); return [w.a[0] + (w.b[0]-w.a[0]) / L * o.t, w.a[1] + (w.b[1]-w.a[1]) / L * o.t]; };
+  const [win1, win2] = r0.openings.filter(o => o.type === "window"), door = r0.openings.find(o => o.type === "door");
+  const near = (o, txt, dy = .45) => { const c = ctr(o); return { x: c[0] + .1, y: c[1] + dy, text: txt }; };
+  const cm = v => Math.round(v * 100);
+  const texts = [...d.texts,
+    near(win1, `${cm(win1.w)}/240`, .45), near(win1, "hb 5 cm", -.45),             // vetro alto fino a terra: portafinestra con alzatina
+    near(win2, `${cm(win2.w) - 30}x140`, .45),                                      // larghezza che non torna: dubbio
+    near(door, `${cm(door.w) - 10}\\P210`, .45)];                                    // luce del serramento 10 cm meno del vano: confermata
+  const r = A3.analyzePlan(d.segs, d.arcs, texts), find = o => r.openings.find(x => x.wall === o.wall && Math.abs(x.t - o.t) < .01);
+  const pf = find(win1), w2 = find(win2), dr = find(door);
+  assert.equal(pf.type, "door"); assert.equal(pf.style, "portafinestra"); assert.equal(pf.h, 2.4); assert.equal(pf.alz, .05); assert.equal(pf.conf.ok, true);
+  assert.equal(w2.conf.ok, false); assert.match(w2.conf.why, /scritto .* ma il vano è largo/);
+  assert.equal(dr.type, "door"); assert.equal(dr.h, 2.1); assert.equal(dr.conf.ok, true);
+  // davanzale scritto su una finestra; senza scritte il davanzale tipico è 1,00 m (combine)
+  const r2 = A3.analyzePlan(d.segs, d.arcs, [...d.texts, near(win2, "HB=0,85", .45)]);
+  assert.equal(r2.openings.find(x => x.wall === win2.wall && Math.abs(x.t - win2.t) < .01).sill, .85);
+  const m = A3.combine(r2, [], { height: 2.7 });
+  const sills = m.openings.filter(o => o.type === "window").map(o => o.sill).sort();
+  assert.deepEqual(sills, [.85, 1]);
 });
