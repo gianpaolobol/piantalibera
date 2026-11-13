@@ -2,7 +2,8 @@
 // Confronta i muri, le aperture e i locali riconosciuti con la verità della pianta generata.
 import { readFileSync } from "node:fs";
 
-const src = f => readFileSync(new URL("../../editor-src/" + f, import.meta.url), "utf8");
+// BANCO_MOTORE=cartella: confronta un'altra versione del motore (stessi due file), es. quella di main
+const src = f => readFileSync(process.env.BANCO_MOTORE ? process.env.BANCO_MOTORE + "/" + f : new URL("../../editor-src/" + f, import.meta.url), "utf8");
 /** Motore attuale dell'editor (editor-src/075-auto3d.js) con lo stesso filtro dei layer dell'interfaccia (076-auto3d-ui.js). */
 export function motoreAttuale(){
   const A3 = new Function(src("075-auto3d.js") + "; return A3;")();

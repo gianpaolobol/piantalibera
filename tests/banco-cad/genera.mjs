@@ -82,15 +82,6 @@ export function generaPianta(seed, stile = "ordinato"){
         openings.push({ wall: w.id, t: r2(st + ww / 2), w: ww, type: "window", style: pick(["semplice", "doppia", "telaio"]), sill: ww >= 1.6 && R() < .5 ? 0 : .9 }); s = st + ww + rr(1, 2.5); }
     }
   }
-  // locali veri: rettangoli netti tra le facce dei muri
-  const wallAlong = (x0, y0, x1, y1) => walls.filter(w => { const s0 = onAxis([x0, y0], w), s1 = onAxis([x1, y1], w); return s0 !== null && s1 !== null; });
-  const halfT = (x0, y0, x1, y1) => Math.max(0, ...wallAlong(x0, y0, x1, y1).map(w => w.thick / 2));
-  const names = [...NOMI].sort(() => R() - .5);
-  const rooms = leaves.map(([x0, y0, x1, y1], i) => {
-    const l = x0 + halfT(x0, y0, x0, y1), r = x1 - halfT(x1, y0, x1, y1), t = y0 + halfT(x0, y0, x1, y0), b = y1 - halfT(x0, y1, x1, y1);
-    return { name: names[i % names.length], pts: [[l, t], [r, t], [r, b], [l, b]], area: +((r - l) * (b - t)).toFixed(4) };
-  });
-
   // ---------- disegno ----------
   const segs = [], arcs = [], texts = [];
   const seg = (x0, y0, x1, y1, ruolo, layer) => segs.push([x0, y0, x1, y1, layer ?? LY[ruolo], ruolo]);
@@ -100,9 +91,17 @@ export function generaPianta(seed, stile = "ordinato"){
   const box = r => { const A = [r.w.a[0] + r.w.u[0] * r.s0, r.w.a[1] + r.w.u[1] * r.s0], B = [r.w.a[0] + r.w.u[0] * r.s1, r.w.a[1] + r.w.u[1] * r.s1];
     const hx = Math.abs(r.w.n[0]) * r.h, hy = Math.abs(r.w.n[1]) * r.h; return [Math.min(A[0], B[0]) - hx, Math.min(A[1], B[1]) - hy, Math.max(A[0], B[0]) + hx, Math.max(A[1], B[1]) + hy]; };
   const SB = solid.map(box), VB = voids.map(box);
+  const inB = (x, y, b) => x > b[0] && x < b[2] && y > b[1] && y < b[3];
+  // locali veri: dentro il riquadro della divisione, tutto ciò che non è muro (esatto anche con lati su muri di spessore diverso)
+  const names = [...NOMI].sort(() => R() - .5);
+  const rooms = leaves.map(([x0, y0, x1, y1], i) => {
+    const cut = (a, b, k) => [...new Set([a, b, ...SB.flatMap(q => [q[k], q[k + 2]]).filter(v => v > a && v < b)].map(v => +v.toFixed(6)))].sort((p, q) => p - q);
+    const X = cut(x0, x1, 0), Y = cut(y0, y1, 1), free = (ii, jj) => ii >= 0 && jj >= 0 && ii < X.length - 1 && jj < Y.length - 1 && !SB.some(q => inB((X[ii] + X[ii + 1]) / 2, (Y[jj] + Y[jj + 1]) / 2, q));
+    let area = 0; for (let ii = 0; ii < X.length - 1; ii++) for (let jj = 0; jj < Y.length - 1; jj++) if (free(ii, jj)) area += (X[ii + 1] - X[ii]) * (Y[jj + 1] - Y[jj]);
+    return { name: names[i % names.length], pts: contorno(X, Y, free), area: +area.toFixed(4) };
+  });
   const xs = [...new Set([...SB, ...VB].flatMap(b => [b[0], b[2]]).map(v => +v.toFixed(5)))].sort((a, b) => a - b);
   const ys = [...new Set([...SB, ...VB].flatMap(b => [b[1], b[3]]).map(v => +v.toFixed(5)))].sort((a, b) => a - b);
-  const inB = (x, y, b) => x > b[0] && x < b[2] && y > b[1] && y < b[3];
   const full = (i, j) => { if (i < 0 || j < 0 || i >= xs.length - 1 || j >= ys.length - 1) return false; const x = (xs[i] + xs[i + 1]) / 2, y = (ys[j] + ys[j + 1]) / 2; return SB.some(b => inB(x, y, b)) && !VB.some(b => inB(x, y, b)); };
   const F = xs.map((_, i) => ys.map((_, j) => full(i, j)));
   const isF = (i, j) => i >= 0 && j >= 0 && i < xs.length - 1 && j < ys.length - 1 && F[i][j];
@@ -143,7 +142,7 @@ export function generaPianta(seed, stile = "ordinato"){
   }
   // arredi, testi dei locali
   for (const r of rooms){
-    const [[l, t], [rt, , ], [, b]] = [r.pts[0], r.pts[1], r.pts[2]], cx = (l + rt) / 2, cy = (t + b) / 2;
+    const l = Math.min(...r.pts.map(p => p[0])), rt = Math.max(...r.pts.map(p => p[0])), t = Math.min(...r.pts.map(p => p[1])), b = Math.max(...r.pts.map(p => p[1])), cx = (l + rt) / 2, cy = (t + b) / 2;
     texts.push({ x: cx, y: cy, text: r.name.toUpperCase(), layer: LY.testo });
     texts.push({ x: cx, y: cy + .4, text: `${r.area.toFixed(2).replace(".", ",")} m²`, layer: LY.testo });
     if (S.arredi && rt - l > 2.2 && b - t > 2.2 && R() < .7){
@@ -189,6 +188,16 @@ export function generaPianta(seed, stile = "ordinato"){
   return { seed, stile, verita, disegno };
 }
 
+/** Contorno di un insieme di celle (lati di confine concatenati, punti allineati tolti). */
+function contorno(X, Y, free){
+  const edges = new Map(), k = (i, j) => i + "," + j;
+  for (let i = 0; i < X.length - 1; i++) for (let j = 0; j < Y.length - 1; j++){ if (!free(i, j)) continue;
+    if (!free(i, j - 1)) edges.set(k(i, j), [i + 1, j]); if (!free(i + 1, j)) edges.set(k(i + 1, j), [i + 1, j + 1]);
+    if (!free(i, j + 1)) edges.set(k(i + 1, j + 1), [i, j + 1]); if (!free(i - 1, j)) edges.set(k(i, j + 1), [i, j]); }
+  const start = edges.keys().next().value, out = []; let cur = start, g = 0;
+  do { const [i, j] = cur.split(",").map(Number); out.push([X[i], Y[j]]); const n = edges.get(cur); cur = k(n[0], n[1]); } while (cur !== start && g++ < 1e5);
+  return out.filter((p, m) => { const a = out[(m - 1 + out.length) % out.length], b = out[(m + 1) % out.length]; return Math.abs((p[0] - a[0]) * (b[1] - p[1]) - (p[1] - a[1]) * (b[0] - p[0])) > 1e-12; });
+}
 function inside(poly, [x, y]){ let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++){ const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; }
 
 /** Ruota verità e disegno attorno all'origine (tavole con il nord non in alto). */
