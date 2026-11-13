@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Kzg/V9n/feIID60+XYZYe9Nhi8MWloaYmV65wdSPoOU=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Zbqz75iJCKl3t5U0SB6nLTBOTRB74E6jIr1/098YckU=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -778,7 +778,10 @@ function buildIFC(P, opt = {}){
     }
     for (const r of rooms){
       const poly = r.pts.map(W2I), prof = () => add(`IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,${add(`IFCPOLYLINE((${[...poly, poly[0]].map(p => pt2(p[0], p[1])).join(",")}))`)})`);
-      const slab = add(`IFCSLAB('${guid()}',$,${ifcStr("Solaio " + (r.name || ""))},${ifcStr(matName(r.mat))},$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(pt3(0, 0, -Lv.slab))},${Z},${R(Lv.slab)})`)])},$,.FLOOR.)`); bim.mat(slab, r.mat); elems.push(slab); counts.slabs++;
+      const st = r.slab?.t ?? Lv.slab, sk = r.slab?.k || (Lv.elev <= .01 ? "vespaio" : "laterocemento");
+      const slab = add(`IFCSLAB('${guid()}',$,${ifcStr("Solaio " + (r.name || ""))},${ifcStr(matName(r.mat))},$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(pt3(0, 0, -st))},${Z},${R(st)})`)])},$,${sk === "vespaio" ? ".BASESLAB." : ".FLOOR."})`); bim.mat(slab, r.mat); elems.push(slab); counts.slabs++;
+      bim.pset(slab, "Pset_SlabCommon", [["IsExternal", "bool", false], ["LoadBearing", "bool", sk !== "vespaio"], ["Reference", "label", `Solaio ${sk} ${Math.round(st * 100)} cm`]]);
+      bim.qto(slab, "Qto_SlabBaseQuantities", [["Width", "len", st], ["NetArea", "area", Math.abs(polyArea(r.pts))], ["NetVolume", "vol", Math.abs(polyArea(r.pts)) * st]]);
       const sp = add(`IFCSPACE('${guid()}',$,${ifcStr(r.name || "Locale")},$,$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(O)},${Z},${R(r.ceilH || Lv.height)})`)])},${ifcStr(r.name || "Locale")},.ELEMENT.,.INTERNAL.,$)`); spaces.push(sp); counts.spaces++;
       const q = add(`IFCELEMENTQUANTITY('${guid()}',$,'Qto_SpaceBaseQuantities',$,$,(${add(`IFCQUANTITYAREA('NetFloorArea',$,$,${R(Math.abs(polyArea(r.pts)))},$)`)},${add(`IFCQUANTITYLENGTH('Height',$,$,${R(r.ceilH || Lv.height)},$)`)}))`);
       add(`IFCRELDEFINESBYPROPERTIES('${guid()}',$,$,$,(${sp}),${q})`);
@@ -1420,7 +1423,7 @@ function buildModel(opts={}){
     for (const r of P.rooms.filter(r=>r.level===L.id)){
       if (r.pts.length < 3) continue;
       const sh = roomShape(r, holesUp);
-      const g = new THREE.ExtrudeGeometry(sh, {depth:L.slab, bevelEnabled:false}); g.rotateX(Math.PI/2); g.translate(0, e0, 0);
+      const g = new THREE.ExtrudeGeometry(sh, {depth:r.slab?.t ?? L.slab, bevelEnabled:false}); g.rotateX(Math.PI/2); g.translate(0, e0, 0);
       add(L.id, r.mat, "floor", g, r.tile ? r : null);
       if (!opts.print && !r.noCeiling){ const csh = roomShape(r, holesHere), cm = r.ceilMat || (r.ceilH ? "cartongesso" : "soffitto");
         if (r.ceilH){ const cg = new THREE.ExtrudeGeometry(csh, {depth:.06, bevelEnabled:false}); cg.rotateX(Math.PI/2); cg.translate(0, e0 + r.ceilH + .06, 0); add(L.id, cm, "ceiling", cg); }
@@ -2395,6 +2398,9 @@ $("#panel-props").addEventListener("change", e => { const t = e.target;
   if (t.id === "arcH" || t.id === "arcT"){ const g = arcGroupOf(selList()), v = num(t.value); if (g && v !== null && (t.id === "arcH" || v > 0)) regenArc(g, t.id === "arcH" ? {h:v} : {thick:v}); }
   if (t.id === "wallShape"){ PREFS.wallShape = t.value; savePrefs(); S.draw = null; renderInspector(); draw2D(); }
   if (t.id === "rNoCeil"){ const r = findSel(); if (r){ r.noCeiling = t.checked; commit(); } }
+  if (t.id === "rSlabT" || t.id === "rSlabK"){ const r = findSel(); if (!r || S.sel?.type !== "room") return; const s = {...slabOf(r)};
+    if (t.id === "rSlabT"){ const v = num(t.value); if (v === null || v < 2 || v > 150) { toast("Spessore del solaio tra 2 e 150 cm", true); renderInspector(); return; } s.t = v / 100; } else s.k = t.value;
+    r.slab = s; commit(); renderInspector(); }
   if (t.id === "ceilChk"){ S.ceilings = t.checked; applyVisibility(); render3D(); }
   if (t.id === "vcutAxis"){ S.vcut = {axis:t.value || null, pos:S.vcut?.pos ?? 50}; applyVisibility(); render3D(); renderInspector(); }
 });
@@ -2413,18 +2419,46 @@ function objOf3D(o){ for (let x = o; x; x = x.parent) if (x.userData?.objId) ret
 function selectionFrom3D(hit){
   const ob = objOf3D(hit.object); if (ob) return {type:"object", id:ob.userData.objId, lid:ob.userData.level};
   const lid = hit.object.userData.level; if (!lid) return null;
-  const prev = S.level; S.level = lid; const h = hitTest([hit.point.x, hit.point.z]); if (!h) S.level = prev; return h ? {...h, lid} : null;
+  const q = [hit.point.x, hit.point.z], cat = hit.object.userData.cat;
+  if (cat === "floor"){   // pavimento colpito: il locale (e il suo solaio) che lo contiene
+    const r = P.rooms.find(r => r.level === lid && inPoly(q, r.pts)) || P.rooms.filter(r => r.level === lid).map(r => ({r, d:Math.min(...r.pts.map((p, i) => projOnSeg(q, p, r.pts[(i + 1) % r.pts.length]).d))})).sort((a, b) => a.d - b.d).find(x => x.d < .3)?.r;
+    if (r) return {type:"room", id:r.id, lid}; }
+  if (cat === "wall"){   // muro colpito: l'apertura sopra il punto, altrimenti il muro più vicino in pianta
+    const L = level(lid), y = hit.point.y - (L?.elev || 0); let best = null;
+    for (const w of P.walls){ if (w.level !== lid) continue; const r = projOnSeg(q, w.a, w.b), d = r.d - w.thick / 2; if (d > .05) continue;
+      const s = r.t * wallFrame(w).len, o = P.openings.find(o => o.wall === w.id && Math.abs(s - o.t) < o.w / 2 && y >= (o.type === "door" ? 0 : o.sill || 0) - .02 && y <= (o.type === "door" ? 0 : o.sill || 0) + o.h + .02);
+      if (!best || d < best.d) best = {d, h:o ? {type:"opening", id:o.id} : {type:"wall", id:w.id}}; }
+    if (best) return {...best.h, lid}; }
+  const prev = S.level; S.level = lid; const h = hitTest(q); if (!h || h.type === "dim") S.level = prev; return h && h.type !== "dim" ? {...h, lid} : null;
 }
 const raySel = new THREE.Group(); raySel.name = "selezione"; scene.add(raySel);
 let selKey = "";
 function updateSel3D(force){
-  const ids = selList().filter(s => s.type === "object").map(s => s.id), key = ids.join(",");
+  const all = selList(), ids = all.filter(s => s.type === "object").map(s => s.id), key = all.map(s => s.type + ":" + s.id).join(",") + "|" + (S.rev || 0);
   if (!force && key === selKey) return; selKey = key;
   for (const c of [...raySel.children]){ raySel.remove(c); c.geometry?.dispose?.(); }
+  for (const s of all) if (s.type !== "object") for (const g of selGeos3D(s)) addSel3D(g);
   if (ids.length) modelGroup.traverse(o => { if (o.userData?.objId && ids.includes(o.userData.objId)){ const b = new THREE.BoxHelper(o, new THREE.Color(css("--accent") || "#1f6f62")); b.material.depthTest = false; b.renderOrder = 10; raySel.add(b); } });
   render3D();
 }
 function afterRebuild3D(){ updateSel3D(true); }
+/* Sagome evidenziate dell'elemento selezionato: il 3D unisce i muri per materiale, quindi si costruisce la forma esatta a parte */
+const SEL_FILL = new THREE.MeshBasicMaterial({transparent:true, opacity:.28, depthTest:false, depthWrite:false, side:THREE.DoubleSide}), SEL_LINE = new THREE.LineBasicMaterial({depthTest:false, transparent:true});
+function addSel3D(g){ const c = new THREE.Color(css("--accent") || "#1f6f62"); SEL_FILL.color.copy(c); SEL_LINE.color.copy(c);
+  const m = new THREE.Mesh(g, SEL_FILL); m.renderOrder = 9; raySel.add(m); const e = new THREE.LineSegments(new THREE.EdgesGeometry(g, 20), SEL_LINE); e.renderOrder = 10; raySel.add(e); }
+/** Prisma verticale da un poligono in pianta (x, y → x, z del 3D) tra le quote y0 e y1. */
+function prism3D(pts, y0, y1){ const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], -p[1]))), g = new THREE.ExtrudeGeometry(sh, {depth:y1 - y0, bevelEnabled:false}); g.rotateX(-Math.PI / 2); g.translate(0, y0, 0); return g; }
+function selGeos3D(s){
+  if (s.type === "wall"){ const w = P.walls.find(x => x.id === s.id); if (!w) return []; const L = level(w.level), f = wallFrame(w), sh = wallFaceLengths(w, P.walls).shift, t2 = w.thick / 2;
+    const Pw = (a, o) => [w.a[0] + f.ux*a + f.nx*o, w.a[1] + f.uy*a + f.ny*o];
+    return [prism3D([Pw(sh.A[0], t2), Pw(f.len - sh.A[1], t2), Pw(f.len - sh.B[1], -t2), Pw(sh.B[0], -t2)], L.elev, L.elev + (w.height || L.height))]; }
+  if (s.type === "opening"){ const o = P.openings.find(x => x.id === s.id), w = o && P.walls.find(x => x.id === o.wall); if (!w) return []; const L = level(w.level), f = wallFrame(w), t2 = w.thick / 2 + .03;
+    const Pw = (a, q) => [w.a[0] + f.ux*a + f.nx*q, w.a[1] + f.uy*a + f.ny*q], s0 = o.t - o.w / 2, s1 = o.t + o.w / 2, bot = o.type === "door" ? 0 : (o.sill || 0);
+    return [prism3D([Pw(s0, t2), Pw(s1, t2), Pw(s1, -t2), Pw(s0, -t2)], L.elev + bot, L.elev + bot + o.h)]; }
+  if (s.type === "room"){ const r = P.rooms.find(x => x.id === s.id); if (!r || r.pts.length < 3) return []; const L = level(r.level), t = r.slab?.t ?? L.slab;
+    return [prism3D(r.pts, L.elev - t, L.elev + .01)]; }
+  return [];
+}
 let d3 = null;
 $("#pane3d").addEventListener("pointerdown", e => {
   if (e.target !== c3d || e.button !== 0) return;
@@ -3205,7 +3239,7 @@ function renderInspector(){
       const ra = roomAreas(sel);
       h += `<div class="sec"><h3>Locale</h3>${F("rName","Nome",sel.name)}<dl class="kv"><dt>Superficie netta</dt><dd>${fmt(A)} m²</dd><dt>Superficie lorda</dt><dd>${fmt(ra.gross)} m² <small>con metà muri</small></dd><dt>Perimetro</dt><dd>${fmtL(ra.per)}</dd><dt>Volume netto</dt><dd>${fmt(A*L.height,1)} m³</dd></dl>
         <label class="chk"><input type="checkbox" id="rNoCeil" ${sel.noCeiling?"checked":""}> Senza soffitto (vista dall'alto)</label><p class="note">L'etichetta del locale si trascina in pianta.</p>
-        <span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, sel.mat, "rm")}${roomExtraHTML(sel)}<div class="btns"><button class="btn" id="camRoom">Vista interna</button><button class="btn danger" id="delSel">Elimina</button></div></div>`; }
+        <span class="lbl">Pavimento</span>${swatches(FLOOR_MATS, sel.mat, "rm")}${roomExtraHTML(sel)}<div class="btns"><button class="btn" id="camRoom">Vista interna</button><button class="btn danger" id="delSel">Elimina</button></div></div>${slabHTML(sel, L, A)}`; }
     if (S.sel.type === "object"){
       const it = sel.kind === "lib" ? LIBMAP[libRef(sel.ref)] : null, imp = sel.kind === "import" ? importStore[sel.ref] : null, fp = objFootprint(sel);
       h += `<div class="sec"><h3>${it ? esc(it.cat) : imp?.source?.type === "polyhaven" ? "Poly Haven" : "Modello importato"}</h3>${it ? `<div class="libsel">${thumbImg(it.ref)}<div><b>${esc(it.nome)}</b><small>${esc(it.dim)}${it.credit ? ` · ${esc(it.credit)}` : ""}</small></div></div>` : ""}${F("obName","Nome",sel.name)}<div class="row">${F("obX","X (m)",fmt(sel.x),'inputmode="decimal"')}${F("obY","Y (m)",fmt(sel.y),'inputmode="decimal"')}</div>
@@ -3366,6 +3400,14 @@ let autoLabelQ = 0; new MutationObserver(() => { if (!autoLabelQ) autoLabelQ = r
 // strumenti del ricalco solo quando il piano ha una base importata (#59, U3)
 function syncUnderlayTools(){ const on = !!level()?.underlay; for (const b of document.querySelectorAll('[data-tool="calib"], [data-tool="moveunder"]')) b.hidden = !on; }
 function refresh(){ syncUnderlayTools(); renderLevels(); renderInspector(); draw2D(); rebuild3D(); $("#undoBtn").disabled = !past.length; $("#redoBtn").disabled = !future.length; if (S.tab === "export") renderExport(); if (S.tab === "list") renderList(); renderCamSel(); }
+
+/* Solaio sotto il locale: elemento con le sue proprietà (spessore, struttura), evidenziato nel 3D quando il locale è selezionato */
+const SLAB_KINDS = [["laterocemento", "Laterocemento"], ["ca", "Calcestruzzo armato pieno"], ["predalles", "Predalles / prefabbricato"], ["legno", "Legno (travi e tavolato)"], ["acciaio", "Acciaio e lamiera grecata"], ["vespaio", "Su vespaio (controterra)"]];
+function slabOf(r, L = level(r.level)){ return {t:r.slab?.t ?? L.slab, k:r.slab?.k || (L.elev <= .01 ? "vespaio" : "laterocemento")}; }
+function slabHTML(r, L, A){ const s = slabOf(r, L);
+  return `<div class="sec" id="slabSec"><h3>Solaio</h3><div class="row">${F("rSlabT", "Spessore (cm)", fmt(s.t * 100, 0), 'inputmode="decimal"')}<div class="f"><label class="lbl" for="rSlabK">Struttura</label><select id="rSlabK" class="inp">${SLAB_KINDS.map(([k, n]) => `<option value="${k}" ${s.k === k ? "selected" : ""}>${n}</option>`).join("")}</select></div></div>
+    <dl class="kv"><dt>Estradosso</dt><dd>${fmt(L.elev, 2)} m</dd><dt>Intradosso</dt><dd>${fmt(L.elev - s.t, 2)} m</dd><dt>Superficie</dt><dd>${fmt(A)} m²</dd><dt>Volume</dt><dd>${fmt(A * s.t, 2)} m³</dd></dl>
+    <p class="note">Nel 3D un clic sul pavimento seleziona locale e solaio.</p></div>`; }
 
 /* ---- 06-online.js ---- */
 /* ============================================================
@@ -3741,16 +3783,16 @@ function renderImport(){
 function dxfPanel(){ const d = dxfPending;
   return `<div class="exp" id="dxfBox"><header><h4>${esc(d.name)}</h4><span class="tag">${d.count} entità</span></header>
     <div class="row"><div class="f"><span class="lbl">Unità del disegno</span><select id="dxU" class="inp"><option value="1">Metri</option><option value="0.01">Centimetri</option><option value="0.001">Millimetri</option></select></div>
-    <div class="f"><span class="lbl">Come usarlo</span><select id="dxM" class="inp"><option value="vec">Base di ricalco</option><option value="walls">Linee → muri (asse)</option></select></div></div>
+    <div class="f"><span class="lbl">Come usarlo</span><select id="dxM" class="inp"><option value="auto" ${d.mode==="auto"?"selected":""}>Riconosci muri, porte, finestre e locali</option><option value="vec" ${d.mode==="vec"?"selected":""}>Solo base di ricalco</option><option value="walls" ${d.mode==="walls"?"selected":""}>Linee singole → muri (asse, spessore unico)</option></select></div></div>
     <span class="lbl">Layer da usare</span><div class="layers">${Object.entries(d.layers).map(([n,c])=>`<label class="chk"><input type="checkbox" data-layer="${esc(n)}" ${d.sel.has(n)?"checked":""}> ${esc(n)} <span class="tag">${c}</span></label>`).join("")}</div>
     <div id="dxThickRow" ${d.mode==="walls"?"":"hidden"}>${F("dxT","Spessore muri (m)","0,30",'inputmode="decimal"')}</div>
-    <p class="note">«Linee → muri» va bene per disegni a linea singola sull'asse del muro. Per piante con le due facce del muro usa la base di ricalco.</p>
+    <p class="note" id="dxNote">${d.mode === "auto" ? "Consigliato: ogni muro prende il suo spessore dalle due linee del disegno; porte, finestre e locali vengono riconosciuti e li rivedi prima di creare il modello." : d.mode === "walls" ? "Solo per disegni a linea singola sull'asse del muro: tutti i muri avranno lo stesso spessore." : "La pianta resta sotto come base da ricalcare a mano."}</p>
     <div class="btns"><button class="btn primary" id="dxGo">Importa</button><button class="btn" id="dxNo">Annulla</button></div></div>`; }
 const PI = $("#panel-import");
 PI.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
   if (b.id === "imPlan") $("#fPlan").click(); if (b.id === "imModel") $("#fModel").click(); if (b.id === "imProj") $("#fProj").click(); if (b.id === "imTex") $("#fTex").click();
   if (b.id === "dxNo"){ dxfPending = null; renderImport(); }
-  if (b.id === "dxGo") applyDXF();
+  if (b.id === "dxGo"){ if (dxfPending.mode === "auto"){ const f = dxfPending.file; dxfPending = null; a3FromImport(f); } else applyDXF(); }
   if (b.dataset.mdel){ const k = b.dataset.mdel; const used = P.walls.some(w=>w.mat===k) || P.rooms.some(r=>r.mat===k) || P.levels.some(l=>l.roof?.mat===k); if (used){ toast("Il materiale è in uso: cambialo prima su muri, pavimenti o coperture", true); return; } delete P.materials[k]; invalidateMat(k); commit(); renderImport(); }
   if (b.dataset.phh) pickPHHdri(b.dataset.phh, b.dataset.nome);
   if (b.dataset.pht) pickPHTexture(b.dataset.pht, b.dataset.nome);
@@ -3761,7 +3803,7 @@ PI.addEventListener("change", e => { const t = e.target;
   if (t.id === "phHq") hydratePHList("hdris"); if (t.id === "phTq") hydratePHList("textures");
   if (!dxfPending) return;
   if (t.dataset.layer){ t.checked ? dxfPending.sel.add(t.dataset.layer) : dxfPending.sel.delete(t.dataset.layer); }
-  if (t.id === "dxM"){ dxfPending.mode = t.value; $("#dxThickRow").hidden = t.value !== "walls"; }
+  if (t.id === "dxM"){ dxfPending.mode = t.value; renderImport(); }
   if (t.id === "dxU") dxfPending.unit = +t.value;
 });
 const readAs = (f, how) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r[how](f); });
@@ -3856,7 +3898,7 @@ async function loadDXF(f){
   const {segs, unit} = flattenCAD(await readCAD(f));
   if (!segs.length) throw new Error("nessuna linea trovata nel disegno");
   const layers = {}; segs.forEach(s => layers[s[4]] = (layers[s[4]]||0) + 1);
-  dxfPending = {name:f.name, segs, layers, sel:new Set(Object.keys(layers)), mode:"vec", unit, count:segs.length};
+  dxfPending = {name:f.name, segs, layers, sel:new Set(Object.keys(layers)), mode:"auto", unit, count:segs.length, file:f};
   S.tab = "import"; renderTabs();
 }
 /** Unità del disegno quando l'intestazione non la dice: prima dai raggi delle porte (~0,8–1 m), poi dalla larghezza. */
@@ -4563,6 +4605,10 @@ function a3Cluster(){
   const plans = all.filter(c => c.role === "pianta"); plans.slice(1).forEach(c => { if (c.reason !== "nome del file" && !c.reason.startsWith("etichetta")) c.role = "ignora"; });
   A3S.clusters = all;
 }
+/** Dal pannello «Importa pianta» (DWG/DXF): stesso file al riconoscimento, poi revisione. */
+async function a3FromImport(f){ Object.assign(A3S, {files:[], clusters:[], layersOff:null, report:null, preview:null, dec:new Map()});
+  await a3AddFiles([f]); if (A3S.files.length && A3S.clusters.some(c => c.role === "pianta")) a3Recognize(); else renderImport();
+  $("#a3Box")?.scrollIntoView({block:"start"}); }
 async function a3AddFiles(files){
   for (const f of files){
     try { busy(`Leggo ${f.name}…`); const flat = flattenCAD(await readCAD(f)); if (!flat.segs.length) throw new Error("nessuna linea"); A3S.files.push({name:f.name, flat, unit:flat.unit}); }
@@ -7486,6 +7532,7 @@ function sanitizeProject(p){
   p.walls = p.walls.filter(w => Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1]) >= .01);
   for (const w of p.walls){ if (!(w.thick > 0)) w.thick = .3; w.thick = Math.min(w.thick, 3); if (w.height != null && !(w.height > 0)) w.height = null; }
   for (const r of arr("rooms")){ r.id = fix(r.id); r.level = fix(r.level); r.pts = Array.isArray(r.pts) ? r.pts.map(pt) : []; r.name = T(r.name, 80); r.mat = K(r.mat); if (r.lab) r.lab = pt(r.lab);
+    if (r.slab && typeof r.slab === "object"){ const t = N(r.slab.t, NaN); r.slab = {...(t >= .02 && t <= 1.5 ? {t} : {}), ...(["laterocemento", "ca", "predalles", "legno", "acciaio", "vespaio"].includes(r.slab.k) ? {k:r.slab.k} : {})}; if (!Object.keys(r.slab).length) delete r.slab; } else delete r.slab;
     if (r.ceilH != null) r.ceilH = Nn(r.ceilH); if (r.ceilMat != null) r.ceilMat = K(r.ceilMat); if (r.tile) r.tile = {scale:N(r.tile.scale, 1), rot:N(r.tile.rot), ox:N(r.tile.ox), oy:N(r.tile.oy)}; if (r.skirt) r.skirt = {h:N(r.skirt.h, .08), mat:K(r.skirt.mat) || "bianco"}; }
   for (const o of arr("openings")){ o.id = fix(o.id); o.wall = fix(o.wall); for (const k of ["t", "w", "h", "sill"]) o[k] = N(o[k]); o.type = o.type === "door" ? "door" : "window"; o.flip = N(o.flip) | 0; if (o.style != null) o.style = K(o.style); if (o.shut != null) o.shut = K(o.shut); }
   { const len = new Map(p.walls.map(w => [w.id, Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1])]));

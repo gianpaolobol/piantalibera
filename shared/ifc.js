@@ -84,7 +84,10 @@ export function buildIFC(P, opt = {}){
     }
     for (const r of rooms){
       const poly = r.pts.map(W2I), prof = () => add(`IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,${add(`IFCPOLYLINE((${[...poly, poly[0]].map(p => pt2(p[0], p[1])).join(",")}))`)})`);
-      const slab = add(`IFCSLAB('${guid()}',$,${ifcStr("Solaio " + (r.name || ""))},${ifcStr(matName(r.mat))},$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(pt3(0, 0, -Lv.slab))},${Z},${R(Lv.slab)})`)])},$,.FLOOR.)`); bim.mat(slab, r.mat); elems.push(slab); counts.slabs++;
+      const st = r.slab?.t ?? Lv.slab, sk = r.slab?.k || (Lv.elev <= .01 ? "vespaio" : "laterocemento");
+      const slab = add(`IFCSLAB('${guid()}',$,${ifcStr("Solaio " + (r.name || ""))},${ifcStr(matName(r.mat))},$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(pt3(0, 0, -st))},${Z},${R(st)})`)])},$,${sk === "vespaio" ? ".BASESLAB." : ".FLOOR."})`); bim.mat(slab, r.mat); elems.push(slab); counts.slabs++;
+      bim.pset(slab, "Pset_SlabCommon", [["IsExternal", "bool", false], ["LoadBearing", "bool", sk !== "vespaio"], ["Reference", "label", `Solaio ${sk} ${Math.round(st * 100)} cm`]]);
+      bim.qto(slab, "Qto_SlabBaseQuantities", [["Width", "len", st], ["NetArea", "area", Math.abs(polyArea(r.pts))], ["NetVolume", "vol", Math.abs(polyArea(r.pts)) * st]]);
       const sp = add(`IFCSPACE('${guid()}',$,${ifcStr(r.name || "Locale")},$,$,${lp(sLP, A0)},${rep([add(`IFCEXTRUDEDAREASOLID(${prof()},${ax3(O)},${Z},${R(r.ceilH || Lv.height)})`)])},${ifcStr(r.name || "Locale")},.ELEMENT.,.INTERNAL.,$)`); spaces.push(sp); counts.spaces++;
       const q = add(`IFCELEMENTQUANTITY('${guid()}',$,'Qto_SpaceBaseQuantities',$,$,(${add(`IFCQUANTITYAREA('NetFloorArea',$,$,${R(Math.abs(polyArea(r.pts)))},$)`)},${add(`IFCQUANTITYLENGTH('Height',$,$,${R(r.ceilH || Lv.height)},$)`)}))`);
       add(`IFCRELDEFINESBYPROPERTIES('${guid()}',$,$,$,(${sp}),${q})`);

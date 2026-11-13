@@ -57,6 +57,7 @@ function sanitizeProject(p){
   p.walls = p.walls.filter(w => Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1]) >= .01);
   for (const w of p.walls){ if (!(w.thick > 0)) w.thick = .3; w.thick = Math.min(w.thick, 3); if (w.height != null && !(w.height > 0)) w.height = null; }
   for (const r of arr("rooms")){ r.id = fix(r.id); r.level = fix(r.level); r.pts = Array.isArray(r.pts) ? r.pts.map(pt) : []; r.name = T(r.name, 80); r.mat = K(r.mat); if (r.lab) r.lab = pt(r.lab);
+    if (r.slab && typeof r.slab === "object"){ const t = N(r.slab.t, NaN); r.slab = {...(t >= .02 && t <= 1.5 ? {t} : {}), ...(["laterocemento", "ca", "predalles", "legno", "acciaio", "vespaio"].includes(r.slab.k) ? {k:r.slab.k} : {})}; if (!Object.keys(r.slab).length) delete r.slab; } else delete r.slab;
     if (r.ceilH != null) r.ceilH = Nn(r.ceilH); if (r.ceilMat != null) r.ceilMat = K(r.ceilMat); if (r.tile) r.tile = {scale:N(r.tile.scale, 1), rot:N(r.tile.rot), ox:N(r.tile.ox), oy:N(r.tile.oy)}; if (r.skirt) r.skirt = {h:N(r.skirt.h, .08), mat:K(r.skirt.mat) || "bianco"}; }
   for (const o of arr("openings")){ o.id = fix(o.id); o.wall = fix(o.wall); for (const k of ["t", "w", "h", "sill"]) o[k] = N(o[k]); o.type = o.type === "door" ? "door" : "window"; o.flip = N(o.flip) | 0; if (o.style != null) o.style = K(o.style); if (o.shut != null) o.shut = K(o.shut); }
   { const len = new Map(p.walls.map(w => [w.id, Math.hypot(w.b[0]-w.a[0], w.b[1]-w.a[1])]));

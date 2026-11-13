@@ -42,7 +42,7 @@ Un progetto con versione superiore a quella dell'editor viene aperto comunque, c
 
 **Wall** — `id`, `level`, `a`, `b` (estremi), `thick`, `wtype` (tipo scelto: `t8`·`t10`·`t12` tramezzo, `p30` portante interno, `e55` esterno; assente = spessore libero), `layers` (`{core, insul}` solo per l'esterno con cappotto, metri), `height` (`null` = altezza del piano), `mat`, `matA`/`matB` (finitura dei due lati), `arc` (`{g, i, h, A, B}` per i muri ad arco, spezzati in segmenti dello stesso gruppo `g`).
 
-**Room** — `id`, `level`, `name`, `pts` (poligono), `mat`, `lab` (posizione dell'etichetta), `ceilH`/`ceilMat` (controsoffitto), `tile` (`{scale, rot, ox, oy}` posa del pavimento), `skirt` (`{h, mat}` battiscopa).
+**Room** — `id`, `level`, `name`, `pts` (poligono), `mat`, `lab` (posizione dell'etichetta), `ceilH`/`ceilMat` (controsoffitto), `tile` (`{scale, rot, ox, oy}` posa del pavimento), `skirt` (`{h, mat}` battiscopa). Facoltativo `slab` (`{t, k}`): solaio sotto il locale, spessore `t` in metri (0,02–1,5; senza = spessore del piano) e struttura `k` (`laterocemento`, `ca`, `predalles`, `legno`, `acciaio`, `vespaio`); usato nel 3D, nell'IFC (`IfcSlab` con `Pset_SlabCommon` e quantità) e nella scheda del locale.
 
 **Opening** — `id`, `wall`, `t` (distanza dall'estremo `a` del muro), `w`, `h`, `sill`, `type:"door"·"window"`, `flip` (0–3), `style`, `shut`.
 

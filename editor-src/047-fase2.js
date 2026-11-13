@@ -95,6 +95,9 @@ $("#panel-props").addEventListener("change", e => { const t = e.target;
   if (t.id === "arcH" || t.id === "arcT"){ const g = arcGroupOf(selList()), v = num(t.value); if (g && v !== null && (t.id === "arcH" || v > 0)) regenArc(g, t.id === "arcH" ? {h:v} : {thick:v}); }
   if (t.id === "wallShape"){ PREFS.wallShape = t.value; savePrefs(); S.draw = null; renderInspector(); draw2D(); }
   if (t.id === "rNoCeil"){ const r = findSel(); if (r){ r.noCeiling = t.checked; commit(); } }
+  if (t.id === "rSlabT" || t.id === "rSlabK"){ const r = findSel(); if (!r || S.sel?.type !== "room") return; const s = {...slabOf(r)};
+    if (t.id === "rSlabT"){ const v = num(t.value); if (v === null || v < 2 || v > 150) { toast("Spessore del solaio tra 2 e 150 cm", true); renderInspector(); return; } s.t = v / 100; } else s.k = t.value;
+    r.slab = s; commit(); renderInspector(); }
   if (t.id === "ceilChk"){ S.ceilings = t.checked; applyVisibility(); render3D(); }
   if (t.id === "vcutAxis"){ S.vcut = {axis:t.value || null, pos:S.vcut?.pos ?? 50}; applyVisibility(); render3D(); renderInspector(); }
 });
@@ -113,18 +116,46 @@ function objOf3D(o){ for (let x = o; x; x = x.parent) if (x.userData?.objId) ret
 function selectionFrom3D(hit){
   const ob = objOf3D(hit.object); if (ob) return {type:"object", id:ob.userData.objId, lid:ob.userData.level};
   const lid = hit.object.userData.level; if (!lid) return null;
-  const prev = S.level; S.level = lid; const h = hitTest([hit.point.x, hit.point.z]); if (!h) S.level = prev; return h ? {...h, lid} : null;
+  const q = [hit.point.x, hit.point.z], cat = hit.object.userData.cat;
+  if (cat === "floor"){   // pavimento colpito: il locale (e il suo solaio) che lo contiene
+    const r = P.rooms.find(r => r.level === lid && inPoly(q, r.pts)) || P.rooms.filter(r => r.level === lid).map(r => ({r, d:Math.min(...r.pts.map((p, i) => projOnSeg(q, p, r.pts[(i + 1) % r.pts.length]).d))})).sort((a, b) => a.d - b.d).find(x => x.d < .3)?.r;
+    if (r) return {type:"room", id:r.id, lid}; }
+  if (cat === "wall"){   // muro colpito: l'apertura sopra il punto, altrimenti il muro più vicino in pianta
+    const L = level(lid), y = hit.point.y - (L?.elev || 0); let best = null;
+    for (const w of P.walls){ if (w.level !== lid) continue; const r = projOnSeg(q, w.a, w.b), d = r.d - w.thick / 2; if (d > .05) continue;
+      const s = r.t * wallFrame(w).len, o = P.openings.find(o => o.wall === w.id && Math.abs(s - o.t) < o.w / 2 && y >= (o.type === "door" ? 0 : o.sill || 0) - .02 && y <= (o.type === "door" ? 0 : o.sill || 0) + o.h + .02);
+      if (!best || d < best.d) best = {d, h:o ? {type:"opening", id:o.id} : {type:"wall", id:w.id}}; }
+    if (best) return {...best.h, lid}; }
+  const prev = S.level; S.level = lid; const h = hitTest(q); if (!h || h.type === "dim") S.level = prev; return h && h.type !== "dim" ? {...h, lid} : null;
 }
 const raySel = new THREE.Group(); raySel.name = "selezione"; scene.add(raySel);
 let selKey = "";
 function updateSel3D(force){
-  const ids = selList().filter(s => s.type === "object").map(s => s.id), key = ids.join(",");
+  const all = selList(), ids = all.filter(s => s.type === "object").map(s => s.id), key = all.map(s => s.type + ":" + s.id).join(",") + "|" + (S.rev || 0);
   if (!force && key === selKey) return; selKey = key;
   for (const c of [...raySel.children]){ raySel.remove(c); c.geometry?.dispose?.(); }
+  for (const s of all) if (s.type !== "object") for (const g of selGeos3D(s)) addSel3D(g);
   if (ids.length) modelGroup.traverse(o => { if (o.userData?.objId && ids.includes(o.userData.objId)){ const b = new THREE.BoxHelper(o, new THREE.Color(css("--accent") || "#1f6f62")); b.material.depthTest = false; b.renderOrder = 10; raySel.add(b); } });
   render3D();
 }
 function afterRebuild3D(){ updateSel3D(true); }
+/* Sagome evidenziate dell'elemento selezionato: il 3D unisce i muri per materiale, quindi si costruisce la forma esatta a parte */
+const SEL_FILL = new THREE.MeshBasicMaterial({transparent:true, opacity:.28, depthTest:false, depthWrite:false, side:THREE.DoubleSide}), SEL_LINE = new THREE.LineBasicMaterial({depthTest:false, transparent:true});
+function addSel3D(g){ const c = new THREE.Color(css("--accent") || "#1f6f62"); SEL_FILL.color.copy(c); SEL_LINE.color.copy(c);
+  const m = new THREE.Mesh(g, SEL_FILL); m.renderOrder = 9; raySel.add(m); const e = new THREE.LineSegments(new THREE.EdgesGeometry(g, 20), SEL_LINE); e.renderOrder = 10; raySel.add(e); }
+/** Prisma verticale da un poligono in pianta (x, y → x, z del 3D) tra le quote y0 e y1. */
+function prism3D(pts, y0, y1){ const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], -p[1]))), g = new THREE.ExtrudeGeometry(sh, {depth:y1 - y0, bevelEnabled:false}); g.rotateX(-Math.PI / 2); g.translate(0, y0, 0); return g; }
+function selGeos3D(s){
+  if (s.type === "wall"){ const w = P.walls.find(x => x.id === s.id); if (!w) return []; const L = level(w.level), f = wallFrame(w), sh = wallFaceLengths(w, P.walls).shift, t2 = w.thick / 2;
+    const Pw = (a, o) => [w.a[0] + f.ux*a + f.nx*o, w.a[1] + f.uy*a + f.ny*o];
+    return [prism3D([Pw(sh.A[0], t2), Pw(f.len - sh.A[1], t2), Pw(f.len - sh.B[1], -t2), Pw(sh.B[0], -t2)], L.elev, L.elev + (w.height || L.height))]; }
+  if (s.type === "opening"){ const o = P.openings.find(x => x.id === s.id), w = o && P.walls.find(x => x.id === o.wall); if (!w) return []; const L = level(w.level), f = wallFrame(w), t2 = w.thick / 2 + .03;
+    const Pw = (a, q) => [w.a[0] + f.ux*a + f.nx*q, w.a[1] + f.uy*a + f.ny*q], s0 = o.t - o.w / 2, s1 = o.t + o.w / 2, bot = o.type === "door" ? 0 : (o.sill || 0);
+    return [prism3D([Pw(s0, t2), Pw(s1, t2), Pw(s1, -t2), Pw(s0, -t2)], L.elev + bot, L.elev + bot + o.h)]; }
+  if (s.type === "room"){ const r = P.rooms.find(x => x.id === s.id); if (!r || r.pts.length < 3) return []; const L = level(r.level), t = r.slab?.t ?? L.slab;
+    return [prism3D(r.pts, L.elev - t, L.elev + .01)]; }
+  return [];
+}
 let d3 = null;
 $("#pane3d").addEventListener("pointerdown", e => {
   if (e.target !== c3d || e.button !== 0) return;
