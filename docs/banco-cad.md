@@ -85,6 +85,8 @@ Le piante sono sintetiche e il generatore lo abbiamo scritto noi, come il motore
 
 - **Fiducia per ogni elemento** (`conf: {ok, why}` nel risultato di `A3.analyzePlan`): muro di spessore raro, capo libero o non collegato; vano senza simbolo, arco che non corrisponde alla larghezza, arco e vetro nello stesso vano; locale con superficie diversa da quella scritta nel disegno («14,50 m²», «mq 14.5») o molto piccolo.
 - **Interfaccia** (scheda Importa → «Da pianta e prospetti al 3D»): «Riconosci» mostra l'anteprima a colori (muri, porte, finestre, locali; dubbi in giallo) e l'elenco dei dubbi; per ogni dubbio «Togli»/«Rimetti» e, per le aperture, Porta/Finestra; un clic evidenzia l'elemento. «Crea il modello BIM» applica le correzioni. Le correzioni sono legate alla posizione (5 cm) e **restano** se si cambiano layer, unità o ruoli dei disegni e il riconoscimento si rifà da solo.
+![Revisione nel pannello Importa](banco-cad/revisione.png)
+
 - **Misura**: «errori segnalati» = quota degli elementi sbagliati (muri falsi, aperture false o di tipo sbagliato, locali fuori dall'1 %) che sono tra i dubbi; «dubbi per pianta» = quanti elementi l'utente deve guardare.
 
 | Indicatore (200 piante) | valore |
