@@ -81,6 +81,17 @@ Cinque interventi sul motore (`editor-src/075-auto3d.js`), ognuno misurato su qu
 
 Le piante sono sintetiche e il generatore lo abbiamo scritto noi, come il motore: c'è il rischio di adattare le regole ai nostri stessi disegni. Le regole sono generali (nessun valore preso dal generatore), ma la prova vera è il **banco reale** con le piante dello studio.
 
+## Fase C: revisione guidata (13/11/2026)
+
+- **Fiducia per ogni elemento** (`conf: {ok, why}` nel risultato di `A3.analyzePlan`): muro di spessore raro, capo libero o non collegato; vano senza simbolo, arco che non corrisponde alla larghezza, arco e vetro nello stesso vano; locale con superficie diversa da quella scritta nel disegno («14,50 m²», «mq 14.5») o molto piccolo.
+- **Interfaccia** (scheda Importa → «Da pianta e prospetti al 3D»): «Riconosci» mostra l'anteprima a colori (muri, porte, finestre, locali; dubbi in giallo) e l'elenco dei dubbi; per ogni dubbio «Togli»/«Rimetti» e, per le aperture, Porta/Finestra; un clic evidenzia l'elemento. «Crea il modello BIM» applica le correzioni. Le correzioni sono legate alla posizione (5 cm) e **restano** se si cambiano layer, unità o ruoli dei disegni e il riconoscimento si rifà da solo.
+- **Misura**: «errori segnalati» = quota degli elementi sbagliati (muri falsi, aperture false o di tipo sbagliato, locali fuori dall'1 %) che sono tra i dubbi; «dubbi per pianta» = quanti elementi l'utente deve guardare.
+
+| Indicatore (200 piante) | valore |
+|---|---|
+| Errori segnalati tra i dubbi | **82,4 %** |
+| Dubbi per pianta (media) | **1** |
+
 ## Prossimo passo
 
-Revisione guidata (fase C) e banco reale appena il titolare fornisce le piante.
+Banco reale appena il titolare fornisce le piante; poi modello addestrato (fase D) per i disegni più disordinati e altezze e più piani (fase E).

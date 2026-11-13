@@ -8,6 +8,7 @@ rivela irraggiungibile se ne propone la modifica nella issue #1, con il motivo.
 
 | Sigla | Comando | Cosa produce |
 |---|---|---|
+| **B** | `npm run banco:cad` | `test-results/banco-cad.json`: riconoscimento CAD → BIM sul banco sintetico |
 | **L** | `npm i --no-save axe-core@4 && npx playwright test -c playwright.livelli.config.mjs` | `test-results/livelli.json`: computo, coperture, IFC, DXF, persistenza, import, prestazioni, axe, UI |
 | **V** | workflow «Varianti» (`.github/workflows/varianti.yml`) | tabella funzione × variante nel riepilogo dell'esecuzione |
 | **E** | `npm run test:unit`, `npm run test:e2e` (CI «Build e test») | prove verdi / totali |
@@ -85,6 +86,20 @@ un'iterazione con la precedente sulla stessa macchina.
 | Layer DXF usati ma non dichiarati | L `dxf_layer_non_dichiarati` | 0 (prima 4) | **0** | alcuni CAD non creano i layer mancanti con colori e tipi di linea |
 | Errori di audit DXF (ezdxf) | I | 0 | **0** (mantenere) | |
 
+### Riconoscimento CAD → BIM (banco sintetico, `docs/banco-cad.md`)
+
+Obiettivi del progetto (`docs/progetto-cad-bim.md` §9) misurati sul banco sintetico di 200 piante; i livelli definitivi valgono sul banco reale, quando il titolare fornisce le piante dello studio.
+
+| Indicatore | Metodo | Attuale | Livello | Motivo |
+|---|---|---|---|---|
+| Muri trovati (lunghezza) | B `muri_richiamo` | 99,7 % (prima 97,1 %) | **≥ 97 %** | ArchLine.XP dichiara 90–95 % |
+| Muri giusti (precisione) | B `muri_precisione` | 99,4 % (prima 93,3 %) | **≥ 97 %** | |
+| Porte e finestre trovate con il tipo giusto | B `aperture_richiamo` × `aperture_tipo` | 98,3 % × 99,6 % (prima 92,3 % × 89,7 %) | **≥ 95 %** | |
+| Locali con superficie entro l'1 % | B `locali_area_1pct` | 95,2 % (prima 49,5 %) | **≥ 95 %** | |
+| Errori segnalati tra i dubbi | B `errori_segnalati` | 82,4 % (nuovo) | **≥ 80 %** | chi rivede deve trovare gli errori tra i dubbi, non cercarli |
+| Dubbi per pianta | B `dubbi_per_pianta` | 1 | **≤ 5** | |
+| Tempo per pianta | B `ms` | ~4 ms | **≤ 3 s** | |
+
 ### Piattaforme
 
 | Indicatore | Metodo | Attuale | Livello | Motivo |
@@ -156,3 +171,5 @@ Punteggio 0–4 sull'editor completo (pianta, 3D, pannello, telefono); motivo in
 | 12/11/2026 | #89 | U1–U12 11 → 12 su 12; Nielsen 3,3 → 3,4 |
 | 12/11/2026 | #90 | funzioni di calcolo con node --test 3 → 4 su 4 |
 | 12/11/2026 | #91 | misura della modifica sull'edificio grande: mediana di 9 campioni invece di 3 (68 ms in locale) |
+| 13/11/2026 | #94, #96 | banco CAD → BIM; muri 97,1 → 99,7 %, precisione 93,3 → 99,4 %, aperture 92,3 → 98,3 %, tipo 89,7 → 99,6 %, locali ±1 % 49,5 → 95,2 % |
+| 13/11/2026 | fase C | revisione guidata: errori segnalati 82,4 %, 1 dubbi per pianta |

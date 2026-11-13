@@ -62,6 +62,14 @@ export function valuta(verita, ris){
     const c = [media(r.pts.map(p => p[0])), media(r.pts.map(p => p[1]))], d = ris.rooms.find(x => x.pts?.length > 2 && inPoly(c, x.pts));
     if (!d) continue; locTrovati++; const e = Math.abs(polyArea(d.pts) - r.area) / r.area; errArea.push(e); if (e <= .01) locEsatti++;
   }
+  // revisione guidata (fase C): gli elementi sbagliati devono essere tra i dubbi; i dubbi devono essere pochi
+  const dubbio = x => x.conf && x.conf.ok === false;
+  const muroSbagliato = w => copertura([w], verita.walls).quota < .5;
+  const apSbagliata = new Set(OD.map((d, k) => k).filter(k => !usati.has(k)));
+  const tipoErr = OD.filter((d, k) => usati.has(k) && !verita.openings.some(o => { const c = centro(o, verita.walls); return len(sub(d.c, c)) <= .2 && o.type === d.o.type; }));
+  const locSbagliato = d => { const t = verita.rooms.find(r => inPoly([media(r.pts.map(p => p[0])), media(r.pts.map(p => p[1]))], d.pts)); return !t || Math.abs(polyArea(d.pts) - t.area) / t.area > .01; };
+  const errati = [...ris.walls.filter(muroSbagliato), ...OD.filter((d, k) => apSbagliata.has(k)).map(d => d.o), ...tipoErr.map(d => d.o), ...ris.rooms.filter(r => r.pts?.length > 2 && locSbagliato(r))];
+  const dubbi = [...ris.walls, ...ris.openings, ...ris.rooms].filter(dubbio).length;
   return {
     muri_richiamo: rec.quota, muri_precisione: prec.quota,
     spessore_esatto: rec.spess.length ? rec.spess.filter(e => e <= .005).length / rec.spess.length : 0,
@@ -72,6 +80,8 @@ export function valuta(verita, ris){
     locali_trovati: verita.rooms.length ? locTrovati / verita.rooms.length : 1,
     locali_area_1pct: verita.rooms.length ? locEsatti / verita.rooms.length : 1,
     errore_area_mediano_pct: mediana(errArea) * 100,
+    errori_segnalati: errati.length ? errati.filter(dubbio).length / errati.length : 1,
+    dubbi_per_pianta: dubbi,
   };
 }
 
@@ -84,6 +94,6 @@ export function misuraBanco(piante, riconosci){
     const m = { ...valuta(p.verita, ris), ms: performance.now() - t0 };
     (perStile[p.stile] ||= []).push(m); tutte.push(m);
   }
-  const riassumi = L => Object.fromEntries(Object.keys(L[0]).map(k => [k, +media(L.map(m => m[k])).toFixed(k === "ms" || k.endsWith("_mm") || k.endsWith("_pct") ? 1 : 3)]));
+  const riassumi = L => Object.fromEntries(Object.keys(L[0]).map(k => [k, +media(L.map(m => m[k])).toFixed(k === "ms" || k === "dubbi_per_pianta" || k.endsWith("_mm") || k.endsWith("_pct") ? 1 : 3)]));
   return { piante: piante.length, totale: riassumi(tutte), perStile: Object.fromEntries(Object.entries(perStile).map(([k, L]) => [k, riassumi(L)])) };
 }

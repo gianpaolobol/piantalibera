@@ -223,7 +223,9 @@ const A3 = (() => {
     }
     // porte e finestre nei vuoti
     let nid = 0;
-    const out = W.map(w => ({id:"w" + (nid++), a:w.P(w.a), b:w.P(w.b), thick:w.t, _w:w}));
+    // fiducia per la revisione guidata (fase C): dubbio con il motivo, altrimenti sicuro
+    const wallConf = w => !w.peak ? {ok:false, why:`spessore raro (${Math.round(w.t * 100)} cm)`} : !(w.joined.a && w.joined.b) && !linked(w) ? {ok:false, why:"non collegato ad altri muri"} : !(w.joined.a && w.joined.b) ? {ok:false, why:"un capo libero"} : {ok:true};
+    const out = W.map(w => ({id:"w" + (nid++), a:w.P(w.a), b:w.P(w.b), thick:w.t, conf:wallConf(w), _w:w}));
     for (const ow of out){
       const w = ow._w;
       for (const o of w.ops){
@@ -235,7 +237,10 @@ const A3 = (() => {
         // porta scorrevole: ante su due linee sfalsate, ciascuna più corta del vano, che si sovrappongono al centro
         const part = inGap.filter(x => x.ov < .88 * width), sliding = part.some(x => part.some(y => Math.abs(y.l.off - x.l.off) > .005 && Math.min(x.l.b, y.l.b) - Math.max(x.l.a, y.l.a) > .05 * width)) && !inGap.some(x => x.ov >= .88 * width);
         const type = arc || sliding ? "door" : glass ? "window" : width >= 2.6 ? "window" : "door";
-        openings.push({wall:ow.id, t:(o.s0 + o.s1)/2 - w.a, w:+width.toFixed(3), type, from:arc ? "arco" : sliding ? "scorrevole" : glass ? "vetro" : "vuoto", ...(sliding && !arc ? {style:"scorrevole"} : {})});
+        openings.push({wall:ow.id, t:(o.s0 + o.s1)/2 - w.a, w:+width.toFixed(3), type, from:arc ? "arco" : sliding ? "scorrevole" : glass ? "vetro" : "vuoto", ...(sliding && !arc ? {style:"scorrevole"} : {}),
+          conf:!(arc || sliding || glass) ? {ok:false, why:`vano di ${Math.round(width * 100)} cm senza simbolo: ${type === "door" ? "porta" : "finestra"}?`}
+            : arc && Math.abs(arc.r - width) > .1 && Math.abs(arc.r - width/2) > .1 ? {ok:false, why:`arco di ${Math.round(arc.r * 100)} cm su un vano di ${Math.round(width * 100)} cm`}
+            : arc && glass && inGap.some(x => x.ov > .88 * width) ? {ok:false, why:"arco e vetro nello stesso vano: porta o finestra?"} : {ok:true}});
       }
     }
     const rooms = findRooms(out, texts);
@@ -290,6 +295,10 @@ const A3 = (() => {
     for (const r of rooms){
       const cand = texts.filter(t => inPoly(t.x, t.y, r.pts)).map(t => cleanText(t.text)).filter(t => t && t.length <= 30 && !skip.test(t) && /[a-zà-ù]{2}/i.test(t));
       const name = cand[0] || ""; r.name = name ? name[0].toUpperCase() + name.slice(1).toLowerCase() : "";
+      // superficie scritta nel locale («14,50 m²», «mq 14.5») confrontata con quella calcolata
+      const written = texts.filter(t => inPoly(t.x, t.y, r.pts)).map(t => cleanText(t.text).match(/(?:^|\s)(?:mq|m2|m²|sup\.?|s\s*=)?\s*(\d+[.,]\d+|\d+)\s*(?:mq|m2|m²)?\s*$/i)).find(m => m && /mq|m2|m²|sup|s\s*=/i.test(m[0]));
+      const wa = written ? +written[1].replace(",", ".") : null, A = r.area;
+      r.conf = wa && Math.abs(A - wa) / wa > .01 ? {ok:false, why:`superficie scritta ${String(wa).replace(".", ",")} m², calcolata ${A.toFixed(2).replace(".", ",")} m²`} : A < 2 ? {ok:false, why:"locale molto piccolo"} : {ok:true, ...(wa ? {written:wa} : {})};
       r.mat = /bagn|wc|doccia|lavand|cucin|kitchen|bath|lavanderia|centrale|tecnic/i.test(name) ? "gres" : /terraz|balcon|portic|loggi|cortil/i.test(name) ? "pietra" : /garage|box|cantin|riposti/i.test(name) ? "cemento" : "parquet";
     }
     return rooms;
