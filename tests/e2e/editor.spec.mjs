@@ -916,3 +916,43 @@ test("Importa pianta DWG/DXF: il riconoscimento è la scelta predefinita e porta
   expect(await page.evaluate(() => P.walls.filter(w => w.level === S.level).length)).toBe(5);
   expect(errors).toEqual([]);
 });
+
+test("copertura personalizzata: falde dalla copertura automatica, colmo alzato, vertice trascinato, nuova falda, pendenza, salvataggio", async ({ page }) => {
+  const errors = await open(page);
+  await page.evaluate(() => { PREFS.introDone = true; setSel([]); renderInspector(); });
+  await page.selectOption("#lRoof", "custom");
+  const R = () => page.evaluate(() => JSON.parse(JSON.stringify(level().roof)));
+  let r = await R(); expect(r.type).toBe("custom"); expect(r.falde.length).toBe(2);
+  const roofMeshes = () => page.evaluate(() => { let n = 0, g = 0; modelGroup.traverse(o => { if (o.isMesh && o.userData.cat === "roof") n++; if (o.isMesh && o.userData.cat === "gable") g++; }); return [n, g]; });
+  expect((await roofMeshes())[0]).toBeGreaterThan(0); expect((await roofMeshes())[1]).toBeGreaterThan(0);   // falde e timpani
+  await page.click("#rfEdit");
+  await expect(page.locator("#rfSec")).toBeVisible();
+  // clic su un punto del colmo (quota più alta): la quota cambia anche nell'altra falda
+  const scr = p => page.evaluate(p => { const s = toS(p), r = c2d.getBoundingClientRect(); return [r.left + s[0], r.top + s[1]]; }, p);
+  const ridge = r.falde[0].pts.reduce((a, p) => p[2] > a[2] ? p : a);
+  let s = await scr(ridge); await page.mouse.click(s[0], s[1]);
+  await expect(page.locator("#rfH")).toBeVisible();
+  await page.fill("#rfH", "5,50"); await page.locator("#rfH").press("Enter"); await page.waitForTimeout(250);
+  r = await R(); const hits = r.falde.flatMap(f => f.pts).filter(p => Math.hypot(p[0] - ridge[0], p[1] - ridge[1]) < 1e-3);
+  expect(hits.length).toBe(2); expect(hits.every(p => Math.abs(p[2] - 5.5) < 1e-6)).toBe(true);
+  // trascinamento del vertice: si muovono insieme i punti condivisi
+  s = await scr(ridge); const s2 = await scr([ridge[0] - 1, ridge[1]]);
+  await page.mouse.move(s[0], s[1]); await page.mouse.down(); await page.mouse.move(s2[0], s2[1], { steps: 5 }); await page.mouse.up(); await page.waitForTimeout(250);
+  r = await R(); expect(r.falde.flatMap(f => f.pts).filter(p => Math.abs(p[0] - (ridge[0] - 1)) < .06 && Math.abs(p[1] - ridge[1]) < .06).length).toBe(2);
+  // nuova falda disegnata: tre clic e Invio
+  await page.click("#rfNew");
+  for (const p of [[2, 10], [5, 10], [3.5, 12]]){ const q = await scr(p); await page.mouse.click(q[0], q[1]); }
+  await page.keyboard.press("Enter"); await page.waitForTimeout(250);
+  r = await R(); expect(r.falde.length).toBe(3);
+  await expect(page.locator("#rfPitch")).toBeVisible();
+  await page.fill("#rfPitch", "30"); await page.locator("#rfPitch").press("Enter"); await page.waitForTimeout(250);
+  expect(await page.evaluate(() => faldaPitch(level().roof.falde[2]))).toBeCloseTo(30, 0);
+  await page.keyboard.press("Delete"); await page.waitForTimeout(200);
+  expect((await R()).falde.length).toBe(2);
+  await page.keyboard.press("Escape"); expect(await page.evaluate(() => S.tool)).toBe("select");
+  // salvataggio e riapertura: le falde restano
+  await page.reload(); await page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function"); await page.waitForTimeout(1200);
+  r = await R(); expect(r.type).toBe("custom"); expect(r.falde.length).toBe(2);
+  expect(await page.evaluate(() => customRoofArea(level()))).toBeGreaterThan(100);
+  expect(errors).toEqual([]);
+});

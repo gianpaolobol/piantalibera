@@ -49,6 +49,7 @@ function renderInspector(){
     h += `<div class="sec"><h3>Quote</h3><p class="note">Clic sul primo e sul secondo punto (agganciano estremi e punti medi dei muri), poi sposta il mouse per la distanza della quota e clic. La quota si seleziona, si sposta e si elimina come gli altri elementi.</p>
       <label class="chk"><input type="checkbox" id="autoDimsChk" ${PREFS.autoDims?"checked":""}> Mostra la lunghezza di tutti i muri</label></div>`;
   }
+  else if (S.tool === "roof") h += roofToolHTML();
   else if (["door","window"].includes(S.tool)){
     const d = S.tool === "door" ? S.defaults.door : S.defaults.win;
     h += `<div class="sec"><h3>${S.tool==="door"?"Nuove porte":"Nuove finestre"}</h3><div class="row3">${F("dOw","Larghezza",fmt(d.w),'inputmode="decimal"')}${F("dOh","Altezza",fmt(d.h),'inputmode="decimal"')}${S.tool==="window"?F("dOs","Davanzale",fmt(d.sill),'inputmode="decimal"'):""}</div>${openingDefaultsHTML()}<p class="note">Misure in metri. Clicca su un muro per inserire.</p></div>`;
@@ -92,12 +93,12 @@ function renderInspector(){
   if (!sel && S.tool !== "furn" && S.tool !== "calib" && S.tool !== "paint"){
     const U = L.underlay;
     // primi passi (U12): tre punti di partenza finché l'utente non chiude il riquadro
-    if (!PREFS.introDone && !S.viewer && !S.guest) h += `<div class="sec intro"><h3>Per iniziare</h3><p class="note">Disegna, importa o parti dall'esempio. Clic su un elemento per vederne le proprietà; <kbd>?</kbd> mostra tutte le scorciatoie.</p>
+    if (!PREFS.introDone && !S.viewer && !S.guest && S.tool !== "roof") h += `<div class="sec intro"><h3>Per iniziare</h3><p class="note">Disegna, importa o parti dall'esempio. Clic su un elemento per vederne le proprietà; <kbd>?</kbd> mostra tutte le scorciatoie.</p>
       <div class="btns"><button class="btn primary" id="inRoom">Disegna una stanza</button><button class="btn" id="inImport">Importa una pianta</button><button class="btn" id="inNew">Progetto vuoto</button><button class="btn" id="inClose" aria-label="Chiudi i primi passi">Ho capito</button></div></div>`;
     h += `<div class="sec"><h3>Piano</h3>${F("lName","Nome",L.name)}<div class="row3">${F("lElev","Quota (m)",fmt(L.elev),'inputmode="decimal"')}${F("lH","Altezza muri",fmt(L.height),'inputmode="decimal"')}${F("lSlab","Solaio",fmt(L.slab),'inputmode="decimal"')}</div>
-      <div class="row"><div class="f"><span class="lbl">Copertura</span><select id="lRoof" class="inp"><option value="none">Nessuna</option><option value="flat">Piana</option><option value="gable">A due falde</option><option value="hip">A padiglione (quattro falde)</option><option value="shed">A una falda</option></select></div>
+      <div class="row"><div class="f"><span class="lbl">Copertura</span><select id="lRoof" class="inp"><option value="none">Nessuna</option><option value="flat">Piana</option><option value="gable">A due falde</option><option value="hip">A padiglione (quattro falde)</option><option value="shed">A una falda</option><option value="custom">Personalizzata (falde modificabili)</option></select></div>
       ${["gable","hip","shed"].includes(L.roof.type)?F("lPitch","Pendenza °",L.roof.pitch,'inputmode="decimal"'):"<div></div>"}</div>
-      ${L.roof.type!=="none"?`<div class="row">${F("lOv","Sporto (m)",fmt(L.roof.overhang),'inputmode="decimal"')}${L.roof.type==="shed"?`<div class="f"><span class="lbl">La falda scende verso</span><select id="lShedDir" class="inp">${[["s","Sud (basso in pianta)"],["n","Nord"],["e","Est"],["o","Ovest"]].map(([k,n])=>`<option value="${k}" ${(L.roof.dir||"s")===k?"selected":""}>${n}</option>`).join("")}</select></div>`:L.roof.type==="gable"?`<div class="f"><span class="lbl">Colmo</span><select id="lRidge" class="inp"><option value="">Lato lungo</option><option value="x" ${L.roof.ridge==="x"?"selected":""}>Est–ovest</option><option value="y" ${L.roof.ridge==="y"?"selected":""}>Nord–sud</option></select></div>`:"<div></div>"}</div><span class="lbl">Manto</span>${swatches(ROOF_MATS, L.roof.mat, "roofm")}`:""}
+      ${L.roof.type==="custom"?roofCustomHTML(L):""}${L.roof.type!=="none"?`<div class="row">${L.roof.type==="custom"?"<div></div>":F("lOv","Sporto (m)",fmt(L.roof.overhang),'inputmode="decimal"')}${L.roof.type==="shed"?`<div class="f"><span class="lbl">La falda scende verso</span><select id="lShedDir" class="inp">${[["s","Sud (basso in pianta)"],["n","Nord"],["e","Est"],["o","Ovest"]].map(([k,n])=>`<option value="${k}" ${(L.roof.dir||"s")===k?"selected":""}>${n}</option>`).join("")}</select></div>`:L.roof.type==="gable"?`<div class="f"><span class="lbl">Colmo</span><select id="lRidge" class="inp"><option value="">Lato lungo</option><option value="x" ${L.roof.ridge==="x"?"selected":""}>Est–ovest</option><option value="y" ${L.roof.ridge==="y"?"selected":""}>Nord–sud</option></select></div>`:"<div></div>"}</div><span class="lbl">Manto</span>${swatches(ROOF_MATS, L.roof.mat, "roofm")}`:""}
       ${P.levels.length>1?`<div class="btns"><button class="btn danger" id="lDel">Elimina piano</button></div>`:""}${levelsTableHTML()}</div>${camerasHTML()}
       ${U?`<div class="sec"><h3>Base di ricalco</h3><div class="f"><label class="lbl" for="uOp">Opacità</label><input type="range" id="uOp" min="0.05" max="1" step="0.05" value="${U.opacity}"></div><div class="btns"><button class="btn" data-tool-go="calib">Calibra scala</button><button class="btn" data-tool-go="moveunder">Sposta</button><button class="btn danger" id="uDel">Rimuovi</button></div></div>`:""}
       <div class="sec"><h3>Vista 3D</h3><div class="seg" id="show3d"><button data-s="all">Tutto</button><button data-s="below">Fino a questo piano</button><button data-s="section">Sezione</button></div>
@@ -148,7 +149,7 @@ P_.addEventListener("change", e => {
     case "lElev": if (v!==null){ L.elev = v; commit(); } break;
     case "lH": if (v>0){ L.height = v; commit(); } break;
     case "lSlab": if (v>0){ L.slab = v; commit(); } break;
-    case "lRoof": L.roof.type = e.target.value; commit(); break;
+    case "lRoof": setRoofType(L, e.target.value); commit(); break;
     case "wallRef": PREFS.wallRef = e.target.value; savePrefs(); draw2D(); break;
     case "rectRef": PREFS.rectRef = e.target.value; savePrefs(); draw2D(); break;
     case "autoDimsChk": PREFS.autoDims = e.target.checked; savePrefs(); renderStatus(); draw2D(); break;

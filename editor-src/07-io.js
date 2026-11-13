@@ -126,7 +126,7 @@ async function exportAI(){
 }
 function aiPrompt(){
   const ws = P.walls, mats = [...new Set(ws.map(w=>matName(w.mat).toLowerCase()))], floors = [...new Set(P.rooms.map(r=>matName(r.mat).toLowerCase()))];
-  const roofL = P.levels.find(l=>l.roof?.type !== "none"), roof = roofL ? ({gable:`tetto a due falde in ${matName(roofL.roof.mat).toLowerCase()}`, hip:`tetto a padiglione in ${matName(roofL.roof.mat).toLowerCase()}`, shed:`tetto a una falda in ${matName(roofL.roof.mat).toLowerCase()}`}[roofL.roof.type] || `copertura piana`) : "";
+  const roofL = P.levels.find(l=>l.roof?.type !== "none"), roof = roofL ? ({gable:`tetto a due falde in ${matName(roofL.roof.mat).toLowerCase()}`, hip:`tetto a padiglione in ${matName(roofL.roof.mat).toLowerCase()}`, shed:`tetto a una falda in ${matName(roofL.roof.mat).toLowerCase()}`, custom:`tetto a falde in ${matName(roofL.roof.mat).toLowerCase()}`}[roofL.roof.type] || `copertura piana`) : "";
   const el = P.sun.el, luce = el < 0 ? "scena notturna, cielo scuro, luci artificiali accese all'interno e calde riflessioni" : el < 12 ? "luce radente del tramonto, toni caldi" : el < 30 ? "luce del pomeriggio, ombre lunghe e morbide" : "luce piena del giorno, cielo con nuvole leggere";
   const trees = [...new Set(P.objects.filter(o => LIBMAP[libRef(o.ref)]?.cat === "Verde").map(o => LIBMAP[libRef(o.ref)].nome.toLowerCase()))];
   const people = P.objects.some(o => LIBMAP[libRef(o.ref)]?.cat === "Persone");
