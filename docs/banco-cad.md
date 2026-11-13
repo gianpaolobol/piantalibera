@@ -146,6 +146,17 @@ Richiesta del titolare: davanzale dalle quote «HB» quando ci sono, altrimenti 
 
 Misure: banco sintetico tipo d'apertura giusto 99,6 → **100,0 %**, dubbi 0,8 → 0,7 per pianta, errori non segnalati 72 → 71 (su 200 piante; il rapporto «errori segnalati» passa da 86,8 a 86,6 % perché spariscono 14 errori di tipo che erano tutti segnalati); muri, aperture trovate e locali invariati. Banco reale: superfici invariate; 320 aperture su 2.163 con misura scritta confermata, 84 portefinestre, 8 alzatine, 87 davanzali da «hb», 95 misure che non tornano segnalate come dubbi.
 
+## Scale, gradini esterni e layer «costruzioni» (13/11/2026)
+
+Richiesta del titolare: le scale esterne venivano riconosciute come muri.
+
+- **Rampe e gradini** (`findStairs`, prima dei muri): serie di almeno 3 linee parallele a passo regolare 20–45 cm. «Rampa dritta»: pedate della stessa lunghezza (≤ 2,2 m) allineate; «gradini»: rettangoli concentrici aperti su un lato (gradini esterni su tre lati), ogni linea più lunga della precedente di due passi. Il verso di salita viene dalla freccia (linea che attraversa le pedate con la punta); i gradini salgono verso la linea più corta (l'edificio) e il blocco parte dal fronte più esterno. Due rampe affiancate = scala a U. Le linee usate (pedate, fianchi, cosciali, freccia) non diventano muri; fianchi e freccia si cercano solo fra le linee della stessa provenienza e mai sul layer dei muri.
+- **Layer delle scale** («1-SCALA», «scale», «stair»…): escluso dai muri come prima, ma ora le sue linee vanno al riconoscimento delle scale (fino a 3 m fuori dal disegno della pianta, per i gradini esterni, esclusi gli altri disegni della tavola). Se vicino a una scala restano più di 2 linee del layer non spiegate (gradini a ventaglio, rampe spezzate) la scala è un **dubbio** «riconosciuta in parte»; senza freccia il verso è un dubbio.
+- **Nel modello**: ogni scala diventa un oggetto scala parametrico (dritta o a U; gradini esterni come scala dritta in pietra senza ringhiera, alzata 16 cm) con larghezza, pedata, numero di gradini, posizione e rotazione; le scale interne arrivano al piano di sopra e hanno il corrimano. Nella revisione compaiono in verde con la freccia.
+- **Layer «costruzioni»** fra gli indizi del layer dei muri (con «muri», «wall», «parete»…): nelle tavole di uno studio i muri stanno su «-COSTRUZIONI». Senza questo indizio i muri antichi di spessore vario (28–45 cm) dipendevano dall'istogramma degli spessori, che le linee dei gradini a passo 30 cm falsavano.
+
+Misure. Banco sintetico invariato (muri, aperture, locali, dubbi). Banco reale: superfici dentro un locale 47,9 → **49,0 %**, esatte (±1 %) 17,2 → **17,6 %**, entro il 3 % 25,4 → **26,2 %**; 309 scale nelle 57 piante (148 a U, 135 rampe dritte, 26 gradini esterni), 275 da controllare (soprattutto nella tavola condominiale con le frecce corte e nelle scale a ventaglio). Una pianta peggiora (2 superfici su 4: un tratto di muro esterno su un altro layer), quattro migliorano (una passa da 9 a 10 locali su 10 e da 2 a 5 superfici esatte).
+
 ## Prossimo passo
 
 Banco reale appena il titolare fornisce le piante; poi modello addestrato (fase D) per i disegni più disordinati e altezze e più piani (fase E).

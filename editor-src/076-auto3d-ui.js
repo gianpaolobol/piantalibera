@@ -97,7 +97,8 @@ function a3Recognize(){
   // linee dei layer delle scale (escluse dai muri): servono a riconoscere rampe e gradini
   const f = A3S.files.find(x => x.name === pc.file), u = f?.unit || 1, [bx0b, by0b, bx1b, by1b] = pc.bbox;
   const stairSegs = f ? f.flat.segs.filter(s => A3S.layersOff.has(s[4]) && A3_STAIR_LAYERS.test(s[4])).map(s => [s[0]*u, s[1]*u, s[2]*u, s[3]*u, s[4]])
-    .filter(s => Math.min(s[0], s[2]) >= bx0b - .5 && Math.max(s[0], s[2]) <= bx1b + .5 && Math.min(s[1], s[3]) >= by0b - .5 && Math.max(s[1], s[3]) <= by1b + .5).map(s => [...toApp(s[0], s[1]), ...toApp(s[2], s[3]), s[4]]) : [];
+    .filter(s => Math.min(s[0], s[2]) >= bx0b - 3 && Math.max(s[0], s[2]) <= bx1b + 3 && Math.min(s[1], s[3]) >= by0b - 3 && Math.max(s[1], s[3]) <= by1b + 3
+      && !A3S.clusters.some(c => c !== pc && c.file === pc.file && (s[0] + s[2]) / 2 >= c.bbox[0] && (s[0] + s[2]) / 2 <= c.bbox[2] && (s[1] + s[3]) / 2 >= c.bbox[1] && (s[1] + s[3]) / 2 <= c.bbox[3])).map(s => [...toApp(s[0], s[1]), ...toApp(s[2], s[3]), s[4]]) : [];
   busy("Riconosco muri, aperture e locali…");
   try {
     const pr = A3.analyzePlan(segs, arcs, texts, {stairSegs});

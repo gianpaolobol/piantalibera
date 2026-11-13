@@ -134,3 +134,21 @@ test("etichette delle aperture: L/H confermata dalla larghezza, hb davanzale e a
   const sills = m.openings.filter(o => o.type === "window").map(o => o.sill).sort();
   assert.deepEqual(sills, [.85, 1]);
 });
+
+test("scale: gradini esterni su tre lati e rampa con freccia diventano scale, non muri", () => {
+  const d = planDrawing(), base = A3.analyzePlan(d.segs, d.arcs, d.texts);
+  const extra = [];
+  // tre gradini davanti al muro sud (faccia esterna a y = 8), passo 30 cm, aperti verso l'edificio
+  for (let k = 0; k < 3; k++){ const o = .3 * (k + 1); extra.push([2.5 - .8 - o, 8 + o, 2.5 + .8 + o, 8 + o, "0"], [2.5 - .8 - o, 8, 2.5 - .8 - o, 8 + o, "0"], [2.5 + .8 + o, 8, 2.5 + .8 + o, 8 + o, "0"]); }
+  // rampa interna di 8 pedate da 90 cm con la freccia che sale verso y crescenti, sul layer delle scale (passato a parte)
+  const stairSegs = []; for (let i = 0; i <= 8; i++) stairSegs.push([6, 2 + i * .28, 6.9, 2 + i * .28, "SCALA"]);
+  stairSegs.push([6.45, 2.05, 6.45, 4.2, "SCALA"], [6.45, 4.2, 6.35, 4.0, "SCALA"], [6.45, 4.2, 6.55, 4.0, "SCALA"]);
+  const r = A3.analyzePlan([...d.segs, ...extra], d.arcs, d.texts, { stairSegs });
+  assert.equal(r.walls.length, base.walls.length, "i gradini non diventano muri");
+  const g = r.stairs.find(s => s.shape === "gradini"), f = r.stairs.find(s => s.shape === "dritta");
+  assert.ok(g && f, JSON.stringify(r.stairs));
+  assert.equal(g.steps, 3); assert.deepEqual(g.dir.map(v => Math.round(v) + 0), [0, -1], "salgono verso l'edificio");
+  assert.ok(Math.abs(g.center[1] - 8.45) < .02 && Math.abs(g.center[0] - 2.5) < .02, JSON.stringify(g.center));
+  assert.equal(f.steps, 8); assert.equal(f.known, true); assert.deepEqual(f.dir.map(v => Math.round(v) + 0), [0, 1]); assert.equal(f.conf.ok, true);
+  assert.ok(Math.abs(f.w - .9) < .01 && Math.abs(f.tread - .28) < .01);
+});

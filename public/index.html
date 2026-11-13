@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-1+o3YhLFelAtgGJRp4jzTHKE4FtVphyykSSzCjIHRJE=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-wy+jXaerYiSRj2paWKfL+OG1Ioz0BirsGgZ+6bnq+AA=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4152,7 +4152,7 @@ const A3 = (() => {
           const run = [list[i]]; let step = null;
           for (let j = i + 1; j < list.length; j++){ const p = run[run.length - 1], q = list[j], d = q.off - p.off; if (d < .2) continue; if (d > .45) break; if (taken.has(q) || used.has(q.i)) continue;
             if (step !== null && Math.abs(d - step) > .035) continue;
-            const ok = kind === "dritta" ? Math.abs(p.a - q.a) < .1 && Math.abs(p.b - q.b) < .1
+            const ok = kind === "dritta" ? Math.abs(p.a - q.a) < .1 && Math.abs(p.b - q.b) < .1 && q.L <= 2.2 && p.L <= 2.2
               : (Math.abs((p.a - q.a) - d) < .1 && Math.abs((q.b - p.b) - d) < .1) || (Math.abs((q.a - p.a) - d) < .1 && Math.abs((p.b - q.b) - d) < .1);
             if (!ok) continue; if (step === null) step = d; run.push(q); }
           // gradini concentrici: l'ordine delle lunghezze deve essere monotono (tutti crescono o tutti calano)
@@ -4166,26 +4166,26 @@ const A3 = (() => {
     // frecce: linea perpendicolare alle pedate che ne attraversa almeno due, con la punta (due tratti corti che si incontrano a un estremo)
     const shorts = segs.map((s, i) => ({s, i, L:segLen(s)})).filter(x => x.L > .05 && x.L < .45);
     const tip = (P) => shorts.filter(x => Math.hypot(x.s[0] - P[0], x.s[1] - P[1]) < .03 || Math.hypot(x.s[2] - P[0], x.s[3] - P[1]) < .03).length >= 2;
-    const out = [];
+    const out = [], WALLY = /mur|wall|parete|tamponam|tramezz|costru/i, same = (j, f) => (j >= extraFrom) === (f.run[0].i >= extraFrom) && !WALLY.test(segs[j][4] || "");
     for (const f of flights){
       const offs = f.run.map(x => x.off), o0 = Math.min(...offs), o1 = Math.max(...offs), A = Math.max(...f.run.map(x => x.a)), B = Math.min(...f.run.map(x => x.b));
       const lo = f.kind === "dritta" ? median(f.run.map(x => x.a)) : Math.min(...f.run.map(x => x.a)), hi = f.kind === "dritta" ? median(f.run.map(x => x.b)) : Math.max(...f.run.map(x => x.b));
       const w = f.kind === "dritta" ? median(f.run.map(x => x.L)) : Math.max(...f.run.map(x => x.L));
       // verso: +1 sale verso offset crescente
       let up = 0;
-      for (let j = 0; j < segs.length && !up; j++){ const s = segs[j], L = segLen(s); if (L < 2 * f.step || used.has(j) || f.run.some(x => x.i === j)) continue;
+      for (let j = 0; j < segs.length && !up; j++){ const s = segs[j], L = segLen(s); if (L < 2 * f.step || used.has(j) || f.run.some(x => x.i === j) || !same(j, f)) continue;
         const dv = [(s[2]-s[0]) / L, (s[3]-s[1]) / L]; if (Math.abs(dv[0]*f.n[0] + dv[1]*f.n[1]) < .97) continue;
         const along = ((s[0] + s[2]) / 2) * f.u[0] + ((s[1] + s[3]) / 2) * f.u[1]; if (along < A || along > B) continue;
         const e0 = s[0]*f.n[0] + s[1]*f.n[1], e1 = s[2]*f.n[0] + s[3]*f.n[1]; if (Math.min(e0, e1) > o0 + f.step || Math.max(e0, e1) < o1 - f.step) continue;
         const t0 = tip([s[0], s[1]]), t1 = tip([s[2], s[3]]); if (t0 !== t1){ up = (t1 ? e1 - e0 : e0 - e1) > 0 ? 1 : -1; used.add(j); const P = t1 ? [s[2], s[3]] : [s[0], s[1]];
-          for (const x of shorts) if (Math.hypot(x.s[0] - P[0], x.s[1] - P[1]) < .03 || Math.hypot(x.s[2] - P[0], x.s[3] - P[1]) < .03) used.add(x.i); } }
+          for (const x of shorts) if (same(x.i, f) && Math.hypot(x.s[0] - P[0], x.s[1] - P[1]) < .03 || Math.hypot(x.s[2] - P[0], x.s[3] - P[1]) < .03) used.add(x.i); } }
       if (!up && f.kind === "gradini"){ const sh = f.run.reduce((m, x) => x.L < m.L ? x : m); up = sh.off > (o0 + o1) / 2 ? 1 : -1; }
       for (const x of f.run) used.add(x.i);
       // fianchi: linee perpendicolari alle pedate che toccano i loro estremi (gradini) o le fiancheggiano per tutta la rampa (cosciali)
       const ends = f.run.flatMap(x => [[x.s[0], x.s[1]], [x.s[2], x.s[3]]]);
-      segs.forEach((s, j) => { if (used.has(j)) return; const L = segLen(s); if (L < .05) return; const dv = [(s[2]-s[0]) / L, (s[3]-s[1]) / L]; if (Math.abs(dv[0]*f.n[0] + dv[1]*f.n[1]) < .99) return;
+      segs.forEach((s, j) => { if (used.has(j) || !same(j, f)) return; const L = segLen(s); if (L < .05) return; const dv = [(s[2]-s[0]) / L, (s[3]-s[1]) / L]; if (Math.abs(dv[0]*f.n[0] + dv[1]*f.n[1]) < .99) return;
         const pa = s[0]*f.u[0] + s[1]*f.u[1], e0 = s[0]*f.n[0] + s[1]*f.n[1], e1 = s[2]*f.n[0] + s[3]*f.n[1];
-        if (f.kind === "gradini" ? ends.some(P => Math.hypot(P[0] - s[0], P[1] - s[1]) < .03 || Math.hypot(P[0] - s[2], P[1] - s[3]) < .03) && L <= o1 - o0 + f.step + .05
+        if (f.kind === "gradini" ? ends.some(P => Math.hypot(P[0] - s[0], P[1] - s[1]) < .03 || Math.hypot(P[0] - s[2], P[1] - s[3]) < .03) && L <= o1 - o0 + f.step + 3
           : (Math.abs(pa - lo) < .06 || Math.abs(pa - hi) < .06) && Math.min(e0, e1) > o0 - f.step - .05 && Math.max(e0, e1) < o1 + f.step + .05 && L > .5 * (o1 - o0)) used.add(j); });
       const c = (lo + hi) / 2, steps = f.kind === "gradini" ? f.run.length : f.run.length - 1;
       // gradini esterni: il blocco parte dal fronte più esterno e sale verso l'edificio per «steps» pedate
@@ -4238,7 +4238,7 @@ const A3 = (() => {
     for (const i of order){ if (!cur || segs[i].ang - cur.last > D2R * .6){ cur = {ids:[], last:segs[i].ang}; groups.push(cur); } cur.ids.push(i); cur.last = segs[i].ang; }
     if (groups.length > 1 && (Math.PI - groups[groups.length-1].last) + segs[groups[0].ids[0]].ang < D2R * .6){ groups[0].ids.push(...groups.pop().ids); }
     // layer dei muri come primo indizio: se c'è (MURI, WALL, A-WALL…) e porta almeno un quarto delle linee, le facce si cercano solo lì
-    const WALL_L = /mur|wall|parete|tamponam|tramezz/i, wallLen = segs.reduce((t, x) => t + (WALL_L.test(x.s[4] || "") ? x.L : 0), 0), allLen = segs.reduce((t, x) => t + x.L, 0);
+    const WALL_L = /mur|wall|parete|tamponam|tramezz|costru/i, wallLen = segs.reduce((t, x) => t + (WALL_L.test(x.s[4] || "") ? x.L : 0), 0), allLen = segs.reduce((t, x) => t + x.L, 0);
     const wallOnly = opt.wallLayer !== false && wallLen >= .25 * allLen ? i => WALL_L.test(segs[i].s[4] || "") : null;
     // con il layer dei muri si accetta ogni spessore plausibile, anche i muri antichi fino a 80 cm, senza chiedere che si ripeta
     if (wallOnly && opt.maxThick == null) maxT = .8;
@@ -4797,7 +4797,8 @@ function a3Recognize(){
   // linee dei layer delle scale (escluse dai muri): servono a riconoscere rampe e gradini
   const f = A3S.files.find(x => x.name === pc.file), u = f?.unit || 1, [bx0b, by0b, bx1b, by1b] = pc.bbox;
   const stairSegs = f ? f.flat.segs.filter(s => A3S.layersOff.has(s[4]) && A3_STAIR_LAYERS.test(s[4])).map(s => [s[0]*u, s[1]*u, s[2]*u, s[3]*u, s[4]])
-    .filter(s => Math.min(s[0], s[2]) >= bx0b - .5 && Math.max(s[0], s[2]) <= bx1b + .5 && Math.min(s[1], s[3]) >= by0b - .5 && Math.max(s[1], s[3]) <= by1b + .5).map(s => [...toApp(s[0], s[1]), ...toApp(s[2], s[3]), s[4]]) : [];
+    .filter(s => Math.min(s[0], s[2]) >= bx0b - 3 && Math.max(s[0], s[2]) <= bx1b + 3 && Math.min(s[1], s[3]) >= by0b - 3 && Math.max(s[1], s[3]) <= by1b + 3
+      && !A3S.clusters.some(c => c !== pc && c.file === pc.file && (s[0] + s[2]) / 2 >= c.bbox[0] && (s[0] + s[2]) / 2 <= c.bbox[2] && (s[1] + s[3]) / 2 >= c.bbox[1] && (s[1] + s[3]) / 2 <= c.bbox[3])).map(s => [...toApp(s[0], s[1]), ...toApp(s[2], s[3]), s[4]]) : [];
   busy("Riconosco muri, aperture e locali…");
   try {
     const pr = A3.analyzePlan(segs, arcs, texts, {stairSegs});
