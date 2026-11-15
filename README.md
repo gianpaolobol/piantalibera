@@ -1,5 +1,8 @@
 # Pianta Libera
 
+> **Copyright © 2026 Gian Paolo Franceschini** (limitatamente ai contributi originali di sua legittima titolarità). Il codice coperto da [GNU AGPL-3.0](LICENSE) rimane utilizzabile, modificabile e redistribuibile secondo i termini di quella licenza; restano fermi i diritti e le licenze dei terzi.
+
+
 Web app per modellare architettura in pianta e in 3D (interni ed esterni) e ottenere render fotorealistici **a partire dalla scena modellata**.
 
 ## Prova
