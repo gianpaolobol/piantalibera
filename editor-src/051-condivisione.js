@@ -147,7 +147,7 @@ function viewerPanelHTML(){
     <p class="note">Gira il modello nel 3D, prova «A piedi» per camminare dentro, cambia piano dalle schede sopra la pianta. Per lasciare un commento premi il pulsante qui sotto e poi clicca il punto della pianta.</p></div>
     ${open ? `<div class="sec"><h3>Commento ${S.comments.indexOf(open) + 1}</h3><p><b>${esc(open.author)}</b>: ${esc(open.text)}</p>${open.cam ? `<button class="btn" data-cgo="${esc(open.id)}">Vista 3D del commento</button>` : ""}</div>` : ""}
     <div class="sec"><h3>Nuovo commento</h3>
-      ${d?.at ? `${F("cmAuthor", "Il tuo nome", PREFS.cmAuthor || "", 'maxlength="60" autocomplete="name"')}<div class="f"><label class="lbl" for="cmText">Commento</label><textarea id="cmText" class="inp" maxlength="1000" placeholder="Es. qui vorremmo una finestra più grande"></textarea></div>
+      ${d?.at ? `${F("cmAuthor", "Il tuo nome", PREFS.cmAuthor || "", 'maxlength="60" autocomplete="name"')}<div class="f"><label class="lbl" for="cmText">Commento</label><textarea id="cmText" class="inp" maxlength="1000" placeholder="Es. qui vorremmo una finestra più grande">${esc(SH.cmDraft || "")}</textarea></div>
         <label class="chk"><input type="checkbox" id="cmCam" checked> Allega la vista 3D che vedo ora</label>${SH.cfg?.turnstile ? `<div id="cmTs" class="ts"></div>` : ""}
         <div class="btns"><button class="btn primary" id="cmSend">Invia il commento</button><button class="btn" id="cmCancel">Annulla</button></div>`
         : `<div class="btns"><button class="btn primary" id="cmAdd" aria-pressed="${v.adding}">${v.adding ? "Clicca il punto in pianta…" : "Aggiungi un commento"}</button></div>`}
@@ -159,14 +159,14 @@ $("#panel-props").addEventListener("click", async e => {
   if (!S.viewer) return; const b = e.target.closest("button"); if (!b) return; const v = S.viewer;
   if (b.dataset.cgo){ focusComment(b.dataset.cgo); return; }
   if (b.id === "cmAdd"){ v.adding = !v.adding; renderInspector(); return; }
-  if (b.id === "cmCancel"){ v.draft = null; v.adding = false; renderInspector(); draw2D(); return; }
+  if (b.id === "cmCancel"){ v.draft = null; v.adding = false; SH.cmDraft = ""; renderInspector(); draw2D(); return; }
   if (b.id === "cmSend"){
     const text = $("#cmText").value.trim(), author = $("#cmAuthor").value.trim(), st = $("#cmStatus");
     if (!text){ st.textContent = "Scrivi il commento."; st.className = "status err"; return; }
     if (SH.cfg?.turnstile && !SH.ts){ st.textContent = "Completa la verifica anti-bot."; st.className = "status err"; return; }
     PREFS.cmAuthor = author; savePrefs(); b.disabled = true;
     try { const c = await shareFetch(`/${v.id}/comments`, {method:"POST", body:JSON.stringify({author, text, level:v.draft.level, at:v.draft.at, cam:$("#cmCam").checked ? camState() : null, turnstile:SH.ts})});
-      S.comments.push(c); v.draft = null; v.adding = false; v.open = c.id; resetShareTs(); renderInspector(); draw2D(); toast("Commento inviato"); }
+      S.comments.push(c); v.draft = null; v.adding = false; v.open = c.id; SH.cmDraft = ""; resetShareTs(); renderInspector(); draw2D(); toast("Commento inviato"); }
     catch(err){ st.textContent = "Non inviato: " + err.message; st.className = "status err"; b.disabled = false; resetShareTs(); }
   }
 });
@@ -246,3 +246,9 @@ async function guestClick(b){
       try { localStorage.removeItem(guestKey(g.id)); } catch(e){} location.reload(); }
   } catch(err){ shareStatus("Non riuscito: " + err.message, true); b.disabled = false; resetShareTs(); }
 }
+
+/* nome e bozza del commento conservati mentre si scrive: un ridisegno del pannello (dati condivisi che arrivano, verifica anti-bot)
+   non deve cancellare quello che il cliente ha appena digitato */
+document.addEventListener("input", e => { const t = e.target;
+  if (t.id === "cmAuthor" || t.id === "gAuthor") PREFS.cmAuthor = t.value;
+  if (t.id === "cmText") SH.cmDraft = t.value; });

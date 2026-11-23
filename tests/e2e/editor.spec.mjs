@@ -372,7 +372,10 @@ test("fase 4: link per il cliente in sola lettura con commenti in pianta", async
   await v.keyboard.press("Delete");
   expect(await v.evaluate(() => JSON.stringify(P.walls))).toBe(before);
   await v.click("#cmAdd"); const sp = await v.evaluate(() => toS([3, 3])); await v.mouse.click(vb.x + sp[0], vb.y + sp[1]);
-  await v.fill("#cmAuthor", "Laura"); await v.fill("#cmText", "Finestra più grande qui"); await v.click("#cmSend");
+  await v.fill("#cmAuthor", "Laura"); await v.fill("#cmText", "Finestra più grande qui");
+  await v.evaluate(() => renderInspector());   // un ridisegno mentre si scrive non deve perdere nome e commento
+  await expect(v.locator("#cmAuthor")).toHaveValue("Laura"); await expect(v.locator("#cmText")).toHaveValue("Finestra più grande qui");
+  await v.click("#cmSend");
   await expect(v.locator(".cmts")).toContainText("Finestra più grande qui");
   expect(verr).toEqual([]);
   await page.bringToFront(); await page.click("#shLoad");
