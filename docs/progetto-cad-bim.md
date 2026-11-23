@@ -82,6 +82,27 @@ Debolezze comuni dei concorrenti, cioè le occasioni per fare meglio:
 
 Onestà: il riconoscimento perfetto non esiste. ArchLine.XP dichiara 90–95 % e i migliori modelli di ricerca sono intorno a 91 di PQ sui disegni piccoli. Puntiamo a **superare questi valori sulle piante residenziali e da ristrutturazione** (il lavoro tipico dello studio), con una revisione che renda veloce correggere il resto.
 
+### 3.6 Dove siamo rispetto ai concorrenti (misurato il 23/11/2026)
+
+Confronto sulle capacità del **riconoscimento CAD → BIM**, con le nostre misure sui due banchi (`docs/banco-cad.md`) e quanto i concorrenti dichiarano pubblicamente (§3.1–3.2). I concorrenti non pubblicano misure su tavole reali confrontabili: dove manca il dato lo diciamo.
+
+| Capacità | Pianta Libera | Concorrenti | Esito |
+|---|---|---|---|
+| Ingresso DWG/DXF vettoriale, letto come vettori | sì, nel browser, gratuito, nessun dato inviato | ArchLine.XP sì (desktop, a pagamento); WiseBIM/usBIM.planAI trasformano il DWG in immagine; bimy.ai non legge il DWG; Planner 5D solo via API | **avanti** |
+| Muri trovati (banco sintetico, 200 piante) | 99,8 % trovati, 99,6 % giusti, spessore esatto 99,6 % | ArchLine.XP dichiara 90–95 % | **avanti** (sul sintetico; sul reale i muri non sono ancora misurati uno per uno) |
+| Porte e finestre col tipo giusto (sintetico) | 98,7 % trovate, tipo giusto 100 % | nessun dato pubblicato | — |
+| Locali sulle tavole vere (383 superfici scritte in 46 piante) | 85,1 % in un locale; superficie esatta ±1 % 29,0 %, ±3 % 46,5 % | nessun dato pubblicato | da migliorare: l'obiettivo è l'80 % esatto |
+| Altezze, davanzali, alzatine dal disegno | sì: misure scritte («80/210», «hb 90») confermate dalla larghezza, prospetti, davanzale tipico 1,00 m | WiseBIM e usBIM.planAI: a mano | **avanti** |
+| Scale e gradini | rampe, scale a U e gradini esterni riconosciuti come scale | BIMIFY: fatte a mano dal loro personale; gli altri no | **avanti** |
+| Disegni «sporchi» (campiture, pavimenti disegnati, layer di impianti) | campiture oblique, griglie di piastrelle, spina di pesce, layer di impianti, pavimenti, ombre esclusi | WiseBIM: cartigli scambiati per muri (dichiarato) | **avanti** sui casi provati |
+| Dubbi invece di errori | ogni elemento incerto ha il suo motivo; 27,7 % delle aperture reali da rivedere | bimy.ai: punteggio 0–100 per pianta | **avanti** (motivo per elemento) |
+| Correzioni conservate dopo un nuovo riconoscimento | sì, per posizione | usBIM.planAI le perde | **avanti** |
+| Tempo | ~9 ms per pianta sintetica; le tavole vere più grandi in meno di un minuto | servizi a lotti: minuti od ore | **avanti** |
+| CAD 2D per disegnare e modificare il DWG | non ancora (fasi F–H) | ArchLine.XP, BricsCAD, Archicad: CAD completo | **indietro** |
+| Modello addestrato per simboli disordinati | non ancora (fase D) | WiseBIM, bimy.ai: reti neurali | **indietro** su piante raster e simboli insoliti |
+
+**Lettura onesta.** Sul riconoscimento da DWG vettoriale siamo avanti su quasi tutto ciò che si può confrontare, anche perché i servizi di AI trasformano il DWG in immagine e perdono la precisione delle coordinate. Restano tre distacchi veri: la superficie esatta dei locali sulle tavole vere (29 % contro l'obiettivo dell'80 %), il CAD 2D di disegno e modifica (fasi F–H) e il modello addestrato (fase D). I primi due sono il lavoro dei prossimi giri; per misurare i muri reali uno per uno servono tavole con i muri annotati.
+
 ## 4. I quattro livelli in dettaglio
 
 ### Livello 1 — CAD 2D per il lavoro quotidiano
