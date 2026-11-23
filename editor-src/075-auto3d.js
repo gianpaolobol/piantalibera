@@ -510,11 +510,18 @@ const A3 = (() => {
     const near = (a, x, y, d) => Math.hypot(x - a.cx, y - a.cy) < d;
     const leaf = s => { const L = segLen(s); return doorA.some(a => ((near(a, s[0], s[1], .1) || near(a, s[2], s[3], .1)) && Math.abs(L - a.r) < .12)
       || (L < .08 && near(a, s[0], s[1], a.r + .05) && near(a, s[2], s[3], a.r + .05) && (near(a, s[0], s[1], .1) || !near(a, s[0], s[1], a.r - .15)))); };
-    const segs = segs0.filter(s => !(onArc(s[0], s[1]) && onArc(s[2], s[3])) && !leaf(s));
+    // con un layer dei muri vero (almeno un quarto della lunghezza), il locale si cerca solo tra muri e infissi: arredi, sanitari,
+    // demolizioni, sigle e pavimenti disegnati su altri layer non lo chiudono
+    const WL = /mur|wall|parete|tamponam|tramezz|costru/i, OL = /infiss|serram|porte|porta|finestr|door|window|vetr/i, len = s => segLen(s);
+    const tl = segs0.reduce((t, s) => t + len(s), 0), wl = segs0.reduce((t, s) => t + (WL.test(s[4] || "") ? len(s) : 0), 0);
+    const byLayer = wl >= .25 * tl ? s => WL.test(s[4] || "") || OL.test(s[4] || "") : () => true;
+    const segsAll = segs0.filter(s => !(onArc(s[0], s[1]) && onArc(s[2], s[3])) && !leaf(s)), segs = segsAll.filter(byLayer);
     const seeds = texts.map(t => ({x:t.x, y:t.y, s:cleanText(t.text)})).filter(t => AREA_RE.test(t.s) || ROOM_RE.test(t.s));
-    if (!seeds.length || !segs.length) return;
+    if (!seeds.length || !segsAll.length) return;
     const inP = (x, y, p) => { let c = false; for (let i = 0, j = p.length-1; i < p.length; j = i++) if ((p[i][1] > y) !== (p[j][1] > y) && x < (p[j][0]-p[i][0]) * (y-p[i][1]) / (p[j][1]-p[i][1]) + p[i][0]) c = !c; return c; };
     const isArea = t => AREA_RE.test(t.s);
+    // linee + ponti sui vani + indice spaziale, per un insieme di linee
+    const prep = segs => {
     // ponti sui vani: dall'estremo di un tratto al primo estremo di un tratto parallelo davanti a sé (stessa direzione entro 3°), a 0,5–2,6 m
     const L = segs.filter(s => segLen(s) >= .2).map(s => { const l = segLen(s); return {s, u:[(s[2]-s[0]) / l, (s[3]-s[1]) / l]}; });
     const cellB = 2.6, grid = new Map(), key = (x, y) => Math.floor(x / cellB) + "," + Math.floor(y / cellB);
@@ -529,15 +536,15 @@ const A3 = (() => {
         if (!best || d < best.d) best = {d, Q:q.P, k:[i, q.i].sort().join("-")}; }
       if (best && !seen.has(best.k)){ seen.add(best.k); cand.push({s:[P[0], P[1], best.Q[0], best.Q[1]], u:g.u}); } } });
     for (const b of cand) bridges.push(b.s);
-    const all = [...segs, ...bridges], R = 15;   // finestra di ricerca: 30 × 30 m attorno al testo
+    const all = [...segs, ...bridges];
     // indice spaziale (celle da 5 m): per ogni testo si leggono solo le linee vicine
     const CI = 5, idx = new Map(); all.forEach((s, i) => { for (let a = Math.floor(Math.min(s[0], s[2]) / CI); a <= Math.floor(Math.max(s[0], s[2]) / CI); a++) for (let b = Math.floor(Math.min(s[1], s[3]) / CI); b <= Math.floor(Math.max(s[1], s[3]) / CI); b++){ const k = a + "," + b; (idx.get(k) || idx.set(k, []).get(k)).push(i); } });
-    const nearSegs = (xa, ya, xb, yb) => { const out = new Set(); for (let a = Math.floor(xa / CI); a <= Math.floor(xb / CI); a++) for (let b = Math.floor(ya / CI); b <= Math.floor(yb / CI); b++) for (const i of idx.get(a + "," + b) || []) out.add(i); return [...out].map(i => all[i]); };
-    const done = [];
-    for (const sd of seeds){
-      if (done.some(d => inP(sd.x, sd.y, d.pts))) continue;
-      const host = rooms.find(r => inP(sd.x, sd.y, r.pts));
-      if (host && seeds.filter(t => isArea(t) && inP(t.x, t.y, host.pts)).length < 2) continue;   // già nel suo locale, e da solo
+    return (xa, ya, xb, yb) => { const out = new Set(); for (let a = Math.floor(xa / CI); a <= Math.floor(xb / CI); a++) for (let b = Math.floor(ya / CI); b <= Math.floor(yb / CI); b++) for (const i of idx.get(a + "," + b) || []) out.add(i); return [...out].map(i => all[i]); };
+    };
+    const R = 15;   // finestra di ricerca: 30 × 30 m attorno al testo
+    const nearA = prep(segs); let nearB = null;
+    // regione chiusa attorno al testo con un insieme di linee: sagoma del locale, o null se aperta, troppo piccola o troppo grande
+    const region = (sd, nearSegs) => {
       const x0 = sd.x - R, y0 = sd.y - R, nx = Math.ceil(2 * R / cell), ny = nx, G = new Uint8Array(nx * ny), h = cell * .75;
       const local = nearSegs(x0, y0, x0 + 2*R, y0 + 2*R);
       for (const s of local){ const mnx = Math.min(s[0], s[2]), mxx = Math.max(s[0], s[2]), mny = Math.min(s[1], s[3]), mxy = Math.max(s[1], s[3]);
@@ -547,7 +554,7 @@ const A3 = (() => {
         for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++){ const px = x0 + (i+.5)*cell - s[0], py = y0 + (j+.5)*cell - s[1], t = px*u[0] + py*u[1], o = -px*u[1] + py*u[0];
           if (t >= -h && t <= Ls + h && Math.abs(o) <= h) G[j*nx + i] = 1; } }
       let k0 = Math.floor((sd.y - y0)/cell) * nx + Math.floor((sd.x - x0)/cell);
-      if (G[k0]){ let f = -1; for (let r2 = 1; r2 <= 4 && f < 0; r2++) for (const [di, dj] of [[r2,0],[-r2,0],[0,r2],[0,-r2]]){ const k = k0 + dj*nx + di; if (k >= 0 && k < G.length && !G[k]){ f = k; break; } } if (f < 0) continue; k0 = f; }
+      if (G[k0]){ let f = -1; for (let r2 = 1; r2 <= 4 && f < 0; r2++) for (const [di, dj] of [[r2,0],[-r2,0],[0,r2],[0,-r2]]){ const k = k0 + dj*nx + di; if (k >= 0 && k < G.length && !G[k]){ f = k; break; } } if (f < 0) return null; k0 = f; }
       const fill = () => { const st = [k0]; G[k0] = 3; let n = 0, open = false, bi0 = nx, bi1 = 0, bj0 = ny, bj1 = 0;
         while (st.length){ const k = st.pop(); n++; const i = k % nx, j = (k / nx) | 0; if (i < bi0) bi0 = i; if (i > bi1) bi1 = i; if (j < bj0) bj0 = j; if (j > bj1) bj1 = j;
           if (i === 0 || j === 0 || i === nx-1 || j === ny-1){ open = true; break; }
@@ -557,7 +564,7 @@ const A3 = (() => {
       // cornicetta attorno all'etichetta del locale (o testo dentro un simbolo): la si cancella e si riempie di nuovo, una volta
       if (!open && n * cell * cell < .8){ const m = 2; for (let j = Math.max(0, F.bj0 - m); j <= Math.min(ny - 1, F.bj1 + m); j++) for (let i = Math.max(0, F.bi0 - m); i <= Math.min(nx - 1, F.bi1 + m); i++){ const k = j*nx + i; if (G[k]) G[k] = 0; }
         F = fill(); n = F.n; open = F.open; }
-      if (open || n * cell * cell < 1.5 || n * cell * cell > 400) continue;
+      if (open || n * cell * cell < 1.5 || n * cell * cell > 400) return null;
       // isole interne (arredi, pilastri) dentro il locale: fanno parte del locale
       for (let k = 0; k < G.length; k++) if (G[k] !== 3) G[k] = G[k] === 1 ? 1 : 0;
       { const st2 = []; for (let i = 0; i < nx; i++){ st2.push(i, (ny-1)*nx + i); } for (let j = 0; j < ny; j++){ st2.push(j*nx, j*nx + nx-1); }
@@ -565,12 +572,21 @@ const A3 = (() => {
         while (q.length){ const k = q.pop(), i = k % nx; for (const m of [i > 0 ? k-1 : -1, i < nx-1 ? k+1 : -1, k-nx, k+nx]) if (m >= 0 && m < G.length && G[m] !== 3 && G[m] !== 2){ G[m] = 2; q.push(m); } }
         for (let k = 0; k < G.length; k++) if (G[k] !== 2) G[k] = 3; }
       let first = -1; for (let k = 0; k < G.length; k++) if (G[k] === 3){ first = k; break; }
-      const raw = traceRoom(G, nx, ny, 3, first, x0, y0, cell); if (raw.length < 3) continue;
+      const raw = traceRoom(G, nx, ny, 3, first, x0, y0, cell); if (raw.length < 3) return null;
       const rx = raw.map(p => p[0]), ry = raw.map(p => p[1]);
       const pts = snapEdges(raw, nearSegs(Math.min(...rx) - .3, Math.min(...ry) - .3, Math.max(...rx) + .3, Math.max(...ry) + .3).map(s => ({a:[s[0], s[1]], b:[s[2], s[3]], thick:0})));
       const A = Math.abs(pts.reduce((t, p, i) => { const q = pts[(i+1) % pts.length]; return t + p[0]*q[1] - q[0]*p[1]; }, 0) / 2);
-      if (!(A >= 1.5)) continue;
-      done.push({pts, area:+A.toFixed(2), fromLines:true});
+      return A >= 1.5 ? {pts, area:+A.toFixed(2), fromLines:true} : null;
+    };
+    const done = [];
+    for (const sd of seeds){
+      if (done.some(d => inP(sd.x, sd.y, d.pts))) continue;
+      const host = rooms.find(r => inP(sd.x, sd.y, r.pts));
+      if (host && seeds.filter(t => isArea(t) && inP(t.x, t.y, host.pts)).length < 2) continue;   // già nel suo locale, e da solo
+      // prima solo muri e infissi; se il locale non si chiude, con tutte le linee
+      let d = region(sd, nearA);
+      if (!d && segs.length < segsAll.length){ nearB = nearB || prep(segsAll); d = region(sd, nearB); }
+      if (d) done.push(d);
     }
     // locali uniti sostituiti dai locali trovati dalle linee che contengono; i nuovi si aggiungono
     for (const d of done){ const host = rooms.findIndex(r => inP(d.pts[0][0] * .5 + d.pts[2 % d.pts.length][0] * .5, d.pts[0][1] * .5 + d.pts[2 % d.pts.length][1] * .5, r.pts) && seeds.some(t => inP(t.x, t.y, d.pts) && inP(t.x, t.y, r.pts)));
