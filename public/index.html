@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-lm68qoRs1c3o+st/I1i7MNF1Z7JKyN1DT25AT0RHVx0=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-J57pdfdn85nlVyyvry5+f6JZKcNIKyf0dU7iZxMiy0M=' https://cdn.jsdelivr.net https://challenges.cloudflare.com 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://challenges.cloudflare.com; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f6f62"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pianta Libera"><link rel="apple-touch-icon" href="assets/app/icon-180.png"><link rel="icon" type="image/png" sizes="192x192" href="assets/app/icon-192.png">
 </head><body>
 <title>Pianta Libera</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -4132,6 +4132,22 @@ const A3 = (() => {
         if (run.length >= 6) run.forEach(x => dropped.add(x));
       }
     }
+    // pavimenti e rivestimenti disegnati a linee lungo gli assi (piastrelle, doghe): almeno 8 linee parallele a passo identico (±1 cm)
+    // fra 15 e 80 cm, sovrapposte; i muri non hanno mai un passo così regolare
+    for (const ax of [th, th + Math.PI / 2]){
+      const nrm = ((ax % Math.PI) + Math.PI) % Math.PI, L = items.filter(x => !dropped.has(x) && Math.abs(Math.sin(x.ang - nrm)) < .01 && x.L >= .3);
+      const offs = [...new Set(L.map(x => Math.round(x.off * 1000) / 1000))].sort((a, b) => a - b);
+      for (let i = 0; i < offs.length; i++){
+        for (let j = i + 1; j < offs.length && offs[j] - offs[i] <= .8; j++){ const st = offs[j] - offs[i]; if (st < .15) continue;
+          const run = [offs[i], offs[j]]; let k = j;
+          for (;;){ const nxt = offs.findIndex((o, q) => q > k && Math.abs(o - (run[run.length - 1] + st)) <= .01); if (nxt < 0) break; run.push(offs[nxt]); k = nxt; }
+          if (run.length < 8) continue;
+          const lines = run.map(o => L.filter(x => Math.abs(x.off - o) <= .0015)), ext = lines.map(ls => [Math.min(...ls.map(x => x.a)), Math.max(...ls.map(x => x.b))]);
+          const A = median(ext.map(e => e[0])), B = median(ext.map(e => e[1])); if (B - A < 1) continue;
+          const okc = ext.filter(e => Math.min(e[1], B) - Math.max(e[0], A) > .5 * (B - A)).length; if (okc < .8 * run.length) continue;
+          for (const ls of lines) for (const x of ls) if (x.a >= A - 1 && x.b <= B + 1) dropped.add(x);
+          break; } }
+    }
     // collineari: stessa direzione (±0,2°) e stessa retta (±5 mm), intervalli uniti se si toccano entro «gap»
     const keep = items.filter(x => !dropped.has(x)).sort((x, y) => x.ang - y.ang || x.off - y.off || x.a - y.a), out = [], used = new Uint8Array(keep.length);
     for (let i = 0; i < keep.length; i++){
@@ -4832,7 +4848,7 @@ function a3StairObject(st, L){
 }
 const A3S = {files:[], clusters:[], layersOff:null, report:null, preview:null, dec:new Map()};   // dec: correzioni della revisione, per posizione (restano se si rifà il riconoscimento)
 // layer che non sono muri né aperture: quote, testi, retini, arredi, impianti, superfici, scale, demolizioni, strutture, librerie di blocchi
-const A3_SKIP_LAYERS = /quot|dim|cot[ae]|text|test[oi]|scritt|hatch|tratt|camp|retin|arred|mobil|furn|sanit|asse|axis|grid|grigl|cartig|squadr|defpoints|viewport|^vp|impiant|elettr|idraul|termic|gas\b|clima|superfic|area|scal[ae]\b|stair|demoli|gronda|gronde|pluvial|trav[ei]|pilastr.*strutt|sezion|section|noplot|no.?plot|cad-block|dwgmodels|verde|alber|veget|planim|catast|perimetr.*lott/i;
+const A3_SKIP_LAYERS = /quot|dim|cot[ae]|text|test[oi]|scritt|hatch|tratt|camp|retin|arred|mobil|furn|sanit|asse|axis|grid|grigl|cartig|squadr|defpoints|viewport|^vp|impiant|elettr|idraul|termic|gas\b|clima|superfic|area|scal[ae]\b|stair|demoli|gronda|gronde|pluvial|trav[ei]|pilastr.*strutt|sezion|section|noplot|no.?plot|cad-block|dwgmodels|verde|alber|veget|planim|catast|perimetr.*lott|pavim|ombr[ae]|abaco/i;
 const A3_ROLES = [["pianta","Pianta"],["sud","Prospetto sud"],["nord","Prospetto nord"],["est","Prospetto est"],["ovest","Prospetto ovest"],["ignora","Ignora"]];
 
 function autoPanelHTML(){

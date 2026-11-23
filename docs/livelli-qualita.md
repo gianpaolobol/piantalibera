@@ -99,8 +99,8 @@ Obiettivi del progetto (`docs/progetto-cad-bim.md` §9) misurati sul banco sinte
 | Errori segnalati tra i dubbi | B `errori_segnalati` | 86,6 % (prima 82,4 %); errori non segnalati 71 su 200 piante (main: 72) | **≥ 80 %** | chi rivede deve trovare gli errori tra i dubbi, non cercarli. Il rapporto scende quando spariscono errori segnalati: conta anche il numero assoluto |
 | Dubbi per pianta | B `dubbi_per_pianta` | 0,8 | **≤ 5** | |
 | Tempo per pianta | B `ms` | ~4 ms | **≤ 3 s** | |
-| **Banco reale**: superfici scritte ritrovate con locale esatto (±1 %) | `scripts/banco-reale.mjs` (privato) | 28,5 % (390 superfici in piante con geometria; primo giro 13,3 %) | **≥ 80 %** | obiettivo del progetto; oggi lontano: il lavoro principale dei prossimi giri |
-| **Banco reale**: superfici scritte dentro un locale riconosciuto | idem | 82,3 % (primo giro 36,1 %) | **≥ 95 %** | |
+| **Banco reale**: superfici scritte ritrovate con locale esatto (±1 %) | `scripts/banco-reale.mjs` (privato) | 29,0 % (383 superfici di locali in piante con geometria; primo giro 13,3 %) | **≥ 80 %** | obiettivo del progetto; oggi lontano: il lavoro principale dei prossimi giri |
+| **Banco reale**: superfici scritte dentro un locale riconosciuto | idem | 85,1 % (primo giro 36,1 %) | **≥ 95 %** | |
 | **Banco reale**: aperture con la misura scritta confermata dalla larghezza | idem | 28,4 % (299 su 1.053; prima 0) | crescere | l'altezza scritta sostituisce quella tipica; il tipo segue l'altezza (H < 1,60 finestra, H ≥ 1,95 porta o portafinestra) |
 | **Banco reale**: misure scritte che non tornano, segnalate | idem | 95 dubbi | tutte segnalate | una misura scritta diversa dal vano non corregge mai in silenzio |
 | **Banco reale**: piante riconosciute come piante (senza superfici scritte) | idem | 94,7 % (prima 10,5 %) | **≥ 95 %** | |

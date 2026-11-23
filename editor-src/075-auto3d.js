@@ -109,6 +109,22 @@ const A3 = (() => {
         if (run.length >= 6) run.forEach(x => dropped.add(x));
       }
     }
+    // pavimenti e rivestimenti disegnati a linee lungo gli assi (piastrelle, doghe): almeno 8 linee parallele a passo identico (±1 cm)
+    // fra 15 e 80 cm, sovrapposte; i muri non hanno mai un passo così regolare
+    for (const ax of [th, th + Math.PI / 2]){
+      const nrm = ((ax % Math.PI) + Math.PI) % Math.PI, L = items.filter(x => !dropped.has(x) && Math.abs(Math.sin(x.ang - nrm)) < .01 && x.L >= .3);
+      const offs = [...new Set(L.map(x => Math.round(x.off * 1000) / 1000))].sort((a, b) => a - b);
+      for (let i = 0; i < offs.length; i++){
+        for (let j = i + 1; j < offs.length && offs[j] - offs[i] <= .8; j++){ const st = offs[j] - offs[i]; if (st < .15) continue;
+          const run = [offs[i], offs[j]]; let k = j;
+          for (;;){ const nxt = offs.findIndex((o, q) => q > k && Math.abs(o - (run[run.length - 1] + st)) <= .01); if (nxt < 0) break; run.push(offs[nxt]); k = nxt; }
+          if (run.length < 8) continue;
+          const lines = run.map(o => L.filter(x => Math.abs(x.off - o) <= .0015)), ext = lines.map(ls => [Math.min(...ls.map(x => x.a)), Math.max(...ls.map(x => x.b))]);
+          const A = median(ext.map(e => e[0])), B = median(ext.map(e => e[1])); if (B - A < 1) continue;
+          const okc = ext.filter(e => Math.min(e[1], B) - Math.max(e[0], A) > .5 * (B - A)).length; if (okc < .8 * run.length) continue;
+          for (const ls of lines) for (const x of ls) if (x.a >= A - 1 && x.b <= B + 1) dropped.add(x);
+          break; } }
+    }
     // collineari: stessa direzione (±0,2°) e stessa retta (±5 mm), intervalli uniti se si toccano entro «gap»
     const keep = items.filter(x => !dropped.has(x)).sort((x, y) => x.ang - y.ang || x.off - y.off || x.a - y.a), out = [], used = new Uint8Array(keep.length);
     for (let i = 0; i < keep.length; i++){
