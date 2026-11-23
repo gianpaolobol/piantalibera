@@ -172,6 +172,8 @@ Richiesta del titolare: riesaminare tutto per iterazioni e superare i concorrent
 
 Misure. Banco reale (390 superfici in 46 piante): superfici dentro un locale 59,2 → **80,0 %**, esatte (±1 %) 20,8 → **25,4 %**, entro il 3 % 30,5 → **41,5 %**; nessuna pianta perde superfici esatte o entro il 3 %. Banco sintetico: locali trovati 99,5 → 100 %, esatti 96,6 → 96,7 %, errori non segnalati invariati (71 su 200 piante).
 
+**Orientamento della pianta e pavimenti disegnati** (stesso giorno). Una pianta con il pavimento a spina di pesce disegnato a linee sul layer «0» veniva ruotata di 45°: le migliaia di tratti brevi della spina di pesce decidevano la direzione principale, e le loro diagonali parallele diventavano muri da 12 cm con 936 «vani» da 70 cm. Ora l'orientamento si stima due volte, su tutte le linee e sulle sole linee da 1 m in su; se le due stime differiscono di oltre 5° vince la seconda. Il peso L² (provato) peggiorava i rilievi con lunghe linee di strade e confini; la sola soglia di 1 m peggiorava le piante ruotate del banco sintetico. Effetto sul banco reale: aperture da 2.106 a 1.053 (le 914 in più erano fantasmi), dubbi dal 62,2 al **28,1 %**, misure scritte confermate dal 14,8 al 28,4 %, superfici dentro un locale 81,3 %; banco sintetico identico.
+
 Cosa resta, con le cause misurate: superfici che differiscono dall'1–3 % per convenzione di misura (controparete o intonaco compresi o no: non deducibile dal disegno con certezza), locali che perdono da vuoti non richiusi (finestre sulle facciate, tavole di impianti), superfici in piante di sole sistemazioni esterne.
 
 ## Prossimo passo

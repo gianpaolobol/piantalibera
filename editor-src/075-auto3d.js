@@ -71,14 +71,20 @@ const A3 = (() => {
   /* ---------- pianta: muri, aperture, locali ---------- */
   /* ---------- pulizia del disegno (fase B, docs/banco-cad.md) ---------- */
   /** Direzione principale della pianta (radianti, tra −45° e 45°): media delle linee pesata sulla lunghezza, modulo 90°. */
-  function dominantAngle(segs){
+  function angleFrom(segs, MINL){
     const bins = new Float64Array(180); let tot = 0;
-    for (const s of segs){ const L = segLen(s); if (L < .3) continue; let a = Math.atan2(s[3]-s[1], s[2]-s[0]) / D2R; a = ((a % 90) + 90) % 90; bins[Math.floor(a * 2) % 180] += L; tot += L; }
-    if (!tot) return 0;
+    for (const s of segs){ const L = segLen(s); if (L < MINL) continue; let a = Math.atan2(s[3]-s[1], s[2]-s[0]) / D2R; a = ((a % 90) + 90) % 90; bins[Math.floor(a * 2) % 180] += L; tot += L; }
+    if (!tot) return null;
     let k = 0; for (let i = 1; i < 180; i++) if (bins[i] > bins[k]) k = i;
     let sx = 0, sy = 0;   // media circolare (4θ) delle linee entro 1° dal picco
-    for (const s of segs){ const L = segLen(s); if (L < .3) continue; let a = Math.atan2(s[3]-s[1], s[2]-s[0]) / D2R; a = ((a % 90) + 90) % 90; let d = Math.abs(a - k / 2); d = Math.min(d, 90 - d); if (d > 1) continue; sx += L * Math.cos(4 * a * D2R); sy += L * Math.sin(4 * a * D2R); }
+    for (const s of segs){ const L = segLen(s); if (L < MINL) continue; let a = Math.atan2(s[3]-s[1], s[2]-s[0]) / D2R; a = ((a % 90) + 90) % 90; let d = Math.abs(a - k / 2); d = Math.min(d, 90 - d); if (d > 1) continue; sx += L * Math.cos(4 * a * D2R); sy += L * Math.sin(4 * a * D2R); }
     let th = Math.atan2(sy, sx) / 4; if (th > Math.PI / 4) th -= Math.PI / 2; return th;
+  }
+  /** Orientamento della pianta. Se le sole linee da 1 m in su indicano un orientamento diverso (oltre 5°) da quello di tutte le linee,
+   *  vince il loro: tratti brevi e ripetuti (campiture, pavimenti a spina di pesce) non devono ruotare la pianta. */
+  function dominantAngle(segs){
+    const a = angleFrom(segs, .3), b = angleFrom(segs, 1); if (a === null) return b ?? 0; if (b === null) return a;
+    let d = Math.abs(a - b) % (Math.PI / 2); d = Math.min(d, Math.PI / 2 - d); return d > 5 * D2R ? b : a;
   }
   /** Linee collineari spezzate, doppie o staccate di pochi cm unite; retini (famiglie fitte di linee corte e oblique) tolti. */
   function cleanSegs(segsIn, opt = {}){
