@@ -174,6 +174,15 @@ Misure. Banco reale (390 superfici in 46 piante): superfici dentro un locale 59,
 
 **Orientamento della pianta e pavimenti disegnati** (stesso giorno). Una pianta con il pavimento a spina di pesce disegnato a linee sul layer «0» veniva ruotata di 45°: le migliaia di tratti brevi della spina di pesce decidevano la direzione principale, e le loro diagonali parallele diventavano muri da 12 cm con 936 «vani» da 70 cm. Ora l'orientamento si stima due volte, su tutte le linee e sulle sole linee da 1 m in su; se le due stime differiscono di oltre 5° vince la seconda. Il peso L² (provato) peggiorava i rilievi con lunghe linee di strade e confini; la sola soglia di 1 m peggiorava le piante ruotate del banco sintetico. Effetto sul banco reale: aperture da 2.106 a 1.053 (le 914 in più erano fantasmi), dubbi dal 62,2 al **28,1 %**, misure scritte confermate dal 14,8 al 28,4 %, superfici dentro un locale 81,3 %; banco sintetico identico.
 
+**Layer dei muri anche per i locali dalle linee** (stesso giorno). Nei bagni piccoli i locali trovati dalle linee erano più piccoli del 25–40 %: sanitari, demolizioni («… dem …»), sigle dell'abaco degli infissi e pavimenti da sostituire, disegnati su altri layer, chiudevano sacche contro i muri. Se il disegno ha un layer dei muri vero (almeno un quarto della lunghezza delle linee), il locale si cerca prima tra le sole linee dei muri e degli infissi e, solo se lì non si chiude, con tutte le linee (alcune tavole chiudono i locali con le «linee sottili»). Banco reale: superfici dentro un locale 81,3 → **82,3 %**, esatte 25,4 → **28,5 %**, entro il 3 % 41,5 → **44,4 %**; banco sintetico identico.
+
+**Griglie di piastrelle, layer esecutivi, tabelle** (stesso giorno).
+- Un pavimento a piastrelle disegnato a linee lungo gli assi diventava una scacchiera di muri da 40 cm che spezzettava i locali. La pulizia toglie ora le famiglie di almeno 8 linee parallele a passo identico (±1 cm) fra 15 e 80 cm che coprono la stessa fascia: i muri non hanno mai un passo così regolare.
+- Esclusi dai muri anche i layer dei pavimenti («-EA pavimenti»), delle ombre e degli abachi delle finiture.
+- Banco: le superfici scritte in una tabella riepilogativa dentro il disegno (almeno altre due superfici entro 1 m) non sono superfici di un locale: 11 escluse, sempre indicate.
+
+Risultato: superfici dentro un locale 82,3 → **85,1 %**, esatte **29,0 %**, entro il 3 % 44,4 → **46,5 %**; aperture 1.018, dubbi 27,7 %; banco sintetico identico.
+
 Cosa resta, con le cause misurate: superfici che differiscono dall'1–3 % per convenzione di misura (controparete o intonaco compresi o no: non deducibile dal disegno con certezza), locali che perdono da vuoti non richiusi (finestre sulle facciate, tavole di impianti), superfici in piante di sole sistemazioni esterne.
 
 ## Prossimo passo
