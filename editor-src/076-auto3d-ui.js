@@ -92,7 +92,8 @@ function a3Recognize(){
   const pc = plan[0], [bx0, , , by1] = pc.bbox;
   const toApp = (x, y) => [+(x - bx0).toFixed(4), +(by1 - y).toFixed(4)];
   const segs = pc.segs.map(s => [...toApp(s[0], s[1]), ...toApp(s[2], s[3]), s[4]]);
-  const arcs = pc.arcs.map(a => { const [cx, cy] = toApp(a.cx, a.cy); return {...a, cx, cy}; });
+  // la pianta si ribalta in verticale: anche gli angoli degli archi (θ → −θ, estremi scambiati per restare in senso antiorario)
+  const arcs = pc.arcs.map(a => { const [cx, cy] = toApp(a.cx, a.cy); return {...a, cx, cy, ...(a.a0 != null && a.a1 != null ? {a0:-a.a1, a1:-a.a0} : {})}; });
   const texts = pc.texts.map(t => { const [x, y] = toApp(t.x, t.y); return {...t, x, y}; });
   // linee dei layer delle scale (escluse dai muri): servono a riconoscere rampe e gradini
   const f = A3S.files.find(x => x.name === pc.file), u = f?.unit || 1, [bx0b, by0b, bx1b, by1b] = pc.bbox;
