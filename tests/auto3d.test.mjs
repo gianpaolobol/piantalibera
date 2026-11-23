@@ -161,3 +161,19 @@ test("prospetto: la cornice attorno alla finestra non allarga il vano e diventa 
   const d = planDrawing(), plan = A3.analyzePlan(d.segs, d.arcs, d.texts), m = A3.combine(plan, [{ side: "sud", data: A3.prepareElevation(segs, plan, "sud") }], { height: 2.7 });
   const w = m.openings.find(o => o.cornice); assert.ok(w, "la finestra prende la cornice"); assert.equal(w.cornice.ext, .15); assert.equal(w.w, 1.5);
 });
+
+test("locali dalle linee: muri antichi spessi 1 m (oltre il limite dei muri) con una porta, il locale c'è e misura giusto", () => {
+  const segs = [], q = (a, b, c, d) => segs.push([a, b, c, d, "0"]);
+  // stanza interna 4 × 3 m (12 m²) con la porta di 0,9 m sul lato sud; faccia esterna dei muri a 1 m di distanza
+  q(0, 0, 4, 0); q(4, 0, 4, 3); q(4, 3, 2.45, 3); q(1.55, 3, 0, 3); q(0, 3, 0, 0);          // facce interne, vano da 1,55 a 2,45
+  q(1.55, 3, 1.55, 4); q(2.45, 3, 2.45, 4);                                                  // stipiti
+  q(-1, -1, 5, -1); q(5, -1, 5, 4); q(5, 4, 2.45, 4); q(1.55, 4, -1, 4); q(-1, 4, -1, -1);   // facce esterne
+  // corridoio a sud, chiuso, dove porta il vano
+  q(-1, 4, -1, 6); q(-1, 6, 5, 6); q(5, 6, 5, 4);
+  const texts = [{ x: 2, y: 1.5, text: "CAMERA" }, { x: 2, y: 1.2, text: "mq 12,00" }];
+  const r = A3.analyzePlan(segs, [{ cx: 1.55, cy: 3, r: .9 }], texts);
+  const room = r.rooms.find(x => x.name === "Camera");
+  assert.ok(room, JSON.stringify(r.rooms.map(x => [x.name, x.area])));
+  assert.ok(Math.abs(room.area - 12) / 12 <= .01, String(room.area));
+  assert.equal(room.conf.ok, true);
+});
