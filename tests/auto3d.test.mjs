@@ -177,3 +177,15 @@ test("locali dalle linee: muri antichi spessi 1 m (oltre il limite dei muri) con
   assert.ok(Math.abs(room.area - 12) / 12 <= .01, String(room.area));
   assert.equal(room.conf.ok, true);
 });
+
+test("pavimento a piastrelle disegnato a linee: la griglia a passo costante non diventa muri", () => {
+  const d = planDrawing(), base = A3.analyzePlan(d.segs, d.arcs, d.texts);
+  const tiles = [];
+  for (let k = 0; k <= 10; k++){ const x = 1 + k * .4; tiles.push([x, 1, x, 5, "0"]); }      // griglia 40 × 40 cm nel soggiorno
+  for (let k = 0; k <= 10; k++){ const y = 1 + k * .4; tiles.push([1, y, 5, y, "0"]); }
+  const r = A3.analyzePlan([...d.segs, ...tiles], d.arcs, d.texts);
+  assert.equal(r.walls.length, base.walls.length, JSON.stringify(r.walls.map(w => w.thick)));
+  assert.deepEqual(r.rooms.map(x => x.name).sort(), base.rooms.map(x => x.name).sort());
+  const sog = r.rooms.find(x => x.name === "Soggiorno"), sog0 = base.rooms.find(x => x.name === "Soggiorno");
+  assert.ok(Math.abs(sog.area - sog0.area) < .01, `${sog.area} ${sog0.area}`);
+});
