@@ -218,7 +218,8 @@ test("fase 2: selezione e trascinamento in 3D, camere, metro, elenco e trascina 
   const box = await page.locator("#c2d").boundingBox(), b3 = await page.locator("#c3d").boundingBox();
   const at = async p => { const s = await page.evaluate(q => toS(q), p); return [box.x + s[0], box.y + s[1]]; };
   const proj = (x, y, z) => page.evaluate(([x, y, z]) => { const v = new THREE.Vector3(x, y, z).project(camera); const r = c3d.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }, [x, y, z]);
-  await page.evaluate(() => { camPreset("bird"); setSel([]); }); await page.waitForTimeout(600);
+  // vista dall'alto senza il tetto del piano («Fino a questo piano»): il clic agisce su ciò che si vede
+  await page.evaluate(() => { camPreset("bird"); S.show3d = "below"; applyVisibility(); render3D(); setSel([]); }); await page.waitForTimeout(600);
   const o = await page.evaluate(() => { const o = P.objects.find(o => o.ref === "letto2"); return [o.x, level(o.level).elev + .5, o.y]; });
   const [sx, sy] = await proj(o[0], o[1], o[2]);
   await page.mouse.click(sx, sy);
@@ -371,7 +372,10 @@ test("fase 4: link per il cliente in sola lettura con commenti in pianta", async
   await v.keyboard.press("Delete");
   expect(await v.evaluate(() => JSON.stringify(P.walls))).toBe(before);
   await v.click("#cmAdd"); const sp = await v.evaluate(() => toS([3, 3])); await v.mouse.click(vb.x + sp[0], vb.y + sp[1]);
-  await v.fill("#cmAuthor", "Laura"); await v.fill("#cmText", "Finestra più grande qui"); await v.click("#cmSend");
+  await v.fill("#cmAuthor", "Laura"); await v.fill("#cmText", "Finestra più grande qui");
+  await v.evaluate(() => renderInspector());   // un ridisegno mentre si scrive non deve perdere nome e commento
+  await expect(v.locator("#cmAuthor")).toHaveValue("Laura"); await expect(v.locator("#cmText")).toHaveValue("Finestra più grande qui");
+  await v.click("#cmSend");
   await expect(v.locator(".cmts")).toContainText("Finestra più grande qui");
   expect(verr).toEqual([]);
   await page.bringToFront(); await page.click("#shLoad");
@@ -866,7 +870,7 @@ test("selezione nel 3D: muro, apertura e locale con il suo solaio sono evidenzia
       for (const k of [.15, .5, .85]){ const s = k * f.len; if (P.openings.some(o => o.wall === w.id && Math.abs(s - o.t) < o.w / 2 + .1)) continue;
         for (const sd of [1, -1]){ const x = w.a[0] + f.ux*s + f.nx*w.thick/2*sd, z = w.a[1] + f.uy*s + f.ny*w.thick/2*sd, y = L.elev + 1.2;
           const v = new THREE.Vector3(x, y, z), dir = v.clone().sub(camera.position).normalize(), rc = new THREE.Raycaster(camera.position, dir);
-          const h = rc.intersectObject(modelGroup, true).find(h => h.object.visible && !["glass", "ground", "roof", "gable", "ceiling"].includes(h.object.userData.cat));
+          const h = rc.intersectObject(modelGroup, true).find(h => h.object.visible && !["glass", "ground", "ceiling"].includes(h.object.userData.cat));
           const p = v.clone().project(camera);
           if (h && h.object.userData.cat === "wall" && h.point.distanceTo(v) < .05 && Math.abs(p.x) < .9 && Math.abs(p.y) < .9) return {id:w.id, x, y, z}; } } }
     return null; });
@@ -1025,5 +1029,22 @@ test("cornici e balconi: cornice esterna e interna su tutte le finestre, cornice
   expect(await page.evaluate(id => P.rooms.find(r => r.id === id).balcone, balc)).toEqual({ tipo: "muratura", h: 1 });
   await page.reload(); await page.waitForFunction(() => typeof P !== "undefined" && P && typeof buildModel === "function"); await page.waitForTimeout(1200);
   expect(await page.evaluate(([w, b]) => [P.openings.find(o => o.id === w).cornice, P.rooms.find(r => r.id === b).balcone], [win, balc])).toEqual([{ ext: .14, int: .07 }, { tipo: "muratura", h: 1 }]);
+  expect(errors).toEqual([]);
+});
+
+test("clic sul tetto nel 3D: si aprono le proprietà della copertura del piano, non si seleziona il pavimento sotto", async ({ page }) => {
+  const errors = await open(page);
+  await page.click('#viewSeg button[data-v="3d"]'); await page.waitForTimeout(400);
+  const p = await page.evaluate(() => { setSel([]); renderInspector();
+    const r = c3d.getBoundingClientRect();
+    for (let fy = .15; fy < .6; fy += .03) for (let fx = .3; fx < .7; fx += .05){
+      const nd = new THREE.Vector2(fx * 2 - 1, -(fy * 2 - 1)), rc = new THREE.Raycaster(); rc.setFromCamera(nd, camera);
+      const h = rc.intersectObject(modelGroup, true).find(h => h.object.visible && !["glass", "ground"].includes(h.object.userData.cat));
+      if (h && h.object.userData.cat === "roof") return [r.left + fx * r.width, r.top + fy * r.height]; }
+    return null; });
+  expect(p, "un punto del tetto visibile").not.toBeNull();
+  await page.mouse.move(p[0], p[1]); await page.mouse.down(); await page.mouse.up(); await page.waitForTimeout(250);
+  expect(await page.evaluate(() => selList().length)).toBe(0);
+  await expect(page.locator("#lRoof")).toBeFocused();
   expect(errors).toEqual([]);
 });

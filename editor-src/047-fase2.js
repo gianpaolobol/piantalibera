@@ -112,6 +112,19 @@ function pick3D(e, ground){
   const skip = ground ? ["glass"] : ["glass", "ground", "roof", "gable", "ceiling"];
   return ray3.intersectObject(modelGroup, true).find(h => visibleChain(h.object) && !skip.includes(h.object.userData.cat) && planes.every(p => p.distanceToPoint(h.point) >= -1e-3)) || null;
 }
+/** Il primo elemento visibile sotto il puntatore è il tetto o un timpano? Restituisce l'id del piano della copertura. */
+function pickRoof3D(e){
+  const r = c3d.getBoundingClientRect(); ndc3.set(((e.clientX - r.left) / r.width)*2 - 1, -((e.clientY - r.top) / r.height)*2 + 1); ray3.setFromCamera(ndc3, camera);
+  const planes = renderer.clippingPlanes || [];
+  const h = ray3.intersectObject(modelGroup, true).find(h => visibleChain(h.object) && !["glass", "ground"].includes(h.object.userData.cat) && planes.every(p => p.distanceToPoint(h.point) >= -1e-3));
+  return h && ["roof", "gable"].includes(h.object.userData.cat) ? h.object.userData.level || null : null;
+}
+function openRoofOf(lid){
+  if (lid !== S.level){ S.level = lid; applyVisibility(); renderLevels(); }
+  setSel([]); if (S.tab !== "props"){ S.tab = "props"; renderTabs(); } renderInspector(); draw2D();
+  const el = $("#lRoof"); if (el){ el.scrollIntoView({block:"center"}); el.focus({preventScroll:true}); }
+  toast(`Copertura di «${level(lid)?.name || ""}»: tipo, pendenza, sporto e manto`);
+}
 function objOf3D(o){ for (let x = o; x; x = x.parent) if (x.userData?.objId) return x; return null; }
 function selectionFrom3D(hit){
   const ob = objOf3D(hit.object); if (ob) return {type:"object", id:ob.userData.objId, lid:ob.userData.level};
@@ -185,6 +198,8 @@ $("#pane3d").addEventListener("pointerup", e => {
   if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4 || d.type === "look") return;
   if (M3.on){ measureClick(e); return; }
   if (S.tool !== "select") return;
+  // clic sul tetto (o sul timpano) visibile davanti a tutto: le proprietà della copertura di quel piano, non il pavimento sotto
+  const roofHit = pickRoof3D(e); if (roofHit){ openRoofOf(roofHit); return; }
   const hit = pick3D(e), h = hit && selectionFrom3D(hit);
   if (h?.lid && h.lid !== S.level){ S.level = h.lid; applyVisibility(); renderLevels(); }
   if (!h){ if (!e.shiftKey) setSel([]); } else if (e.shiftKey) toggleSel({type:h.type, id:h.id}); else setSel(expandGroup({type:h.type, id:h.id}));
