@@ -157,6 +157,25 @@ Richiesta del titolare: le scale esterne venivano riconosciute come muri.
 
 Misure. Banco sintetico invariato (muri, aperture, locali, dubbi). Banco reale: superfici dentro un locale 47,9 → **49,0 %**, esatte (±1 %) 17,2 → **17,6 %**, entro il 3 % 25,4 → **26,2 %**; 309 scale nelle 57 piante (148 a U, 135 rampe dritte, 26 gradini esterni), 275 da controllare (soprattutto nella tavola condominiale con le frecce corte e nelle scale a ventaglio). Una pianta peggiora (2 superfici su 4: un tratto di muro esterno su un altro layer), quattro migliorano (una passa da 9 a 10 locali su 10 e da 2 a 5 superfici esatte).
 
+## Riesame: locali direttamente dalle linee (23/11/2026)
+
+Richiesta del titolare: riesaminare tutto per iterazioni e superare i concorrenti. Primo passo: dove si perdono le superfici scritte, una per una.
+
+- **Banco più onesto**: i «disegni» con almeno 3 superfici scritte ma meno di 200 linee non sono piante (tabelle delle superfici, cartigli, piante la cui geometria sta in riferimenti esterni non contenuti nel file): 122 superfici escluse, sempre indicate nel resoconto. Restano 46 piante e 390 superfici.
+- **Locali dalle linee** (`roomsFromLines`): dove i muri non si riconoscono (rilievi di edifici storici con muri spessi e irregolari e campitura non importata) o due locali risultano uniti, il locale si trova dalla regione chiusa attorno al nome o alla superficie scritta.
+  - Le linee sono rasterizzate a 5 cm. I vani delle porte si richiudono con un ponte: dall'estremo di un tratto al primo estremo di un tratto parallelo davanti a sé (entro 3°), a 0,5–2,6 m.
+  - Archi e ante delle porte non chiudono il locale (anta = linea lunga quanto il raggio che parte dal cardine). Una cornicetta attorno all'etichetta (regione sotto 0,8 m²) si ignora.
+  - Una regione che arriva al bordo della finestra di ricerca (30 × 30 m) è aperta e non vale. I lati si agganciano alle linee vere. Un locale da muri che contiene più superfici scritte è sostituito dai locali trovati dalle linee.
+  - La superficie scritta non serve a scegliere, solo a dare la fiducia: la misura resta onesta.
+  - Un indice spaziale tiene il tempo sotto controllo sulle tavole da centinaia di migliaia di linee.
+- **Provato e scartato** (peggiorava): richiedere uno stipite o un vuoto gemello sull'altra faccia del muro per creare il ponte (si perdono più porte vere di quanti ponti sbagliati si evitano); unire al locale le piccole sacche chiuse senza testo se lo rendono più regolare.
+
+Misure. Banco reale (390 superfici in 46 piante): superfici dentro un locale 59,2 → **80,0 %**, esatte (±1 %) 20,8 → **25,4 %**, entro il 3 % 30,5 → **41,5 %**; nessuna pianta perde superfici esatte o entro il 3 %. Banco sintetico: locali trovati 99,5 → 100 %, esatti 96,6 → 96,7 %, errori non segnalati invariati (71 su 200 piante).
+
+**Orientamento della pianta e pavimenti disegnati** (stesso giorno). Una pianta con il pavimento a spina di pesce disegnato a linee sul layer «0» veniva ruotata di 45°: le migliaia di tratti brevi della spina di pesce decidevano la direzione principale, e le loro diagonali parallele diventavano muri da 12 cm con 936 «vani» da 70 cm. Ora l'orientamento si stima due volte, su tutte le linee e sulle sole linee da 1 m in su; se le due stime differiscono di oltre 5° vince la seconda. Il peso L² (provato) peggiorava i rilievi con lunghe linee di strade e confini; la sola soglia di 1 m peggiorava le piante ruotate del banco sintetico. Effetto sul banco reale: aperture da 2.106 a 1.053 (le 914 in più erano fantasmi), dubbi dal 62,2 al **28,1 %**, misure scritte confermate dal 14,8 al 28,4 %, superfici dentro un locale 81,3 %; banco sintetico identico.
+
+Cosa resta, con le cause misurate: superfici che differiscono dall'1–3 % per convenzione di misura (controparete o intonaco compresi o no: non deducibile dal disegno con certezza), locali che perdono da vuoti non richiusi (finestre sulle facciate, tavole di impianti), superfici in piante di sole sistemazioni esterne.
+
 ## Prossimo passo
 
 Banco reale appena il titolare fornisce le piante; poi modello addestrato (fase D) per i disegni più disordinati e altezze e più piani (fase E).
