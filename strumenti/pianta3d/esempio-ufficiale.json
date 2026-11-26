@@ -1,0 +1,498 @@
+{
+ "name": "Casa unifamiliare (esempio)",
+ "version": 3,
+ "materials": {},
+ "sky": {
+  "kind": "asset",
+  "id": "giorno"
+ },
+ "sun": {
+  "az": 245,
+  "el": 36
+ },
+ "levels": [
+  {
+   "id": "L0",
+   "name": "Piano terra",
+   "elev": 0,
+   "height": 2.9,
+   "slab": 0.25,
+   "roof": {
+    "type": "gable",
+    "pitch": 26,
+    "overhang": 0.5,
+    "mat": "tegole"
+   },
+   "underlay": null
+  }
+ ],
+ "walls": [
+  {
+   "id": "id1",
+   "level": "L0",
+   "a": [
+    0,
+    0
+   ],
+   "b": [
+    11,
+    0
+   ],
+   "thick": 0.3,
+   "height": null,
+   "mat": "intonaco"
+  },
+  {
+   "id": "id2",
+   "level": "L0",
+   "a": [
+    11,
+    0
+   ],
+   "b": [
+    11,
+    8
+   ],
+   "thick": 0.3,
+   "height": null,
+   "mat": "intonaco"
+  },
+  {
+   "id": "id3",
+   "level": "L0",
+   "a": [
+    11,
+    8
+   ],
+   "b": [
+    0,
+    8
+   ],
+   "thick": 0.3,
+   "height": null,
+   "mat": "intonaco"
+  },
+  {
+   "id": "id4",
+   "level": "L0",
+   "a": [
+    0,
+    8
+   ],
+   "b": [
+    0,
+    0
+   ],
+   "thick": 0.3,
+   "height": null,
+   "mat": "intonaco"
+  },
+  {
+   "id": "id5",
+   "level": "L0",
+   "a": [
+    6.5,
+    0
+   ],
+   "b": [
+    6.5,
+    8
+   ],
+   "thick": 0.12,
+   "height": null,
+   "mat": "intonaco"
+  }
+ ],
+ "openings": [
+  {
+   "id": "id6",
+   "wall": "id3",
+   "t": 7.2,
+   "w": 1,
+   "h": 2.2,
+   "sill": 0,
+   "type": "door",
+   "flip": 0
+  },
+  {
+   "id": "id7",
+   "wall": "id3",
+   "t": 3.2,
+   "w": 2.4,
+   "h": 2.2,
+   "sill": 0,
+   "type": "window",
+   "flip": 0
+  },
+  {
+   "id": "id8",
+   "wall": "id3",
+   "t": 9.4,
+   "w": 1.2,
+   "h": 1.4,
+   "sill": 0.9,
+   "type": "window",
+   "flip": 0
+  },
+  {
+   "id": "id9",
+   "wall": "id1",
+   "t": 2,
+   "w": 1.4,
+   "h": 1.4,
+   "sill": 0.9,
+   "type": "window",
+   "flip": 0
+  },
+  {
+   "id": "id10",
+   "wall": "id1",
+   "t": 8.8,
+   "w": 1.4,
+   "h": 1.4,
+   "sill": 0.9,
+   "type": "window",
+   "flip": 0
+  },
+  {
+   "id": "id11",
+   "wall": "id2",
+   "t": 4,
+   "w": 1.2,
+   "h": 1.4,
+   "sill": 0.9,
+   "type": "window",
+   "flip": 0
+  },
+  {
+   "id": "id12",
+   "wall": "id4",
+   "t": 4,
+   "w": 1.6,
+   "h": 1.4,
+   "sill": 0.9,
+   "type": "window",
+   "flip": 0
+  },
+  {
+   "id": "id13",
+   "wall": "id5",
+   "t": 5.6,
+   "w": 0.8,
+   "h": 2.1,
+   "sill": 0,
+   "type": "door",
+   "flip": 1
+  }
+ ],
+ "rooms": [
+  {
+   "id": "id14",
+   "level": "L0",
+   "name": "Soggiorno",
+   "mat": "parquet",
+   "pts": [
+    [
+     0.15,
+     0.15
+    ],
+    [
+     6.44,
+     0.15
+    ],
+    [
+     6.44,
+     7.85
+    ],
+    [
+     0.15,
+     7.85
+    ]
+   ]
+  },
+  {
+   "id": "id15",
+   "level": "L0",
+   "name": "Camera",
+   "mat": "parquet",
+   "pts": [
+    [
+     6.56,
+     0.15
+    ],
+    [
+     10.85,
+     0.15
+    ],
+    [
+     10.85,
+     7.85
+    ],
+    [
+     6.56,
+     7.85
+    ]
+   ]
+  }
+ ],
+ "objects": [
+  {
+   "id": "id16",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "divano3",
+   "name": "divano3",
+   "x": 3,
+   "y": 2,
+   "rot": 0,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id17",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "tappeto",
+   "name": "tappeto",
+   "x": 3,
+   "y": 3.2,
+   "rot": 0,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id18",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "tavolino",
+   "name": "tavolino",
+   "x": 3,
+   "y": 3.3,
+   "rot": 0,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id19",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "mobile_tv",
+   "name": "mobile_tv",
+   "x": 3,
+   "y": 4.9,
+   "rot": 180,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id20",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "tavolo6",
+   "name": "tavolo6",
+   "x": 3.4,
+   "y": 6.5,
+   "rot": 0,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id21",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "sedia",
+   "name": "sedia",
+   "x": 2.6,
+   "y": 5.9,
+   "rot": 180,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id22",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "sedia",
+   "name": "sedia",
+   "x": 4.2,
+   "y": 5.9,
+   "rot": 180,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id23",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "letto2",
+   "name": "letto2",
+   "x": 8.7,
+   "y": 1.4,
+   "rot": 0,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id24",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "comodino",
+   "name": "comodino",
+   "x": 7.6,
+   "y": 0.5,
+   "rot": 0,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id25",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "comodino",
+   "name": "comodino",
+   "x": 9.8,
+   "y": 0.5,
+   "rot": 0,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id26",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "armadio2",
+   "name": "armadio2",
+   "x": 9.9,
+   "y": 7.4,
+   "rot": 180,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id27",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "olivo",
+   "name": "olivo",
+   "x": -3.6,
+   "y": 10.2,
+   "rot": 0,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id28",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "cipresso",
+   "name": "cipresso",
+   "x": -2.2,
+   "y": 1,
+   "rot": 0,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id29",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "cipresso",
+   "name": "cipresso",
+   "x": -2.2,
+   "y": 4,
+   "rot": 0,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id30",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "palma",
+   "name": "palma",
+   "x": 14.2,
+   "y": -2,
+   "rot": 0,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id31",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "arbusto",
+   "name": "arbusto",
+   "x": 1.2,
+   "y": 9.4,
+   "rot": 0,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id32",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "arbusto",
+   "name": "arbusto",
+   "x": 9.6,
+   "y": 9.3,
+   "rot": 0,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id33",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "siepe",
+   "name": "siepe",
+   "x": 4,
+   "y": 13.8,
+   "rot": 0,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id34",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "sagoma_uomo",
+   "name": "sagoma_uomo",
+   "x": 6.9,
+   "y": 9.8,
+   "rot": -20,
+   "scale": 1,
+   "z": 0
+  },
+  {
+   "id": "id35",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "sagoma_donna_c",
+   "name": "sagoma_donna_c",
+   "x": 4.4,
+   "y": 10.6,
+   "rot": 30,
+   "scale": 1,
+   "z": 0
+  }
+ ],
+ "app": "Pianta Libera",
+ "cameras": [
+  {
+   "id": "c1",
+   "name": "Soggiorno",
+   "pos": [
+    1.2,
+    1.6,
+    7.2
+   ],
+   "target": [
+    4.5,
+    1.3,
+    1
+   ],
+   "fov": 62
+  }
+ ]
+}

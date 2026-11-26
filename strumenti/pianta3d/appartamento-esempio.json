@@ -1,0 +1,755 @@
+{
+ "version": 3,
+ "app": "Pianta Libera",
+ "name": "Appartamento 90 m² (esempio)",
+ "levels": [
+  {
+   "id": "L0",
+   "name": "Piano tipo",
+   "elev": 0,
+   "height": 2.75,
+   "slab": 0.3,
+   "roof": null
+  }
+ ],
+ "walls": [
+  {
+   "id": "w1",
+   "level": "L0",
+   "a": [
+    0,
+    0
+   ],
+   "b": [
+    12,
+    0
+   ],
+   "thick": 0.3,
+   "height": null,
+   "mat": "intonaco"
+  },
+  {
+   "id": "w2",
+   "level": "L0",
+   "a": [
+    12,
+    0
+   ],
+   "b": [
+    12,
+    8
+   ],
+   "thick": 0.3,
+   "height": null,
+   "mat": "intonaco"
+  },
+  {
+   "id": "w3",
+   "level": "L0",
+   "a": [
+    12,
+    8
+   ],
+   "b": [
+    0,
+    8
+   ],
+   "thick": 0.3,
+   "height": null,
+   "mat": "intonaco"
+  },
+  {
+   "id": "w4",
+   "level": "L0",
+   "a": [
+    0,
+    8
+   ],
+   "b": [
+    0,
+    0
+   ],
+   "thick": 0.3,
+   "height": null,
+   "mat": "intonaco"
+  },
+  {
+   "id": "w5",
+   "level": "L0",
+   "a": [
+    7,
+    0.15
+   ],
+   "b": [
+    7,
+    7.85
+   ],
+   "thick": 0.12,
+   "height": null,
+   "mat": "intonaco"
+  },
+  {
+   "id": "w6",
+   "level": "L0",
+   "a": [
+    7.06,
+    4
+   ],
+   "b": [
+    11.85,
+    4
+   ],
+   "thick": 0.12,
+   "height": null,
+   "mat": "intonaco"
+  },
+  {
+   "id": "w7",
+   "level": "L0",
+   "a": [
+    9.5,
+    4.06
+   ],
+   "b": [
+    9.5,
+    7.85
+   ],
+   "thick": 0.12,
+   "height": null,
+   "mat": "intonaco"
+  },
+  {
+   "id": "w8",
+   "level": "L0",
+   "a": [
+    0.15,
+    5
+   ],
+   "b": [
+    3.5,
+    5
+   ],
+   "thick": 0.12,
+   "height": null,
+   "mat": "intonaco"
+  },
+  {
+   "id": "w9",
+   "level": "L0",
+   "a": [
+    3.5,
+    5
+   ],
+   "b": [
+    3.5,
+    7.85
+   ],
+   "thick": 0.12,
+   "height": null,
+   "mat": "intonaco"
+  }
+ ],
+ "openings": [
+  {
+   "id": "o1",
+   "wall": "w1",
+   "t": 1.2,
+   "w": 1.6,
+   "h": 1.5,
+   "sill": 0.9,
+   "type": "window"
+  },
+  {
+   "id": "o2",
+   "wall": "w1",
+   "t": 4.4,
+   "w": 1.4,
+   "h": 1.5,
+   "sill": 0.9,
+   "type": "window"
+  },
+  {
+   "id": "o3",
+   "wall": "w1",
+   "t": 8.8,
+   "w": 1.6,
+   "h": 1.5,
+   "sill": 0.9,
+   "type": "window"
+  },
+  {
+   "id": "o4",
+   "wall": "w2",
+   "t": 5.2,
+   "w": 1.2,
+   "h": 1.4,
+   "sill": 0.9,
+   "type": "window"
+  },
+  {
+   "id": "o5",
+   "wall": "w3",
+   "t": 0.5,
+   "w": 1.2,
+   "h": 1.4,
+   "sill": 0.9,
+   "type": "window"
+  },
+  {
+   "id": "o6",
+   "wall": "w3",
+   "t": 2.8000000000000007,
+   "w": 0.6,
+   "h": 0.6,
+   "sill": 1.5,
+   "type": "window"
+  },
+  {
+   "id": "o7",
+   "wall": "w3",
+   "t": 5.4,
+   "w": 1.4,
+   "h": 2.3,
+   "sill": 0,
+   "type": "door",
+   "style": "portafinestra"
+  },
+  {
+   "id": "o8",
+   "wall": "w3",
+   "t": 9.2,
+   "w": 1.0,
+   "h": 1.4,
+   "sill": 0.9,
+   "type": "window"
+  },
+  {
+   "id": "o9",
+   "wall": "w4",
+   "t": 5.4,
+   "w": 1.0,
+   "h": 2.2,
+   "sill": 0,
+   "type": "door"
+  },
+  {
+   "id": "o10",
+   "wall": "w5",
+   "t": 1.6,
+   "w": 0.8,
+   "h": 2.1,
+   "sill": 0,
+   "type": "door"
+  },
+  {
+   "id": "o11",
+   "wall": "w5",
+   "t": 5.0,
+   "w": 0.8,
+   "h": 2.1,
+   "sill": 0,
+   "type": "door"
+  },
+  {
+   "id": "o12",
+   "wall": "w6",
+   "t": 3.4,
+   "w": 0.8,
+   "h": 2.1,
+   "sill": 0,
+   "type": "door"
+  },
+  {
+   "id": "o13",
+   "wall": "w8",
+   "t": 2.2,
+   "w": 0.8,
+   "h": 2.1,
+   "sill": 0,
+   "type": "door"
+  }
+ ],
+ "rooms": [
+  {
+   "id": "r1",
+   "level": "L0",
+   "name": "Soggiorno",
+   "mat": "parquet",
+   "pts": [
+    [
+     0.15,
+     0.15
+    ],
+    [
+     6.94,
+     0.15
+    ],
+    [
+     6.94,
+     7.85
+    ],
+    [
+     3.56,
+     7.85
+    ],
+    [
+     3.56,
+     5.06
+    ],
+    [
+     0.15,
+     5.06
+    ]
+   ]
+  },
+  {
+   "id": "r2",
+   "level": "L0",
+   "name": "Cucina",
+   "mat": "gres",
+   "pts": [
+    [
+     0.15,
+     5.06
+    ],
+    [
+     3.44,
+     5.06
+    ],
+    [
+     3.44,
+     7.85
+    ],
+    [
+     0.15,
+     7.85
+    ]
+   ]
+  },
+  {
+   "id": "r3",
+   "level": "L0",
+   "name": "Camera matrimoniale",
+   "mat": "parquet",
+   "pts": [
+    [
+     7.06,
+     0.15
+    ],
+    [
+     11.85,
+     0.15
+    ],
+    [
+     11.85,
+     3.94
+    ],
+    [
+     7.06,
+     3.94
+    ]
+   ]
+  },
+  {
+   "id": "r4",
+   "level": "L0",
+   "name": "Bagno",
+   "mat": "gres",
+   "pts": [
+    [
+     7.06,
+     4.06
+    ],
+    [
+     9.44,
+     4.06
+    ],
+    [
+     9.44,
+     7.85
+    ],
+    [
+     7.06,
+     7.85
+    ]
+   ]
+  },
+  {
+   "id": "r5",
+   "level": "L0",
+   "name": "Camera",
+   "mat": "parquet",
+   "pts": [
+    [
+     9.56,
+     4.06
+    ],
+    [
+     11.85,
+     4.06
+    ],
+    [
+     11.85,
+     7.85
+    ],
+    [
+     9.56,
+     7.85
+    ]
+   ]
+  },
+  {
+   "id": "r6",
+   "level": "L0",
+   "name": "Balcone",
+   "mat": "gres",
+   "pts": [
+    [
+     4.0,
+     8.15
+    ],
+    [
+     6.8,
+     8.15
+    ],
+    [
+     6.8,
+     9.6
+    ],
+    [
+     4.0,
+     9.6
+    ]
+   ],
+   "balcone": {
+    "tipo": "ringhiera",
+    "h": 1.0
+   }
+  }
+ ],
+ "objects": [
+  {
+   "id": "a1",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "divano3",
+   "name": "divano3",
+   "x": 3.4,
+   "y": 1.0,
+   "z": 0,
+   "rot": 0,
+   "scale": 1
+  },
+  {
+   "id": "a2",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "tappeto",
+   "name": "tappeto",
+   "x": 3.4,
+   "y": 2.2,
+   "z": 0,
+   "rot": 0,
+   "scale": 1
+  },
+  {
+   "id": "a3",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "tavolino",
+   "name": "tavolino",
+   "x": 3.4,
+   "y": 2.1,
+   "z": 0,
+   "rot": 0,
+   "scale": 1
+  },
+  {
+   "id": "a4",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "mobile_tv",
+   "name": "mobile_tv",
+   "x": 3.4,
+   "y": 3.6,
+   "z": 0,
+   "rot": 180,
+   "scale": 1
+  },
+  {
+   "id": "a5",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "poltrona",
+   "name": "poltrona",
+   "x": 1.3,
+   "y": 2.2,
+   "z": 0,
+   "rot": 270,
+   "scale": 1
+  },
+  {
+   "id": "a6",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "libreria",
+   "name": "libreria",
+   "x": 6.6,
+   "y": 1.6,
+   "z": 0,
+   "rot": 90,
+   "scale": 1
+  },
+  {
+   "id": "a7",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "tavolo6",
+   "name": "tavolo6",
+   "x": 5.2,
+   "y": 6.0,
+   "z": 0,
+   "rot": 90,
+   "scale": 1
+  },
+  {
+   "id": "a8",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "sedia",
+   "name": "sedia",
+   "x": 4.7,
+   "y": 5.3,
+   "z": 0,
+   "rot": 0,
+   "scale": 1
+  },
+  {
+   "id": "a9",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "sedia",
+   "name": "sedia",
+   "x": 5.7,
+   "y": 5.3,
+   "z": 0,
+   "rot": 0,
+   "scale": 1
+  },
+  {
+   "id": "a10",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "sedia",
+   "name": "sedia",
+   "x": 4.7,
+   "y": 6.7,
+   "z": 0,
+   "rot": 180,
+   "scale": 1
+  },
+  {
+   "id": "a11",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "sedia",
+   "name": "sedia",
+   "x": 5.7,
+   "y": 6.7,
+   "z": 0,
+   "rot": 180,
+   "scale": 1
+  },
+  {
+   "id": "a12",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "cucina",
+   "name": "cucina",
+   "x": 1.8,
+   "y": 7.5,
+   "z": 0,
+   "rot": 180,
+   "scale": 1
+  },
+  {
+   "id": "a13",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "frigo",
+   "name": "frigo",
+   "x": 0.5,
+   "y": 5.5,
+   "z": 0,
+   "rot": 270,
+   "scale": 1
+  },
+  {
+   "id": "a14",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "letto2",
+   "name": "letto2",
+   "x": 9.4,
+   "y": 1.3,
+   "z": 0,
+   "rot": 0,
+   "scale": 1
+  },
+  {
+   "id": "a15",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "comodino",
+   "name": "comodino",
+   "x": 8.3,
+   "y": 0.45,
+   "z": 0,
+   "rot": 0,
+   "scale": 1
+  },
+  {
+   "id": "a16",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "comodino",
+   "name": "comodino",
+   "x": 10.5,
+   "y": 0.45,
+   "z": 0,
+   "rot": 0,
+   "scale": 1
+  },
+  {
+   "id": "a17",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "armadio2",
+   "name": "armadio2",
+   "x": 11.5,
+   "y": 2.6,
+   "z": 0,
+   "rot": 90,
+   "scale": 1
+  },
+  {
+   "id": "a18",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "letto1",
+   "name": "letto1",
+   "x": 10.9,
+   "y": 6.6,
+   "z": 0,
+   "rot": 180,
+   "scale": 1
+  },
+  {
+   "id": "a19",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "scrivania",
+   "name": "scrivania",
+   "x": 10.6,
+   "y": 4.5,
+   "z": 0,
+   "rot": 0,
+   "scale": 1
+  },
+  {
+   "id": "a20",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "sedia_uff",
+   "name": "sedia_uff",
+   "x": 10.6,
+   "y": 5.0,
+   "z": 0,
+   "rot": 180,
+   "scale": 1
+  },
+  {
+   "id": "a21",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "vasca",
+   "name": "vasca",
+   "x": 8.2,
+   "y": 7.4,
+   "z": 0,
+   "rot": 180,
+   "scale": 1
+  },
+  {
+   "id": "a22",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "wc",
+   "name": "wc",
+   "x": 9.1,
+   "y": 4.5,
+   "z": 0,
+   "rot": 0,
+   "scale": 1
+  },
+  {
+   "id": "a23",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "bidet",
+   "name": "bidet",
+   "x": 8.5,
+   "y": 4.5,
+   "z": 0,
+   "rot": 0,
+   "scale": 1
+  },
+  {
+   "id": "a24",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "lavabo",
+   "name": "lavabo",
+   "x": 7.5,
+   "y": 5.3,
+   "z": 0,
+   "rot": 270,
+   "scale": 1
+  },
+  {
+   "id": "a25",
+   "level": "L0",
+   "kind": "lib",
+   "ref": "tavolo_giard",
+   "name": "tavolo_giard",
+   "x": 5.4,
+   "y": 8.9,
+   "z": 0,
+   "rot": 0,
+   "scale": 1
+  }
+ ],
+ "dims": [],
+ "cameras": [
+  {
+   "id": "c1",
+   "name": "Soggiorno",
+   "pos": [
+    6.3,
+    1.6,
+    7.4
+   ],
+   "target": [
+    2.5,
+    1.2,
+    1.2
+   ],
+   "fov": 65
+  }
+ ],
+ "materials": {},
+ "sun": {
+  "az": 200,
+  "el": 38
+ }
+}
