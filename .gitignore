@@ -13,3 +13,7 @@ playwright-report/
 .dev.vars
 scripts/tmp/
 public/modelli/
+
+# planimetrie catastali vere del banco: mai nel repository
+banco-catasto-privato/
+*.planimetria.pdf
