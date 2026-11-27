@@ -1048,3 +1048,39 @@ test("clic sul tetto nel 3D: si aprono le proprietà della copertura del piano, 
   await expect(page.locator("#lRoof")).toBeFocused();
   expect(errors).toEqual([]);
 });
+
+
+// [Codex] Neutral DXF exchange fixture: millimetres are explicit, not guessed.
+// Authored from the public LWPOLYLINE format; no Catasto proprietary source.
+test("Catasto: contorni DXF diagnostici in mm restano solo base di ricalco", async ({ page }) => {
+  const errors = await open(page);
+  const raw = [
+    "0","SECTION","2","ENTITIES",
+    "0","LWPOLYLINE","100","AcDbEntity","8","SYNTH_CONTOUR_MM","100","AcDbPolyline","90","4","70","1",
+    "10","0","20","0","10","4000","20","0","10","4000","20","2000","10","0","20","2000",
+    "0","LWPOLYLINE","100","AcDbEntity","8","SYNTH_CONTOUR_MM","100","AcDbPolyline","90","4","70","1",
+    "10","5000","20","0","10","7000","20","0","10","7000","20","1000","10","5000","20","1000",
+    "0","ENDSEC","0","EOF",""
+  ].join("\n");
+  const before = await page.evaluate(() => JSON.stringify([P.walls,P.rooms,P.openings,P.objects]));
+  await page.click('[data-tab="import"]');
+  await page.setInputFiles("#fPlan", { name: "catasto-contorno-locale-mm-non-ufficiale.dxf", mimeType: "application/dxf", buffer: Buffer.from(raw) });
+  await expect(page.locator("#dxfBox")).toBeVisible({ timeout: 15000 });
+  await expect(page.locator("#dxfBox")).toContainText("SYNTH_CONTOUR_MM");
+  // A 7 m drawing without HEADER is ambiguous to the generic CAD heuristic.
+  await page.selectOption("#dxM", "vec");
+  await page.selectOption("#dxU", "0.001");
+  await expect(page.locator("#dxU")).toHaveValue("0.001");
+  await page.click("#dxGo");
+  await expect(page.locator("#dxfBox")).toHaveCount(0);
+  const result = await page.evaluate(() => ({ underlay:level().underlay, model:JSON.stringify([P.walls,P.rooms,P.openings,P.objects]) }));
+  expect(result.model).toBe(before);
+  expect(result.underlay.kind).toBe("vec");
+  expect(result.underlay.k).toBe(1);
+  expect(result.underlay.lines).toHaveLength(8);
+  const lines = result.underlay.lines;
+  expect(Math.max(...lines.flatMap(l => [l[0],l[2]]))).toBeCloseTo(7, 8);
+  expect(Math.max(...lines.flatMap(l => [l[1],l[3]]))).toBeCloseTo(2, 8);
+  expect(lines.map(l => Math.hypot(l[2]-l[0],l[3]-l[1])).sort((a,b)=>a-b)).toEqual([1,1,2,2,2,2,4,4]);
+  expect(errors).toEqual([]);
+});
