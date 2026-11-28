@@ -1,5 +1,9 @@
 # CLAUDE.md — Pianta Libera: istruzioni condivise di progetto
 
+@LINEE_GUIDA.md
+@AGENTS.md
+
+
 > Handoff del 6 novembre 2026. Fonte: mandato del proprietario e pianificazione tecnica concordata con ChatGPT.
 > Repository canonico: https://github.com/gianpaolobol/piantalibera
 > **ATTENZIONE:** il proprietario dichiara che Claude sta già sviluppando il modellatore 3D e il livello di chiamata delle API di rendering. Non sostituire o sovrascrivere lavoro esistente senza prima ispezionare stato locale, branch e diff.

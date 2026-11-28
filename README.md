@@ -1,5 +1,10 @@
 # Pianta Libera
 
+<!-- inizio-riquadro-linee-guida -->
+> **Linee guida v1.1.0** — Questo progetto segue le linee guida comuni dei progetti di Gian Paolo Franceschini: leggi prima [`LINEE_GUIDA.md`](LINEE_GUIDA.md), poi [`AGENTS.md`](AGENTS.md) e [`STATO.md`](STATO.md).
+<!-- fine-riquadro-linee-guida -->
+
+
 > **Copyright © 2026 Gian Paolo Franceschini** (limitatamente ai contributi originali di sua legittima titolarità). Il codice coperto da [GNU AGPL-3.0](LICENSE) rimane utilizzabile, modificabile e redistribuibile secondo i termini di quella licenza; restano fermi i diritti e le licenze dei terzi.
 
 
